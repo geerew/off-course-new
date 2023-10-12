@@ -30,7 +30,7 @@ type Attachment struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // CountAttachments returns the number of attachments
-func CountAttachments(db database.Database, params *database.DatabaseParams, ctx context.Context) (int, error) {
+func CountAttachments(ctx context.Context, db database.Database, params *database.DatabaseParams) (int, error) {
 	q := db.DB().NewSelect().Model((*Attachment)(nil))
 
 	if params != nil && params.Where != nil {
@@ -43,7 +43,7 @@ func CountAttachments(db database.Database, params *database.DatabaseParams, ctx
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GetAttachments returns a slice of attachments
-func GetAttachments(db database.Database, params *database.DatabaseParams, ctx context.Context) ([]*Attachment, error) {
+func GetAttachments(ctx context.Context, db database.Database, params *database.DatabaseParams) ([]*Attachment, error) {
 	var attachments []*Attachment
 
 	q := db.DB().NewSelect().Model(&attachments)
@@ -51,7 +51,7 @@ func GetAttachments(db database.Database, params *database.DatabaseParams, ctx c
 	if params != nil {
 		// Pagination
 		if params.Pagination != nil {
-			if count, err := CountAttachments(db, params, ctx); err != nil {
+			if count, err := CountAttachments(ctx, db, params); err != nil {
 				return nil, err
 			} else {
 				params.Pagination.SetCount(count)
@@ -85,7 +85,7 @@ func GetAttachments(db database.Database, params *database.DatabaseParams, ctx c
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GetAttachment returns an attachment based upon the where clause in the database params
-func GetAttachment(db database.Database, params *database.DatabaseParams, ctx context.Context) (*Attachment, error) {
+func GetAttachment(ctx context.Context, db database.Database, params *database.DatabaseParams) (*Attachment, error) {
 	if params == nil || params.Where == nil {
 		return nil, errors.New("where clause required")
 	}
@@ -114,7 +114,7 @@ func GetAttachment(db database.Database, params *database.DatabaseParams, ctx co
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // CreateAttachment inserts a new attachment
-func CreateAttachment(db database.Database, attachment *Attachment, ctx context.Context) error {
+func CreateAttachment(ctx context.Context, db database.Database, attachment *Attachment) error {
 	attachment.RefreshId()
 	attachment.RefreshCreatedAt()
 	attachment.RefreshUpdatedAt()
@@ -130,7 +130,7 @@ func CreateAttachment(db database.Database, attachment *Attachment, ctx context.
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // DeleteAttachment deletes an attachment with the given ID
-func DeleteAttachment(db database.Database, id string, ctx context.Context) (int, error) {
+func DeleteAttachment(ctx context.Context, db database.Database, id string) (int, error) {
 	attachment := &Attachment{}
 	attachment.SetId(id)
 

@@ -19,7 +19,7 @@ func Test_CountAttachments(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		count, err := CountAttachments(db, nil, ctx)
+		count, err := CountAttachments(ctx, db, nil)
 		require.Nil(t, err)
 		assert.Equal(t, 0, count)
 	})
@@ -32,7 +32,7 @@ func Test_CountAttachments(t *testing.T) {
 		assets := NewTestAssets(t, db, []*Course{course}, 2)
 		NewTestAttachments(t, db, assets, 2)
 
-		count, err := CountAttachments(db, nil, ctx)
+		count, err := CountAttachments(ctx, db, nil)
 		require.Nil(t, err)
 		assert.Equal(t, 4, count)
 	})
@@ -46,12 +46,12 @@ func Test_CountAttachments(t *testing.T) {
 		attachments := NewTestAttachments(t, db, assets, 2)
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: attachments[1].ID}}}
-		count, err := CountAttachments(db, dbParams, ctx)
+		count, err := CountAttachments(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 
 		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "id", Value: attachments[0].ID}}}
-		count, err = CountAttachments(db, dbParams, ctx)
+		count, err = CountAttachments(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 	})
@@ -63,7 +63,7 @@ func Test_CountAttachments(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Attachment{}).Exec(ctx)
 		require.Nil(t, err)
 
-		_, err = CountAttachments(db, nil, ctx)
+		_, err = CountAttachments(ctx, db, nil)
 		require.ErrorContains(t, err, "no such table: attachments")
 	})
 
@@ -72,7 +72,7 @@ func Test_CountAttachments(t *testing.T) {
 		defer teardown(t)
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "", Value: ""}}}
-		count, err := CountAssets(db, dbParams, ctx)
+		count, err := CountAssets(ctx, db, dbParams)
 		require.ErrorContains(t, err, "syntax error")
 		assert.Equal(t, 0, count)
 	})
@@ -85,7 +85,7 @@ func Test_GetAttachments(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		attachments, err := GetAttachments(db, nil, ctx)
+		attachments, err := GetAttachments(ctx, db, nil)
 		require.Nil(t, err)
 		require.Len(t, attachments, 0)
 	})
@@ -99,7 +99,7 @@ func Test_GetAttachments(t *testing.T) {
 		assets := NewTestAssets(t, db, courses, 2)
 		attachments := NewTestAttachments(t, db, assets, 2)
 
-		result, err := GetAttachments(db, nil, ctx)
+		result, err := GetAttachments(ctx, db, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 20)
 		assert.Equal(t, attachments[0].ID, result[0].ID)
@@ -124,7 +124,7 @@ func Test_GetAttachments(t *testing.T) {
 		// ----------------------------
 		relation := []database.Relation{{Struct: "Course"}}
 
-		result, err := GetAttachments(db, &database.DatabaseParams{Relation: relation}, ctx)
+		result, err := GetAttachments(ctx, db, &database.DatabaseParams{Relation: relation})
 		require.Nil(t, err)
 		require.Len(t, result, 20)
 		assert.Equal(t, attachments[0].ID, result[0].ID)
@@ -143,7 +143,7 @@ func Test_GetAttachments(t *testing.T) {
 		// ----------------------------
 		relation = []database.Relation{{Struct: "Course"}, {Struct: "Asset"}}
 
-		result, err = GetAttachments(db, &database.DatabaseParams{Relation: relation}, ctx)
+		result, err = GetAttachments(ctx, db, &database.DatabaseParams{Relation: relation})
 		require.Len(t, result, 20)
 		require.Nil(t, err)
 		assert.Equal(t, attachments[0].ID, result[0].ID)
@@ -177,7 +177,7 @@ func Test_GetAttachments(t *testing.T) {
 		p := pagination.New(c)
 
 		// Assert the last attachment in the paginated response
-		result, err := GetAttachments(db, &database.DatabaseParams{Pagination: p}, ctx)
+		result, err := GetAttachments(ctx, db, &database.DatabaseParams{Pagination: p})
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		assert.Equal(t, attachments[9].ID, result[9].ID)
@@ -189,7 +189,7 @@ func Test_GetAttachments(t *testing.T) {
 		p = pagination.New(c)
 
 		// Assert the last attachment in the paginated response
-		result, err = GetAttachments(db, &database.DatabaseParams{Pagination: p}, ctx)
+		result, err = GetAttachments(ctx, db, &database.DatabaseParams{Pagination: p})
 		require.Nil(t, err)
 		require.Len(t, result, 6)
 		assert.Equal(t, attachments[15].ID, result[5].ID)
@@ -205,7 +205,7 @@ func Test_GetAttachments(t *testing.T) {
 		assets := NewTestAssets(t, db, courses, 2)
 		attachments := NewTestAttachments(t, db, assets, 2)
 
-		result, err := GetAttachments(db, &database.DatabaseParams{OrderBy: []string{"created_at desc"}}, ctx)
+		result, err := GetAttachments(ctx, db, &database.DatabaseParams{OrderBy: []string{"created_at desc"}})
 		require.Nil(t, err)
 		require.Len(t, result, 20)
 		assert.Equal(t, attachments[19].ID, result[0].ID)
@@ -221,13 +221,13 @@ func Test_GetAttachments(t *testing.T) {
 		attachments := NewTestAttachments(t, db, assets, 2)
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "id", Value: attachments[2].ID}}}
-		result, err := GetAttachments(db, dbParams, ctx)
+		result, err := GetAttachments(ctx, db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, attachments[2].ID, result[0].ID)
 
 		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "id", Value: attachments[3].ID}}}
-		result, err = GetAttachments(db, dbParams, ctx)
+		result, err = GetAttachments(ctx, db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, attachments[3].ID, result[0].ID)
@@ -248,11 +248,11 @@ func Test_GetAttachments(t *testing.T) {
 		p := pagination.New(c)
 
 		// With pagination
-		_, err = GetAttachments(db, &database.DatabaseParams{Pagination: p}, ctx)
+		_, err = GetAttachments(ctx, db, &database.DatabaseParams{Pagination: p})
 		require.ErrorContains(t, err, "no such table: attachments")
 
 		// Without pagination
-		_, err = GetAttachments(db, nil, ctx)
+		_, err = GetAttachments(ctx, db, nil)
 		require.ErrorContains(t, err, "no such table: attachments")
 	})
 }
@@ -266,7 +266,7 @@ func Test_GetAttachment(t *testing.T) {
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: "1"}}}
 
-		attachment, err := GetAttachment(db, dbParams, ctx)
+		attachment, err := GetAttachment(ctx, db, dbParams)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, attachment)
 	})
@@ -281,7 +281,7 @@ func Test_GetAttachment(t *testing.T) {
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: attachments[5].ID}}}
 
-		result, err := GetAttachment(db, dbParams, ctx)
+		result, err := GetAttachment(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, attachments[5].ID, result.ID)
 		assert.Equal(t, attachments[5].CourseID, result.CourseID)
@@ -311,7 +311,7 @@ func Test_GetAttachment(t *testing.T) {
 			Relation: []database.Relation{{Struct: "Course"}},
 		}
 
-		result, err := GetAttachment(db, dbParams, ctx)
+		result, err := GetAttachment(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, attachments[5].ID, result.ID)
 		assert.Equal(t, attachments[5].CourseID, result.CourseID)
@@ -332,7 +332,7 @@ func Test_GetAttachment(t *testing.T) {
 			Relation: []database.Relation{{Struct: "Course"}, {Struct: "Asset"}},
 		}
 
-		result, err = GetAttachment(db, dbParams, ctx)
+		result, err = GetAttachment(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, attachments[12].ID, result.ID)
 		assert.Equal(t, attachments[12].CourseID, result.CourseID)
@@ -356,7 +356,7 @@ func Test_GetAttachment(t *testing.T) {
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: "1"}}}
 
-		_, err = GetAttachment(db, dbParams, ctx)
+		_, err = GetAttachment(ctx, db, dbParams)
 		require.ErrorContains(t, err, "no such table: attachments")
 	})
 
@@ -367,7 +367,7 @@ func Test_GetAttachment(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
 		require.Nil(t, err)
 
-		_, err = GetAttachment(db, nil, ctx)
+		_, err = GetAttachment(ctx, db, nil)
 		require.ErrorContains(t, err, "where clause required")
 	})
 }
@@ -383,7 +383,7 @@ func Test_CreateAttachment(t *testing.T) {
 		asset := NewTestAssets(t, db, []*Course{course}, 1)[0]
 		attachment := NewTestAttachments(t, nil, []*Asset{asset}, 1)[0]
 
-		err := CreateAttachment(db, attachment, ctx)
+		err := CreateAttachment(ctx, db, attachment)
 		require.Nil(t, err)
 		assert.NotEmpty(t, attachment.ID)
 		assert.Equal(t, course.ID, attachment.CourseID)
@@ -394,7 +394,7 @@ func Test_CreateAttachment(t *testing.T) {
 		assert.False(t, attachment.UpdatedAt.IsZero())
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: attachment.ID}}}
-		_, err = GetAttachment(db, dbParams, ctx)
+		_, err = GetAttachment(ctx, db, dbParams)
 		require.Nil(t, err)
 	})
 
@@ -406,11 +406,11 @@ func Test_CreateAttachment(t *testing.T) {
 		asset := NewTestAssets(t, db, []*Course{course}, 1)[0]
 		attachment := NewTestAttachments(t, nil, []*Asset{asset}, 1)[0]
 
-		err := CreateAttachment(db, attachment, ctx)
+		err := CreateAttachment(ctx, db, attachment)
 		require.Nil(t, err)
 		assert.NotEmpty(t, asset.ID)
 
-		err = CreateAttachment(db, attachment, ctx)
+		err = CreateAttachment(ctx, db, attachment)
 		assert.ErrorContains(t, err, "UNIQUE constraint failed: attachments.path")
 	})
 
@@ -420,38 +420,38 @@ func Test_CreateAttachment(t *testing.T) {
 
 		// Title
 		attachment := &Attachment{}
-		assert.ErrorContains(t, CreateAttachment(db, attachment, ctx), "NOT NULL constraint failed: attachments.title")
+		assert.ErrorContains(t, CreateAttachment(ctx, db, attachment), "NOT NULL constraint failed: attachments.title")
 		attachment = &Attachment{Title: ""}
-		assert.ErrorContains(t, CreateAttachment(db, attachment, ctx), "NOT NULL constraint failed: attachments.title")
+		assert.ErrorContains(t, CreateAttachment(ctx, db, attachment), "NOT NULL constraint failed: attachments.title")
 
 		// Path
 		attachment = &Attachment{Title: "Course 1"}
-		assert.ErrorContains(t, CreateAttachment(db, attachment, ctx), "NOT NULL constraint failed: attachments.path")
+		assert.ErrorContains(t, CreateAttachment(ctx, db, attachment), "NOT NULL constraint failed: attachments.path")
 		attachment = &Attachment{Title: "Course 1", Path: ""}
-		assert.ErrorContains(t, CreateAttachment(db, attachment, ctx), "NOT NULL constraint failed: attachments.path")
+		assert.ErrorContains(t, CreateAttachment(ctx, db, attachment), "NOT NULL constraint failed: attachments.path")
 
 		// Course ID
 		attachment = &Attachment{Title: "Course 1", Path: "/course 1/01 attachment"}
-		assert.ErrorContains(t, CreateAttachment(db, attachment, ctx), "FOREIGN KEY constraint failed")
+		assert.ErrorContains(t, CreateAttachment(ctx, db, attachment), "FOREIGN KEY constraint failed")
 		attachment = &Attachment{CourseID: "", Title: "Course 1", Path: "/course 1/01 attachment"}
-		assert.ErrorContains(t, CreateAttachment(db, attachment, ctx), "FOREIGN KEY constraint failed")
+		assert.ErrorContains(t, CreateAttachment(ctx, db, attachment), "FOREIGN KEY constraint failed")
 		attachment = &Attachment{CourseID: "1234", Title: "Course 1", Path: "/course 1/01 attachment"}
-		assert.ErrorContains(t, CreateAttachment(db, attachment, ctx), "FOREIGN KEY constraint failed")
+		assert.ErrorContains(t, CreateAttachment(ctx, db, attachment), "FOREIGN KEY constraint failed")
 
 		course := NewTestCourses(t, db, 1)[0]
 
 		// Asset ID
 		attachment = &Attachment{CourseID: course.ID, Title: "Course 1", Path: "/course 1/01 attachment"}
-		assert.ErrorContains(t, CreateAttachment(db, attachment, ctx), "FOREIGN KEY constraint failed")
+		assert.ErrorContains(t, CreateAttachment(ctx, db, attachment), "FOREIGN KEY constraint failed")
 		attachment = &Attachment{CourseID: course.ID, AssetID: "", Title: "Course 1", Path: "/course 1/01 attachment"}
-		assert.ErrorContains(t, CreateAttachment(db, attachment, ctx), "FOREIGN KEY constraint failed")
+		assert.ErrorContains(t, CreateAttachment(ctx, db, attachment), "FOREIGN KEY constraint failed")
 		attachment = &Attachment{CourseID: course.ID, AssetID: "1234", Title: "Course 1", Path: "/course 1/01 attachment"}
-		assert.ErrorContains(t, CreateAttachment(db, attachment, ctx), "FOREIGN KEY constraint failed")
+		assert.ErrorContains(t, CreateAttachment(ctx, db, attachment), "FOREIGN KEY constraint failed")
 
 		// Success
 		asset := NewTestAssets(t, db, []*Course{course}, 1)[0]
 		attachment = &Attachment{CourseID: course.ID, AssetID: asset.ID, Title: "Course 1", Path: "/course 1/01 attachment"}
-		assert.Nil(t, CreateAttachment(db, attachment, ctx))
+		assert.Nil(t, CreateAttachment(ctx, db, attachment))
 	})
 }
 
@@ -466,7 +466,7 @@ func Test_DeleteAttachment(t *testing.T) {
 		assets := NewTestAssets(t, db, []*Course{course}, 2)
 		attachment := NewTestAttachments(t, db, assets, 1)[0]
 
-		count, err := DeleteAttachment(db, attachment.ID, ctx)
+		count, err := DeleteAttachment(ctx, db, attachment.ID)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 	})
@@ -482,11 +482,11 @@ func Test_DeleteAttachment(t *testing.T) {
 		asset := NewTestAssets(t, db, []*Course{course}, 1)[0]
 		NewTestAttachments(t, db, []*Asset{asset}, 5)
 
-		count, err := DeleteCourse(db, course.ID, ctx)
+		count, err := DeleteCourse(ctx, db, course.ID)
 		require.Nil(t, err)
 		require.Equal(t, 1, count)
 
-		count, err = CountAttachments(db, nil, ctx)
+		count, err = CountAttachments(ctx, db, nil)
 		require.Nil(t, err)
 		assert.Equal(t, 0, count)
 
@@ -497,11 +497,11 @@ func Test_DeleteAttachment(t *testing.T) {
 		asset = NewTestAssets(t, db, []*Course{course}, 1)[0]
 		NewTestAttachments(t, db, []*Asset{asset}, 5)
 
-		count, err = DeleteAsset(db, asset.ID, ctx)
+		count, err = DeleteAsset(ctx, db, asset.ID)
 		require.Nil(t, err)
 		require.Equal(t, 1, count)
 
-		count, err = CountAttachments(db, nil, ctx)
+		count, err = CountAttachments(ctx, db, nil)
 		require.Nil(t, err)
 		assert.Equal(t, 0, count)
 	})
@@ -511,7 +511,7 @@ func Test_DeleteAttachment(t *testing.T) {
 		defer teardown(t)
 
 		// Invalid ID
-		count, err := DeleteAttachment(db, "1", ctx)
+		count, err := DeleteAttachment(ctx, db, "1")
 		require.Nil(t, err)
 		assert.Equal(t, 0, count)
 
@@ -519,7 +519,7 @@ func Test_DeleteAttachment(t *testing.T) {
 		_, err = db.DB().NewDropTable().Model(&Attachment{}).Exec(ctx)
 		require.Nil(t, err)
 
-		count, err = DeleteAttachment(db, "1", ctx)
+		count, err = DeleteAttachment(ctx, db, "1")
 		assert.ErrorContains(t, err, "no such table: attachments")
 		assert.Equal(t, 0, count)
 	})

@@ -1,107 +1,97 @@
 package jobs
 
-// import (
-// 	"errors"
-// 	"fmt"
-// 	"os"
-// 	"sort"
-// 	"strconv"
-// 	"testing"
-// 	"time"
+import (
+	"context"
+	"database/sql"
+	"os"
+	"testing"
 
-// 	"github.com/geerew/off-course/database"
-// 	"github.com/geerew/off-course/models"
-// 	"github.com/geerew/off-course/utils/appFs"
-// 	"github.com/geerew/off-course/utils/types"
-// 	"github.com/rs/zerolog"
-// 	"github.com/rs/zerolog/log"
-// 	"github.com/rzajac/zltest"
-// 	"github.com/spf13/afero"
-// 	"github.com/stretchr/testify/assert"
-// 	"github.com/stretchr/testify/require"
-// )
+	"github.com/geerew/off-course/database"
+	"github.com/geerew/off-course/migrations"
+	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils/appFs"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rzajac/zltest"
+	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
 
-// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// func Test_Add(t *testing.T) {
-// 	t.Run("success", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
-// 		defer teardown(t)
+func Test_Add(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		scanner, _, teardown := setup(t)
+		defer teardown(t)
 
-// 		// Create a course
-// 		course := &models.Course{ID: "course1", Title: "Course 1", Path: "/course1"}
-// 		require.Nil(t, scanner.db.DB().Create(course).Error)
+		course := models.NewTestCourses(t, scanner.db, 1)[0]
 
-// 		scan, err := scanner.Add(course.ID)
-// 		require.Nil(t, err)
-// 		assert.Equal(t, scan.CourseID, course.ID)
-// 	})
+		scan, err := scanner.Add(course.ID)
+		require.Nil(t, err)
+		assert.Equal(t, scan.CourseID, course.ID)
+	})
 
-// 	t.Run("duplicate", func(t *testing.T) {
-// 		scanner, lh, teardown := setup(t)
-// 		defer teardown(t)
+	t.Run("duplicate", func(t *testing.T) {
+		scanner, lh, teardown := setup(t)
+		defer teardown(t)
 
-// 		// Create a course
-// 		course := &models.Course{ID: "course1", Title: "Course 1", Path: "/course1"}
-// 		require.Nil(t, scanner.db.DB().Create(course).Error)
+		course := models.NewTestCourses(t, scanner.db, 1)[0]
 
-// 		scan, err := scanner.Add(course.ID)
-// 		assert.Nil(t, err)
-// 		assert.Equal(t, scan.CourseID, course.ID)
+		scan, err := scanner.Add(course.ID)
+		assert.Nil(t, err)
+		assert.Equal(t, scan.CourseID, course.ID)
 
-// 		// Add the same course again
-// 		scan, err = scanner.Add(course.ID)
-// 		require.Nil(t, err)
-// 		require.NotNil(t, lh.LastEntry())
-// 		require.Nil(t, scan)
-// 		lh.LastEntry().ExpMsg("scan job already exists")
-// 		lh.LastEntry().ExpLevel(zerolog.DebugLevel)
-// 	})
+		// Add the same course again
+		scan, err = scanner.Add(course.ID)
+		require.Nil(t, err)
+		require.NotNil(t, lh.LastEntry())
+		require.Nil(t, scan)
+		lh.LastEntry().ExpMsg("scan job already exists")
+		lh.LastEntry().ExpLevel(zerolog.DebugLevel)
+	})
 
-// 	t.Run("invalid course", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
-// 		defer teardown(t)
+	t.Run("invalid course", func(t *testing.T) {
+		scanner, _, teardown := setup(t)
+		defer teardown(t)
 
-// 		scan, err := scanner.Add("bob")
-// 		require.EqualError(t, err, "no rows in result set")
-// 		assert.Nil(t, scan)
+		scan, err := scanner.Add("bob")
+		require.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, scan)
 
-// 		scans, err := models.GetScans(scanner.db, nil)
-// 		require.Nil(t, err)
-// 		require.Len(t, scans, 0)
-// 	})
+		count, err := models.CountScans(scanner.db, nil, scanner.ctx)
+		require.Nil(t, err)
+		require.Equal(t, 0, count)
+	})
 
-// 	t.Run("not blocked", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
-// 		defer teardown(t)
+	t.Run("not blocked", func(t *testing.T) {
+		scanner, _, teardown := setup(t)
+		defer teardown(t)
 
-// 		// Create 2 scans
-// 		course1 := &models.Course{ID: "course1", Title: "Course 1", Path: "/course 1"}
-// 		course2 := &models.Course{ID: "course2", Title: "Course 2", Path: "/course 2"}
-// 		require.Nil(t, scanner.db.DB().Create(course1).Error)
-// 		require.Nil(t, scanner.db.DB().Create(course2).Error)
+		courses := models.NewTestCourses(t, scanner.db, 2)
 
-// 		scan1, err := scanner.Add(course1.ID)
-// 		require.Nil(t, err)
-// 		assert.Equal(t, scan1.CourseID, course1.ID)
+		scan1, err := scanner.Add(courses[0].ID)
+		require.Nil(t, err)
+		assert.Equal(t, scan1.CourseID, courses[0].ID)
 
-// 		scan2, err := scanner.Add(course2.ID)
-// 		require.Nil(t, err)
-// 		assert.Equal(t, scan2.CourseID, course2.ID)
-// 	})
+		scan2, err := scanner.Add(courses[1].ID)
+		require.Nil(t, err)
+		assert.Equal(t, scan2.CourseID, courses[1].ID)
+	})
 
-// 	t.Run("scan lookup error", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
-// 		defer teardown(t)
+	t.Run("scan lookup error", func(t *testing.T) {
+		scanner, _, teardown := setup(t)
+		defer teardown(t)
 
-// 		err := scanner.db.DB().Migrator().DropTable(&models.Scan{})
-// 		require.Nil(t, err)
+		// Drop table
+		_, err := scanner.db.DB().NewDropTable().Model(&models.Scan{}).Exec(scanner.ctx)
+		require.Nil(t, err)
 
-// 		scan, err := scanner.Add("")
-// 		require.EqualError(t, err, "no such table: scans")
-// 		assert.Nil(t, scan)
-// 	})
-// }
+		scan, err := scanner.Add("")
+		require.ErrorContains(t, err, "no such table: scans")
+		assert.Nil(t, scan)
+	})
+}
 
 // func Test_Worker(t *testing.T) {
 // 	t.Run("single job", func(t *testing.T) {
@@ -240,7 +230,7 @@ package jobs
 
 // func Test_ScanCourse(t *testing.T) {
 // 	t.Run("nil", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		err := scanCourse(nil, scanner.db, scanner.appFs)
@@ -248,7 +238,7 @@ package jobs
 // 	})
 
 // 	t.Run("path error", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		course := models.CreateTestCourses(t, scanner.db, 1)[0]
@@ -258,7 +248,7 @@ package jobs
 // 	})
 
 // 	t.Run("found card", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		// Create course
@@ -281,7 +271,7 @@ package jobs
 // 	})
 
 // 	t.Run("ignore card in chapter", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		// Create course
@@ -303,7 +293,7 @@ package jobs
 // 	})
 
 // 	t.Run("multiple cards", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		// Create course
@@ -328,7 +318,7 @@ package jobs
 // 	})
 
 // 	t.Run("ignore files", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		course := models.CreateTestCourses(t, scanner.db, 1)[0]
@@ -347,7 +337,7 @@ package jobs
 // 	})
 
 // 	t.Run("found video", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		course := models.CreateTestCourses(t, scanner.db, 1)[0]
@@ -372,7 +362,7 @@ package jobs
 // 	})
 
 // 	t.Run("found document", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		course := models.CreateTestCourses(t, scanner.db, 1)[0]
@@ -397,7 +387,7 @@ package jobs
 // 	})
 
 // 	t.Run("found videos and documents", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		course := models.CreateTestCourses(t, scanner.db, 1)[0]
@@ -456,7 +446,7 @@ package jobs
 // 	})
 
 // 	t.Run("video trumps all", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		course := models.CreateTestCourses(t, scanner.db, 1)[0]
@@ -490,7 +480,7 @@ package jobs
 // 	})
 
 // 	t.Run("html trumps pdf", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		course := models.CreateTestCourses(t, scanner.db, 1)[0]
@@ -644,7 +634,7 @@ package jobs
 
 // func Test_UpdateAssets(t *testing.T) {
 // 	t.Run("error (course lookup)", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		err := scanner.db.DB().Migrator().DropTable(&models.Asset{})
@@ -655,7 +645,7 @@ package jobs
 // 	})
 
 // 	t.Run("success (nothing added or deleted)", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		// Create and insert 1 course with 10 assets
@@ -677,7 +667,7 @@ package jobs
 // 	})
 
 // 	t.Run("success (add)", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		// Create and insert 1 course
@@ -711,7 +701,7 @@ package jobs
 // 	})
 
 // 	t.Run("success (delete)", func(t *testing.T) {
-// 		scanner, _, teardown := setup(t)
+// 		scanne ctx, _, teardown := setup(t)
 // 		defer teardown(t)
 
 // 		// Create and insert 1 course with 12 asset
@@ -745,37 +735,37 @@ package jobs
 // 	})
 // }
 
-// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// // HELPERS
-// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// HELPERS
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// func setup(t *testing.T) (*CourseScanner, *zltest.Tester, func(t *testing.T)) {
+func setup(t *testing.T) (*CourseScanner, *zltest.Tester, func(t *testing.T)) {
+	// Set test logger
+	loggerHook := zltest.New(t)
+	log.Logger = zerolog.New(loggerHook).Level(zerolog.DebugLevel)
 
-// 	// Set test logger
-// 	loggerHook := zltest.New(t)
-// 	log.Logger = zerolog.New(loggerHook).Level(zerolog.DebugLevel)
+	appFs := appFs.NewAppFs(afero.NewMemMapFs())
 
-// 	appFs := appFs.NewAppFs(afero.NewMemMapFs())
+	db := database.NewSqliteDB(&database.SqliteDbConfig{
+		IsDebug: false,
+		DataDir: "./co_data",
+		AppFs:   appFs,
+	})
 
-// 	db := database.NewSqliteDB(&database.SqliteDbConfig{
-// 		IsDebug: false,
-// 		DataDir: "./co_data",
-// 		AppFs:   appFs,
-// 	})
+	// Force DB to be in-memory
+	os.Setenv("OC_InMemDb", "true")
 
-// 	// Force DB to be in-memory
-// 	os.Setenv("OC_InMemDb", "true")
+	require.Nil(t, db.Bootstrap())
+	require.Nil(t, migrations.Up(db))
 
-// 	require.Nil(t, db.Bootstrap())
-// 	require.Nil(t, models.MigrateModels(db))
+	courseScanner := NewCourseScanner(&CourseScannerConfig{
+		Db:    db,
+		AppFs: appFs,
+		Ctx:   context.Background(),
+	})
 
-// 	courseScanner := NewCourseScanner(&CourseScannerConfig{
-// 		Db:    db,
-// 		AppFs: appFs,
-// 	})
-
-// 	// teardown
-// 	return courseScanner, loggerHook, func(t *testing.T) {
-// 		os.Unsetenv("OC_InMemDb")
-// 	}
-// }
+	// teardown
+	return courseScanner, loggerHook, func(t *testing.T) {
+		os.Unsetenv("OC_InMemDb")
+	}
+}

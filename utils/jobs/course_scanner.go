@@ -17,6 +17,7 @@ type CourseScanner struct {
 	db        database.Database
 	appFs     *appFs.AppFs
 	jobSignal chan bool
+	ctx       context.Context
 	finished  bool
 }
 
@@ -26,6 +27,7 @@ type CourseScanner struct {
 type CourseScannerConfig struct {
 	Db    database.Database
 	AppFs *appFs.AppFs
+	Ctx   context.Context
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -36,6 +38,7 @@ func NewCourseScanner(config *CourseScannerConfig) *CourseScanner {
 		db:        config.Db,
 		appFs:     config.AppFs,
 		jobSignal: make(chan bool, 1),
+		ctx:       Ctx,
 		finished:  false,
 	}
 }
@@ -43,9 +46,13 @@ func NewCourseScanner(config *CourseScannerConfig) *CourseScanner {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Add inserts a course scan job into the db
-func (cs *CourseScanner) Add(ctx context.Context, id string) (*models.Scan, error) {
+func (cs *CourseScanner) Add(id string) (*models.Scan, error) {
 	// Ensure a job does not already exists for this course
-	scan, err := models.GetScanByCourseId(cs.db, id, ctx)
+	dbParams := &database.DatabaseParams{
+		Where:    []database.Where{{Column: "course_id", Value: id}},
+		Relation: []database.Relation{{Struct: "Course"}},
+	}
+	scan, err := models.GetScan(cs.db, dbParams, ctx)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	} else if scan != nil {
@@ -54,7 +61,8 @@ func (cs *CourseScanner) Add(ctx context.Context, id string) (*models.Scan, erro
 	}
 
 	// Get the course
-	course, err := models.GetCourse(cs.db, id, nil, ctx)
+	dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: id}}}
+	course, err := models.GetCourse(cs.db, dbParams, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -76,49 +84,49 @@ func (cs *CourseScanner) Add(ctx context.Context, id string) (*models.Scan, erro
 	return scan, nil
 }
 
-// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// // Worker processes jobs out of the DB sequentially
-// func (cs *CourseScanner) Worker(processor func(*models.Scan, database.Database, *appFs.AppFs) error) {
-// 	log.Info().Msg("Started course scanner worker")
+// Worker processes jobs out of the DB sequentially
+func (cs *CourseScanner) Worker(processor func(*models.Scan, database.Database, *appFs.AppFs) error) {
+	log.Info().Msg("Started course scanner worker")
 
-// 	for {
-// 		<-cs.jobSignal
-// 		for {
-// 			// Get the next scan job
-// 			scanJob, err := models.NextScan(cs.db)
-// 			if err != nil {
-// 				log.Error().Err(err).Msg("error looking up next scan job")
-// 				break
-// 			} else if scanJob == nil {
-// 				log.Info().Msg("finished processing all scan jobs")
-// 				break
-// 			}
+	for {
+		<-cs.jobSignal
+		for {
+			// Get the next scan job
+			scanJob, err := models.NextScan(cs.db)
+			if err != nil {
+				log.Error().Err(err).Msg("error looking up next scan job")
+				break
+			} else if scanJob == nil {
+				log.Info().Msg("finished processing all scan jobs")
+				break
+			}
 
-// 			log.Info().Str("job", scanJob.ID).Str("path", scanJob.Course.Path).Msg("processing scan job")
+			log.Info().Str("job", scanJob.ID).Str("path", scanJob.Course.Path).Msg("processing scan job")
 
-// 			err = processor(scanJob, cs.db, cs.appFs)
-// 			if err != nil {
-// 				log.Error().Str("job", scanJob.ID).Err(err).Msg("error processing scan job")
+			err = processor(scanJob, cs.db, cs.appFs)
+			if err != nil {
+				log.Error().Str("job", scanJob.ID).Err(err).Msg("error processing scan job")
 
-// 				// Cleanup
-// 				if err := models.DeleteScan(cs.db, scanJob.ID); err != nil {
-// 					log.Error().Str("job", scanJob.ID).Err(err).Msg("error deleting scan job")
-// 				}
+				// Cleanup
+				if err := models.DeleteScan(cs.db, scanJob.ID); err != nil {
+					log.Error().Str("job", scanJob.ID).Err(err).Msg("error deleting scan job")
+				}
 
-// 				break
-// 			}
+				break
+			}
 
-// 			log.Info().Str("job", scanJob.ID).Str("path", scanJob.Course.Path).Msg("finished processing scan job")
+			log.Info().Str("job", scanJob.ID).Str("path", scanJob.Course.Path).Msg("finished processing scan job")
 
-// 			// Cleanup
-// 			if err := models.DeleteScan(cs.db, scanJob.ID); err != nil {
-// 				log.Error().Str("job", scanJob.ID).Err(err).Msg("error deleting scan job")
-// 				break
-// 			}
-// 		}
-// 	}
-// }
+			// Cleanup
+			if err := models.DeleteScan(cs.db, scanJob.ID); err != nil {
+				log.Error().Str("job", scanJob.ID).Err(err).Msg("error deleting scan job")
+				break
+			}
+		}
+	}
+}
 
 // // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

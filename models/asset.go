@@ -37,7 +37,7 @@ type Asset struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // CountAssets returns the number of attachments
-func CountAssets(db database.Database, params *database.DatabaseParams, ctx context.Context) (int, error) {
+func CountAssets(ctx context.Context, db database.Database, params *database.DatabaseParams) (int, error) {
 	q := db.DB().NewSelect().Model((*Asset)(nil))
 
 	if params != nil && params.Where != nil {
@@ -50,7 +50,7 @@ func CountAssets(db database.Database, params *database.DatabaseParams, ctx cont
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GetAssets returns a slice of assets
-func GetAssets(db database.Database, params *database.DatabaseParams, ctx context.Context) ([]*Asset, error) {
+func GetAssets(ctx context.Context, db database.Database, params *database.DatabaseParams) ([]*Asset, error) {
 	var assets []*Asset
 
 	q := db.DB().NewSelect().Model(&assets)
@@ -58,7 +58,7 @@ func GetAssets(db database.Database, params *database.DatabaseParams, ctx contex
 	if params != nil {
 		// Pagination
 		if params.Pagination != nil {
-			if count, err := CountAssets(db, params, ctx); err != nil {
+			if count, err := CountAssets(ctx, db, params); err != nil {
 				return nil, err
 			} else {
 				params.Pagination.SetCount(count)
@@ -92,7 +92,7 @@ func GetAssets(db database.Database, params *database.DatabaseParams, ctx contex
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GetAsset returns an asset based upon the where clause in the database params
-func GetAsset(db database.Database, params *database.DatabaseParams, ctx context.Context) (*Asset, error) {
+func GetAsset(ctx context.Context, db database.Database, params *database.DatabaseParams) (*Asset, error) {
 	if params == nil || params.Where == nil {
 		return nil, errors.New("where clause required")
 	}
@@ -120,7 +120,7 @@ func GetAsset(db database.Database, params *database.DatabaseParams, ctx context
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // CreateAsset inserts a new asset
-func CreateAsset(db database.Database, asset *Asset, ctx context.Context) error {
+func CreateAsset(ctx context.Context, db database.Database, asset *Asset) error {
 	if asset.Prefix < 0 {
 		return fmt.Errorf("prefix must be greater than 0")
 	}
@@ -140,7 +140,7 @@ func CreateAsset(db database.Database, asset *Asset, ctx context.Context) error 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // DeleteAsset deletes an asset with the given ID
-func DeleteAsset(db database.Database, id string, ctx context.Context) (int, error) {
+func DeleteAsset(ctx context.Context, db database.Database, id string) (int, error) {
 	asset := &Asset{}
 	asset.SetId(id)
 

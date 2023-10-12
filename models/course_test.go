@@ -20,7 +20,7 @@ func Test_CountCourses(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		count, err := CountCourses(db, nil, ctx)
+		count, err := CountCourses(ctx, db, nil)
 		require.Nil(t, err)
 		assert.Equal(t, count, 0)
 	})
@@ -31,7 +31,7 @@ func Test_CountCourses(t *testing.T) {
 
 		NewTestCourses(t, db, 5)
 
-		count, err := CountCourses(db, nil, ctx)
+		count, err := CountCourses(ctx, db, nil)
 		require.Nil(t, err)
 		assert.Equal(t, count, 5)
 	})
@@ -44,13 +44,13 @@ func Test_CountCourses(t *testing.T) {
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: courses[1].ID}}}
 
-		count, err := CountCourses(db, dbParams, ctx)
+		count, err := CountCourses(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 
 		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "id", Value: courses[0].ID}}}
 
-		count, err = CountCourses(db, dbParams, ctx)
+		count, err = CountCourses(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 	})
@@ -62,7 +62,7 @@ func Test_CountCourses(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model((*Course)(nil)).Exec(ctx)
 		require.Nil(t, err)
 
-		_, err = CountCourses(db, nil, ctx)
+		_, err = CountCourses(ctx, db, nil)
 		require.ErrorContains(t, err, "no such table: courses")
 	})
 
@@ -71,7 +71,7 @@ func Test_CountCourses(t *testing.T) {
 		defer teardown(t)
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "", Value: ""}}}
-		count, err := CountCourses(db, dbParams, ctx)
+		count, err := CountCourses(ctx, db, dbParams)
 		require.ErrorContains(t, err, "syntax error")
 		assert.Equal(t, 0, count)
 	})
@@ -84,7 +84,7 @@ func Test_GetCourses(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		courses, err := GetCourses(db, nil, ctx)
+		courses, err := GetCourses(ctx, db, nil)
 		require.Nil(t, err)
 		require.Len(t, courses, 0)
 	})
@@ -96,7 +96,7 @@ func Test_GetCourses(t *testing.T) {
 		courses := NewTestCourses(t, db, 5)
 		NewTestScans(t, db, courses)
 
-		result, err := GetCourses(db, nil, ctx)
+		result, err := GetCourses(ctx, db, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 5)
 		assert.Equal(t, courses[0].ID, result[0].ID)
@@ -129,7 +129,7 @@ func Test_GetCourses(t *testing.T) {
 		// ----------------------------
 		relation := []database.Relation{{Struct: "Assets"}}
 
-		result, err := GetCourses(db, &database.DatabaseParams{Relation: relation}, ctx)
+		result, err := GetCourses(ctx, db, &database.DatabaseParams{Relation: relation})
 		require.Nil(t, err)
 		require.Len(t, result, 5)
 		assert.Equal(t, courses[0].ID, result[0].ID)
@@ -147,7 +147,7 @@ func Test_GetCourses(t *testing.T) {
 		// ----------------------------
 		relation = []database.Relation{{Struct: "Assets"}, {Struct: "Assets.Attachments"}}
 
-		result, err = GetCourses(db, &database.DatabaseParams{Relation: relation}, ctx)
+		result, err = GetCourses(ctx, db, &database.DatabaseParams{Relation: relation})
 		require.Nil(t, err)
 		require.Len(t, result, 5)
 		assert.Equal(t, courses[0].ID, result[0].ID)
@@ -179,7 +179,7 @@ func Test_GetCourses(t *testing.T) {
 		p := pagination.New(c)
 
 		// Assert the last course in the pagination response
-		result, err := GetCourses(db, &database.DatabaseParams{Pagination: p}, ctx)
+		result, err := GetCourses(ctx, db, &database.DatabaseParams{Pagination: p})
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		assert.Equal(t, courses[9].ID, result[9].ID)
@@ -191,7 +191,7 @@ func Test_GetCourses(t *testing.T) {
 		p = pagination.New(c)
 
 		// Assert the last course in the pagination response
-		result, err = GetCourses(db, &database.DatabaseParams{Pagination: p}, ctx)
+		result, err = GetCourses(ctx, db, &database.DatabaseParams{Pagination: p})
 		require.Nil(t, err)
 		require.Len(t, result, 7)
 		assert.Equal(t, courses[16].ID, result[6].ID)
@@ -205,7 +205,7 @@ func Test_GetCourses(t *testing.T) {
 
 		courses := NewTestCourses(t, db, 5)
 
-		result, err := GetCourses(db, &database.DatabaseParams{OrderBy: []string{"created_at desc"}}, ctx)
+		result, err := GetCourses(ctx, db, &database.DatabaseParams{OrderBy: []string{"created_at desc"}})
 		require.Nil(t, err)
 		require.Len(t, result, 5)
 		assert.Equal(t, courses[4].ID, result[0].ID)
@@ -221,14 +221,14 @@ func Test_GetCourses(t *testing.T) {
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: courses[2].ID}}}
 
-		result, err := GetCourses(db, dbParams, ctx)
+		result, err := GetCourses(ctx, db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, courses[2].ID, result[0].ID)
 
 		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "course.id", Value: courses[3].ID}}}
 
-		result, err = GetCourses(db, dbParams, ctx)
+		result, err = GetCourses(ctx, db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, courses[3].ID, result[0].ID)
@@ -249,11 +249,11 @@ func Test_GetCourses(t *testing.T) {
 		p := pagination.New(c)
 
 		// With pagination
-		_, err = GetCourses(db, &database.DatabaseParams{Pagination: p}, ctx)
+		_, err = GetCourses(ctx, db, &database.DatabaseParams{Pagination: p})
 		require.ErrorContains(t, err, "no such table: courses")
 
 		// Without pagination
-		_, err = GetCourses(db, nil, ctx)
+		_, err = GetCourses(ctx, db, nil)
 		require.ErrorContains(t, err, "no such table: courses")
 	})
 }
@@ -267,7 +267,7 @@ func Test_GetCourse(t *testing.T) {
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: "1"}}}
 
-		course, err := GetCourse(db, dbParams, ctx)
+		course, err := GetCourse(ctx, db, dbParams)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, course)
 	})
@@ -281,7 +281,7 @@ func Test_GetCourse(t *testing.T) {
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: courses[2].ID}}}
 
-		result, err := GetCourse(db, dbParams, ctx)
+		result, err := GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, courses[2].ID, result.ID)
 		assert.Equal(t, courses[2].Title, result.Title)
@@ -316,7 +316,7 @@ func Test_GetCourse(t *testing.T) {
 			Relation: []database.Relation{{Struct: "Assets"}},
 		}
 
-		result, err := GetCourse(db, dbParams, ctx)
+		result, err := GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, courses[2].ID, result.ID)
 
@@ -336,7 +336,7 @@ func Test_GetCourse(t *testing.T) {
 			Relation: []database.Relation{{Struct: "Assets"}, {Struct: "Assets.Attachments"}},
 		}
 
-		result, err = GetCourse(db, dbParams, ctx)
+		result, err = GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, courses[3].ID, result.ID)
 
@@ -402,7 +402,7 @@ func Test_GetCourse(t *testing.T) {
 		require.Nil(t, err)
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: "1"}}}
-		_, err = GetCourse(db, dbParams, ctx)
+		_, err = GetCourse(ctx, db, dbParams)
 		require.ErrorContains(t, err, "no such table: courses")
 	})
 
@@ -413,7 +413,7 @@ func Test_GetCourse(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
 		require.Nil(t, err)
 
-		_, err = GetCourse(db, nil, ctx)
+		_, err = GetCourse(ctx, db, nil)
 		require.ErrorContains(t, err, "where clause required")
 	})
 }
@@ -427,7 +427,7 @@ func Test_CreateCourse(t *testing.T) {
 
 		course := &Course{Title: "Course 1", Path: "/course1"}
 
-		err := CreateCourse(db, course, ctx)
+		err := CreateCourse(ctx, db, course)
 		require.Nil(t, err)
 		assert.NotEmpty(t, course.ID)
 		assert.False(t, course.Started)
@@ -437,7 +437,7 @@ func Test_CreateCourse(t *testing.T) {
 		assert.False(t, course.CreatedAt.IsZero())
 		assert.False(t, course.UpdatedAt.IsZero())
 
-		count, err := CountCourses(db, nil, ctx)
+		count, err := CountCourses(ctx, db, nil)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 	})
@@ -448,11 +448,11 @@ func Test_CreateCourse(t *testing.T) {
 
 		course := NewTestCourses(t, nil, 1)[0]
 
-		err := CreateCourse(db, course, ctx)
+		err := CreateCourse(ctx, db, course)
 		require.Nil(t, err)
 		assert.NotEmpty(t, course.ID)
 
-		err = CreateCourse(db, course, ctx)
+		err = CreateCourse(ctx, db, course)
 		assert.ErrorContains(t, err, "UNIQUE constraint failed: courses.path")
 	})
 
@@ -462,17 +462,17 @@ func Test_CreateCourse(t *testing.T) {
 
 		// Path
 		course := &Course{Title: "Course 1"}
-		err := CreateCourse(db, course, ctx)
+		err := CreateCourse(ctx, db, course)
 		assert.ErrorContains(t, err, "NOT NULL constraint failed: courses.path")
 
 		// Title
 		course = &Course{Path: "/course 1"}
-		err = CreateCourse(db, course, ctx)
+		err = CreateCourse(ctx, db, course)
 		assert.ErrorContains(t, err, "NOT NULL constraint failed: courses.title")
 
 		// Success
 		course = &Course{Title: "Course 1", Path: "/course 1"}
-		err = CreateCourse(db, course, ctx)
+		err = CreateCourse(ctx, db, course)
 		assert.Nil(t, err)
 	})
 }
@@ -487,19 +487,19 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 		require.Empty(t, course.CardPath)
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: course.ID}}}
-		origCourse, err := GetCourse(db, dbParams, ctx)
+		origCourse, err := GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)
 
 		// Give time to allow `updated at` to be different
 		time.Sleep(time.Millisecond * 1)
 
 		// Update the card path
-		err = UpdateCourseCardPath(db, course, "/path/to/card.jpg", ctx)
+		err = UpdateCourseCardPath(ctx, db, course, "/path/to/card.jpg")
 		require.Nil(t, err)
 
 		// Get the updated course
 		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: course.ID}}}
-		updatedCourse, err := GetCourse(db, dbParams, ctx)
+		updatedCourse, err := GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, "/path/to/card.jpg", updatedCourse.CardPath)
 		assert.NotEqual(t, origCourse.UpdatedAt, updatedCourse.UpdatedAt)
@@ -518,18 +518,18 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: course.ID}}}
 
-		origCourse, err := GetCourse(db, dbParams, ctx)
+		origCourse, err := GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)
 
 		// Give time to allow `updated at` to be different
 		time.Sleep(time.Millisecond * 1)
 
-		err = UpdateCourseCardPath(db, course, "", ctx)
+		err = UpdateCourseCardPath(ctx, db, course, "")
 		require.Nil(t, err)
 
 		// Assert there were no changes to the DB
 
-		updatedCourse, err := GetCourse(db, dbParams, ctx)
+		updatedCourse, err := GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Empty(t, updatedCourse.CardPath)
 		assert.Equal(t, origCourse.UpdatedAt.String(), updatedCourse.UpdatedAt.String())
@@ -547,7 +547,7 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 
 		course.ID = ""
 
-		err := UpdateCourseCardPath(db, course, "123", ctx)
+		err := UpdateCourseCardPath(ctx, db, course, "123")
 		assert.ErrorContains(t, err, "course ID cannot be empty")
 	})
 
@@ -559,20 +559,20 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: course.ID}}}
 
-		origCourse, err := GetCourse(db, dbParams, ctx)
+		origCourse, err := GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)
 
 		// Change the ID
 		course.ID = "invalid"
 
 		// Update the scan status to waiting
-		err = UpdateCourseCardPath(db, course, "1234", ctx)
+		err = UpdateCourseCardPath(ctx, db, course, "1234")
 		require.Nil(t, err)
 
 		// Assert there were no changes to the DB
 		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: origCourse.ID}}}
 
-		updatedCourse, err := GetCourse(db, dbParams, ctx)
+		updatedCourse, err := GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Empty(t, updatedCourse.CardPath)
 		assert.Equal(t, origCourse.UpdatedAt.String(), updatedCourse.UpdatedAt.String())
@@ -591,7 +591,7 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
 		require.Nil(t, err)
 
-		err = UpdateCourseCardPath(db, course, "123", ctx)
+		err = UpdateCourseCardPath(ctx, db, course, "123")
 		require.ErrorContains(t, err, "no such table: courses")
 	})
 }
@@ -605,7 +605,7 @@ func Test_DeleteCourse(t *testing.T) {
 
 		course := NewTestCourses(t, db, 1)[0]
 
-		count, err := DeleteCourse(db, course.ID, ctx)
+		count, err := DeleteCourse(ctx, db, course.ID)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 	})
@@ -615,7 +615,7 @@ func Test_DeleteCourse(t *testing.T) {
 		defer teardown(t)
 
 		// Invalid ID
-		count, err := DeleteCourse(db, "1", ctx)
+		count, err := DeleteCourse(ctx, db, "1")
 		require.Nil(t, err)
 		assert.Equal(t, 0, count)
 
@@ -623,7 +623,7 @@ func Test_DeleteCourse(t *testing.T) {
 		_, err = db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
 		require.Nil(t, err)
 
-		count, err = DeleteCourse(db, "1", ctx)
+		count, err = DeleteCourse(ctx, db, "1")
 		assert.ErrorContains(t, err, "no such table: courses")
 		assert.Equal(t, 0, count)
 	})

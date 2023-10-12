@@ -33,7 +33,7 @@ type Course struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // CountCourses returns the number of courses
-func CountCourses(db database.Database, params *database.DatabaseParams, ctx context.Context) (int, error) {
+func CountCourses(ctx context.Context, db database.Database, params *database.DatabaseParams) (int, error) {
 	q := db.DB().NewSelect().Model((*Course)(nil))
 
 	if params != nil && params.Where != nil {
@@ -46,7 +46,7 @@ func CountCourses(db database.Database, params *database.DatabaseParams, ctx con
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GetCourses returns a slice of courses
-func GetCourses(db database.Database, params *database.DatabaseParams, ctx context.Context) ([]*Course, error) {
+func GetCourses(ctx context.Context, db database.Database, params *database.DatabaseParams) ([]*Course, error) {
 	var courses []*Course
 
 	// Create a query that joins the scans table, selecting the scan status
@@ -60,7 +60,7 @@ func GetCourses(db database.Database, params *database.DatabaseParams, ctx conte
 	if params != nil {
 		// Pagination
 		if params.Pagination != nil {
-			if count, err := CountCourses(db, params, ctx); err != nil {
+			if count, err := CountCourses(ctx, db, params); err != nil {
 				return nil, err
 			} else {
 				params.Pagination.SetCount(count)
@@ -94,7 +94,7 @@ func GetCourses(db database.Database, params *database.DatabaseParams, ctx conte
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GetCourse returns a course based upon the where clause in the database params
-func GetCourse(db database.Database, params *database.DatabaseParams, ctx context.Context) (*Course, error) {
+func GetCourse(ctx context.Context, db database.Database, params *database.DatabaseParams) (*Course, error) {
 	if params == nil || params.Where == nil {
 		return nil, errors.New("where clause required")
 	}
@@ -128,7 +128,7 @@ func GetCourse(db database.Database, params *database.DatabaseParams, ctx contex
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // CreateCourse creates a new course
-func CreateCourse(db database.Database, course *Course, ctx context.Context) error {
+func CreateCourse(ctx context.Context, db database.Database, course *Course) error {
 	course.RefreshId()
 	course.RefreshCreatedAt()
 	course.RefreshUpdatedAt()
@@ -144,7 +144,7 @@ func CreateCourse(db database.Database, course *Course, ctx context.Context) err
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // UpdateCourseCardPath updates the course `card_path`
-func UpdateCourseCardPath(db database.Database, course *Course, newCardPath string, ctx context.Context) error {
+func UpdateCourseCardPath(ctx context.Context, db database.Database, course *Course, newCardPath string) error {
 	// Do nothing when the card path is the same
 	if course.CardPath == newCardPath {
 		return nil
@@ -180,7 +180,7 @@ func UpdateCourseCardPath(db database.Database, course *Course, newCardPath stri
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // DeleteCourse deletes a course with the given ID
-func DeleteCourse(db database.Database, id string, ctx context.Context) (int, error) {
+func DeleteCourse(ctx context.Context, db database.Database, id string) (int, error) {
 	course := &Course{}
 	course.SetId(id)
 

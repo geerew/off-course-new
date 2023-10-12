@@ -20,7 +20,7 @@ func Test_CountAssets(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		count, err := CountAssets(db, nil, ctx)
+		count, err := CountAssets(ctx, db, nil)
 		require.Nil(t, err)
 		assert.Equal(t, 0, count)
 	})
@@ -32,7 +32,7 @@ func Test_CountAssets(t *testing.T) {
 		course := NewTestCourses(t, db, 1)[0]
 		NewTestAssets(t, db, []*Course{course}, 5)
 
-		count, err := CountAssets(db, nil, ctx)
+		count, err := CountAssets(ctx, db, nil)
 		require.Nil(t, err)
 		assert.Equal(t, 5, count)
 	})
@@ -45,12 +45,12 @@ func Test_CountAssets(t *testing.T) {
 		assets := NewTestAssets(t, db, courses, 2)
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: assets[1].ID}}}
-		count, err := CountAssets(db, dbParams, ctx)
+		count, err := CountAssets(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 
 		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "id", Value: assets[0].ID}}}
-		count, err = CountAssets(db, dbParams, ctx)
+		count, err = CountAssets(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 	})
@@ -62,7 +62,7 @@ func Test_CountAssets(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Asset{}).Exec(ctx)
 		require.Nil(t, err)
 
-		_, err = CountAssets(db, nil, ctx)
+		_, err = CountAssets(ctx, db, nil)
 		require.ErrorContains(t, err, "no such table: assets")
 	})
 
@@ -71,7 +71,7 @@ func Test_CountAssets(t *testing.T) {
 		defer teardown(t)
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "", Value: ""}}}
-		count, err := CountAssets(db, dbParams, ctx)
+		count, err := CountAssets(ctx, db, dbParams)
 		require.ErrorContains(t, err, "syntax error")
 		assert.Equal(t, 0, count)
 	})
@@ -84,7 +84,7 @@ func Test_GetAssets(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		assets, err := GetAssets(db, nil, ctx)
+		assets, err := GetAssets(ctx, db, nil)
 		require.Nil(t, err)
 		require.Len(t, assets, 0)
 	})
@@ -97,7 +97,7 @@ func Test_GetAssets(t *testing.T) {
 		courses := NewTestCourses(t, db, 5)
 		assets := NewTestAssets(t, db, courses, 2)
 
-		result, err := GetAssets(db, nil, ctx)
+		result, err := GetAssets(ctx, db, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		assert.Equal(t, assets[0].ID, result[0].ID)
@@ -127,7 +127,7 @@ func Test_GetAssets(t *testing.T) {
 		// ----------------------------
 		relation := []database.Relation{{Struct: "Course"}}
 
-		result, err := GetAssets(db, &database.DatabaseParams{Relation: relation}, ctx)
+		result, err := GetAssets(ctx, db, &database.DatabaseParams{Relation: relation})
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		assert.Equal(t, assets[0].ID, result[0].ID)
@@ -145,7 +145,7 @@ func Test_GetAssets(t *testing.T) {
 		// ----------------------------
 		relation = []database.Relation{{Struct: "Course"}, {Struct: "Attachments"}}
 
-		result, err = GetAssets(db, &database.DatabaseParams{Relation: relation}, ctx)
+		result, err = GetAssets(ctx, db, &database.DatabaseParams{Relation: relation})
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		assert.Equal(t, assets[0].ID, result[0].ID)
@@ -178,7 +178,7 @@ func Test_GetAssets(t *testing.T) {
 		p := pagination.New(c)
 
 		// Assert the last asset in the paginated response
-		result, err := GetAssets(db, &database.DatabaseParams{Pagination: p}, ctx)
+		result, err := GetAssets(ctx, db, &database.DatabaseParams{Pagination: p})
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		assert.Equal(t, assets[9].ID, result[9].ID)
@@ -190,7 +190,7 @@ func Test_GetAssets(t *testing.T) {
 		p = pagination.New(c)
 
 		// Assert the last asset in the paginated response
-		result, err = GetAssets(db, &database.DatabaseParams{Pagination: p}, ctx)
+		result, err = GetAssets(ctx, db, &database.DatabaseParams{Pagination: p})
 		require.Nil(t, err)
 		require.Len(t, result, 6)
 		assert.Equal(t, assets[15].ID, result[5].ID)
@@ -205,7 +205,7 @@ func Test_GetAssets(t *testing.T) {
 		courses := NewTestCourses(t, db, 5)
 		assets := NewTestAssets(t, db, courses, 2)
 
-		result, err := GetAssets(db, &database.DatabaseParams{OrderBy: []string{"created_at desc"}}, ctx)
+		result, err := GetAssets(ctx, db, &database.DatabaseParams{OrderBy: []string{"created_at desc"}})
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		assert.Equal(t, assets[9].ID, result[0].ID)
@@ -221,14 +221,14 @@ func Test_GetAssets(t *testing.T) {
 
 		// Get asset 3
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: assets[2].ID}}}
-		result, err := GetAssets(db, dbParams, ctx)
+		result, err := GetAssets(ctx, db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, assets[2].ID, result[0].ID)
 
 		// Get all assets for course 1
 		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "course_id", Value: courses[0].ID}}}
-		result, err = GetAssets(db, dbParams, ctx)
+		result, err = GetAssets(ctx, db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 2)
 		assert.Equal(t, assets[0].ID, result[0].ID)
@@ -250,11 +250,11 @@ func Test_GetAssets(t *testing.T) {
 		p := pagination.New(c)
 
 		// With pagination
-		_, err = GetAssets(db, &database.DatabaseParams{Pagination: p}, ctx)
+		_, err = GetAssets(ctx, db, &database.DatabaseParams{Pagination: p})
 		require.ErrorContains(t, err, "no such table: assets")
 
 		// Without pagination
-		_, err = GetAssets(db, nil, ctx)
+		_, err = GetAssets(ctx, db, nil)
 		require.ErrorContains(t, err, "no such table: assets")
 	})
 }
@@ -268,7 +268,7 @@ func Test_GetAsset(t *testing.T) {
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: "1"}}}
 
-		asset, err := GetAsset(db, dbParams, ctx)
+		asset, err := GetAsset(ctx, db, dbParams)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, asset)
 	})
@@ -282,7 +282,7 @@ func Test_GetAsset(t *testing.T) {
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: assets[2].ID}}}
 
-		result, err := GetAsset(db, dbParams, ctx)
+		result, err := GetAsset(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, assets[2].ID, result.ID)
 		assert.Equal(t, assets[2].CourseID, result.CourseID)
@@ -314,7 +314,7 @@ func Test_GetAsset(t *testing.T) {
 			Relation: []database.Relation{{Struct: "Course"}},
 		}
 
-		result, err := GetAsset(db, dbParams, ctx)
+		result, err := GetAsset(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, assets[2].ID, result.ID)
 		assert.Equal(t, assets[2].CourseID, result.CourseID)
@@ -334,7 +334,7 @@ func Test_GetAsset(t *testing.T) {
 			Relation: []database.Relation{{Struct: "Course"}, {Struct: "Attachments"}},
 		}
 
-		result, err = GetAsset(db, dbParams, ctx)
+		result, err = GetAsset(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, assets[6].ID, result.ID)
 		assert.Equal(t, assets[6].CourseID, result.CourseID)
@@ -357,7 +357,7 @@ func Test_GetAsset(t *testing.T) {
 		require.Nil(t, err)
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: "1"}}}
-		_, err = GetAsset(db, dbParams, ctx)
+		_, err = GetAsset(ctx, db, dbParams)
 		require.ErrorContains(t, err, "no such table: assets")
 	})
 
@@ -368,7 +368,7 @@ func Test_GetAsset(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Asset{}).Exec(ctx)
 		require.Nil(t, err)
 
-		_, err = GetAttachment(db, nil, ctx)
+		_, err = GetAttachment(ctx, db, nil)
 		require.ErrorContains(t, err, "where clause required")
 	})
 }
@@ -383,7 +383,7 @@ func Test_CreateAsset(t *testing.T) {
 		course := NewTestCourses(t, db, 1)[0]
 		asset := NewTestAssets(t, nil, []*Course{course}, 1)[0]
 
-		err := CreateAsset(db, asset, ctx)
+		err := CreateAsset(ctx, db, asset)
 		require.Nil(t, err)
 		assert.NotEmpty(t, asset.ID)
 		assert.Equal(t, course.ID, asset.CourseID)
@@ -396,7 +396,7 @@ func Test_CreateAsset(t *testing.T) {
 
 		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: asset.ID}}}
 
-		_, err = GetAsset(db, dbParams, ctx)
+		_, err = GetAsset(ctx, db, dbParams)
 		require.Nil(t, err)
 	})
 
@@ -407,11 +407,11 @@ func Test_CreateAsset(t *testing.T) {
 		course := NewTestCourses(t, db, 1)[0]
 		asset := NewTestAssets(t, nil, []*Course{course}, 1)[0]
 
-		err := CreateAsset(db, asset, ctx)
+		err := CreateAsset(ctx, db, asset)
 		require.Nil(t, err)
 		assert.NotEmpty(t, asset.ID)
 
-		err = CreateAsset(db, asset, ctx)
+		err = CreateAsset(ctx, db, asset)
 		assert.ErrorContains(t, err, "UNIQUE constraint failed: assets.path")
 	})
 
@@ -421,40 +421,40 @@ func Test_CreateAsset(t *testing.T) {
 
 		// Title
 		asset := &Asset{}
-		assert.ErrorContains(t, CreateAsset(db, asset, ctx), "NOT NULL constraint failed: assets.title")
+		assert.ErrorContains(t, CreateAsset(ctx, db, asset), "NOT NULL constraint failed: assets.title")
 		asset = &Asset{Title: ""}
-		assert.ErrorContains(t, CreateAsset(db, asset, ctx), "NOT NULL constraint failed: assets.title")
+		assert.ErrorContains(t, CreateAsset(ctx, db, asset), "NOT NULL constraint failed: assets.title")
 
 		// Prefix
 		asset = &Asset{Title: "Course 1"}
-		assert.ErrorContains(t, CreateAsset(db, asset, ctx), "NOT NULL constraint failed: assets.prefix")
+		assert.ErrorContains(t, CreateAsset(ctx, db, asset), "NOT NULL constraint failed: assets.prefix")
 		asset = &Asset{Title: "Course 1", Prefix: -1}
-		assert.ErrorContains(t, CreateAsset(db, asset, ctx), "prefix must be greater than 0")
+		assert.ErrorContains(t, CreateAsset(ctx, db, asset), "prefix must be greater than 0")
 
 		// Type
 		asset = &Asset{Title: "Course 1", Prefix: 1}
-		assert.ErrorContains(t, CreateAsset(db, asset, ctx), "NOT NULL constraint failed: assets.type")
+		assert.ErrorContains(t, CreateAsset(ctx, db, asset), "NOT NULL constraint failed: assets.type")
 		asset = &Asset{Title: "Course 1", Prefix: 1, Type: types.Asset{}}
-		assert.ErrorContains(t, CreateAsset(db, asset, ctx), "NOT NULL constraint failed: assets.type")
+		assert.ErrorContains(t, CreateAsset(ctx, db, asset), "NOT NULL constraint failed: assets.type")
 
 		// Path
 		asset = &Asset{Title: "Course 1", Prefix: 1, Type: *types.NewAsset("mp4")}
-		assert.ErrorContains(t, CreateAsset(db, asset, ctx), "NOT NULL constraint failed: assets.path")
+		assert.ErrorContains(t, CreateAsset(ctx, db, asset), "NOT NULL constraint failed: assets.path")
 		asset = &Asset{Title: "Course 1", Prefix: 1, Type: *types.NewAsset("mp4"), Path: ""}
-		assert.ErrorContains(t, CreateAsset(db, asset, ctx), "NOT NULL constraint failed: assets.path")
+		assert.ErrorContains(t, CreateAsset(ctx, db, asset), "NOT NULL constraint failed: assets.path")
 
 		// Course ID
 		asset = &Asset{Title: "Course 1", Prefix: 1, Type: *types.NewAsset("mp4"), Path: "/course 1/01 asset"}
-		assert.ErrorContains(t, CreateAsset(db, asset, ctx), "FOREIGN KEY constraint failed")
+		assert.ErrorContains(t, CreateAsset(ctx, db, asset), "FOREIGN KEY constraint failed")
 		asset = &Asset{CourseID: "", Title: "Course 1", Prefix: 1, Type: *types.NewAsset("mp4"), Path: "/course 1/01 asset"}
-		assert.ErrorContains(t, CreateAsset(db, asset, ctx), "FOREIGN KEY constraint failed")
+		assert.ErrorContains(t, CreateAsset(ctx, db, asset), "FOREIGN KEY constraint failed")
 		asset = &Asset{CourseID: "1234", Title: "Course 1", Prefix: 1, Type: *types.NewAsset("mp4"), Path: "/course 1/01 asset"}
-		assert.ErrorContains(t, CreateAsset(db, asset, ctx), "FOREIGN KEY constraint failed")
+		assert.ErrorContains(t, CreateAsset(ctx, db, asset), "FOREIGN KEY constraint failed")
 
 		// Success
 		course := NewTestCourses(t, db, 1)[0]
 		asset = &Asset{CourseID: course.ID, Title: "Course 1", Prefix: 1, Type: *types.NewAsset("mp4"), Path: "/course 1/01 asset"}
-		assert.Nil(t, CreateAsset(db, asset, ctx))
+		assert.Nil(t, CreateAsset(ctx, db, asset))
 	})
 }
 
@@ -468,7 +468,7 @@ func Test_DeleteAsset(t *testing.T) {
 		course := NewTestCourses(t, db, 1)[0]
 		asset := NewTestAssets(t, db, []*Course{course}, 2)[0]
 
-		count, err := DeleteAsset(db, asset.ID, ctx)
+		count, err := DeleteAsset(ctx, db, asset.ID)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 	})
@@ -480,11 +480,11 @@ func Test_DeleteAsset(t *testing.T) {
 		course := NewTestCourses(t, db, 1)[0]
 		NewTestAssets(t, db, []*Course{course}, 1)
 
-		count, err := DeleteCourse(db, course.ID, ctx)
+		count, err := DeleteCourse(ctx, db, course.ID)
 		require.Nil(t, err)
 		require.Equal(t, 1, count)
 
-		count, err = CountAssets(db, nil, ctx)
+		count, err = CountAssets(ctx, db, nil)
 		require.Nil(t, err)
 		assert.Equal(t, 0, count)
 	})
@@ -494,7 +494,7 @@ func Test_DeleteAsset(t *testing.T) {
 		defer teardown(t)
 
 		// Invalid ID
-		count, err := DeleteAsset(db, "1", ctx)
+		count, err := DeleteAsset(ctx, db, "1")
 		require.Nil(t, err)
 		assert.Equal(t, 0, count)
 
@@ -502,7 +502,7 @@ func Test_DeleteAsset(t *testing.T) {
 		_, err = db.DB().NewDropTable().Model(&Asset{}).Exec(ctx)
 		require.Nil(t, err)
 
-		count, err = DeleteAsset(db, "1", ctx)
+		count, err = DeleteAsset(ctx, db, "1")
 		assert.ErrorContains(t, err, "no such table: assets")
 		assert.Equal(t, 0, count)
 	})

@@ -26,7 +26,7 @@ type Scan struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // CountScans returns the number of scans
-func CountScans(db database.Database, params *database.DatabaseParams, ctx context.Context) (int, error) {
+func CountScans(ctx context.Context, db database.Database, params *database.DatabaseParams) (int, error) {
 	q := db.DB().NewSelect().Model((*Scan)(nil))
 
 	if params != nil && params.Where != nil {
@@ -39,7 +39,7 @@ func CountScans(db database.Database, params *database.DatabaseParams, ctx conte
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GetScans returns a slice of scans
-func GetScans(db database.Database, params *database.DatabaseParams, ctx context.Context) ([]*Scan, error) {
+func GetScans(ctx context.Context, db database.Database, params *database.DatabaseParams) ([]*Scan, error) {
 	var scans []*Scan
 
 	q := db.DB().NewSelect().Model(&scans)
@@ -47,7 +47,7 @@ func GetScans(db database.Database, params *database.DatabaseParams, ctx context
 	if params != nil {
 		// Pagination
 		if params.Pagination != nil {
-			if count, err := CountScans(db, params, ctx); err != nil {
+			if count, err := CountScans(ctx, db, params); err != nil {
 				return nil, err
 			} else {
 				params.Pagination.SetCount(count)
@@ -81,7 +81,7 @@ func GetScans(db database.Database, params *database.DatabaseParams, ctx context
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GetScan returns a scan based upon the where clause in the database params
-func GetScan(db database.Database, params *database.DatabaseParams, ctx context.Context) (*Scan, error) {
+func GetScan(ctx context.Context, db database.Database, params *database.DatabaseParams) (*Scan, error) {
 	if params == nil || params.Where == nil {
 		return nil, errors.New("where clause required")
 	}
@@ -110,7 +110,7 @@ func GetScan(db database.Database, params *database.DatabaseParams, ctx context.
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // CreateScan inserts a new scan with a status of waiting
-func CreateScan(db database.Database, scan *Scan, ctx context.Context) error {
+func CreateScan(ctx context.Context, db database.Database, scan *Scan) error {
 	scan.RefreshId()
 	scan.RefreshCreatedAt()
 	scan.RefreshUpdatedAt()
@@ -127,7 +127,7 @@ func CreateScan(db database.Database, scan *Scan, ctx context.Context) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // UpdateScanStatus updates the scan status
-func UpdateScanStatus(db database.Database, scan *Scan, newStatus types.ScanStatusType, ctx context.Context) error {
+func UpdateScanStatus(ctx context.Context, db database.Database, scan *Scan, newStatus types.ScanStatusType) error {
 	// Do nothing when the status is the same
 	ss := types.NewScanStatus(newStatus)
 	if scan.Status == ss {
@@ -165,7 +165,7 @@ func UpdateScanStatus(db database.Database, scan *Scan, newStatus types.ScanStat
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // DeleteScan deletes a scan with the given ID
-func DeleteScan(db database.Database, id string, ctx context.Context) (int, error) {
+func DeleteScan(ctx context.Context, db database.Database, id string) (int, error) {
 	scan := &Scan{}
 	scan.SetId(id)
 
@@ -180,7 +180,7 @@ func DeleteScan(db database.Database, id string, ctx context.Context) (int, erro
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // NextScan returns the next scan to be processed whose status is `waiting“
-func NextScan(db database.Database, ctx context.Context) (*Scan, error) {
+func NextScan(ctx context.Context, db database.Database) (*Scan, error) {
 	var scan Scan
 
 	err := db.DB().NewSelect().
