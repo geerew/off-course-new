@@ -5,8 +5,11 @@ import (
 	"testing"
 
 	"github.com/geerew/off-course/database"
+	"github.com/geerew/off-course/utils/pagination"
+	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/valyala/fasthttp"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -154,6 +157,44 @@ func Test_GetAttachments(t *testing.T) {
 		assert.Equal(t, assets[0].ID, result[0].Asset.ID)
 	})
 
+	t.Run("pagination", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 2)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 4)
+
+		// Pagination context
+		app := fiber.New()
+		c := app.AcquireCtx(&fasthttp.RequestCtx{})
+		defer app.ReleaseCtx(c)
+
+		// Page 1 with 10 items
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
+		p := pagination.New(c)
+
+		// Assert the last attachment in the paginated response
+		result, err := GetAttachments(db, &database.DatabaseParams{Pagination: p}, ctx)
+		require.Nil(t, err)
+		require.Len(t, result, 10)
+		assert.Equal(t, attachments[9].ID, result[9].ID)
+		assert.Equal(t, attachments[9].CourseID, result[9].CourseID)
+		assert.Equal(t, attachments[9].AssetID, result[9].AssetID)
+
+		// Page 2 with 10 items
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=2" + "&" + pagination.PerPageQueryParam + "=10")
+		p = pagination.New(c)
+
+		// Assert the last attachment in the paginated response
+		result, err = GetAttachments(db, &database.DatabaseParams{Pagination: p}, ctx)
+		require.Nil(t, err)
+		require.Len(t, result, 6)
+		assert.Equal(t, attachments[15].ID, result[5].ID)
+		assert.Equal(t, attachments[15].CourseID, result[5].CourseID)
+		assert.Equal(t, attachments[15].AssetID, result[5].AssetID)
+	})
+
 	t.Run("orderby", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
@@ -199,19 +240,18 @@ func Test_GetAttachments(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Attachment{}).Exec(ctx)
 		require.Nil(t, err)
 
-		// Pagination count error
-		// TODO
-		// app := fiber.New()
-		// c := app.AcquireCtx(&fasthttp.RequestCtx{})
-		// defer app.ReleaseCtx(c)
+		app := fiber.New()
+		c := app.AcquireCtx(&fasthttp.RequestCtx{})
+		defer app.ReleaseCtx(c)
 
-		// c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
-		// p := pagination.New(c)
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
+		p := pagination.New(c)
 
-		// _, err = GetScans(db, &database.DatabaseParams{Pagination: p})
-		// require.ErrorContains(t, err, "no such table: scans")
+		// With pagination
+		_, err = GetAttachments(db, &database.DatabaseParams{Pagination: p}, ctx)
+		require.ErrorContains(t, err, "no such table: attachments")
 
-		// Standard error
+		// Without pagination
 		_, err = GetAttachments(db, nil, ctx)
 		require.ErrorContains(t, err, "no such table: attachments")
 	})

@@ -5,9 +5,12 @@ import (
 	"testing"
 
 	"github.com/geerew/off-course/database"
+	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/types"
+	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/valyala/fasthttp"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -133,6 +136,43 @@ func Test_GetAssets(t *testing.T) {
 		// TODO attachments relation
 	})
 
+	t.Run("pagination", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 4)
+		assets := NewTestAssets(t, db, courses, 4)
+
+		// Pagination context
+		app := fiber.New()
+		c := app.AcquireCtx(&fasthttp.RequestCtx{})
+		defer app.ReleaseCtx(c)
+
+		// Page 1 with 10 items
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
+		p := pagination.New(c)
+
+		// Assert the last asset in the paginated response
+		result, err := GetAssets(db, &database.DatabaseParams{Pagination: p}, ctx)
+		require.Nil(t, err)
+		require.Len(t, result, 10)
+		assert.Equal(t, assets[9].ID, result[9].ID)
+		assert.Equal(t, assets[9].Title, result[9].Title)
+		assert.Equal(t, assets[9].Path, result[9].Path)
+
+		// Page 2 with 10 items
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=2" + "&" + pagination.PerPageQueryParam + "=10")
+		p = pagination.New(c)
+
+		// Assert the last asset in the paginated response
+		result, err = GetAssets(db, &database.DatabaseParams{Pagination: p}, ctx)
+		require.Nil(t, err)
+		require.Len(t, result, 6)
+		assert.Equal(t, assets[15].ID, result[5].ID)
+		assert.Equal(t, assets[15].Title, result[5].Title)
+		assert.Equal(t, assets[15].Path, result[5].Path)
+	})
+
 	t.Run("orderby", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
@@ -179,60 +219,21 @@ func Test_GetAssets(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Asset{}).Exec(ctx)
 		require.Nil(t, err)
 
-		// Pagination count error
-		// TODO
-		// app := fiber.New()
-		// c := app.AcquireCtx(&fasthttp.RequestCtx{})
-		// defer app.ReleaseCtx(c)
+		app := fiber.New()
+		c := app.AcquireCtx(&fasthttp.RequestCtx{})
+		defer app.ReleaseCtx(c)
 
-		// c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
-		// p := pagination.New(c)
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
+		p := pagination.New(c)
 
-		// _, err = GetScans(db, &database.DatabaseParams{Pagination: p})
-		// require.ErrorContains(t, err, "no such table: scans")
+		// With pagination
+		_, err = GetAssets(db, &database.DatabaseParams{Pagination: p}, ctx)
+		require.ErrorContains(t, err, "no such table: assets")
 
-		// Standard error
+		// Without pagination
 		_, err = GetAssets(db, nil, ctx)
 		require.ErrorContains(t, err, "no such table: assets")
 	})
-
-	// 	t.Run("pagination", func(t *testing.T) {
-	// 		_, db, teardown := setup(t)
-	// 		defer teardown(t)
-
-	// 		// Create 4 courses with 4 assets each
-	// 		courses := CreateTestCourses(t, db, 4)
-	// 		assets := CreateTestAssets(t, db, courses, 4)
-
-	// 		// Create context for pagination
-	// 		app := fiber.New()
-	// 		c := app.AcquireCtx(&fasthttp.RequestCtx{})
-	// 		defer app.ReleaseCtx(c)
-
-	// 		// Get the first 10 assets
-	// 		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
-	// 		p := pagination.New(c)
-
-	// 		// Assert the last asset in the pagination response
-	// 		result, err := GetAssets(db, &database.DatabaseParams{Pagination: p})
-	// 		require.Nil(t, err)
-	// 		require.Len(t, result, 10)
-	// 		assert.Equal(t, assets[9].ID, result[9].ID)
-	// 		assert.Equal(t, assets[9].Title, result[9].Title)
-	// 		assert.Equal(t, assets[9].Path, result[9].Path)
-
-	// 		// Set context URI and create pagination for page 2 with 10 items
-	// 		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=2" + "&" + pagination.PerPageQueryParam + "=10")
-	// 		p = pagination.New(c)
-
-	// 		// Assert the last asset in the pagination response
-	// 		result, err = GetAssets(db, &database.DatabaseParams{Pagination: p})
-	// 		require.Nil(t, err)
-	// 		require.Len(t, result, 6)
-	// 		assert.Equal(t, assets[15].ID, result[5].ID)
-	// 		assert.Equal(t, assets[15].Title, result[5].Title)
-	// 		assert.Equal(t, assets[15].Path, result[5].Path)
-	// 	})
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

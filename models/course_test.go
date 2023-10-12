@@ -6,8 +6,11 @@ import (
 	"time"
 
 	"github.com/geerew/off-course/database"
+	"github.com/geerew/off-course/utils/pagination"
+	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/valyala/fasthttp"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -133,30 +136,41 @@ func Test_GetCourses(t *testing.T) {
 		// TODO attachments
 	})
 
-	// 	t.Run("preload", func(t *testing.T) {
-	// 		_, db, ctx, teardown := setup(t)
-	// 		defer teardown(t)
+	t.Run("pagination", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
 
-	// 		// Create 3 course with 5 assets
-	// 		courses := NewTestCourses(t, db, 3)
-	// 		assets := CreateTestAssets(t, db, courses, 5)
+		courses := NewTestCourses(t, db, 17)
 
-	// 		preload := []database.Preload{
-	// 			{Table: "Assets"},
-	// 			{Table: "Assets.Attachments"},
-	// 		}
+		// Pagination context
+		app := fiber.New()
+		c := app.AcquireCtx(&fasthttp.RequestCtx{})
+		defer app.ReleaseCtx(c)
 
-	// 		result, err := GetCourses(db, &database.DatabaseParams{Preload: preload})
-	// 		require.Nil(t, err)
-	// 		require.Len(t, result, 3)
-	// 		assert.Equal(t, courses[0].ID, result[0].ID)
-	// 		assert.Equal(t, courses[0].Title, result[0].Title)
-	// 		assert.Equal(t, courses[0].Path, result[0].Path)
+		// Page 1 with 10 items
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
+		p := pagination.New(c)
 
-	// 		// Assert the assets
-	// 		require.Len(t, result[0].Assets, 5)
-	// 		assert.Equal(t, assets[0].ID, result[0].Assets[0].ID)
-	// 	})
+		// Assert the last course in the pagination response
+		result, err := GetCourses(db, &database.DatabaseParams{Pagination: p}, ctx)
+		require.Nil(t, err)
+		require.Len(t, result, 10)
+		assert.Equal(t, courses[9].ID, result[9].ID)
+		assert.Equal(t, courses[9].Title, result[9].Title)
+		assert.Equal(t, courses[9].Path, result[9].Path)
+
+		// Page 2 with 10 items
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=2" + "&" + pagination.PerPageQueryParam + "=10")
+		p = pagination.New(c)
+
+		// Assert the last course in the pagination response
+		result, err = GetCourses(db, &database.DatabaseParams{Pagination: p}, ctx)
+		require.Nil(t, err)
+		require.Len(t, result, 7)
+		assert.Equal(t, courses[16].ID, result[6].ID)
+		assert.Equal(t, courses[16].Title, result[6].Title)
+		assert.Equal(t, courses[16].Path, result[6].Path)
+	})
 
 	t.Run("orderby", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
@@ -219,43 +233,6 @@ func Test_GetCourses(t *testing.T) {
 		assert.Equal(t, courses[3].ID, result[0].ID)
 	})
 
-	// 	t.Run("pagination", func(t *testing.T) {
-	// 		_, db, ctx, teardown := setup(t)
-	// 		defer teardown(t)
-
-	// 		// Create 17 courses
-	// 		courses := NewTestCourses(t, db, 17)
-
-	// 		// Create context for pagination
-	// 		app := fiber.New()
-	// 		c := app.AcquireCtx(&fasthttp.RequestCtx{})
-	// 		defer app.ReleaseCtx(c)
-
-	// 		// Set context URI and create pagination for page 1 with 10 items
-	// 		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
-	// 		p := pagination.New(c)
-
-	// 		// Assert the last course in the pagination response
-	// 		result, err := GetCourses(db, &database.DatabaseParams{Pagination: p})
-	// 		require.Nil(t, err)
-	// 		require.Len(t, result, 10)
-	// 		assert.Equal(t, courses[9].ID, result[9].ID)
-	// 		assert.Equal(t, courses[9].Title, result[9].Title)
-	// 		assert.Equal(t, courses[9].Path, result[9].Path)
-
-	// 		// Set context URI and create pagination for page 2 with 10 items
-	// 		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=2" + "&" + pagination.PerPageQueryParam + "=10")
-	// 		p = pagination.New(c)
-
-	// 		// Assert the last course in the pagination response
-	// 		result, err = GetCourses(db, &database.DatabaseParams{Pagination: p})
-	// 		require.Nil(t, err)
-	// 		require.Len(t, result, 7)
-	// 		assert.Equal(t, courses[16].ID, result[6].ID)
-	// 		assert.Equal(t, courses[16].Title, result[6].Title)
-	// 		assert.Equal(t, courses[16].Path, result[6].Path)
-	// 	})
-
 	t.Run("db error", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
@@ -263,18 +240,16 @@ func Test_GetCourses(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
 		require.Nil(t, err)
 
-		// Pagination count error
-		// TODO
-		// app := fiber.New()
-		// c := app.AcquireCtx(&fasthttp.RequestCtx{})
-		// defer app.ReleaseCtx(c)
+		app := fiber.New()
+		c := app.AcquireCtx(&fasthttp.RequestCtx{})
+		defer app.ReleaseCtx(c)
 
-		// c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
-		// p := pagination.New(c)
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
+		p := pagination.New(c)
 
-		// // With pagination
-		// _, err = GetCourses(db, &database.DatabaseParams{Pagination: p})
-		// require.ErrorContains(t, err, "no such table: courses")
+		// With pagination
+		_, err = GetCourses(db, &database.DatabaseParams{Pagination: p}, ctx)
+		require.ErrorContains(t, err, "no such table: courses")
 
 		// Without pagination
 		_, err = GetCourses(db, nil, ctx)

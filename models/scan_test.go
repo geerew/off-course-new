@@ -6,9 +6,12 @@ import (
 	"time"
 
 	"github.com/geerew/off-course/database"
+	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/types"
+	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/valyala/fasthttp"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -127,6 +130,43 @@ func Test_GetScans(t *testing.T) {
 		assert.Equal(t, courses[0].Title, result[0].Course.Title)
 	})
 
+	t.Run("pagination", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 17)
+		scans := NewTestScans(t, db, courses)
+
+		// Pagination context
+		app := fiber.New()
+		c := app.AcquireCtx(&fasthttp.RequestCtx{})
+		defer app.ReleaseCtx(c)
+
+		// Page 1 with 10 items
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
+		p := pagination.New(c)
+
+		// Assert the last scan in the paginated response
+		result, err := GetScans(db, &database.DatabaseParams{Pagination: p}, ctx)
+		require.Nil(t, err)
+		require.Len(t, result, 10)
+		assert.Equal(t, scans[9].ID, result[9].ID)
+		assert.Equal(t, scans[9].CourseID, result[9].CourseID)
+		assert.Equal(t, scans[9].Status, result[9].Status)
+
+		// Page 2 with 10 items
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=2" + "&" + pagination.PerPageQueryParam + "=10")
+		p = pagination.New(c)
+
+		// Assert the last scan in the paginated response
+		result, err = GetScans(db, &database.DatabaseParams{Pagination: p}, ctx)
+		require.Nil(t, err)
+		require.Len(t, result, 7)
+		assert.Equal(t, scans[16].ID, result[6].ID)
+		assert.Equal(t, scans[16].CourseID, result[6].CourseID)
+		assert.Equal(t, scans[16].Status, result[6].Status)
+	})
+
 	t.Run("orderby", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
@@ -170,60 +210,21 @@ func Test_GetScans(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Scan{}).Exec(ctx)
 		require.Nil(t, err)
 
-		// Pagination count error
-		// TODO
-		// app := fiber.New()
-		// c := app.AcquireCtx(&fasthttp.RequestCtx{})
-		// defer app.ReleaseCtx(c)
+		app := fiber.New()
+		c := app.AcquireCtx(&fasthttp.RequestCtx{})
+		defer app.ReleaseCtx(c)
 
-		// c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
-		// p := pagination.New(c)
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
+		p := pagination.New(c)
 
-		// _, err = GetScans(db, &database.DatabaseParams{Pagination: p})
-		// require.ErrorContains(t, err, "no such table: scans")
+		// With pagination
+		_, err = GetScans(db, &database.DatabaseParams{Pagination: p}, ctx)
+		require.ErrorContains(t, err, "no such table: scans")
 
-		// Standard error
+		// Without pagination
 		_, err = GetScans(db, nil, ctx)
 		require.ErrorContains(t, err, "no such table: scans")
 	})
-
-	// 	t.Run("pagination", func(t *testing.T) {
-	// 		_, db , ctx, teardown := setup(t)
-	// 		defer teardown(t)
-
-	// 		// Create 17 scans
-	// 		courses := NewTestCourses(t, db, 17)
-	// 		scans := NewTestScans(t, db, courses)
-
-	// 		// Create context for pagination
-	// 		app := fiber.New()
-	// 		c := app.AcquireCtx(&fasthttp.RequestCtx{})
-	// 		defer app.ReleaseCtx(c)
-
-	// 		// Set context URI and create pagination for page 1 with 10 items
-	// 		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
-	// 		p := pagination.New(c)
-
-	// 		// Assert the last scan in the pagination response
-	// 		result, err := GetScans(db, &database.DatabaseParams{Pagination: p})
-	// 		require.Nil(t, err)
-	// 		require.Len(t, result, 10)
-	// 		assert.Equal(t, scans[9].ID, result[9].ID)
-	// 		assert.Equal(t, scans[9].CourseID, result[9].CourseID)
-	// 		assert.Equal(t, scans[9].Status, result[9].Status)
-
-	// 		// Set context URI and create pagination for page 2 with 10 items
-	// 		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=2" + "&" + pagination.PerPageQueryParam + "=10")
-	// 		p = pagination.New(c)
-
-	// 		// Assert the last scan in the pagination response
-	// 		result, err = GetScans(db, &database.DatabaseParams{Pagination: p})
-	// 		require.Nil(t, err)
-	// 		require.Len(t, result, 7)
-	// 		assert.Equal(t, scans[16].ID, result[6].ID)
-	// 		assert.Equal(t, scans[16].CourseID, result[6].CourseID)
-	// 		assert.Equal(t, scans[16].Status, result[6].Status)
-	// 	})
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

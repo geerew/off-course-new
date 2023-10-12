@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
-	"gorm.io/gorm"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -26,7 +25,7 @@ const (
 type PaginationResult struct {
 	Page       int               `json:"page"`
 	PerPage    int               `json:"perPage"`
-	TotalItems int64             `json:"totalItems"`
+	TotalItems int               `json:"totalItems"`
 	TotalPages int               `json:"totalPages"`
 	Items      []json.RawMessage `json:"items"`
 }
@@ -37,7 +36,7 @@ type PaginationResult struct {
 type Pagination struct {
 	page       int
 	perPage    int
-	totalItems int64
+	totalItems int
 	totalPages int
 }
 
@@ -70,18 +69,9 @@ func (p *Pagination) Offset() int {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // SetCount sets the total number of items and calculates the total number of pages
-func (p *Pagination) SetCount(count int64) {
+func (p *Pagination) SetCount(count int) {
 	p.totalItems = count
 	p.totalPages = int(math.Ceil(float64(p.totalItems) / float64(p.perPage)))
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Paginate returns a pagination function for use with gorm scoped queries
-func (p *Pagination) Paginate() func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Offset(int(p.Offset())).Limit(p.Limit())
-	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -37,7 +37,7 @@ func Test_NewPagination(t *testing.T) {
 		p := New(c)
 		p.SetCount(24)
 		assert.Equal(t, 2, p.page)
-		assert.Equal(t, int64(24), p.totalItems)
+		assert.Equal(t, 24, p.totalItems)
 		assert.Equal(t, 3, p.totalPages)
 	})
 
@@ -52,7 +52,7 @@ func Test_NewPagination(t *testing.T) {
 
 		assert.Equal(t, 1, p.page)
 		assert.Equal(t, DefaultPerPage, p.perPage)
-		assert.Equal(t, int64(24), p.totalItems)
+		assert.Equal(t, 24, p.totalItems)
 		assert.Equal(t, 1, p.totalPages)
 	})
 }
@@ -172,21 +172,6 @@ func Test_PerPage(t *testing.T) {
 		actual := perPage(c)
 		assert.Equal(t, tt.expected, actual)
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func Test_Paginate(t *testing.T) {
-	app := fiber.New()
-	c := app.AcquireCtx(&fasthttp.RequestCtx{})
-	c.Request().SetRequestURI("/dummy?" + PageQueryParam + "=1" + "&" + PerPageQueryParam + "=5")
-	defer app.ReleaseCtx(c)
-
-	p := New(c)
-	p.SetCount(10)
-
-	paginate := p.Paginate()
-	assert.NotNil(t, paginate)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -12,14 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// import (
-// 	"time"
-
-// 	"github.com/geerew/off-course/database"
-// 	"github.com/geerew/off-course/utils/security"
-// 	"gorm.io/gorm"
-// )
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type Attachment struct {
@@ -56,16 +48,16 @@ func GetAttachments(db database.Database, params *database.DatabaseParams, ctx c
 	q := db.DB().NewSelect().Model(&attachments)
 
 	if params != nil {
-		// // Pagination
-		// if params.Pagination != nil {
-		// 	if count, err := CountScans(db, params); err != nil {
-		// 		return nil, err
-		// 	} else {
-		// 		params.Pagination.SetCount(count)
-		// 	}
+		// Pagination
+		if params.Pagination != nil {
+			if count, err := CountAttachments(db, params, ctx); err != nil {
+				return nil, err
+			} else {
+				params.Pagination.SetCount(count)
+			}
 
-		// 	q = q.Scopes(params.Pagination.Paginate())
-		// }
+			q = q.Offset(params.Pagination.Offset()).Limit(params.Pagination.Limit())
+		}
 
 		if params.Relation != nil {
 			q = selectRelation(q, params)

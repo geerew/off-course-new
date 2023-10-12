@@ -45,16 +45,16 @@ func GetScans(db database.Database, params *database.DatabaseParams, ctx context
 	q := db.DB().NewSelect().Model(&scans)
 
 	if params != nil {
-		// // Pagination
-		// if params.Pagination != nil {
-		// 	if count, err := CountScans(db, params); err != nil {
-		// 		return nil, err
-		// 	} else {
-		// 		params.Pagination.SetCount(count)
-		// 	}
+		// Pagination
+		if params.Pagination != nil {
+			if count, err := CountScans(db, params, ctx); err != nil {
+				return nil, err
+			} else {
+				params.Pagination.SetCount(count)
+			}
 
-		// 	q = q.Scopes(params.Pagination.Paginate())
-		// }
+			q = q.Offset(params.Pagination.Offset()).Limit(params.Pagination.Limit())
+		}
 
 		if params.Relation != nil {
 			q = selectRelation(q, params)

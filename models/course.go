@@ -58,16 +58,16 @@ func GetCourses(db database.Database, params *database.DatabaseParams, ctx conte
 		Join("LEFT JOIN ?0 ON (?0.?1 = ?2.?3)", bun.Ident("scans"), bun.Ident("course_id"), bun.Ident("course"), bun.Ident("id"))
 
 	if params != nil {
-		// 		// Pagination
-		// 		if params.Pagination != nil {
-		// 			if count, err := CountCourses(db, params); err != nil {
-		// 				return nil, err
-		// 			} else {
-		// 				params.Pagination.SetCount(count)
-		// 			}
+		// Pagination
+		if params.Pagination != nil {
+			if count, err := CountCourses(db, params, ctx); err != nil {
+				return nil, err
+			} else {
+				params.Pagination.SetCount(count)
+			}
 
-		// 			q = q.Scopes(params.Pagination.Paginate())
-		// 		}
+			q = q.Offset(params.Pagination.Offset()).Limit(params.Pagination.Limit())
+		}
 
 		// Relations
 		if params.Relation != nil {
