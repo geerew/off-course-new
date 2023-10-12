@@ -1,0 +1,239 @@
+package utils
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"net/url"
+	"reflect"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/rs/zerolog/log"
+)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// PrettyFormat is a function that receives any data type, converts it to a
+// JSON string, and formats it with indents for readability. It uses the
+// standard library's json.MarshalIndent function to create a string
+// representation of the input data with two-space indents.
+func PrettyFormat(x any) string {
+	b, _ := json.MarshalIndent(x, "", "  ")
+	return string(b)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TimeTrack is a function that receives a time value and a name string,
+// calculates the time elapsed since the provided time, and then prints
+// out the name and elapsed time. It is used for simple performance profiling
+// of code sections.
+func TimeTrack(start time.Time, name string) {
+	elapsed := time.Since(start)
+	fmt.Printf("name: %s, elapsed: %s\n", name, elapsed)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TrimQuotes is a function that receives a string and removes double quote characters
+// from the start and end of the string, if they exist. It returns the string with
+// removed quotes. If the input string doesn't start and end with a quote, or if it's
+// less than 2 characters long, it returns the original string.
+func TrimQuotes(s string) string {
+	if len(s) >= 2 {
+		if s[0] == '"' && s[len(s)-1] == '"' {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Contains checks if the element is present in the slice.
+// If T is a string and caseInsensitive is true, the comparison is case-insensitive.
+func Contains[T comparable](slice []T, elem T, caseInsensitive bool) bool {
+	for _, v := range slice {
+		switch vs := any(v).(type) {
+		case string:
+			es, _ := any(elem).(string)
+			if caseInsensitive && strings.EqualFold(vs, es) {
+				return true
+			}
+		}
+
+		if v == elem {
+			return true
+		}
+	}
+	return false
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// DecodeString is a function that receives a Base64-encoded string and first decodes
+// it from Base64 and then URL-decodes it. The function returns the decoded string, or
+// an error if either of the decoding operations fails. It uses standard library
+// functions for both decoding operations.
+func DecodeString(p string) (string, error) {
+	bytePath, err := base64.StdEncoding.DecodeString(p)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode path")
+	}
+
+	decodedPath, err := url.QueryUnescape(string(bytePath))
+	if err != nil {
+		return "", fmt.Errorf("failed to unescape path")
+
+	}
+
+	return decodedPath, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// EncodeString is a function that receives a string, URL-encodes it, and then encodes
+// the result in Base64. The function returns the Base64-encoded string. It uses
+// standard library functions for both encoding operations.
+func EncodeString(p string) string {
+	encodedPath := url.QueryEscape(p)
+
+	res := base64.StdEncoding.EncodeToString([]byte(encodedPath))
+
+	return res
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// RemoveDuplicates is a generic function that receives a slice of strings or integers,
+// and returns a new slice that contains the same elements but with any duplicates removed.
+//
+// The function uses a map for efficient lookup of previously seen elements.
+func RemoveDuplicates[T string | int](s []T) []T {
+	allKeys := make(map[T]bool)
+	list := []T{}
+	for _, item := range s {
+		if _, value := allKeys[item]; !value {
+			allKeys[item] = true
+			list = append(list, item)
+		}
+	}
+	return list
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// StructDiffer takes in two slices of type T (left and right) and a key (string) as arguments.
+// The key defines the which key to use when comparing.
+//
+// It returns two slices:
+//   - Items in the left slice that are not in the right slice based on the provided key.
+//   - Items in the right slice that are not in the left slice based on the provided key.
+//
+// If both left and right slices are empty, nil and nil is returned.
+// If left is empty and right is not, nil and the entire right slice are returned.
+// If right is empty and left is not, the entire left slice and nil are returned.
+//
+// When either left or right is not a struct or the key is not a valid key for the struct,
+// nil and nil are returned.
+//
+// The function uses maps to optimize lookup operations and determine differences between the
+// slices.
+func StructDiffer[T any](left, right []T, key string) ([]T, []T) {
+	leftDiff := []T{}
+	rightDiff := []T{}
+
+	// Check if the slices contain structs or pointers to structs
+	if len(left) > 0 && !IsStructWithKey(left[0], key) || len(right) > 0 && !IsStructWithKey(right[0], key) {
+		log.Error().Msg("invalid struct or invalid key")
+		return nil, nil
+	}
+
+	// Both are empty
+	if len(left) == 0 && len(right) == 0 {
+		return nil, nil
+	}
+
+	// Left is empty, return right
+	if len(left) == 0 {
+		return nil, right
+	}
+
+	// Right is empty, return left
+	if len(right) == 0 {
+		return left, nil
+	}
+
+	leftMap := make(map[string]T)
+	rightMap := make(map[string]T)
+
+	for _, v := range left {
+		meta := reflect.ValueOf(v).Elem()
+		field := meta.FieldByName((key))
+		if field != (reflect.Value{}) {
+			leftMap[ValueToString(field)] = v
+		}
+	}
+
+	for _, v := range right {
+		meta := reflect.ValueOf(v).Elem()
+		field := meta.FieldByName((key))
+		if field != (reflect.Value{}) {
+			rightMap[ValueToString(field)] = v
+		}
+	}
+
+	for k, v := range leftMap {
+		if _, ok := rightMap[k]; !ok {
+			leftDiff = append(leftDiff, v)
+		}
+	}
+
+	for k, v := range rightMap {
+		if _, ok := leftMap[k]; !ok {
+			rightDiff = append(rightDiff, v)
+		}
+	}
+
+	return leftDiff, rightDiff
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// IsStructWithKey checks if the provided value is a struct or a pointer to a struct
+// and if it contains the provided key.
+func IsStructWithKey(value any, key string) bool {
+	t := reflect.TypeOf(value)
+
+	if t.Kind() == reflect.Struct {
+		_, ok := t.FieldByName(key)
+		return ok
+	} else if t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct {
+		_, ok := t.Elem().FieldByName(key)
+		return ok
+	}
+
+	return false
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func ValueToString(v reflect.Value) string {
+	switch v.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return strconv.FormatInt(v.Int(), 10)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return strconv.FormatUint(v.Uint(), 10)
+	case reflect.Float32, reflect.Float64:
+		return strconv.FormatFloat(v.Float(), 'f', -1, 64)
+	case reflect.String:
+		return v.String()
+	case reflect.Bool:
+		return strconv.FormatBool(v.Bool())
+	default:
+		// Return an empty string for unsupported types
+		return ""
+	}
+}

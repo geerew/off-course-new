@@ -1,0 +1,365 @@
+<script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { Error, Loading } from '$components';
+	import { Icons } from '$components/icons';
+	import { DeleteCourseDialog } from '$components/settings';
+	import CourseAssetRow from '$components/settings/CourseAssetRow.svelte';
+	import TableDate from '$components/table/TableDate.svelte';
+	import { addToast } from '$lib/stores/addToast';
+	import type { Course, CourseChapters } from '$lib/types/models';
+	import { AddScan, COURSE_API, GetCourse, GetScanByCourseId } from '$lib/utils/api';
+	import { buildChapterStructure, cn, isBrowser } from '$lib/utils/general';
+	import { createAccordion, createAvatar, createDialog } from '@melt-ui/svelte';
+	import type { AxiosError } from 'axios';
+	import { onDestroy, onMount } from 'svelte';
+	import { slide } from 'svelte/transition';
+
+	// ----------------------
+	// Variables
+	// ----------------------
+
+	// True while the page is loading
+	let loadingPage = true;
+
+	// True if the course id search param missing or not a valid course id
+	let invalidCourseId = false;
+
+	// Holds the information about the course being viewed
+	let course: Course;
+
+	// Holds the course assets in a chapter structure. Populated when getCourse is called in
+	// onMount
+	let chapters: CourseChapters = {};
+
+	// On mount, if the course has a scan status of either waiting or processing, start polling
+	// for updates. This variable will be set the first time the function is called and is used to
+	// stop the polling on destroy
+	let scanPoll = -1;
+
+	let cardEl: HTMLImageElement;
+
+	// Create a delete dialog
+	const deleteDialog = createDialog({
+		role: 'alertdialog'
+	});
+
+	// Get the open state of the delete dialog
+	const openDeleteDialog = deleteDialog.states.open;
+
+	// Accordion to show the course chapters
+	const {
+		elements: { content, item, trigger },
+		helpers: { isSelected }
+	} = createAccordion({
+		multiple: true
+	});
+
+	//
+	const {
+		elements: { image, fallback },
+		options: { src }
+	} = createAvatar();
+
+	// ----------------------
+	// Functions
+	// ----------------------
+
+	// Gets the course id from the search params and queries the api for the course
+	const getCourse = async () => {
+		if (!isBrowser) return false;
+
+		const params = isBrowser && $page.url.searchParams;
+		const id = params && params.get('id');
+		if (!id) return false;
+
+		return await GetCourse(id, { includeAssets: true }, true)
+			.then(async (resp) => {
+				if (!resp) return false;
+				course = { ...resp };
+
+				// build the assets chapter structure
+				if (course.assets) {
+					chapters = buildChapterStructure(course.assets);
+				}
+
+				// Display the card
+				if (course && course.hasCard) {
+					console.log('setting card');
+					src.set(`${COURSE_API}/${course.id}/card?b=${new Date().getTime()}`);
+				} else {
+					console.log('clearing card');
+					src.set('');
+				}
+
+				return true;
+			})
+			.catch((err) => {
+				console.error(err);
+				return false;
+			});
+	};
+
+	// When the scan status is set to either waiting or processing, start polling for updates.
+	// When the scan finishes, clear the interval and set the status to an empty string.
+	const startPolling = () => {
+		scanPoll = setInterval(async () => {
+			await GetScanByCourseId(course.id, true)
+				.then((resp) => {
+					if (resp && resp.status !== course.scanStatus) {
+						course.scanStatus = resp.status;
+					}
+				})
+				.catch(async (err: AxiosError) => {
+					if (err.response?.status === 404) {
+						// Scan is not longer found which means it completed (or was stopped). Get
+						// the latest course details
+						await getCourse();
+					} else {
+						// Some other error
+						$addToast({
+							data: {
+								message: `Failed to get scan`,
+								status: 'error'
+							}
+						});
+						console.error(err);
+					}
+
+					course.scanStatus = '';
+					clearInterval(scanPoll);
+					scanPoll = -1;
+				});
+		}, 1500);
+	};
+
+	// ----------------------
+	// Reactive
+	// ----------------------
+
+	// Update the iProcessing variable when the scan status changes
+	$: isProcessing = course && course.scanStatus === 'processing';
+
+	// Start a poll when the scan status changes and scanPoll is -1
+	$: course && course.scanStatus && scanPoll === -1 && startPolling();
+
+	// ----------------------
+	// Lifecycle
+	// ----------------------
+	onMount(async () => {
+		if (!(await getCourse())) {
+			loadingPage = false;
+			invalidCourseId = true;
+			return;
+		}
+
+		// Start polling if the scan status is either waiting or processing
+		if (course && course.scanStatus && scanPoll === -1) {
+			startPolling();
+		}
+
+		loadingPage = false;
+	});
+
+	onDestroy(() => {
+		if (scanPoll !== -1) {
+			clearInterval(scanPoll);
+			scanPoll = -1;
+		}
+	});
+</script>
+
+<div class="flex w-full flex-col gap-4 pb-10">
+	{#if loadingPage}
+		<div
+			class="flex min-h-[20rem] w-full flex-grow flex-col place-content-center items-center p-10"
+		>
+			<Loading class="border-primary" />
+		</div>
+	{:else if invalidCourseId}
+		<Error />
+	{:else}
+		<div class="bg-background-muted w-full border-b">
+			<!-- Header -->
+			<div class="container flex items-center py-4 md:py-6">
+				<span class="grow text-base font-semibold md:text-lg">{course.title}</span>
+				<div class="flex flex-row items-center gap-5">
+					<!-- Scan -->
+					<button
+						disabled={course.scanStatus !== ''}
+						class="action bg-success text-white enabled:hover:brightness-110 disabled:opacity-60"
+						on:click={async () => {
+							await AddScan({ courseId: course.id })
+								.then(() => {
+									course.scanStatus = 'waiting';
+								})
+								.catch((err) => {
+									console.error(err);
+								});
+						}}
+					>
+						<Icons.search class="h-4 w-4" />
+						Scan
+					</button>
+
+					<!-- Delete -->
+					<button
+						class="action bg-error text-white hover:brightness-110"
+						on:click={() => {
+							openDeleteDialog.set(true);
+						}}
+					>
+						<Icons.delete class="h-4 w-4" />
+						Delete
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<div class="container flex flex-col gap-4">
+			<!-- Course Details -->
+			<div class="flex flex-col gap-8 lg:flex-row">
+				<!-- Card -->
+				<div class="order-1 flex h-48 w-full shrink-0 place-content-center lg:order-2 lg:w-[20rem]">
+					<img bind:this={cardEl} {...$image} alt="Avatar" class="rounded-md" />
+					<div
+						class="bg-accent-1 flex h-48 w-[20rem] !cursor-default place-content-center items-center rounded-md lg:w-full"
+						{...$fallback}
+					>
+						<Icons.play class="h-12 w-12 fill-gray-400 text-gray-400" />
+					</div>
+				</div>
+
+				<div class="order-2 flex w-full flex-col gap-5 lg:order-1">
+					<!-- Path -->
+					<div class="card">
+						<div class="title">
+							<Icons.path class="icon fill-foreground-muted" />
+							<span>Path</span>
+						</div>
+						<span class="text-sm">{course.path}</span>
+					</div>
+
+					<div class="grid grid-cols-3 gap-2.5">
+						<!-- Added -->
+						<div class="card">
+							<div class="title">
+								<Icons.calendarPlus class="icon" />
+								<span>Added</span>
+							</div>
+							<TableDate date={course.createdAt} class="text-foreground" />
+						</div>
+
+						<!-- Updated -->
+						<div class="card">
+							<div class="title">
+								<Icons.calendarSearch class="icon" />
+								<span>Updated</span>
+							</div>
+							<TableDate date={course.updatedAt} class="text-foreground" />
+						</div>
+
+						<!-- Scan status -->
+						<div class="card">
+							<div class="title">
+								<Icons.search class="icon" />
+								<span>Scan Status</span>
+							</div>
+							<span
+								class={cn(
+									'text-foreground',
+									course.scanStatus && isProcessing && 'text-success animate-pulse',
+									course.scanStatus && !isProcessing && 'text-foreground-muted animate-pulse'
+								)}
+							>
+								{course.scanStatus ? (isProcessing ? 'scanning' : 'queued') : '-'}
+							</span>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!--  Course Assets -->
+			<div class="card !border-0 !px-0">
+				<div class="title">
+					<Icons.files class="icon" />
+					<span>Course Assets</span>
+				</div>
+
+				<div class="flex flex-col rounded-md border">
+					{#if Object.keys(chapters).length === 0}
+						<div class="flex flex-col items-center justify-center py-6">
+							<span class="text-foreground-muted">No assets found</span>
+						</div>
+					{:else}
+						{#each Object.keys(chapters) as chapter, i}
+							{@const lastChapter = Object.keys(chapters).length - 1 == i}
+
+							<div
+								{...$item(chapter)}
+								use:item
+								class={cn('flex flex-col', !lastChapter && 'border-b')}
+							>
+								<!-- Chapter Title -->
+								<button
+									{...$trigger(chapter)}
+									use:trigger
+									class="hover:bg-accent-1 flex w-full px-4 py-5"
+								>
+									<!-- <Icons.hash class="" /> -->
+									<span class="grow text-start text-base">{chapter}</span>
+									<Icons.chevronRight
+										class={cn('h-4 w-4 duration-200', $isSelected(chapter) && 'rotate-90')}
+									/>
+								</button>
+
+								{#if $isSelected(chapter)}
+									<div
+										{...$content(chapter)}
+										use:content
+										transition:slide
+										class="bg-background-muted border-t px-5 md:px-8"
+									>
+										{#each chapters[chapter] as asset, i}
+											{@const lastAsset = chapters[chapter].length - 1 == i}
+											<div class={cn('flex gap-3 py-5 ', !lastAsset && 'border-b')}>
+												<CourseAssetRow {asset} />
+											</div>
+										{/each}
+									</div>
+								{/if}
+							</div>
+						{/each}
+					{/if}
+				</div>
+			</div>
+		</div>
+
+		<!-- Delete Dialog -->
+		<DeleteCourseDialog
+			dialog={deleteDialog}
+			bind:id={course.id}
+			on:confirmed={() => {
+				goto('/settings/courses');
+			}}
+		/>
+	{/if}
+</div>
+
+<style lang="postcss">
+	.action {
+		@apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded px-3 py-1.5 text-center text-sm duration-200;
+	}
+
+	.card {
+		@apply shrink-0 overflow-hidden rounded-md border px-4 py-3 text-sm;
+
+		> .title {
+			@apply text-foreground-muted flex select-none items-center gap-2.5 pb-2.5 text-xs tracking-wide;
+
+			& > :global(.icon) {
+				@apply h-4 w-4 stroke-[1.5];
+			}
+		}
+	}
+</style>

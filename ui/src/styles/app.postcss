@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	/* prettier-ignore */
+	:root {
+		--background: 0 0% 100%;           /* #FFFFFF */
+		--background-muted: 220 50% 97%;   /* #F3F5F6 */
+		--foreground: 0 0% 0%; 	           /* #000000 */
+		--foreground-muted: 215 19% 47%;   /* #475569 */
+		--primary: 217 91% 60%;            /* #3B82F6 */
+		--primary-foreground: 0 0% 100%;   /* #FFFFFF */
+		--secondary: 25 95% 53%;  		   /* #f97316 */
+		--secondary-foreground: 0 0% 100%; /* #FFFFFF */
+		--success: 142 76% 36%;            /* #16A34A */
+		--error: 345 83% 41%;              /* #BE123C */
+		--border: 213 27% 84%;             /* #CBD5E1 */
+		--accent-1: 220 50% 93%;           /* #E4EAF6 */
+	}
+
+	/* prettier-ignore */
+	.dark {
+		--background: 222 35% 11%;       /* #0F172A */
+		--background-muted: 229 84% 5%;  /* #020617 */
+		--foreground: 0 0% 100%;         /* #FFFFFF */
+		--foreground-muted: 218 11% 65%; /* #9CA3AF */
+		--border: 215 14% 34%;           /* #4B5563 */
+		--accent-1: 215 25% 27%;         /* #334155 */
+		--error: 345 83% 60%;            /* #DA1645 */
+
+	}
+
+	html {
+		-webkit-text-size-adjust: 100%;
+		font-variation-settings: normal;
+	}
+
+	body {
+		@apply bg-background font-inter font-medium text-foreground antialiased;
+		font-feature-settings:
+			'rlig' 1,
+			'calt' 1;
+	}
+
+	* {
+		@apply border-border;
+	}
+
+	.antialiased {
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+	}
+}
+
+@layer components {
+	button,
+	input {
+		@apply focus:ring-0 focus:ring-offset-0 focus-visible:shadow-focus focus-visible:shadow-gray-500 focus-visible:outline-none;
+	}
+
+	.container {
+		@apply px-4 md:px-8;
+	}
+
+	.sun,
+	html.dark .moon {
+		display: none;
+	}
+
+	.moon,
+	html.dark .sun {
+		display: block;
+	}
+}
