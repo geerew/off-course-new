@@ -114,13 +114,17 @@ func Test_GetCourses(t *testing.T) {
 		assert.Nil(t, result[0].Assets)
 	})
 
-	t.Run("assets relation", func(t *testing.T) {
+	t.Run("relations", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
 		courses := NewTestCourses(t, db, 5)
 		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
 
+		// ----------------------------
+		// Assets relation
+		// ----------------------------
 		relation := []database.Relation{{Struct: "Assets"}}
 
 		result, err := GetCourses(db, &database.DatabaseParams{Relation: relation}, ctx)
@@ -133,7 +137,28 @@ func Test_GetCourses(t *testing.T) {
 		require.Len(t, result[0].Assets, 2)
 		assert.Equal(t, assets[0].ID, result[0].Assets[0].ID)
 
-		// TODO attachments
+		// Asset the attachments for the first asset is nil
+		assert.Nil(t, result[0].Assets[0].Attachments)
+
+		// ----------------------------
+		// Assets and attachments relation
+		// ----------------------------
+		relation = []database.Relation{{Struct: "Assets"}, {Struct: "Assets.Attachments"}}
+
+		result, err = GetCourses(db, &database.DatabaseParams{Relation: relation}, ctx)
+		require.Nil(t, err)
+		require.Len(t, result, 5)
+		assert.Equal(t, courses[0].ID, result[0].ID)
+
+		// Assert the assets
+		require.NotNil(t, result[0].Assets)
+		require.Len(t, result[0].Assets, 2)
+		assert.Equal(t, assets[0].ID, result[0].Assets[0].ID)
+
+		// Asset the attachments
+		assert.NotNil(t, result[0].Assets[0].Attachments)
+		assert.Len(t, result[0].Assets[0].Attachments, 2)
+		assert.Equal(t, attachments[0].ID, result[0].Assets[0].Attachments[0].ID)
 	})
 
 	t.Run("pagination", func(t *testing.T) {
@@ -185,32 +210,6 @@ func Test_GetCourses(t *testing.T) {
 		assert.Equal(t, courses[4].Title, result[0].Title)
 		assert.Equal(t, courses[4].Path, result[0].Path)
 	})
-
-	// 	t.Run("preload orderby", func(t *testing.T) {
-	// 		_, db, ctx, teardown := setup(t)
-	// 		defer teardown(t)
-
-	// 		// Create 3 course with 5 assets
-	// 		courses := NewTestCourses(t, db, 3)
-	// 		assets := CreateTestAssets(t, db, courses, 5)
-
-	// 		preload := []database.Preload{
-	// 			{Table: "Assets", OrderBy: "created_at desc"},
-	// 			{Table: "Assets.Attachments"},
-	// 		}
-
-	// 		result, err := GetCourses(db, &database.DatabaseParams{Preload: preload})
-	// 		require.Nil(t, err)
-	// 		require.Len(t, result, 3)
-	// 		assert.Equal(t, courses[0].ID, result[0].ID)
-	// 		assert.Equal(t, courses[0].Title, result[0].Title)
-	// 		assert.Equal(t, courses[0].Path, result[0].Path)
-
-	// 		// Assert the assets. The last created asset (for this course) should now be the first
-	// 		// result in the assets slice
-	// 		require.Len(t, result[0].Assets, 5)
-	// 		assert.Equal(t, assets[4].ID, result[0].Assets[0].ID)
-	// 	})
 
 	t.Run("where", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
@@ -295,13 +294,17 @@ func Test_GetCourseById(t *testing.T) {
 		assert.Nil(t, courses[2].Assets)
 	})
 
-	t.Run("assets relation", func(t *testing.T) {
+	t.Run("relations", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
 		courses := NewTestCourses(t, db, 5)
 		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
 
+		// ----------------------------
+		// Assets relation
+		// ----------------------------
 		relation := []database.Relation{{Struct: "Assets"}}
 
 		result, err := GetCourseById(db, courses[2].ID, &database.DatabaseParams{Relation: relation}, ctx)
@@ -313,7 +316,27 @@ func Test_GetCourseById(t *testing.T) {
 		require.Len(t, result.Assets, 2)
 		assert.Equal(t, assets[4].ID, result.Assets[0].ID)
 
-		// TODO attachments
+		// Asset the attachments for the first asset is nil
+		assert.Nil(t, result.Assets[0].Attachments)
+
+		// ----------------------------
+		// Assets and attachments relation
+		// ----------------------------
+		relation = []database.Relation{{Struct: "Assets"}, {Struct: "Assets.Attachments"}}
+
+		result, err = GetCourseById(db, courses[3].ID, &database.DatabaseParams{Relation: relation}, ctx)
+		require.Nil(t, err)
+		assert.Equal(t, courses[3].ID, result.ID)
+
+		// Assert the assets
+		require.NotNil(t, result.Assets)
+		require.Len(t, result.Assets, 2)
+		assert.Equal(t, assets[6].ID, result.Assets[0].ID)
+
+		// Asset the attachments
+		assert.NotNil(t, result.Assets[0].Attachments)
+		assert.Len(t, result.Assets[0].Attachments, 2)
+		assert.Equal(t, attachments[12].ID, result.Assets[0].Attachments[0].ID)
 	})
 
 	// 	t.Run("preload", func(t *testing.T) {
