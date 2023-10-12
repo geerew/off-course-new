@@ -80,37 +80,27 @@ func GetScans(db database.Database, params *database.DatabaseParams, ctx context
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetScanById returns a scan with the given ID
-func GetScanById(db database.Database, id string, params *database.DatabaseParams, ctx context.Context) (*Scan, error) {
-	scan := &Scan{}
-	scan.SetId(id)
-
-	q := db.DB().NewSelect().Model(scan)
-
-	if params != nil && params.Relation != nil {
-		q = selectRelation(q, params)
+// GetScan returns a scan based upon the where clause in the database params
+func GetScan(db database.Database, params *database.DatabaseParams, ctx context.Context) (*Scan, error) {
+	if params == nil || params.Where == nil {
+		return nil, errors.New("where clause required")
 	}
 
-	if err := q.Where("scan.id = ?", id).Scan(ctx); err != nil {
-		return nil, err
-	}
-
-	return scan, nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// GetScanByCourseId returns a scan with the given course ID
-func GetScanByCourseId(db database.Database, id string, params *database.DatabaseParams, ctx context.Context) (*Scan, error) {
 	scan := &Scan{}
 
 	q := db.DB().NewSelect().Model(scan)
 
-	if params != nil && params.Relation != nil {
+	// Where
+	if params.Where != nil {
+		q = selectWhere(q, params)
+	}
+
+	// Relations
+	if params.Relation != nil {
 		q = selectRelation(q, params)
 	}
 
-	if err := q.Where("course_id = ?", id).Scan(ctx); err != nil {
+	if err := q.Scan(ctx); err != nil {
 		return nil, err
 	}
 

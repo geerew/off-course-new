@@ -93,20 +93,28 @@ func GetCourses(db database.Database, params *database.DatabaseParams, ctx conte
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetCourseById returns a course with the given ID
-func GetCourseById(db database.Database, id string, params *database.DatabaseParams, ctx context.Context) (*Course, error) {
+// GetCourse returns a course based upon the where clause in the database params
+func GetCourse(db database.Database, params *database.DatabaseParams, ctx context.Context) (*Course, error) {
+	if params == nil || params.Where == nil {
+		return nil, errors.New("where clause required")
+	}
+
 	course := &Course{}
-	course.SetId(id)
 
 	q := db.DB().
 		NewSelect().
 		Model(course).
 		ColumnExpr("Course.*").
 		ColumnExpr("?.? AS ?", bun.Ident("scans"), bun.Ident("status"), bun.Ident("scan_status")).
-		Join("LEFT JOIN ?0 ON (?0.?1 = ?2.?3)", bun.Ident("scans"), bun.Ident("course_id"), bun.Ident("course"), bun.Ident("id")).
-		WherePK()
+		Join("LEFT JOIN ?0 ON (?0.?1 = ?2.?3)", bun.Ident("scans"), bun.Ident("course_id"), bun.Ident("course"), bun.Ident("id"))
 
-	if params != nil && params.Relation != nil {
+	// Where
+	if params.Where != nil {
+		q = selectWhere(q, params)
+	}
+
+	// Relations
+	if params.Relation != nil {
 		q = selectRelation(q, params)
 	}
 

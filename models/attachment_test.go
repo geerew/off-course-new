@@ -45,13 +45,13 @@ func Test_CountAttachments(t *testing.T) {
 		assets := NewTestAssets(t, db, courses, 2)
 		attachments := NewTestAttachments(t, db, assets, 2)
 
-		where := []database.Where{{Column: "id", Value: attachments[1].ID}}
-		count, err := CountAttachments(db, &database.DatabaseParams{Where: where}, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: attachments[1].ID}}}
+		count, err := CountAttachments(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 
-		where = []database.Where{{Query: "? = ?", Column: "id", Value: attachments[0].ID}}
-		count, err = CountAttachments(db, &database.DatabaseParams{Where: where}, ctx)
+		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "id", Value: attachments[0].ID}}}
+		count, err = CountAttachments(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 	})
@@ -71,8 +71,8 @@ func Test_CountAttachments(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		where := []database.Where{{Column: "", Value: ""}}
-		count, err := CountAssets(db, &database.DatabaseParams{Where: where}, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "", Value: ""}}}
+		count, err := CountAssets(db, dbParams, ctx)
 		require.ErrorContains(t, err, "syntax error")
 		assert.Equal(t, 0, count)
 	})
@@ -220,16 +220,14 @@ func Test_GetAttachments(t *testing.T) {
 		assets := NewTestAssets(t, db, courses, 2)
 		attachments := NewTestAttachments(t, db, assets, 2)
 
-		where := []database.Where{{Column: "id", Value: attachments[2].ID}}
-
-		result, err := GetAttachments(db, &database.DatabaseParams{Where: where}, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "id", Value: attachments[2].ID}}}
+		result, err := GetAttachments(db, dbParams, ctx)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, attachments[2].ID, result[0].ID)
 
-		where = []database.Where{{Query: "? = ?", Column: "id", Value: attachments[3].ID}}
-
-		result, err = GetAttachments(db, &database.DatabaseParams{Where: where}, ctx)
+		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "id", Value: attachments[3].ID}}}
+		result, err = GetAttachments(db, dbParams, ctx)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, attachments[3].ID, result[0].ID)
@@ -266,7 +264,9 @@ func Test_GetAttachment(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		attachment, err := GetAttachmentById(db, "1", nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: "1"}}}
+
+		attachment, err := GetAttachment(db, dbParams, ctx)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, attachment)
 	})
@@ -279,7 +279,9 @@ func Test_GetAttachment(t *testing.T) {
 		assets := NewTestAssets(t, db, courses, 2)
 		attachments := NewTestAttachments(t, db, assets, 2)
 
-		result, err := GetAttachmentById(db, attachments[5].ID, nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: attachments[5].ID}}}
+
+		result, err := GetAttachment(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, attachments[5].ID, result.ID)
 		assert.Equal(t, attachments[5].CourseID, result.CourseID)
@@ -304,9 +306,12 @@ func Test_GetAttachment(t *testing.T) {
 		// ----------------------------
 		// Course relation
 		// ----------------------------
-		relation := []database.Relation{{Struct: "Course"}}
+		dbParams := &database.DatabaseParams{
+			Where:    []database.Where{{Column: "attachment.id", Value: attachments[5].ID}},
+			Relation: []database.Relation{{Struct: "Course"}},
+		}
 
-		result, err := GetAttachmentById(db, attachments[5].ID, &database.DatabaseParams{Relation: relation}, ctx)
+		result, err := GetAttachment(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, attachments[5].ID, result.ID)
 		assert.Equal(t, attachments[5].CourseID, result.CourseID)
@@ -322,9 +327,12 @@ func Test_GetAttachment(t *testing.T) {
 		// ----------------------------
 		// Course and asset relation
 		// ----------------------------
-		relation = []database.Relation{{Struct: "Course"}, {Struct: "Asset"}}
+		dbParams = &database.DatabaseParams{
+			Where:    []database.Where{{Column: "attachment.id", Value: attachments[12].ID}},
+			Relation: []database.Relation{{Struct: "Course"}, {Struct: "Asset"}},
+		}
 
-		result, err = GetAttachmentById(db, attachments[12].ID, &database.DatabaseParams{Relation: relation}, ctx)
+		result, err = GetAttachment(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, attachments[12].ID, result.ID)
 		assert.Equal(t, attachments[12].CourseID, result.CourseID)
@@ -346,8 +354,21 @@ func Test_GetAttachment(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Attachment{}).Exec(ctx)
 		require.Nil(t, err)
 
-		_, err = GetAttachmentById(db, "1", nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: "1"}}}
+
+		_, err = GetAttachment(db, dbParams, ctx)
 		require.ErrorContains(t, err, "no such table: attachments")
+	})
+
+	t.Run("missing where clause", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
+		require.Nil(t, err)
+
+		_, err = GetAttachment(db, nil, ctx)
+		require.ErrorContains(t, err, "where clause required")
 	})
 }
 
@@ -372,7 +393,8 @@ func Test_CreateAttachment(t *testing.T) {
 		assert.False(t, attachment.CreatedAt.IsZero())
 		assert.False(t, attachment.UpdatedAt.IsZero())
 
-		_, err = GetAttachmentById(db, attachment.ID, nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: attachment.ID}}}
+		_, err = GetAttachment(db, dbParams, ctx)
 		require.Nil(t, err)
 	})
 

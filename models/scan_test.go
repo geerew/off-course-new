@@ -45,13 +45,14 @@ func Test_CountScans(t *testing.T) {
 		courses := NewTestCourses(t, db, 3)
 		scans := NewTestScans(t, db, courses)
 
-		where := []database.Where{{Column: "id", Value: scans[1].ID}}
-		count, err := CountScans(db, &database.DatabaseParams{Where: where}, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: scans[1].ID}}}
+
+		count, err := CountScans(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 
-		where = []database.Where{{Query: "? = ?", Column: "id", Value: scans[0].ID}}
-		count, err = CountScans(db, &database.DatabaseParams{Where: where}, ctx)
+		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "id", Value: scans[0].ID}}}
+		count, err = CountScans(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 	})
@@ -71,8 +72,8 @@ func Test_CountScans(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		where := []database.Where{{Column: "", Value: ""}}
-		count, err := CountScans(db, &database.DatabaseParams{Where: where}, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "", Value: ""}}}
+		count, err := CountScans(db, dbParams, ctx)
 		require.ErrorContains(t, err, "syntax error")
 		assert.Equal(t, 0, count)
 	})
@@ -188,16 +189,16 @@ func Test_GetScans(t *testing.T) {
 		courses := NewTestCourses(t, db, 5)
 		scans := NewTestScans(t, db, courses)
 
-		where := []database.Where{{Column: "id", Value: scans[2].ID}}
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: scans[2].ID}}}
 
-		result, err := GetScans(db, &database.DatabaseParams{Where: where}, ctx)
+		result, err := GetScans(db, dbParams, ctx)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, scans[2].ID, result[0].ID)
 
-		where = []database.Where{{Query: "? = ?", Column: "id", Value: scans[3].ID}}
+		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "id", Value: scans[3].ID}}}
 
-		result, err = GetScans(db, &database.DatabaseParams{Where: where}, ctx)
+		result, err = GetScans(db, dbParams, ctx)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, scans[3].ID, result[0].ID)
@@ -229,12 +230,14 @@ func Test_GetScans(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func Test_GetScanById(t *testing.T) {
+func Test_GetScan(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		scan, err := GetScanById(db, "1", nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: "1"}}}
+
+		scan, err := GetScan(db, dbParams, ctx)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, scan)
 	})
@@ -246,7 +249,9 @@ func Test_GetScanById(t *testing.T) {
 		courses := NewTestCourses(t, db, 5)
 		scans := NewTestScans(t, db, courses)
 
-		result, err := GetScanById(db, scans[2].ID, nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: scans[2].ID}}}
+
+		result, err := GetScan(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, scans[2].ID, result.ID)
 		assert.Equal(t, scans[2].CourseID, result.CourseID)
@@ -265,9 +270,12 @@ func Test_GetScanById(t *testing.T) {
 		courses := NewTestCourses(t, db, 5)
 		scans := NewTestScans(t, db, courses)
 
-		relation := []database.Relation{{Struct: "Course"}}
+		dbParams := &database.DatabaseParams{
+			Where:    []database.Where{{Column: "scan.id", Value: scans[2].ID}},
+			Relation: []database.Relation{{Struct: "Course"}},
+		}
 
-		result, err := GetScanById(db, scans[2].ID, &database.DatabaseParams{Relation: relation}, ctx)
+		result, err := GetScan(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, scans[2].ID, result.ID)
 		assert.Equal(t, scans[2].CourseID, result.CourseID)
@@ -284,70 +292,21 @@ func Test_GetScanById(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Scan{}).Exec(ctx)
 		require.Nil(t, err)
 
-		_, err = GetScanById(db, "1", nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: "1"}}}
+
+		_, err = GetScan(db, dbParams, ctx)
 		require.ErrorContains(t, err, "no such table: scans")
 	})
-}
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func Test_GetScanByCourseId(t *testing.T) {
-	t.Run("not found", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		scan, err := GetScanByCourseId(db, "1", nil, ctx)
-		assert.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, scan)
-	})
-
-	t.Run("found", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		courses := NewTestCourses(t, db, 5)
-		scans := NewTestScans(t, db, courses)
-
-		result, err := GetScanByCourseId(db, scans[2].CourseID, nil, ctx)
-		require.Nil(t, err)
-		assert.Equal(t, scans[2].ID, result.ID)
-		assert.Equal(t, scans[2].CourseID, result.CourseID)
-		assert.True(t, result.Status.IsWaiting())
-		assert.False(t, result.CreatedAt.IsZero())
-		assert.False(t, result.UpdatedAt.IsZero())
-
-		// Relations
-		assert.Nil(t, result.Course)
-	})
-
-	t.Run("course relation", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		courses := NewTestCourses(t, db, 5)
-		scans := NewTestScans(t, db, courses)
-
-		relation := []database.Relation{{Struct: "Course"}}
-
-		result, err := GetScanByCourseId(db, scans[2].CourseID, &database.DatabaseParams{Relation: relation}, ctx)
-		require.Nil(t, err)
-		assert.Equal(t, scans[2].ID, result.ID)
-		assert.Equal(t, scans[2].CourseID, result.CourseID)
-
-		// Assert the course
-		require.NotNil(t, result.Course)
-		assert.Equal(t, courses[2].Title, result.Course.Title)
-	})
-
-	t.Run("db error", func(t *testing.T) {
+	t.Run("missing where clause", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
 		_, err := db.DB().NewDropTable().Model(&Scan{}).Exec(ctx)
 		require.Nil(t, err)
 
-		_, err = GetScanByCourseId(db, "1", nil, ctx)
-		require.ErrorContains(t, err, "no such table: scans")
+		_, err = GetScan(db, nil, ctx)
+		require.ErrorContains(t, err, "where clause required")
 	})
 }
 
@@ -369,7 +328,9 @@ func Test_CreateScan(t *testing.T) {
 		assert.False(t, scan.CreatedAt.IsZero())
 		assert.False(t, scan.UpdatedAt.IsZero())
 
-		_, err = GetScanById(db, scan.ID, nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: scan.ID}}}
+
+		_, err = GetScan(db, dbParams, ctx)
 		require.Nil(t, err)
 	})
 
@@ -414,7 +375,9 @@ func Test_UpdateScanStatus(t *testing.T) {
 		course := NewTestCourses(t, db, 1)[0]
 		scan := NewTestScans(t, db, []*Course{course})[0]
 
-		origScan, err := GetScanById(db, scan.ID, nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: scan.ID}}}
+
+		origScan, err := GetScan(db, dbParams, ctx)
 		require.Nil(t, err)
 
 		// Give time to allow `updated at` to be different
@@ -425,7 +388,7 @@ func Test_UpdateScanStatus(t *testing.T) {
 		require.Nil(t, err)
 
 		// Get the updated scan and ensure the status was updated
-		updatedScan, err := GetScanById(db, scan.ID, nil, ctx)
+		updatedScan, err := GetScan(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.False(t, updatedScan.Status.IsWaiting())
 		assert.NotEqual(t, origScan.UpdatedAt.String(), updatedScan.UpdatedAt.String())
@@ -442,7 +405,9 @@ func Test_UpdateScanStatus(t *testing.T) {
 		course := NewTestCourses(t, db, 1)[0]
 		scan := NewTestScans(t, db, []*Course{course})[0]
 
-		origScan, err := GetScanById(db, scan.ID, nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: scan.ID}}}
+
+		origScan, err := GetScan(db, dbParams, ctx)
 		require.Nil(t, err)
 
 		// Give time to allow `updated at` to be different
@@ -452,7 +417,7 @@ func Test_UpdateScanStatus(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert there were no changes to the DB
-		updatedScan, err := GetScanById(db, scan.ID, nil, ctx)
+		updatedScan, err := GetScan(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.True(t, updatedScan.Status.IsWaiting())
 		assert.Equal(t, origScan.UpdatedAt.String(), updatedScan.UpdatedAt.String())
@@ -482,7 +447,9 @@ func Test_UpdateScanStatus(t *testing.T) {
 		course := NewTestCourses(t, db, 1)[0]
 		scan := NewTestScans(t, db, []*Course{course})[0]
 
-		origScan, err := GetScanById(db, scan.ID, nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: scan.ID}}}
+
+		origScan, err := GetScan(db, dbParams, ctx)
 		require.Nil(t, err)
 
 		// Change the ID
@@ -492,7 +459,8 @@ func Test_UpdateScanStatus(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert there were no changes to the DB
-		updatedScan, err := GetScanById(db, origScan.ID, nil, ctx)
+		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: origScan.ID}}}
+		updatedScan, err := GetScan(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.True(t, updatedScan.Status.IsWaiting())
 		assert.Equal(t, origScan.UpdatedAt.String(), updatedScan.UpdatedAt.String())

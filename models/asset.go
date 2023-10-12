@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -90,18 +91,26 @@ func GetAssets(db database.Database, params *database.DatabaseParams, ctx contex
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetAssetById returns an asset for the given ID
-func GetAssetById(db database.Database, id string, params *database.DatabaseParams, ctx context.Context) (*Asset, error) {
+// GetAsset returns an asset based upon the where clause in the database params
+func GetAsset(db database.Database, params *database.DatabaseParams, ctx context.Context) (*Asset, error) {
+	if params == nil || params.Where == nil {
+		return nil, errors.New("where clause required")
+	}
 	asset := &Asset{}
-	asset.SetId(id)
 
 	q := db.DB().NewSelect().Model(asset)
 
+	// Where
+	if params.Where != nil {
+		q = selectWhere(q, params)
+	}
+
+	// Relations
 	if params != nil && params.Relation != nil {
 		q = selectRelation(q, params)
 	}
 
-	if err := q.Where("asset.id = ?", id).Scan(ctx); err != nil {
+	if err := q.Scan(ctx); err != nil {
 		return nil, err
 	}
 

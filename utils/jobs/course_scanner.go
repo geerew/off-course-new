@@ -1,28 +1,18 @@
 package jobs
 
 import (
+	"context"
+	"database/sql"
+
 	"github.com/geerew/off-course/database"
+	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
+	"github.com/rs/zerolog/log"
 )
-
-// import (
-// 	"errors"
-// 	"path/filepath"
-// 	"regexp"
-// 	"strconv"
-
-// 	"github.com/geerew/off-course/database"
-// 	"github.com/geerew/off-course/models"
-// 	"github.com/geerew/off-course/utils"
-// 	"github.com/geerew/off-course/utils/appFs"
-// 	"github.com/geerew/off-course/utils/types"
-// 	"github.com/rs/zerolog/log"
-// 	"gorm.io/gorm"
-// )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// CourseScanner is a base scanner that scans for courses
+// CourseScanner scans a course and finds assets and attachments
 type CourseScanner struct {
 	db        database.Database
 	appFs     *appFs.AppFs
@@ -30,61 +20,61 @@ type CourseScanner struct {
 	finished  bool
 }
 
-// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// // CourseScannerConfig is a configuration for a CourseScanner
-// type CourseScannerConfig struct {
-// 	Db    database.Database
-// 	AppFs *appFs.AppFs
-// }
+// CourseScannerConfig is the config for a CourseScanner
+type CourseScannerConfig struct {
+	Db    database.Database
+	AppFs *appFs.AppFs
+}
 
-// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// // NewCourseScanner creates a new CourseScanner
-// func NewCourseScanner(config *CourseScannerConfig) *CourseScanner {
-// 	return &CourseScanner{
-// 		db:        config.Db,
-// 		appFs:     config.AppFs,
-// 		jobSignal: make(chan bool, 1),
-// 		finished:  false,
-// 	}
-// }
+// NewCourseScanner creates a new CourseScanner
+func NewCourseScanner(config *CourseScannerConfig) *CourseScanner {
+	return &CourseScanner{
+		db:        config.Db,
+		appFs:     config.AppFs,
+		jobSignal: make(chan bool, 1),
+		finished:  false,
+	}
+}
 
-// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// // Add inserts a course scan job into the db
-// func (cs *CourseScanner) Add(id string) (*models.Scan, error) {
-// 	// Ensure a job does not already exists for this course
-// 	scan, err := models.GetScanByCourseId(cs.db, id)
-// 	if err != nil && err != gorm.ErrRecordNotFound {
-// 		return nil, err
-// 	} else if scan != nil {
-// 		log.Debug().Str("path", scan.Course.Path).Msg("scan job already exists")
-// 		return nil, nil
-// 	}
+// Add inserts a course scan job into the db
+func (cs *CourseScanner) Add(ctx context.Context, id string) (*models.Scan, error) {
+	// Ensure a job does not already exists for this course
+	scan, err := models.GetScanByCourseId(cs.db, id, ctx)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	} else if scan != nil {
+		log.Debug().Str("path", scan.Course.Path).Msg("scan job already exists")
+		return nil, nil
+	}
 
-// 	// Get the course
-// 	course, err := models.GetCourse(cs.db, id, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+	// Get the course
+	course, err := models.GetCourse(cs.db, id, nil, ctx)
+	if err != nil {
+		return nil, err
+	}
 
-// 	// Add the job
-// 	scan = &models.Scan{CourseID: course.ID}
-// 	if err := models.CreateScan(cs.db, scan); err != nil {
-// 		return nil, err
-// 	}
+	// Add the job
+	scan = &models.Scan{CourseID: course.ID}
+	if err := models.CreateScan(cs.db, scan, ctx); err != nil {
+		return nil, err
+	}
 
-// 	// Signal the worker to process the job
-// 	select {
-// 	case cs.jobSignal <- true:
-// 	default:
-// 	}
+	// Signal the worker to process the job
+	select {
+	case cs.jobSignal <- true:
+	default:
+	}
 
-// 	log.Info().Str("path", course.Path).Msg("added scan job")
+	log.Info().Str("path", course.Path).Msg("added scan job")
 
-// 	return scan, nil
-// }
+	return scan, nil
+}
 
 // // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

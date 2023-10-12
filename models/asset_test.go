@@ -44,13 +44,13 @@ func Test_CountAssets(t *testing.T) {
 		courses := NewTestCourses(t, db, 3)
 		assets := NewTestAssets(t, db, courses, 2)
 
-		where := []database.Where{{Column: "id", Value: assets[1].ID}}
-		count, err := CountAssets(db, &database.DatabaseParams{Where: where}, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: assets[1].ID}}}
+		count, err := CountAssets(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 
-		where = []database.Where{{Query: "? = ?", Column: "id", Value: assets[0].ID}}
-		count, err = CountAssets(db, &database.DatabaseParams{Where: where}, ctx)
+		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "id", Value: assets[0].ID}}}
+		count, err = CountAssets(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 	})
@@ -70,8 +70,8 @@ func Test_CountAssets(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		where := []database.Where{{Column: "", Value: ""}}
-		count, err := CountAssets(db, &database.DatabaseParams{Where: where}, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "", Value: ""}}}
+		count, err := CountAssets(db, dbParams, ctx)
 		require.ErrorContains(t, err, "syntax error")
 		assert.Equal(t, 0, count)
 	})
@@ -220,17 +220,15 @@ func Test_GetAssets(t *testing.T) {
 		assets := NewTestAssets(t, db, courses, 2)
 
 		// Get asset 3
-		where := []database.Where{{Column: "id", Value: assets[2].ID}}
-
-		result, err := GetAssets(db, &database.DatabaseParams{Where: where}, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: assets[2].ID}}}
+		result, err := GetAssets(db, dbParams, ctx)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, assets[2].ID, result[0].ID)
 
 		// Get all assets for course 1
-		where = []database.Where{{Query: "? = ?", Column: "course_id", Value: courses[0].ID}}
-
-		result, err = GetAssets(db, &database.DatabaseParams{Where: where}, ctx)
+		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "course_id", Value: courses[0].ID}}}
+		result, err = GetAssets(db, dbParams, ctx)
 		require.Nil(t, err)
 		require.Len(t, result, 2)
 		assert.Equal(t, assets[0].ID, result[0].ID)
@@ -268,7 +266,9 @@ func Test_GetAsset(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		asset, err := GetAssetById(db, "1", nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: "1"}}}
+
+		asset, err := GetAsset(db, dbParams, ctx)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, asset)
 	})
@@ -280,7 +280,9 @@ func Test_GetAsset(t *testing.T) {
 		courses := NewTestCourses(t, db, 5)
 		assets := NewTestAssets(t, db, courses, 2)
 
-		result, err := GetAssetById(db, assets[2].ID, nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: assets[2].ID}}}
+
+		result, err := GetAsset(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, assets[2].ID, result.ID)
 		assert.Equal(t, assets[2].CourseID, result.CourseID)
@@ -307,9 +309,12 @@ func Test_GetAsset(t *testing.T) {
 		// ----------------------------
 		// Course relation
 		// ----------------------------
-		relation := []database.Relation{{Struct: "Course"}}
+		dbParams := &database.DatabaseParams{
+			Where:    []database.Where{{Column: "asset.id", Value: assets[2].ID}},
+			Relation: []database.Relation{{Struct: "Course"}},
+		}
 
-		result, err := GetAssetById(db, assets[2].ID, &database.DatabaseParams{Relation: relation}, ctx)
+		result, err := GetAsset(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, assets[2].ID, result.ID)
 		assert.Equal(t, assets[2].CourseID, result.CourseID)
@@ -324,9 +329,12 @@ func Test_GetAsset(t *testing.T) {
 		// ----------------------------
 		// Course and attachments relation
 		// ----------------------------
-		relation = []database.Relation{{Struct: "Course"}, {Struct: "Attachments"}}
+		dbParams = &database.DatabaseParams{
+			Where:    []database.Where{{Column: "asset.id", Value: assets[6].ID}},
+			Relation: []database.Relation{{Struct: "Course"}, {Struct: "Attachments"}},
+		}
 
-		result, err = GetAssetById(db, assets[6].ID, &database.DatabaseParams{Relation: relation}, ctx)
+		result, err = GetAsset(db, dbParams, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, assets[6].ID, result.ID)
 		assert.Equal(t, assets[6].CourseID, result.CourseID)
@@ -348,8 +356,20 @@ func Test_GetAsset(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Asset{}).Exec(ctx)
 		require.Nil(t, err)
 
-		_, err = GetAssetById(db, "1", nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: "1"}}}
+		_, err = GetAsset(db, dbParams, ctx)
 		require.ErrorContains(t, err, "no such table: assets")
+	})
+
+	t.Run("missing where clause", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := db.DB().NewDropTable().Model(&Asset{}).Exec(ctx)
+		require.Nil(t, err)
+
+		_, err = GetAttachment(db, nil, ctx)
+		require.ErrorContains(t, err, "where clause required")
 	})
 }
 
@@ -374,7 +394,9 @@ func Test_CreateAsset(t *testing.T) {
 		assert.False(t, asset.CreatedAt.IsZero())
 		assert.False(t, asset.UpdatedAt.IsZero())
 
-		_, err = GetAssetById(db, asset.ID, nil, ctx)
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: asset.ID}}}
+
+		_, err = GetAsset(db, dbParams, ctx)
 		require.Nil(t, err)
 	})
 

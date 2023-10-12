@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -83,18 +84,27 @@ func GetAttachments(db database.Database, params *database.DatabaseParams, ctx c
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetAttachmentById returns an attachment for the given ID
-func GetAttachmentById(db database.Database, id string, params *database.DatabaseParams, ctx context.Context) (*Attachment, error) {
+// GetAttachment returns an attachment based upon the where clause in the database params
+func GetAttachment(db database.Database, params *database.DatabaseParams, ctx context.Context) (*Attachment, error) {
+	if params == nil || params.Where == nil {
+		return nil, errors.New("where clause required")
+	}
+
 	attachment := &Attachment{}
-	attachment.SetId(id)
 
 	q := db.DB().NewSelect().Model(attachment)
 
+	// Where
+	if params.Where != nil {
+		q = selectWhere(q, params)
+	}
+
+	// Relations
 	if params != nil && params.Relation != nil {
 		q = selectRelation(q, params)
 	}
 
-	if err := q.Where("attachment.id = ?", id).Scan(ctx); err != nil {
+	if err := q.Scan(ctx); err != nil {
 		return nil, err
 	}
 
