@@ -257,44 +257,6 @@ func Test_GetAttachments(t *testing.T) {
 		_, err = GetAttachments(db, nil, ctx)
 		require.ErrorContains(t, err, "no such table: attachments")
 	})
-
-	// 	t.Run("pagination", func(t *testing.T) {
-	// 		_, db, teardown := setup(t)
-	// 		defer teardown(t)
-
-	// 		// Create 4 courses with 4 assets each
-	// 		courses := CreateTestCourses(t, db, 4)
-	// 		assets := CreateTestAssets(t, db, courses, 4)
-
-	// 		// Create context for pagination
-	// 		app := fiber.New()
-	// 		c := app.AcquireCtx(&fasthttp.RequestCtx{})
-	// 		defer app.ReleaseCtx(c)
-
-	// 		// Get the first 10 assets
-	// 		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
-	// 		p := pagination.New(c)
-
-	// 		// Assert the last asset in the pagination response
-	// 		result, err := GetAttachments(db, &database.DatabaseParams{Pagination: p})
-	// 		require.Nil(t, err)
-	// 		require.Len(t, result, 10)
-	// 		assert.Equal(t, assets[9].ID, result[9].ID)
-	// 		assert.Equal(t, assets[9].Title, result[9].Title)
-	// 		assert.Equal(t, assets[9].Path, result[9].Path)
-
-	// 		// Set context URI and create pagination for page 2 with 10 items
-	// 		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=2" + "&" + pagination.PerPageQueryParam + "=10")
-	// 		p = pagination.New(c)
-
-	// 		// Assert the last asset in the pagination response
-	// 		result, err = GetAttachments(db, &database.DatabaseParams{Pagination: p})
-	// 		require.Nil(t, err)
-	// 		require.Len(t, result, 6)
-	// 		assert.Equal(t, assets[15].ID, result[5].ID)
-	// 		assert.Equal(t, assets[15].Title, result[5].Title)
-	// 		assert.Equal(t, assets[15].Path, result[5].Path)
-	// 	})
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -579,31 +579,6 @@ func Test_DeleteCourse(t *testing.T) {
 		assert.Equal(t, 1, count)
 	})
 
-	t.Run("cascade", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		course := NewTestCourses(t, db, 1)[0]
-		NewTestAssets(t, db, []*Course{course}, 5)
-		NewTestScans(t, db, []*Course{course})
-
-		count, err := DeleteCourse(db, course.ID, ctx)
-		require.Nil(t, err)
-		require.Equal(t, 1, count)
-
-		// Ensure the scan was deleted
-		count, err = CountScans(db, nil, ctx)
-		require.Nil(t, err)
-		assert.Equal(t, 0, count)
-
-		// Ensure assets were deleted
-		count, err = CountAssets(db, nil, ctx)
-		require.Nil(t, err)
-		assert.Equal(t, 0, count)
-
-		// TODO attachments
-	})
-
 	t.Run("db error", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)

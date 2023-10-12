@@ -137,6 +137,9 @@ func Test_GetAssets(t *testing.T) {
 		require.NotNil(t, result[0].Course)
 		assert.Equal(t, courses[0].Title, result[0].Course.Title)
 
+		// Assert attachments is nil
+		assert.Nil(t, result[0].Attachments)
+
 		// ----------------------------
 		// Course and attachments relation
 		// ----------------------------
@@ -293,13 +296,17 @@ func Test_GetAsset(t *testing.T) {
 		assert.Nil(t, result.Attachments)
 	})
 
-	t.Run("course relation", func(t *testing.T) {
+	t.Run("relations", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
 		courses := NewTestCourses(t, db, 5)
 		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
 
+		// ----------------------------
+		// Course relation
+		// ----------------------------
 		relation := []database.Relation{{Struct: "Course"}}
 
 		result, err := GetAssetById(db, assets[2].ID, &database.DatabaseParams{Relation: relation}, ctx)
@@ -310,6 +317,28 @@ func Test_GetAsset(t *testing.T) {
 		// Assert the course
 		require.NotNil(t, result.Course)
 		assert.Equal(t, courses[1].Title, result.Course.Title)
+
+		// Assert attachments is nil
+		assert.Nil(t, result.Attachments)
+
+		// ----------------------------
+		// Course and attachments relation
+		// ----------------------------
+		relation = []database.Relation{{Struct: "Course"}, {Struct: "Attachments"}}
+
+		result, err = GetAssetById(db, assets[6].ID, &database.DatabaseParams{Relation: relation}, ctx)
+		require.Nil(t, err)
+		assert.Equal(t, assets[6].ID, result.ID)
+		assert.Equal(t, assets[6].CourseID, result.CourseID)
+
+		// Assert the course
+		require.NotNil(t, result.Course)
+		assert.Equal(t, courses[3].Title, result.Course.Title)
+
+		// Assert the attachments
+		require.NotNil(t, result.Attachments)
+		require.Len(t, result.Attachments, 2)
+		assert.Equal(t, attachments[12].ID, result.Attachments[0].ID)
 	})
 
 	t.Run("db error", func(t *testing.T) {
