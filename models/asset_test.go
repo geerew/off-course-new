@@ -114,13 +114,17 @@ func Test_GetAssets(t *testing.T) {
 		assert.Nil(t, result[0].Attachments)
 	})
 
-	t.Run("course relation", func(t *testing.T) {
+	t.Run("relations", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
 		courses := NewTestCourses(t, db, 5)
 		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
 
+		// ----------------------------
+		// Course relation
+		// ----------------------------
 		relation := []database.Relation{{Struct: "Course"}}
 
 		result, err := GetAssets(db, &database.DatabaseParams{Relation: relation}, ctx)
@@ -133,7 +137,25 @@ func Test_GetAssets(t *testing.T) {
 		require.NotNil(t, result[0].Course)
 		assert.Equal(t, courses[0].Title, result[0].Course.Title)
 
-		// TODO attachments relation
+		// ----------------------------
+		// Course and attachments relation
+		// ----------------------------
+		relation = []database.Relation{{Struct: "Course"}, {Struct: "Attachments"}}
+
+		result, err = GetAssets(db, &database.DatabaseParams{Relation: relation}, ctx)
+		require.Nil(t, err)
+		require.Len(t, result, 10)
+		assert.Equal(t, assets[0].ID, result[0].ID)
+		assert.Equal(t, assets[0].CourseID, result[0].CourseID)
+
+		// Assert the course
+		require.NotNil(t, result[0].Course)
+		assert.Equal(t, courses[0].Title, result[0].Course.Title)
+
+		// Assert the attachments
+		require.NotNil(t, result[0].Attachments)
+		require.Len(t, result[0].Attachments, 2)
+		assert.Equal(t, attachments[0].ID, result[0].Attachments[0].ID)
 	})
 
 	t.Run("pagination", func(t *testing.T) {

@@ -126,6 +126,7 @@ func Test_GetAttachments(t *testing.T) {
 
 		result, err := GetAttachments(db, &database.DatabaseParams{Relation: relation}, ctx)
 		require.Nil(t, err)
+		require.Len(t, result, 20)
 		assert.Equal(t, attachments[0].ID, result[0].ID)
 		assert.Equal(t, attachments[0].CourseID, result[0].CourseID)
 		assert.Equal(t, attachments[0].AssetID, result[0].AssetID)
@@ -143,6 +144,7 @@ func Test_GetAttachments(t *testing.T) {
 		relation = []database.Relation{{Struct: "Course"}, {Struct: "Asset"}}
 
 		result, err = GetAttachments(db, &database.DatabaseParams{Relation: relation}, ctx)
+		require.Len(t, result, 20)
 		require.Nil(t, err)
 		assert.Equal(t, attachments[0].ID, result[0].ID)
 		assert.Equal(t, attachments[0].CourseID, result[0].CourseID)
