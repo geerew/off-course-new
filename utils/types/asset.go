@@ -11,17 +11,20 @@ import (
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+type AssetType string
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type Asset struct {
-	s string
+	s AssetType
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 const (
-	AssetVideo = "video"
-	AssetHTML  = "html"
-	AssetPDF   = "pdf"
+	AssetVideo AssetType = "video"
+	AssetHTML  AssetType = "html"
+	AssetPDF   AssetType = "pdf"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -139,11 +142,11 @@ func (a *Asset) Scan(value any) error {
 	vv := cast.ToString(value)
 
 	switch vv {
-	case AssetVideo:
+	case string(AssetVideo):
 		a.s = AssetVideo
-	case AssetHTML:
+	case string(AssetHTML):
 		a.s = AssetHTML
-	case AssetPDF:
+	case string(AssetPDF):
 		a.s = AssetPDF
 	default:
 		return errors.New("invalid asset type")

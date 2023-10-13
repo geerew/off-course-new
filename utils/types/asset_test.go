@@ -13,7 +13,7 @@ func TestAsset_NewAsset(t *testing.T) {
 	// Valid
 	tests := []struct {
 		ext      string
-		expected string
+		expected AssetType
 	}{
 		// Video
 		{"avi", AssetVideo},
