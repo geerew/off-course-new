@@ -30,7 +30,7 @@ func CountScans(ctx context.Context, db database.Database, params *database.Data
 	q := db.DB().NewSelect().Model((*Scan)(nil))
 
 	if params != nil && params.Where != nil {
-		q = selectWhere(q, params)
+		q = selectWhere(q, params, "scan")
 	}
 
 	return q.Count(ctx)
@@ -68,7 +68,7 @@ func GetScans(ctx context.Context, db database.Database, params *database.Databa
 		// Where
 		if params.Where != nil {
 			if params.Where != nil {
-				q = selectWhere(q, params)
+				q = selectWhere(q, params, "scan")
 			}
 		}
 	}
@@ -92,7 +92,7 @@ func GetScan(ctx context.Context, db database.Database, params *database.Databas
 
 	// Where
 	if params.Where != nil {
-		q = selectWhere(q, params)
+		q = selectWhere(q, params, "scan")
 	}
 
 	// Relations

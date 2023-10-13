@@ -271,7 +271,7 @@ func Test_GetScan(t *testing.T) {
 		scans := NewTestScans(t, db, courses)
 
 		dbParams := &database.DatabaseParams{
-			Where:    []database.Where{{Column: "scan.id", Value: scans[2].ID}},
+			Where:    []database.Where{{Column: "id", Value: scans[2].ID}},
 			Relation: []database.Relation{{Struct: "Course"}},
 		}
 

@@ -310,7 +310,7 @@ func Test_GetAsset(t *testing.T) {
 		// Course relation
 		// ----------------------------
 		dbParams := &database.DatabaseParams{
-			Where:    []database.Where{{Column: "asset.id", Value: assets[2].ID}},
+			Where:    []database.Where{{Column: "id", Value: assets[2].ID}},
 			Relation: []database.Relation{{Struct: "Course"}},
 		}
 
@@ -330,7 +330,7 @@ func Test_GetAsset(t *testing.T) {
 		// Course and attachments relation
 		// ----------------------------
 		dbParams = &database.DatabaseParams{
-			Where:    []database.Where{{Column: "asset.id", Value: assets[6].ID}},
+			Where:    []database.Where{{Column: "id", Value: assets[6].ID}},
 			Relation: []database.Relation{{Struct: "Course"}, {Struct: "Attachments"}},
 		}
 

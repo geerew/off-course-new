@@ -37,7 +37,7 @@ func CountCourses(ctx context.Context, db database.Database, params *database.Da
 	q := db.DB().NewSelect().Model((*Course)(nil))
 
 	if params != nil && params.Where != nil {
-		q = selectWhere(q, params)
+		q = selectWhere(q, params, "course")
 	}
 
 	return q.Count(ctx)
@@ -80,7 +80,7 @@ func GetCourses(ctx context.Context, db database.Database, params *database.Data
 		}
 		// Where
 		if params.Where != nil {
-			q = selectWhere(q, params)
+			q = selectWhere(q, params, "course")
 		}
 	}
 
@@ -110,7 +110,7 @@ func GetCourse(ctx context.Context, db database.Database, params *database.Datab
 
 	// Where
 	if params.Where != nil {
-		q = selectWhere(q, params)
+		q = selectWhere(q, params, "course")
 	}
 
 	// Relations

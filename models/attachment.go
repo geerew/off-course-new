@@ -34,7 +34,7 @@ func CountAttachments(ctx context.Context, db database.Database, params *databas
 	q := db.DB().NewSelect().Model((*Attachment)(nil))
 
 	if params != nil && params.Where != nil {
-		q = selectWhere(q, params)
+		q = selectWhere(q, params, "attachment")
 	}
 
 	return q.Count(ctx)
@@ -72,7 +72,7 @@ func GetAttachments(ctx context.Context, db database.Database, params *database.
 		// Where
 		if params.Where != nil {
 			if params.Where != nil {
-				q = selectWhere(q, params)
+				q = selectWhere(q, params, "attachment")
 			}
 		}
 	}
@@ -96,7 +96,7 @@ func GetAttachment(ctx context.Context, db database.Database, params *database.D
 
 	// Where
 	if params.Where != nil {
-		q = selectWhere(q, params)
+		q = selectWhere(q, params, "attachment")
 	}
 
 	// Relations

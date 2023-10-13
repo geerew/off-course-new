@@ -1,6 +1,8 @@
 package models
 
 import (
+	"strings"
+
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/utils/security"
 	"github.com/geerew/off-course/utils/types"
@@ -46,9 +48,14 @@ func (b *BaseModel) RefreshUpdatedAt() {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func selectWhere(q *bun.SelectQuery, params *database.DatabaseParams) *bun.SelectQuery {
+func selectWhere(q *bun.SelectQuery, params *database.DatabaseParams, table string) *bun.SelectQuery {
 	if params != nil && params.Where != nil {
 		for _, where := range params.Where {
+			// Update the column with the default table name when a table is not present
+			if !strings.Contains(where.Column, ".") {
+				where.Column = table + "." + where.Column
+			}
+
 			if where.Query == "" {
 				q = q.Where("? = ?", bun.Ident(where.Column), where.Value)
 			} else {

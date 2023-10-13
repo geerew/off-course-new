@@ -307,7 +307,7 @@ func Test_GetAttachment(t *testing.T) {
 		// Course relation
 		// ----------------------------
 		dbParams := &database.DatabaseParams{
-			Where:    []database.Where{{Column: "attachment.id", Value: attachments[5].ID}},
+			Where:    []database.Where{{Column: "id", Value: attachments[5].ID}},
 			Relation: []database.Relation{{Struct: "Course"}},
 		}
 
@@ -328,7 +328,7 @@ func Test_GetAttachment(t *testing.T) {
 		// Course and asset relation
 		// ----------------------------
 		dbParams = &database.DatabaseParams{
-			Where:    []database.Where{{Column: "attachment.id", Value: attachments[12].ID}},
+			Where:    []database.Where{{Column: "id", Value: attachments[12].ID}},
 			Relation: []database.Relation{{Struct: "Course"}, {Struct: "Asset"}},
 		}
 

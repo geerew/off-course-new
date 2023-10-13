@@ -219,14 +219,14 @@ func Test_GetCourses(t *testing.T) {
 
 		courses := NewTestCourses(t, db, 5)
 
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: courses[2].ID}}}
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: courses[2].ID}}}
 
 		result, err := GetCourses(ctx, db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, courses[2].ID, result[0].ID)
 
-		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "course.id", Value: courses[3].ID}}}
+		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "id", Value: courses[3].ID}}}
 
 		result, err = GetCourses(ctx, db, dbParams)
 		require.Nil(t, err)
@@ -265,7 +265,7 @@ func Test_GetCourse(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: "1"}}}
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: "1"}}}
 
 		course, err := GetCourse(ctx, db, dbParams)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
@@ -279,7 +279,7 @@ func Test_GetCourse(t *testing.T) {
 		courses := NewTestCourses(t, db, 5)
 		NewTestScans(t, db, courses)
 
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: courses[2].ID}}}
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: courses[2].ID}}}
 
 		result, err := GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)
@@ -312,7 +312,7 @@ func Test_GetCourse(t *testing.T) {
 		// Assets relation
 		// ----------------------------
 		dbParams := &database.DatabaseParams{
-			Where:    []database.Where{{Column: "course.id", Value: courses[2].ID}},
+			Where:    []database.Where{{Column: "id", Value: courses[2].ID}},
 			Relation: []database.Relation{{Struct: "Assets"}},
 		}
 
@@ -332,7 +332,7 @@ func Test_GetCourse(t *testing.T) {
 		// Assets and attachments relation
 		// ----------------------------
 		dbParams = &database.DatabaseParams{
-			Where:    []database.Where{{Column: "course.id", Value: courses[3].ID}},
+			Where:    []database.Where{{Column: "id", Value: courses[3].ID}},
 			Relation: []database.Relation{{Struct: "Assets"}, {Struct: "Assets.Attachments"}},
 		}
 
@@ -486,7 +486,7 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 		course := NewTestCourses(t, db, 1)[0]
 		require.Empty(t, course.CardPath)
 
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: course.ID}}}
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
 		origCourse, err := GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)
 
@@ -498,7 +498,7 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 		require.Nil(t, err)
 
 		// Get the updated course
-		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: course.ID}}}
+		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
 		updatedCourse, err := GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)
 		assert.Equal(t, "/path/to/card.jpg", updatedCourse.CardPath)
@@ -516,7 +516,7 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 		course := NewTestCourses(t, db, 1)[0]
 		require.Empty(t, course.CardPath)
 
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: course.ID}}}
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
 
 		origCourse, err := GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)
@@ -557,7 +557,7 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 
 		course := NewTestCourses(t, db, 1)[0]
 
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: course.ID}}}
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
 
 		origCourse, err := GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)
@@ -570,7 +570,7 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert there were no changes to the DB
-		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "course.id", Value: origCourse.ID}}}
+		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: origCourse.ID}}}
 
 		updatedCourse, err := GetCourse(ctx, db, dbParams)
 		require.Nil(t, err)

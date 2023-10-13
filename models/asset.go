@@ -41,7 +41,7 @@ func CountAssets(ctx context.Context, db database.Database, params *database.Dat
 	q := db.DB().NewSelect().Model((*Asset)(nil))
 
 	if params != nil && params.Where != nil {
-		q = selectWhere(q, params)
+		q = selectWhere(q, params, "asset")
 	}
 
 	return q.Count(ctx)
@@ -79,7 +79,7 @@ func GetAssets(ctx context.Context, db database.Database, params *database.Datab
 		// Where
 		if params.Where != nil {
 			if params.Where != nil {
-				q = selectWhere(q, params)
+				q = selectWhere(q, params, "asset")
 			}
 		}
 	}
@@ -102,7 +102,7 @@ func GetAsset(ctx context.Context, db database.Database, params *database.Databa
 
 	// Where
 	if params.Where != nil {
-		q = selectWhere(q, params)
+		q = selectWhere(q, params, "asset")
 	}
 
 	// Relations
