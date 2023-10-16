@@ -114,7 +114,7 @@ func TestAsset_MarshalJSON(t *testing.T) {
 func TestAsset_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		input    string
-		expected string
+		expected AssetType
 		err      string
 	}{
 		// Errors
@@ -124,9 +124,9 @@ func TestAsset_UnmarshalJSON(t *testing.T) {
 		{`""`, "", "invalid asset type"},
 		{`"bob"`, "", "invalid asset type"},
 		// Success
-		{`"video"`, "video", ""},
-		{`"html"`, "html", ""},
-		{`"pdf"`, "pdf", ""},
+		{`"video"`, AssetVideo, ""},
+		{`"html"`, AssetHTML, ""},
+		{`"pdf"`, AssetPDF, ""},
 	}
 
 	for _, tt := range tests {
@@ -146,11 +146,11 @@ func TestAsset_UnmarshalJSON(t *testing.T) {
 func TestAsset_Value(t *testing.T) {
 	tests := []struct {
 		input    string
-		expected string
+		expected AssetType
 	}{
-		{"mp4", "video"},
-		{"html", "html"},
-		{"pdf", "pdf"},
+		{"mp4", AssetVideo},
+		{"html", AssetHTML},
+		{"pdf", AssetPDF},
 	}
 
 	for _, tt := range tests {

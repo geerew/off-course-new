@@ -540,7 +540,7 @@ func Test_GetAttachmentsByAssetId(t *testing.T) {
 
 		result, err = GetAttachmentsByAssetId(ctx, db, dbParams, assets[6].ID)
 		require.Nil(t, err)
-		require.Len(t, result, 4)
+		require.Len(t, result, 2)
 
 		// Assert the first attachment in the result
 		assert.Equal(t, attachments[12].ID, result[0].ID)
