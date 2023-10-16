@@ -68,6 +68,31 @@ func selectWhere(q *bun.SelectQuery, params *database.DatabaseParams, table stri
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+func selectOrderBy(q *bun.SelectQuery, params *database.DatabaseParams, table string) *bun.SelectQuery {
+	if params != nil && params.OrderBy != nil {
+		orderBys := []string{}
+
+		// The orderby can come in 2 forms:
+		//  - A single string with comma separated columns
+		//  - An array of strings with each string being a column
+		for _, orderBy := range params.OrderBy {
+			// Split the string by comma into slice
+			parts := strings.Split(orderBy, ",")
+			for _, part := range parts {
+				if !strings.Contains(part, ".") {
+					orderBys = append(orderBys, table+"."+part)
+				}
+			}
+		}
+
+		q = q.Order(orderBys...)
+	}
+
+	return q
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func selectRelation(q *bun.SelectQuery, params *database.DatabaseParams) *bun.SelectQuery {
 	if params != nil && params.Relation != nil {
 		for _, relation := range params.Relation {

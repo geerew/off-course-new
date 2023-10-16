@@ -76,7 +76,7 @@ func GetCourses(ctx context.Context, db database.Database, params *database.Data
 
 		// Order by
 		if len(params.OrderBy) > 0 {
-			q = q.Order(params.OrderBy...)
+			selectOrderBy(q, params, "course")
 		}
 		// Where
 		if params.Where != nil {

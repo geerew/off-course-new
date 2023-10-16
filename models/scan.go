@@ -62,7 +62,7 @@ func GetScans(ctx context.Context, db database.Database, params *database.Databa
 
 		// Order by
 		if len(params.OrderBy) > 0 {
-			q = q.Order(params.OrderBy...)
+			selectOrderBy(q, params, "scan")
 		}
 
 		// Where

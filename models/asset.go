@@ -73,7 +73,7 @@ func GetAssets(ctx context.Context, db database.Database, params *database.Datab
 
 		// Order by
 		if len(params.OrderBy) > 0 {
-			q = q.Order(params.OrderBy...)
+			selectOrderBy(q, params, "asset")
 		}
 
 		// Where
