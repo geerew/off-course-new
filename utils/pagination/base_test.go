@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
-	"time"
 
+	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -188,14 +188,14 @@ func Test_BuildResult(t *testing.T) {
 		p.SetCount(24)
 
 		type Data struct {
-			ID        string    `json:"id"`
-			CreatedAt time.Time `json:"createdAt"`
+			ID        string         `json:"id"`
+			CreatedAt types.DateTime `json:"createdAt"`
 		}
 
 		// The data to marshal
 		data := []Data{
-			{ID: "1", CreatedAt: time.Now()},
-			{ID: "2", CreatedAt: time.Now()},
+			{ID: "1", CreatedAt: types.NowDateTime()},
+			{ID: "2", CreatedAt: types.NowDateTime()},
 		}
 
 		result, err := p.BuildResult(data)
@@ -206,7 +206,7 @@ func Test_BuildResult(t *testing.T) {
 			var d Data
 			require.Nil(t, json.Unmarshal(raw, &d))
 			assert.Equal(t, data[i].ID, d.ID)
-			assert.True(t, data[i].CreatedAt.Equal(d.CreatedAt))
+			assert.Equal(t, data[i].CreatedAt.String(), d.CreatedAt.String())
 		}
 	})
 
