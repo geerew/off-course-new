@@ -374,6 +374,308 @@ func Test_GetAttachment(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func Test_GetAttachmentById(t *testing.T) {
+	t.Run("not found", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		attachment, err := GetAttachmentById(ctx, db, nil, "1")
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, attachment)
+	})
+
+	t.Run("found", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
+
+		result, err := GetAttachmentById(ctx, db, nil, attachments[5].ID)
+		require.Nil(t, err)
+		assert.Equal(t, attachments[5].ID, result.ID)
+		assert.Equal(t, attachments[5].CourseID, result.CourseID)
+		assert.NotEmpty(t, result.Title)
+		assert.NotEmpty(t, result.Path)
+		assert.False(t, result.CreatedAt.IsZero())
+		assert.False(t, result.UpdatedAt.IsZero())
+
+		// Relations are empty
+		assert.Nil(t, result.Course)
+		assert.Nil(t, result.Asset)
+	})
+
+	t.Run("relations", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
+
+		// ----------------------------
+		// Course relation
+		// ----------------------------
+		dbParams := &database.DatabaseParams{Relation: []database.Relation{{Struct: "Course"}}}
+
+		result, err := GetAttachmentById(ctx, db, dbParams, attachments[5].ID)
+		require.Nil(t, err)
+		assert.Equal(t, attachments[5].ID, result.ID)
+		assert.Equal(t, attachments[5].CourseID, result.CourseID)
+		assert.Equal(t, attachments[5].AssetID, result.AssetID)
+
+		// Assert the course
+		require.NotNil(t, result.Course)
+		assert.Equal(t, courses[1].ID, result.Course.ID)
+
+		// Assert asset is nil
+		assert.Nil(t, result.Asset)
+
+		// ----------------------------
+		// Course and asset relation
+		// ----------------------------
+		dbParams = &database.DatabaseParams{Relation: []database.Relation{{Struct: "Course"}, {Struct: "Asset"}}}
+
+		result, err = GetAttachmentById(ctx, db, dbParams, attachments[12].ID)
+		require.Nil(t, err)
+		assert.Equal(t, attachments[12].ID, result.ID)
+		assert.Equal(t, attachments[12].CourseID, result.CourseID)
+		assert.Equal(t, attachments[12].AssetID, result.AssetID)
+
+		// Assert the course
+		require.NotNil(t, result.Course)
+		assert.Equal(t, courses[3].ID, result.Course.ID)
+
+		// Assert the asset
+		require.NotNil(t, result.Asset)
+		assert.Equal(t, assets[6].ID, result.Asset.ID)
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := db.DB().NewDropTable().Model(&Attachment{}).Exec(ctx)
+		require.Nil(t, err)
+
+		_, err = GetAttachmentById(ctx, db, nil, "1")
+		require.ErrorContains(t, err, "no such table: attachments")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_GetAttachmentsByAssetId(t *testing.T) {
+	t.Run("no entries", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		attachments, err := GetAttachmentsByAssetId(ctx, db, nil, "1")
+		require.Nil(t, err)
+		require.Len(t, attachments, 0)
+	})
+
+	t.Run("found", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
+
+		result, err := GetAttachmentsByAssetId(ctx, db, nil, assets[2].ID)
+		require.Nil(t, err)
+		require.Len(t, result, 2)
+
+		// Assert the first attachment in the result
+		assert.Equal(t, attachments[4].ID, result[0].ID)
+		assert.Equal(t, attachments[4].CourseID, result[0].CourseID)
+		assert.NotEmpty(t, result[0].Title)
+		assert.NotEmpty(t, result[0].Path)
+		assert.False(t, result[0].CreatedAt.IsZero())
+		assert.False(t, result[0].UpdatedAt.IsZero())
+
+		// Relations are empty
+		assert.Nil(t, result[0].Course)
+		assert.Nil(t, result[0].Asset)
+
+		// Assert the second attachment
+		assert.Equal(t, attachments[5].ID, result[1].ID)
+	})
+
+	t.Run("relations", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
+
+		// ----------------------------
+		// Course relation
+		// ----------------------------
+		dbParams := &database.DatabaseParams{Relation: []database.Relation{{Struct: "Course"}}}
+
+		result, err := GetAttachmentsByAssetId(ctx, db, dbParams, assets[2].ID)
+		require.Nil(t, err)
+		require.Len(t, result, 2)
+
+		// Assert the first attachment in the result
+		assert.Equal(t, attachments[4].ID, result[0].ID)
+		assert.Equal(t, attachments[4].CourseID, result[0].CourseID)
+		assert.Equal(t, attachments[4].AssetID, result[0].AssetID)
+
+		// Assert the course
+		require.NotNil(t, result[0].Course)
+		assert.Equal(t, courses[1].ID, result[0].Course.ID)
+
+		// Assert asset is nil
+		assert.Nil(t, result[0].Asset)
+
+		// ----------------------------
+		// Course and asset relation
+		// ----------------------------
+		dbParams = &database.DatabaseParams{Relation: []database.Relation{{Struct: "Course"}, {Struct: "Asset"}}}
+
+		result, err = GetAttachmentsByAssetId(ctx, db, dbParams, assets[6].ID)
+		require.Nil(t, err)
+		require.Len(t, result, 4)
+
+		// Assert the first attachment in the result
+		assert.Equal(t, attachments[12].ID, result[0].ID)
+		assert.Equal(t, attachments[12].CourseID, result[0].CourseID)
+		assert.Equal(t, attachments[12].AssetID, result[0].AssetID)
+
+		// Assert the course
+		require.NotNil(t, result[0].Course)
+		assert.Equal(t, courses[3].ID, result[0].Course.ID)
+
+		// Assert the asset
+		require.NotNil(t, result[0].Asset)
+		assert.Equal(t, assets[6].ID, result[0].Asset.ID)
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := db.DB().NewDropTable().Model(&Attachment{}).Exec(ctx)
+		require.Nil(t, err)
+
+		_, err = GetAttachmentsByAssetId(ctx, db, nil, "1")
+		require.ErrorContains(t, err, "no such table: attachments")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_GetAttachmentsByCourseId(t *testing.T) {
+	t.Run("no entries", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		attachments, err := GetAttachmentsByCourseId(ctx, db, nil, "1")
+		require.Nil(t, err)
+		require.Len(t, attachments, 0)
+	})
+
+	t.Run("found", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
+
+		result, err := GetAttachmentsByCourseId(ctx, db, nil, courses[1].ID)
+		require.Nil(t, err)
+		require.Len(t, result, 4)
+
+		// Assert the first attachment in the result
+		assert.Equal(t, attachments[4].ID, result[0].ID)
+		assert.Equal(t, attachments[4].CourseID, result[0].CourseID)
+		assert.NotEmpty(t, result[0].Title)
+		assert.NotEmpty(t, result[0].Path)
+		assert.False(t, result[0].CreatedAt.IsZero())
+		assert.False(t, result[0].UpdatedAt.IsZero())
+
+		// Relations are empty
+		assert.Nil(t, result[0].Course)
+		assert.Nil(t, result[0].Asset)
+
+		// Assert the other 3 attachments
+		assert.Equal(t, attachments[5].ID, result[1].ID)
+		assert.Equal(t, attachments[6].ID, result[2].ID)
+		assert.Equal(t, attachments[7].ID, result[3].ID)
+	})
+
+	t.Run("relations", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
+
+		// ----------------------------
+		// Course relation
+		// ----------------------------
+		dbParams := &database.DatabaseParams{Relation: []database.Relation{{Struct: "Course"}}}
+
+		result, err := GetAttachmentsByCourseId(ctx, db, dbParams, courses[1].ID)
+		require.Nil(t, err)
+		require.Len(t, result, 4)
+
+		// Assert the first attachment in the result
+		assert.Equal(t, attachments[4].ID, result[0].ID)
+		assert.Equal(t, attachments[4].CourseID, result[0].CourseID)
+		assert.Equal(t, attachments[4].AssetID, result[0].AssetID)
+
+		// Assert the course
+		require.NotNil(t, result[0].Course)
+		assert.Equal(t, courses[1].ID, result[0].Course.ID)
+
+		// Assert asset is nil
+		assert.Nil(t, result[0].Asset)
+
+		// ----------------------------
+		// Course and asset relation
+		// ----------------------------
+		dbParams = &database.DatabaseParams{Relation: []database.Relation{{Struct: "Course"}, {Struct: "Asset"}}}
+
+		result, err = GetAttachmentsByCourseId(ctx, db, dbParams, courses[3].ID)
+		require.Nil(t, err)
+		require.Len(t, result, 4)
+
+		// Assert the first attachment in the result
+		assert.Equal(t, attachments[12].ID, result[0].ID)
+		assert.Equal(t, attachments[12].CourseID, result[0].CourseID)
+		assert.Equal(t, attachments[12].AssetID, result[0].AssetID)
+
+		// Assert the course
+		require.NotNil(t, result[0].Course)
+		assert.Equal(t, courses[3].ID, result[0].Course.ID)
+
+		// Assert the asset
+		require.NotNil(t, result[0].Asset)
+		assert.Equal(t, assets[6].ID, result[0].Asset.ID)
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := db.DB().NewDropTable().Model(&Attachment{}).Exec(ctx)
+		require.Nil(t, err)
+
+		_, err = GetAttachmentsByCourseId(ctx, db, nil, "1")
+		require.ErrorContains(t, err, "no such table: attachments")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func Test_CreateAttachment(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)

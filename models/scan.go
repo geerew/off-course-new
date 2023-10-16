@@ -109,6 +109,44 @@ func GetScan(ctx context.Context, db database.Database, params *database.Databas
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// GetScanById returns a scan for the given ID
+func GetScanById(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) (*Scan, error) {
+	scan := &Scan{}
+
+	q := db.DB().NewSelect().Model(scan).Where("scan.id = ?", id)
+
+	if params != nil && params.Relation != nil {
+		q = selectRelation(q, params)
+	}
+
+	if err := q.Scan(ctx); err != nil {
+		return nil, err
+	}
+
+	return scan, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GetScanByCourseId returns a scan for the given course ID
+func GetScanByCourseId(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) (*Scan, error) {
+	scan := &Scan{}
+
+	q := db.DB().NewSelect().Model(scan).Where("scan.course_id = ?", id)
+
+	if params != nil && params.Relation != nil {
+		q = selectRelation(q, params)
+	}
+
+	if err := q.Scan(ctx); err != nil {
+		return nil, err
+	}
+
+	return scan, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // CreateScan inserts a new scan with a status of waiting
 func CreateScan(ctx context.Context, db database.Database, scan *Scan) error {
 	scan.RefreshId()

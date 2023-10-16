@@ -127,6 +127,31 @@ func GetCourse(ctx context.Context, db database.Database, params *database.Datab
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// GetCourseById returns a course for the given ID
+func GetCourseById(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) (*Course, error) {
+	course := &Course{}
+
+	q := db.DB().
+		NewSelect().
+		Model(course).
+		ColumnExpr("Course.*").
+		ColumnExpr("?.? AS ?", bun.Ident("scans"), bun.Ident("status"), bun.Ident("scan_status")).
+		Join("LEFT JOIN ?0 ON (?0.?1 = ?2.?3)", bun.Ident("scans"), bun.Ident("course_id"), bun.Ident("course"), bun.Ident("id")).
+		Where("Course.id = ?", id)
+
+	if params != nil && params.Relation != nil {
+		q = selectRelation(q, params)
+	}
+
+	if err := q.Scan(ctx); err != nil {
+		return nil, err
+	}
+
+	return course, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // CreateCourse creates a new course
 func CreateCourse(ctx context.Context, db database.Database, course *Course) error {
 	course.RefreshId()

@@ -312,6 +312,130 @@ func Test_GetScan(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func Test_GetScanById(t *testing.T) {
+	t.Run("not found", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		scan, err := GetScanById(ctx, db, nil, "1")
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, scan)
+	})
+
+	t.Run("found", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		scans := NewTestScans(t, db, courses)
+
+		result, err := GetScanById(ctx, db, nil, scans[2].ID)
+		require.Nil(t, err)
+		assert.Equal(t, scans[2].ID, result.ID)
+		assert.Equal(t, scans[2].CourseID, result.CourseID)
+		assert.True(t, result.Status.IsWaiting())
+		assert.False(t, result.CreatedAt.IsZero())
+		assert.False(t, result.UpdatedAt.IsZero())
+
+		// Relations
+		assert.Nil(t, result.Course)
+	})
+
+	t.Run("course relation", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		scans := NewTestScans(t, db, courses)
+
+		dbParams := &database.DatabaseParams{Relation: []database.Relation{{Struct: "Course"}}}
+
+		result, err := GetScanById(ctx, db, dbParams, scans[2].ID)
+		require.Nil(t, err)
+		assert.Equal(t, scans[2].ID, result.ID)
+		assert.Equal(t, scans[2].CourseID, result.CourseID)
+
+		// Assert the course
+		require.NotNil(t, result.Course)
+		assert.Equal(t, courses[2].Title, result.Course.Title)
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := db.DB().NewDropTable().Model(&Scan{}).Exec(ctx)
+		require.Nil(t, err)
+
+		_, err = GetScanById(ctx, db, nil, "1")
+		require.ErrorContains(t, err, "no such table: scans")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_GetScanByCourseId(t *testing.T) {
+	t.Run("not found", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		scan, err := GetScanByCourseId(ctx, db, nil, "1")
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, scan)
+	})
+
+	t.Run("found", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		scans := NewTestScans(t, db, courses)
+
+		result, err := GetScanByCourseId(ctx, db, nil, courses[2].ID)
+		require.Nil(t, err)
+		assert.Equal(t, scans[2].ID, result.ID)
+		assert.Equal(t, scans[2].CourseID, result.CourseID)
+		assert.True(t, result.Status.IsWaiting())
+		assert.False(t, result.CreatedAt.IsZero())
+		assert.False(t, result.UpdatedAt.IsZero())
+
+		// Relations
+		assert.Nil(t, result.Course)
+	})
+
+	t.Run("course relation", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		scans := NewTestScans(t, db, courses)
+
+		dbParams := &database.DatabaseParams{Relation: []database.Relation{{Struct: "Course"}}}
+
+		result, err := GetScanByCourseId(ctx, db, dbParams, courses[2].ID)
+		require.Nil(t, err)
+		assert.Equal(t, scans[2].ID, result.ID)
+		assert.Equal(t, scans[2].CourseID, result.CourseID)
+
+		// Assert the course
+		require.NotNil(t, result.Course)
+		assert.Equal(t, courses[2].Title, result.Course.Title)
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := db.DB().NewDropTable().Model(&Scan{}).Exec(ctx)
+		require.Nil(t, err)
+
+		_, err = GetScanByCourseId(ctx, db, nil, "1")
+		require.ErrorContains(t, err, "no such table: scans")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func Test_CreateScan(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)

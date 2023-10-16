@@ -100,6 +100,25 @@ func GetAttachment(ctx context.Context, db database.Database, params *database.D
 	}
 
 	// Relations
+	if params.Relation != nil {
+		q = selectRelation(q, params)
+	}
+
+	if err := q.Scan(ctx); err != nil {
+		return nil, err
+	}
+
+	return attachment, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GetAttachmentById returns an attachment for the given ID
+func GetAttachmentById(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) (*Attachment, error) {
+	attachment := &Attachment{}
+
+	q := db.DB().NewSelect().Model(attachment).Where("attachment.id = ?", id)
+
 	if params != nil && params.Relation != nil {
 		q = selectRelation(q, params)
 	}
@@ -109,6 +128,44 @@ func GetAttachment(ctx context.Context, db database.Database, params *database.D
 	}
 
 	return attachment, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GetAttachmentById returns a slice of attachments for the given asset ID
+func GetAttachmentsByAssetId(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) ([]*Attachment, error) {
+	var attachments []*Attachment
+
+	q := db.DB().NewSelect().Model(&attachments).Where("attachment.asset_id = ?", id)
+
+	if params != nil && params.Relation != nil {
+		q = selectRelation(q, params)
+	}
+
+	if err := q.Scan(ctx); err != nil {
+		return nil, err
+	}
+
+	return attachments, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GetAttachmentsByCourseId returns a slice of attachments for the given course ID
+func GetAttachmentsByCourseId(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) ([]*Attachment, error) {
+	var attachments []*Attachment
+
+	q := db.DB().NewSelect().Model(&attachments).Where("attachment.course_id = ?", id)
+
+	if params != nil && params.Relation != nil {
+		q = selectRelation(q, params)
+	}
+
+	if err := q.Scan(ctx); err != nil {
+		return nil, err
+	}
+
+	return attachments, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

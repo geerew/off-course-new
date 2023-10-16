@@ -288,8 +288,7 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 
 		// Asset the course card
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
-		foundCourse, err := models.GetCourse(scanner.ctx, scanner.db, dbParams)
+		foundCourse, err := models.GetCourseById(scanner.ctx, scanner.db, nil, course.ID)
 		require.Nil(t, err)
 		assert.Equal(t, cardPath, foundCourse.CardPath)
 	})
@@ -310,8 +309,7 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert the course card
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
-		foundCourse, err := models.GetCourse(scanner.ctx, scanner.db, dbParams)
+		foundCourse, err := models.GetCourseById(scanner.ctx, scanner.db, nil, course.ID)
 		require.Nil(t, err)
 		assert.Empty(t, foundCourse.CardPath)
 		assert.Empty(t, course.CardPath)
@@ -336,8 +334,7 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert the course card
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
-		foundCourse, err := models.GetCourse(scanner.ctx, scanner.db, dbParams)
+		foundCourse, err := models.GetCourseById(scanner.ctx, scanner.db, nil, course.ID)
 		require.Nil(t, err)
 		assert.Equal(t, cardPath1, foundCourse.CardPath)
 	})
@@ -377,7 +374,7 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert the assets
-		assets, err := models.GetAssets(scanner.ctx, scanner.db, nil)
+		assets, err := models.GetAssetsByCourseId(scanner.ctx, scanner.db, nil, course.ID)
 		require.Nil(t, err)
 		require.Len(t, assets, 0)
 	})
@@ -398,9 +395,9 @@ func Test_CourseProcessor(t *testing.T) {
 		err := CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		// Assert the assets (ordered by prefix)
+		// Assert there are 2 assets
 		dbParams := &database.DatabaseParams{OrderBy: []string{"chapter asc", "prefix asc"}}
-		assets, err := models.GetAssets(scanner.ctx, scanner.db, dbParams)
+		assets, err := models.GetAssetsByCourseId(scanner.ctx, scanner.db, dbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, assets, 2)
 
@@ -424,8 +421,8 @@ func Test_CourseProcessor(t *testing.T) {
 		err = CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		// Assert the assets (ordered by prefix)
-		assets, err = models.GetAssets(scanner.ctx, scanner.db, dbParams)
+		// Assert there is 1 asset
+		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, dbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 
@@ -443,7 +440,8 @@ func Test_CourseProcessor(t *testing.T) {
 		err = CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		assets, err = models.GetAssets(scanner.ctx, scanner.db, dbParams)
+		// Assert there are 2 assets
+		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, dbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, assets, 2)
 
@@ -488,14 +486,8 @@ func Test_CourseProcessor(t *testing.T) {
 
 		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
 
-		assetDbParams := &database.DatabaseParams{
-			Where:    []database.Where{{Column: "course_id", Value: course.ID}},
-			Relation: []database.Relation{{Struct: "Attachments"}},
-		}
-		attachmentDbParams := &database.DatabaseParams{
-			OrderBy: []string{"title asc"},
-			Where:   []database.Where{{Column: "course_id", Value: course.ID}},
-		}
+		assetDbParams := &database.DatabaseParams{Relation: []database.Relation{{Struct: "Attachments"}}}
+		attachmentDbParams := &database.DatabaseParams{OrderBy: []string{"title asc"}}
 
 		// Add video asset with 1 attachment
 		videoFile := fmt.Sprintf("%s/01 - video.mp4", course.Path)
@@ -507,7 +499,7 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert the asset
-		assets, err := models.GetAssets(scanner.ctx, scanner.db, assetDbParams)
+		assets, err := models.GetAssetsByCourseId(scanner.ctx, scanner.db, assetDbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, "video", assets[0].Title)
@@ -517,8 +509,8 @@ func Test_CourseProcessor(t *testing.T) {
 		assert.True(t, assets[0].Type.IsVideo())
 		require.Len(t, assets[0].Attachments, 1)
 
-		// Assert the attachment
-		attachments, err := models.GetAttachments(scanner.ctx, scanner.db, attachmentDbParams)
+		// Assert there is 1 attachment
+		attachments, err := models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
 		assert.Equal(t, attachmentFile, attachments[0].Path)
@@ -533,14 +525,14 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert the asset
-		assets, err = models.GetAssets(scanner.ctx, scanner.db, assetDbParams)
+		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, assetDbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, "video", assets[0].Title)
 		require.Len(t, assets[0].Attachments, 2)
 
-		// Assert the attachment
-		attachments, err = models.GetAttachments(scanner.ctx, scanner.db, attachmentDbParams)
+		// Assert there are 2 attachments
+		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, attachments, 2)
 		assert.Equal(t, attachmentFile, attachments[0].Path)
@@ -549,21 +541,20 @@ func Test_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Delete first attachment
 		// ----------------------------
-
 		scanner.appFs.Fs.Remove(attachmentFile)
 
 		err = CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
 		// Assert the asset
-		assets, err = models.GetAssets(scanner.ctx, scanner.db, assetDbParams)
+		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, assetDbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, "video", assets[0].Title)
 		require.Len(t, assets[0].Attachments, 1)
 
-		// Assert the attachment
-		attachments, err = models.GetAttachments(scanner.ctx, scanner.db, attachmentDbParams)
+		// Assert there is 1 attachment
+		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
 		assert.Equal(t, attachmentFile2, attachments[0].Path)
@@ -597,11 +588,7 @@ func Test_CourseProcessor(t *testing.T) {
 
 		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
 
-		assetDbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course_id", Value: course.ID}}}
-		attachmentDbParams := &database.DatabaseParams{
-			OrderBy: []string{"title asc"},
-			Where:   []database.Where{{Column: "course_id", Value: course.ID}},
-		}
+		attachmentDbParams := &database.DatabaseParams{OrderBy: []string{"title asc"}}
 
 		// ----------------------------
 		// PDF
@@ -613,7 +600,7 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert the pdf
-		assets, err := models.GetAssets(scanner.ctx, scanner.db, assetDbParams)
+		assets, err := models.GetAssetsByCourseId(scanner.ctx, scanner.db, nil, course.ID)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 
@@ -625,7 +612,7 @@ func Test_CourseProcessor(t *testing.T) {
 		assert.True(t, assets[0].Type.IsPDF())
 
 		// Assert the attachments
-		attachments, err := models.GetAttachments(scanner.ctx, scanner.db, attachmentDbParams)
+		attachments, err := models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
 		require.Nil(t, err)
 		assert.Empty(t, attachments)
 
@@ -639,7 +626,7 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert the pdf
-		assets, err = models.GetAssets(scanner.ctx, scanner.db, assetDbParams)
+		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, nil, course.ID)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 
@@ -651,7 +638,7 @@ func Test_CourseProcessor(t *testing.T) {
 		assert.True(t, assets[0].Type.IsHTML())
 
 		// Assert the attachments (pdfFile should be the last attachment)
-		attachments, err = models.GetAttachments(scanner.ctx, scanner.db, attachmentDbParams)
+		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
 		assert.Equal(t, pdfFile, attachments[0].Path)
@@ -666,7 +653,7 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert the pdf
-		assets, err = models.GetAssets(scanner.ctx, scanner.db, assetDbParams)
+		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, nil, course.ID)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 
@@ -678,7 +665,7 @@ func Test_CourseProcessor(t *testing.T) {
 		assert.True(t, assets[0].Type.IsVideo())
 
 		// Assert the attachments (html file should be the last attachment)
-		attachments, err = models.GetAttachments(scanner.ctx, scanner.db, attachmentDbParams)
+		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, attachments, 2)
 		assert.Equal(t, htmlFile, attachments[1].Path)
@@ -693,7 +680,7 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert the video file is the asset
-		assets, err = models.GetAssets(scanner.ctx, scanner.db, assetDbParams)
+		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, nil, course.ID)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, "c", assets[0].Title)
@@ -701,7 +688,7 @@ func Test_CourseProcessor(t *testing.T) {
 		assert.True(t, assets[0].Type.IsVideo())
 
 		// Assert the attachments (htmlfile2 should be the last attachment)
-		attachments, err = models.GetAttachments(scanner.ctx, scanner.db, attachmentDbParams)
+		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, attachments, 3)
 		assert.Equal(t, htmlFile2, attachments[2].Path)
@@ -716,7 +703,7 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert the video file is the asset
-		assets, err = models.GetAssets(scanner.ctx, scanner.db, assetDbParams)
+		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, nil, course.ID)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, "c", assets[0].Title)
@@ -724,7 +711,7 @@ func Test_CourseProcessor(t *testing.T) {
 		assert.True(t, assets[0].Type.IsVideo())
 
 		// Assert the attachments (pdfFile2 should be the last attachment)
-		attachments, err = models.GetAttachments(scanner.ctx, scanner.db, attachmentDbParams)
+		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, attachments, 4)
 		assert.Equal(t, pdfFile2, attachments[3].Path)

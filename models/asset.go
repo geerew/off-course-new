@@ -96,6 +96,7 @@ func GetAsset(ctx context.Context, db database.Database, params *database.Databa
 	if params == nil || params.Where == nil {
 		return nil, errors.New("where clause required")
 	}
+
 	asset := &Asset{}
 
 	q := db.DB().NewSelect().Model(asset)
@@ -106,6 +107,25 @@ func GetAsset(ctx context.Context, db database.Database, params *database.Databa
 	}
 
 	// Relations
+	if params.Relation != nil {
+		q = selectRelation(q, params)
+	}
+
+	if err := q.Scan(ctx); err != nil {
+		return nil, err
+	}
+
+	return asset, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GetAssetById returns an asset for the given ID
+func GetAssetById(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) (*Asset, error) {
+	asset := &Asset{}
+
+	q := db.DB().NewSelect().Model(asset).Where("asset.id = ?", id)
+
 	if params != nil && params.Relation != nil {
 		q = selectRelation(q, params)
 	}
@@ -115,6 +135,25 @@ func GetAsset(ctx context.Context, db database.Database, params *database.Databa
 	}
 
 	return asset, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GetAssetById returns a slice of assets for the given course ID
+func GetAssetsByCourseId(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) ([]*Asset, error) {
+	var assets []*Asset
+
+	q := db.DB().NewSelect().Model(&assets).Where("asset.course_id = ?", id)
+
+	if params != nil && params.Relation != nil {
+		q = selectRelation(q, params)
+	}
+
+	if err := q.Scan(ctx); err != nil {
+		return nil, err
+	}
+
+	return assets, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

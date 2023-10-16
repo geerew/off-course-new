@@ -54,12 +54,9 @@ func NewCourseScanner(config *CourseScannerConfig) *CourseScanner {
 // Add inserts a course scan job into the db
 func (cs *CourseScanner) Add(courseId string) (*models.Scan, error) {
 	// Ensure a job does not already exists for this course
-	dbParams := &database.DatabaseParams{
-		Where:    []database.Where{{Column: "course_id", Value: courseId}},
-		Relation: []database.Relation{{Struct: "Course"}},
-	}
+	dbParams := &database.DatabaseParams{Relation: []database.Relation{{Struct: "Course"}}}
 
-	scan, err := models.GetScan(cs.ctx, cs.db, dbParams)
+	scan, err := models.GetScanByCourseId(cs.ctx, cs.db, dbParams, courseId)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	} else if scan != nil {
@@ -68,8 +65,7 @@ func (cs *CourseScanner) Add(courseId string) (*models.Scan, error) {
 	}
 
 	// Get the course
-	dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: courseId}}}
-	course, err := models.GetCourse(cs.ctx, cs.db, dbParams)
+	course, err := models.GetCourseById(cs.ctx, cs.db, nil, courseId)
 	if err != nil {
 		return nil, err
 	}
@@ -147,8 +143,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 	}
 
 	// Check the course still exists
-	dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: scan.CourseID}}}
-	course, err := models.GetCourse(cs.ctx, cs.db, dbParams)
+	course, err := models.GetCourseById(cs.ctx, cs.db, nil, scan.CourseID)
 	if err != nil {
 		return err
 	} else if course == nil {
@@ -418,8 +413,7 @@ func isCard(fileName string) bool {
 
 func updateAssets(ctx context.Context, db database.Database, courseId string, assets []*models.Asset) error {
 	// Get existing assets for this course
-	dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course_id", Value: courseId}}}
-	existingAssets, err := models.GetAssets(ctx, db, dbParams)
+	existingAssets, err := models.GetAssetsByCourseId(ctx, db, nil, courseId)
 	if err != nil {
 		return err
 	}
@@ -462,8 +456,7 @@ func updateAssets(ctx context.Context, db database.Database, courseId string, as
 
 func updateAttachments(ctx context.Context, db database.Database, courseId string, attachments []*models.Attachment) error {
 	// Get existing attachments for this course
-	dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "course_id", Value: courseId}}}
-	existingAttachments, err := models.GetAttachments(ctx, db, dbParams)
+	existingAttachments, err := models.GetAttachmentsByCourseId(ctx, db, nil, courseId)
 	if err != nil {
 		return err
 	}

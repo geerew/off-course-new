@@ -420,6 +420,144 @@ func Test_GetCourse(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func Test_GetCourseById(t *testing.T) {
+	t.Run("not found", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course, err := GetCourseById(ctx, db, nil, "1")
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, course)
+	})
+
+	t.Run("found", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		NewTestScans(t, db, courses)
+
+		result, err := GetCourseById(ctx, db, nil, courses[2].ID)
+		require.Nil(t, err)
+		assert.Equal(t, courses[2].ID, result.ID)
+		assert.Equal(t, courses[2].Title, result.Title)
+		assert.Equal(t, courses[2].Path, result.Path)
+		assert.Empty(t, courses[2].CardPath)
+		assert.False(t, courses[2].Started)
+		assert.False(t, courses[2].Finished)
+		assert.False(t, courses[2].CreatedAt.IsZero())
+		assert.False(t, courses[2].UpdatedAt.IsZero())
+
+		// Scan status
+		require.NotEmpty(t, result.ScanStatus)
+		assert.Equal(t, "waiting", result.ScanStatus)
+
+		// Relations are empty
+		assert.Nil(t, courses[2].Assets)
+	})
+
+	t.Run("relations", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
+
+		// ----------------------------
+		// Assets relation
+		// ----------------------------
+		dbParams := &database.DatabaseParams{Relation: []database.Relation{{Struct: "Assets"}}}
+
+		result, err := GetCourseById(ctx, db, dbParams, courses[2].ID)
+		require.Nil(t, err)
+		assert.Equal(t, courses[2].ID, result.ID)
+
+		// Assert the assets
+		require.NotNil(t, result.Assets)
+		require.Len(t, result.Assets, 2)
+		assert.Equal(t, assets[4].ID, result.Assets[0].ID)
+
+		// Asset the attachments for the first asset is nil
+		assert.Nil(t, result.Assets[0].Attachments)
+
+		// ----------------------------
+		// Assets and attachments relation
+		// ----------------------------
+		dbParams = &database.DatabaseParams{Relation: []database.Relation{{Struct: "Assets"}, {Struct: "Assets.Attachments"}}}
+
+		result, err = GetCourseById(ctx, db, dbParams, courses[3].ID)
+		require.Nil(t, err)
+		assert.Equal(t, courses[3].ID, result.ID)
+
+		// Assert the assets
+		require.NotNil(t, result.Assets)
+		require.Len(t, result.Assets, 2)
+		assert.Equal(t, assets[6].ID, result.Assets[0].ID)
+
+		// Asset the attachments
+		assert.NotNil(t, result.Assets[0].Attachments)
+		assert.Len(t, result.Assets[0].Attachments, 2)
+		assert.Equal(t, attachments[12].ID, result.Assets[0].Attachments[0].ID)
+	})
+
+	// 	t.Run("preload orderby", func(t *testing.T) {
+	// 		_, db, ctx, teardown := setup(t)
+	// 		defer teardown(t)
+
+	// 		// Create 1 course with 5 assets
+	// 		course := NewTestCourses(t, db, 1)[0]
+	// 		assets := CreateTestAssets(t, db, []*Course{course}, 5)
+
+	// 		preload := []database.Preload{
+	// 			{Table: "Assets", OrderBy: "created_at desc"},
+	// 			// {Table: "Assets.Attachments"},
+	// 		}
+
+	// 		result, err := GetCourse(db, course.ID, &database.DatabaseParams{Preload: preload})
+	// 		require.Nil(t, err)
+	// 		assert.Equal(t, course.ID, result.ID)
+
+	// 		// Assert the assets. The last created asset should now be the first result in the assets
+	// 		// slice
+	// 		require.Len(t, result.Assets, 5)
+	// 		assert.Equal(t, assets[4].ID, result.Assets[0].ID)
+	// 	})
+
+	// 	t.Run("error preload orderby", func(t *testing.T) {
+	// 		_, db, ctx, teardown := setup(t)
+	// 		defer teardown(t)
+
+	// 		// Create 1 course
+	// 		course := NewTestCourses(t, db, 1)[0]
+
+	// 		// No column
+	// 		preload := []database.Preload{{Table: "Assets", OrderBy: "error_test desc"}}
+	// 		result, err := GetCourse(db, course.ID, &database.DatabaseParams{Preload: preload})
+	// 		require.ErrorContains(t, err, "no such column: error_test")
+	// 		assert.Nil(t, result)
+
+	// 		// Invalid syntax
+	// 		preload = []database.Preload{{Table: "Assets", OrderBy: "error_test invalid"}}
+	// 		result, err = GetCourse(db, course.ID, &database.DatabaseParams{Preload: preload})
+	// 		require.ErrorContains(t, err, "near \"invalid\": syntax error")
+	// 		assert.Nil(t, result)
+	// 	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := db.DB().NewDropTable().Model((*Course)(nil)).Exec(ctx)
+		require.Nil(t, err)
+
+		_, err = GetCourseById(ctx, db, nil, "1")
+		require.ErrorContains(t, err, "no such table: courses")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func Test_CreateCourse(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
