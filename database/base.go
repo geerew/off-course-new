@@ -31,8 +31,9 @@ type Where struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type Relation struct {
-	Struct string
-	Cols   []string
+	Struct  string
+	Cols    []string
+	OrderBy []string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

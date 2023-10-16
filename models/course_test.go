@@ -163,6 +163,61 @@ func Test_GetCourses(t *testing.T) {
 		assert.Equal(t, attachments[0].ID, result[0].Assets[0].Attachments[0].ID)
 	})
 
+	t.Run("relations orderBy", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
+
+		// ----------------------------
+		// Assets relation
+		// ----------------------------
+		dbParams := &database.DatabaseParams{
+			Relation: []database.Relation{{Struct: "Assets", OrderBy: []string{"created_at desc"}}},
+		}
+
+		result, err := GetCourses(ctx, db, dbParams)
+		require.Nil(t, err)
+		require.Len(t, result, 5)
+		assert.Equal(t, courses[0].ID, result[0].ID)
+
+		// Assert the assets. The last asset created (for this course) should be the first item in
+		// the assets slice
+		require.NotNil(t, result[0].Assets)
+		require.Len(t, result[0].Assets, 2)
+		assert.Equal(t, assets[1].ID, result[0].Assets[0].ID)
+		assert.Equal(t, assets[0].ID, result[0].Assets[1].ID)
+
+		// Asset the attachments for the first asset is nil
+		assert.Nil(t, result[0].Assets[0].Attachments)
+
+		// ----------------------------
+		// Assets and attachments relation
+		// ----------------------------
+		dbParams = &database.DatabaseParams{
+			Relation: []database.Relation{{Struct: "Assets"}, {Struct: "Assets.Attachments", OrderBy: []string{"created_at desc"}}},
+		}
+
+		result, err = GetCourses(ctx, db, dbParams)
+		require.Nil(t, err)
+		require.Len(t, result, 5)
+		assert.Equal(t, courses[0].ID, result[0].ID)
+
+		// Assert the assets
+		require.NotNil(t, result[0].Assets)
+		require.Len(t, result[0].Assets, 2)
+		assert.Equal(t, assets[0].ID, result[0].Assets[0].ID)
+
+		// Asset the attachments. The last attachment created (for this course) should be the
+		// first item in the result slice
+		assert.NotNil(t, result[0].Assets[0].Attachments)
+		assert.Len(t, result[0].Assets[0].Attachments, 2)
+		assert.Equal(t, attachments[1].ID, result[0].Assets[0].Attachments[0].ID)
+		assert.Equal(t, attachments[0].ID, result[0].Assets[0].Attachments[1].ID)
+	})
+
 	t.Run("pagination", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
@@ -351,48 +406,60 @@ func Test_GetCourse(t *testing.T) {
 		assert.Equal(t, attachments[12].ID, result.Assets[0].Attachments[0].ID)
 	})
 
-	// 	t.Run("preload orderby", func(t *testing.T) {
-	// 		_, db, ctx, teardown := setup(t)
-	// 		defer teardown(t)
+	t.Run("relations orderBy", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
 
-	// 		// Create 1 course with 5 assets
-	// 		course := NewTestCourses(t, db, 1)[0]
-	// 		assets := CreateTestAssets(t, db, []*Course{course}, 5)
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
 
-	// 		preload := []database.Preload{
-	// 			{Table: "Assets", OrderBy: "created_at desc"},
-	// 			// {Table: "Assets.Attachments"},
-	// 		}
+		// ----------------------------
+		// Assets relation
+		// ----------------------------
+		dbParams := &database.DatabaseParams{
+			Where:    []database.Where{{Column: "id", Value: courses[2].ID}},
+			Relation: []database.Relation{{Struct: "Assets", OrderBy: []string{"created_at desc"}}},
+		}
 
-	// 		result, err := GetCourse(db, course.ID, &database.DatabaseParams{Preload: preload})
-	// 		require.Nil(t, err)
-	// 		assert.Equal(t, course.ID, result.ID)
+		result, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+		assert.Equal(t, courses[2].ID, result.ID)
 
-	// 		// Assert the assets. The last created asset should now be the first result in the assets
-	// 		// slice
-	// 		require.Len(t, result.Assets, 5)
-	// 		assert.Equal(t, assets[4].ID, result.Assets[0].ID)
-	// 	})
+		// Assert the assets. The last asset created (for this course) should be the first item in
+		// the assets slice
+		require.NotNil(t, result.Assets)
+		require.Len(t, result.Assets, 2)
+		assert.Equal(t, assets[5].ID, result.Assets[0].ID)
+		assert.Equal(t, assets[4].ID, result.Assets[1].ID)
 
-	// 	t.Run("error preload orderby", func(t *testing.T) {
-	// 		_, db, ctx, teardown := setup(t)
-	// 		defer teardown(t)
+		// Asset the attachments for the first asset is nil
+		assert.Nil(t, result.Assets[0].Attachments)
 
-	// 		// Create 1 course
-	// 		course := NewTestCourses(t, db, 1)[0]
+		// ----------------------------
+		// Assets and attachments relation
+		// ----------------------------
+		dbParams = &database.DatabaseParams{
+			Where:    []database.Where{{Column: "id", Value: courses[3].ID}},
+			Relation: []database.Relation{{Struct: "Assets"}, {Struct: "Assets.Attachments", OrderBy: []string{"created_at desc"}}},
+		}
 
-	// 		// No column
-	// 		preload := []database.Preload{{Table: "Assets", OrderBy: "error_test desc"}}
-	// 		result, err := GetCourse(db, course.ID, &database.DatabaseParams{Preload: preload})
-	// 		require.ErrorContains(t, err, "no such column: error_test")
-	// 		assert.Nil(t, result)
+		result, err = GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+		assert.Equal(t, courses[3].ID, result.ID)
 
-	// 		// Invalid syntax
-	// 		preload = []database.Preload{{Table: "Assets", OrderBy: "error_test invalid"}}
-	// 		result, err = GetCourse(db, course.ID, &database.DatabaseParams{Preload: preload})
-	// 		require.ErrorContains(t, err, "near \"invalid\": syntax error")
-	// 		assert.Nil(t, result)
-	// 	})
+		// Assert the assets
+		require.NotNil(t, result.Assets)
+		require.Len(t, result.Assets, 2)
+		assert.Equal(t, assets[6].ID, result.Assets[0].ID)
+
+		// Asset the attachments. The last attachment created (for this course) should be the
+		// first item in the result slice
+		assert.NotNil(t, result.Assets[0].Attachments)
+		assert.Len(t, result.Assets[0].Attachments, 2)
+		assert.Equal(t, attachments[13].ID, result.Assets[0].Attachments[0].ID)
+		assert.Equal(t, attachments[12].ID, result.Assets[0].Attachments[1].ID)
+	})
 
 	t.Run("db error", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)

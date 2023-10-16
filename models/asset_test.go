@@ -161,6 +161,35 @@ func Test_GetAssets(t *testing.T) {
 		assert.Equal(t, attachments[0].ID, result[0].Attachments[0].ID)
 	})
 
+	t.Run("relations orderBy", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
+
+		dbParams := &database.DatabaseParams{
+			Relation: []database.Relation{{Struct: "Course"}, {Struct: "Attachments", OrderBy: []string{"created_at desc"}}},
+		}
+
+		result, err := GetAssets(ctx, db, dbParams)
+		require.Nil(t, err)
+		assert.Equal(t, assets[0].ID, result[0].ID)
+		assert.Equal(t, assets[0].CourseID, result[0].CourseID)
+
+		// Assert the course
+		require.NotNil(t, result[0].Course)
+		assert.Equal(t, courses[0].Title, result[0].Course.Title)
+
+		// Assert the attachments. The last attachment (for this asset) should be the first in the
+		// list
+		require.NotNil(t, result[0].Attachments)
+		require.Len(t, result[0].Attachments, 2)
+		assert.Equal(t, attachments[1].ID, result[0].Attachments[0].ID)
+		assert.Equal(t, attachments[0].ID, result[0].Attachments[1].ID)
+	})
+
 	t.Run("pagination", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
@@ -349,6 +378,36 @@ func Test_GetAsset(t *testing.T) {
 		assert.Equal(t, attachments[12].ID, result.Attachments[0].ID)
 	})
 
+	t.Run("relations orderBy", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
+
+		dbParams := &database.DatabaseParams{
+			Where:    []database.Where{{Column: "id", Value: assets[6].ID}},
+			Relation: []database.Relation{{Struct: "Course"}, {Struct: "Attachments", OrderBy: []string{"created_at desc"}}},
+		}
+
+		result, err := GetAsset(ctx, db, dbParams)
+		require.Nil(t, err)
+		assert.Equal(t, assets[6].ID, result.ID)
+		assert.Equal(t, assets[6].CourseID, result.CourseID)
+
+		// Assert the course
+		require.NotNil(t, result.Course)
+		assert.Equal(t, courses[3].Title, result.Course.Title)
+
+		// Assert the attachments. The last attachment (for this asset) should be the first in the
+		// list
+		require.NotNil(t, result.Attachments)
+		require.Len(t, result.Attachments, 2)
+		assert.Equal(t, attachments[13].ID, result.Attachments[0].ID)
+		assert.Equal(t, attachments[12].ID, result.Attachments[1].ID)
+	})
+
 	t.Run("db error", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
@@ -451,6 +510,35 @@ func Test_GetAssetById(t *testing.T) {
 		require.NotNil(t, result.Attachments)
 		require.Len(t, result.Attachments, 2)
 		assert.Equal(t, attachments[12].ID, result.Attachments[0].ID)
+	})
+
+	t.Run("relations orderBy", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
+
+		dbParams := &database.DatabaseParams{
+			Relation: []database.Relation{{Struct: "Course"}, {Struct: "Attachments", OrderBy: []string{"created_at desc"}}},
+		}
+
+		result, err := GetAssetById(ctx, db, dbParams, assets[6].ID)
+		require.Nil(t, err)
+		assert.Equal(t, assets[6].ID, result.ID)
+		assert.Equal(t, assets[6].CourseID, result.CourseID)
+
+		// Assert the course
+		require.NotNil(t, result.Course)
+		assert.Equal(t, courses[3].Title, result.Course.Title)
+
+		// Assert the attachments. The last attachment (for this asset) should be the first in the
+		// list
+		require.NotNil(t, result.Attachments)
+		require.Len(t, result.Attachments, 2)
+		assert.Equal(t, attachments[13].ID, result.Attachments[0].ID)
+		assert.Equal(t, attachments[12].ID, result.Attachments[1].ID)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -556,6 +644,38 @@ func Test_GetAssetsByCourseId(t *testing.T) {
 		require.NotNil(t, result[0].Attachments)
 		require.Len(t, result[0].Attachments, 2)
 		assert.Equal(t, attachments[12].ID, result[0].Attachments[0].ID)
+	})
+
+	t.Run("relations orderBy", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
+
+		dbParams := &database.DatabaseParams{
+			Relation: []database.Relation{{Struct: "Course"}, {Struct: "Attachments", OrderBy: []string{"created_at desc"}}},
+		}
+
+		result, err := GetAssetsByCourseId(ctx, db, dbParams, courses[3].ID)
+		require.Nil(t, err)
+		require.Len(t, result, 2)
+
+		// Assert the first asset in the result
+		assert.Equal(t, assets[6].ID, result[0].ID)
+		assert.Equal(t, assets[6].CourseID, result[0].CourseID)
+
+		// Assert the course
+		require.NotNil(t, result[0].Course)
+		assert.Equal(t, courses[3].Title, result[0].Course.Title)
+
+		// Assert the attachments. The last attachment (for this asset) should be the first in the
+		// list
+		require.NotNil(t, result[0].Attachments)
+		require.Len(t, result[0].Attachments, 2)
+		assert.Equal(t, attachments[13].ID, result[0].Attachments[0].ID)
+		assert.Equal(t, attachments[12].ID, result[0].Attachments[1].ID)
 	})
 
 	t.Run("db error", func(t *testing.T) {

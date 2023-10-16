@@ -71,11 +71,17 @@ func selectWhere(q *bun.SelectQuery, params *database.DatabaseParams, table stri
 func selectRelation(q *bun.SelectQuery, params *database.DatabaseParams) *bun.SelectQuery {
 	if params != nil && params.Relation != nil {
 		for _, relation := range params.Relation {
-			if len(relation.Cols) > 0 {
+			// Select specific columns from the relation and/or order by specific columns
+			if len(relation.Cols) > 0 || len(relation.OrderBy) > 0 {
 				q = q.Relation(relation.Struct, func(q *bun.SelectQuery) *bun.SelectQuery {
 					for _, col := range relation.Cols {
 						q = q.Column(col)
 					}
+
+					if len(relation.OrderBy) > 0 {
+						q = q.Order(relation.OrderBy...)
+					}
+
 					return q
 				})
 			} else {
