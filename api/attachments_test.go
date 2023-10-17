@@ -1,164 +1,257 @@
 package api
 
-// import (
-// 	"encoding/json"
-// 	"io"
-// 	"net/http"
-// 	"net/http/httptest"
-// 	"testing"
+import (
+	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"testing"
 
-// 	"github.com/geerew/off-course/models"
-// 	"github.com/gofiber/fiber/v2"
-// 	"github.com/stretchr/testify/assert"
-// 	"github.com/stretchr/testify/require"
-// )
+	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils/pagination"
+	"github.com/gofiber/fiber/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
 
-// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// func TestAttachments_GetAttachments(t *testing.T) {
-// 	t.Run("200 (empty)", func(t *testing.T) {
-// 		_, db, _, _, teardown := setup(t)
-// 		defer teardown(t)
+func TestAttachments_GetAttachments(t *testing.T) {
+	t.Run("200 (empty)", func(t *testing.T) {
+		_, db, _, _, teardown := setup(t)
+		defer teardown(t)
 
-// 		f := fiber.New()
-// 		bindAttachmentsApi(f.Group("/api"), db)
+		f := fiber.New()
+		bindAttachmentsApi(f.Group("/api"), db)
 
-// 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
-// 		assert.NoError(t, err)
-// 		require.Equal(t, http.StatusOK, resp.StatusCode)
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-// 		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 
-// 		var respData []attachmentResponse
-// 		err = json.Unmarshal(body, &respData)
-// 		require.Nil(t, err)
-// 		assert.Len(t, respData, 0)
-// 	})
+		var respData pagination.PaginationResult
+		err = json.Unmarshal(body, &respData)
+		require.Nil(t, err)
+		assert.Equal(t, 0, int(respData.TotalItems))
+		assert.Len(t, respData.Items, 0)
+	})
 
-// 	t.Run("200 (found)", func(t *testing.T) {
-// 		_, db, _, _, teardown := setup(t)
-// 		defer teardown(t)
+	t.Run("200 (found)", func(t *testing.T) {
+		_, db, _, _, teardown := setup(t)
+		defer teardown(t)
 
-// 		f := fiber.New()
-// 		bindAttachmentsApi(f.Group("/api"), db)
+		f := fiber.New()
+		bindAttachmentsApi(f.Group("/api"), db)
 
-// 		// Create 2 courses with 5 assets each with 2 attachments each (20 attachments total)
-// 		courses := models.CreateTestCourses(t, db, 2)
-// 		assets := models.CreateTestAssets(t, db, courses, 5)
-// 		attachments := models.CreateTestAttachments(t, db, assets, 2)
+		courses := models.NewTestCourses(t, db, 2)
+		assets := models.NewTestAssets(t, db, courses, 2)
+		attachments := models.NewTestAttachments(t, db, assets, 2)
 
-// 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
-// 		assert.NoError(t, err)
-// 		require.Equal(t, http.StatusOK, resp.StatusCode)
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-// 		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 
-// 		var respData []attachmentResponse
-// 		err = json.Unmarshal(body, &respData)
-// 		require.Nil(t, err)
-// 		assert.Len(t, respData, 20)
-// 		assert.Equal(t, attachments[19].ID, respData[0].ID)
-// 		assert.Equal(t, attachments[19].Title, respData[0].Title)
-// 		assert.Equal(t, attachments[19].Path, respData[0].Path)
-// 	})
+		var respData pagination.PaginationResult
+		err = json.Unmarshal(body, &respData)
+		require.Nil(t, err)
+		assert.Equal(t, 8, int(respData.TotalItems))
 
-// 	t.Run("200 (orderBy)", func(t *testing.T) {
-// 		_, db, _, _, teardown := setup(t)
-// 		defer teardown(t)
+		// Unmarshal
+		var attachmentsResp []attachmentResponse
+		for _, item := range respData.Items {
+			var attachment attachmentResponse
+			require.Nil(t, json.Unmarshal(item, &attachment))
+			attachmentsResp = append(attachmentsResp, attachment)
+		}
 
-// 		f := fiber.New()
-// 		bindAttachmentsApi(f.Group("/api"), db)
+		assert.Equal(t, attachments[7].ID, attachmentsResp[0].ID)
+		assert.Equal(t, attachments[7].Title, attachmentsResp[0].Title)
+		assert.Equal(t, attachments[7].Path, attachmentsResp[0].Path)
+	})
 
-// 		// Create 2 courses with 5 assets each with 2 attachments each (20 attachments total)
-// 		courses := models.CreateTestCourses(t, db, 2)
-// 		assets := models.CreateTestAssets(t, db, courses, 5)
-// 		attachments := models.CreateTestAttachments(t, db, assets, 2)
+	t.Run("200 (orderBy)", func(t *testing.T) {
+		_, db, _, _, teardown := setup(t)
+		defer teardown(t)
 
-// 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/?orderBy=created_at%20asc", nil))
-// 		assert.NoError(t, err)
-// 		require.Equal(t, http.StatusOK, resp.StatusCode)
+		f := fiber.New()
+		bindAttachmentsApi(f.Group("/api"), db)
 
-// 		body, _ := io.ReadAll(resp.Body)
+		courses := models.NewTestCourses(t, db, 2)
+		assets := models.NewTestAssets(t, db, courses, 2)
+		attachments := models.NewTestAttachments(t, db, assets, 2)
 
-// 		var respData []attachmentResponse
-// 		err = json.Unmarshal(body, &respData)
-// 		require.Nil(t, err)
-// 		assert.Len(t, respData, 20)
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/?orderBy=created_at%20asc", nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-// 		assert.Equal(t, attachments[0].ID, respData[0].ID)
-// 		assert.Equal(t, attachments[0].Title, respData[0].Title)
-// 		assert.Equal(t, attachments[0].Path, respData[0].Path)
-// 	})
+		body, _ := io.ReadAll(resp.Body)
 
-// 	t.Run("500 (internal error)", func(t *testing.T) {
-// 		_, db, _, _, teardown := setup(t)
-// 		defer teardown(t)
+		var respData pagination.PaginationResult
+		err = json.Unmarshal(body, &respData)
+		require.Nil(t, err)
+		assert.Equal(t, 8, int(respData.TotalItems))
 
-// 		f := fiber.New()
-// 		bindAttachmentsApi(f.Group("/api"), db)
+		// Unmarshal
+		var attachmentsResp []attachmentResponse
+		for _, item := range respData.Items {
+			var attachment attachmentResponse
+			require.Nil(t, json.Unmarshal(item, &attachment))
+			attachmentsResp = append(attachmentsResp, attachment)
+		}
 
-// 		// Drop the attachments table
-// 		require.Nil(t, db.DB().Migrator().DropTable(&models.Attachment{}))
+		assert.Equal(t, attachments[0].ID, attachmentsResp[0].ID)
+		assert.Equal(t, attachments[0].Title, attachmentsResp[0].Title)
+		assert.Equal(t, attachments[0].Path, attachmentsResp[0].Path)
+	})
 
-// 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
-// 		assert.NoError(t, err)
-// 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-// 	})
-// }
+	t.Run("200 (pagination)", func(t *testing.T) {
+		_, db, _, _, teardown := setup(t)
+		defer teardown(t)
 
-// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		f := fiber.New()
+		bindAttachmentsApi(f.Group("/api"), db)
 
-// func TestAttachments_GetAsset(t *testing.T) {
-// 	t.Run("200 (found)", func(t *testing.T) {
-// 		_, db, _, _, teardown := setup(t)
-// 		defer teardown(t)
+		courses := models.NewTestCourses(t, db, 1)
+		assets := models.NewTestAssets(t, db, courses, 2)
+		attachments := models.NewTestAttachments(t, db, assets, 8)
 
-// 		f := fiber.New()
-// 		bindAttachmentsApi(f.Group("/api"), db)
+		// Get the first 10 courses
+		params := url.Values{
+			"orderBy":                    {"created_at asc"},
+			pagination.PageQueryParam:    {"1"},
+			pagination.PerPageQueryParam: {"10"},
+		}
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/?"+params.Encode(), nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-// 		// Create 2 courses with 5 assets with 2 attachments
-// 		courses := models.CreateTestCourses(t, db, 2)
-// 		assets := models.CreateTestAssets(t, db, courses, 5)
-// 		attachments := models.CreateTestAttachments(t, db, assets, 2)
+		body, _ := io.ReadAll(resp.Body)
 
-// 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/"+attachments[6].ID, nil))
-// 		assert.NoError(t, err)
-// 		require.Equal(t, http.StatusOK, resp.StatusCode)
+		var respData pagination.PaginationResult
+		err = json.Unmarshal(body, &respData)
+		require.Nil(t, err)
+		assert.Equal(t, 16, int(respData.TotalItems))
+		assert.Len(t, respData.Items, 10)
 
-// 		body, _ := io.ReadAll(resp.Body)
+		// Unmarshal
+		var attachmentsResp []attachmentResponse
+		for _, item := range respData.Items {
+			var attachment attachmentResponse
+			require.Nil(t, json.Unmarshal(item, &attachment))
+			attachmentsResp = append(attachmentsResp, attachment)
+		}
 
-// 		var respData attachmentResponse
-// 		err = json.Unmarshal(body, &respData)
-// 		require.Nil(t, err)
-// 		assert.Equal(t, attachments[6].ID, respData.ID)
-// 		assert.Equal(t, attachments[6].Title, respData.Title)
-// 		assert.Equal(t, attachments[6].Path, respData.Path)
-// 	})
+		// Assert the last attachment in the paginated response
+		assert.Equal(t, attachments[9].ID, attachmentsResp[9].ID)
+		assert.Equal(t, attachments[9].Title, attachmentsResp[9].Title)
+		assert.Equal(t, attachments[9].Path, attachmentsResp[9].Path)
 
-// 	t.Run("404 (not found)", func(t *testing.T) {
-// 		_, db, _, _, teardown := setup(t)
-// 		defer teardown(t)
+		// Get the next 8 courses
+		params = url.Values{
+			"orderBy":                    {"created_at asc"},
+			pagination.PageQueryParam:    {"2"},
+			pagination.PerPageQueryParam: {"10"},
+		}
+		resp, err = f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/?"+params.Encode(), nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-// 		f := fiber.New()
-// 		bindAttachmentsApi(f.Group("/api"), db)
+		body, _ = io.ReadAll(resp.Body)
 
-// 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/test", nil))
-// 		assert.NoError(t, err)
-// 		require.Equal(t, http.StatusNotFound, resp.StatusCode)
-// 	})
+		err = json.Unmarshal(body, &respData)
+		require.Nil(t, err)
+		assert.Equal(t, 16, int(respData.TotalItems))
+		assert.Len(t, respData.Items, 6)
 
-// 	t.Run("500 (internal error)", func(t *testing.T) {
-// 		_, db, _, _, teardown := setup(t)
-// 		defer teardown(t)
+		// Unmarshal
+		attachmentsResp = []attachmentResponse{}
+		for _, item := range respData.Items {
+			var attachment attachmentResponse
+			require.Nil(t, json.Unmarshal(item, &attachment))
+			attachmentsResp = append(attachmentsResp, attachment)
+		}
 
-// 		f := fiber.New()
-// 		bindAttachmentsApi(f.Group("/api"), db)
+		// Assert the last attachment in the paginated response
+		assert.Equal(t, attachments[15].ID, attachmentsResp[5].ID)
+		assert.Equal(t, attachments[15].Title, attachmentsResp[5].Title)
+		assert.Equal(t, attachments[15].Path, attachmentsResp[5].Path)
+	})
 
-// 		// Drop the table
-// 		require.Nil(t, db.DB().Migrator().DropTable(&models.Attachment{}))
+	t.Run("500 (internal error)", func(t *testing.T) {
+		_, db, _, _, teardown := setup(t)
+		defer teardown(t)
 
-// 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/test", nil))
-// 		assert.NoError(t, err)
-// 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-// 	})
-// }
+		f := fiber.New()
+		bindAttachmentsApi(f.Group("/api"), db)
+
+		// Drop the attachments table
+		_, err := db.DB().NewDropTable().Model(&models.Attachment{}).Exec(context.Background())
+		require.Nil(t, err)
+
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestAttachments_GetAttachment(t *testing.T) {
+	t.Run("200 (found)", func(t *testing.T) {
+		_, db, _, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindAttachmentsApi(f.Group("/api"), db)
+
+		courses := models.NewTestCourses(t, db, 2)
+		assets := models.NewTestAssets(t, db, courses, 5)
+		attachments := models.NewTestAttachments(t, db, assets, 2)
+
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/"+attachments[6].ID, nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		body, _ := io.ReadAll(resp.Body)
+
+		var respData attachmentResponse
+		err = json.Unmarshal(body, &respData)
+		require.Nil(t, err)
+		assert.Equal(t, attachments[6].ID, respData.ID)
+		assert.Equal(t, attachments[6].Title, respData.Title)
+		assert.Equal(t, attachments[6].Path, respData.Path)
+	})
+
+	t.Run("404 (not found)", func(t *testing.T) {
+		_, db, _, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindAttachmentsApi(f.Group("/api"), db)
+
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/test", nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+	})
+
+	t.Run("500 (internal error)", func(t *testing.T) {
+		_, db, _, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindAttachmentsApi(f.Group("/api"), db)
+
+		// Drop the table
+		_, err := db.DB().NewDropTable().Model(&models.Attachment{}).Exec(context.Background())
+		require.Nil(t, err)
+
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/test", nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+}

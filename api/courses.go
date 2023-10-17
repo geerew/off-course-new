@@ -70,10 +70,8 @@ func bindCoursesApi(router fiber.Router, appFs *appFs.AppFs, db database.Databas
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func (api *courses) getCourses(c *fiber.Ctx) error {
-	orderBy := c.Query("orderBy", "created_at desc")
-
 	dbParams := &database.DatabaseParams{
-		OrderBy:    []string{orderBy},
+		OrderBy:    []string{c.Query("orderBy", []string{"created_at desc"}...)},
 		Pagination: pagination.New(c),
 	}
 

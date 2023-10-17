@@ -1,9 +1,14 @@
 package api
 
 import (
+	"database/sql"
+
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/types"
+	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog/log"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -26,53 +31,63 @@ type attachmentResponse struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// // func bindAttachmentsApi(router fiber.Router, db database.Database) {
-// // 	api := attachments{db: db}
+func bindAttachmentsApi(router fiber.Router, db database.Database) {
+	api := attachments{db: db}
 
-// // 	subGroup := router.Group("/attachments")
+	subGroup := router.Group("/attachments")
 
-// // 	// Assets
-// // 	subGroup.Get("", api.getAttachments)
-// // 	subGroup.Get("/:id", api.getAttachment)
-// // }
+	// Assets
+	subGroup.Get("", api.getAttachments)
+	subGroup.Get("/:id", api.getAttachment)
+}
 
-// // // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// // func (api *attachments) getAttachments(c *fiber.Ctx) error {
-// // 	// Get the order by param
-// // 	orderBy := c.Query("orderBy", "created_at desc")
+func (api *attachments) getAttachments(c *fiber.Ctx) error {
+	dbParams := &database.DatabaseParams{
+		OrderBy:    []string{c.Query("orderBy", []string{"created_at desc"}...)},
+		Pagination: pagination.New(c),
+	}
 
-// // 	attachments, err := models.GetAttachments(api.db, &database.DatabaseParams{OrderBy: orderBy})
-// // 	if err != nil {
-// // 		log.Err(err).Msg("error looking up attachments")
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// // 			"message": "error looking up attachments - " + err.Error(),
-// // 		})
-// // 	}
+	attachments, err := models.GetAttachments(c.UserContext(), api.db, dbParams)
+	if err != nil {
+		log.Err(err).Msg("error looking up attachments")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error looking up attachments - " + err.Error(),
+		})
+	}
 
-// // 	return c.Status(fiber.StatusOK).JSON(toAttachmentResponse(attachments))
-// // }
+	pResult, err := dbParams.Pagination.BuildResult(toAttachmentResponse(attachments))
+	if err != nil {
+		log.Err(err).Msg("error building pagination result")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error building pagination result - " + err.Error(),
+		})
+	}
 
-// // // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	return c.Status(fiber.StatusOK).JSON(pResult)
+}
 
-// // func (api *attachments) getAttachment(c *fiber.Ctx) error {
-// // 	id := c.Params("id")
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// // 	attachment, err := models.GetAttachment(api.db, id)
+func (api *attachments) getAttachment(c *fiber.Ctx) error {
+	id := c.Params("id")
 
-// // 	if err != nil {
-// // 		if err == sql.ErrNoRows {
-// // 			return c.Status(fiber.StatusNotFound).SendString("Not found")
-// // 		}
+	attachment, err := models.GetAttachmentById(c.UserContext(), api.db, nil, id)
 
-// // 		log.Err(err).Msg("error looking up attachment")
-// // 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// // 			"message": "error looking up attachment - " + err.Error(),
-// // 		})
-// // 	}
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).SendString("Not found")
+		}
 
-// // 	return c.Status(fiber.StatusOK).JSON(toAttachmentResponse([]*models.Attachment{attachment})[0])
-// // }
+		log.Err(err).Msg("error looking up attachment")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error looking up attachment - " + err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(toAttachmentResponse([]*models.Attachment{attachment})[0])
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // HELPER
