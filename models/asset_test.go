@@ -234,7 +234,9 @@ func Test_GetAssets(t *testing.T) {
 		courses := NewTestCourses(t, db, 5)
 		assets := NewTestAssets(t, db, courses, 2)
 
-		result, err := GetAssets(ctx, db, &database.DatabaseParams{OrderBy: []string{"created_at desc"}})
+		dbParams := &database.DatabaseParams{OrderBy: []string{"created_at desc"}}
+
+		result, err := GetAssets(ctx, db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		assert.Equal(t, assets[9].ID, result[0].ID)
@@ -592,7 +594,22 @@ func Test_GetAssetsByCourseId(t *testing.T) {
 
 		// Simple check on the second asset
 		assert.Equal(t, assets[3].ID, result[1].ID)
+	})
 
+	t.Run("orderby", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+
+		dbParams := &database.DatabaseParams{OrderBy: []string{"created_at desc"}}
+
+		result, err := GetAssetsByCourseId(ctx, db, dbParams, courses[1].ID)
+		require.Nil(t, err)
+		require.Len(t, result, 2)
+		assert.Equal(t, assets[3].ID, result[0].ID)
+		assert.Equal(t, assets[2].ID, result[1].ID)
 	})
 
 	t.Run("relations", func(t *testing.T) {

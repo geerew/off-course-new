@@ -138,8 +138,16 @@ func GetAttachmentsByAssetId(ctx context.Context, db database.Database, params *
 
 	q := db.DB().NewSelect().Model(&attachments).Where("attachment.asset_id = ?", id)
 
-	if params != nil && params.Relation != nil {
-		q = selectRelation(q, params)
+	if params != nil {
+		// Order by
+		if len(params.OrderBy) > 0 {
+			selectOrderBy(q, params, "attachment")
+		}
+
+		// Relation
+		if params.Relation != nil {
+			q = selectRelation(q, params)
+		}
 	}
 
 	if err := q.Scan(ctx); err != nil {
@@ -157,8 +165,16 @@ func GetAttachmentsByCourseId(ctx context.Context, db database.Database, params 
 
 	q := db.DB().NewSelect().Model(&attachments).Where("attachment.course_id = ?", id)
 
-	if params != nil && params.Relation != nil {
-		q = selectRelation(q, params)
+	if params != nil {
+		// Order by
+		if len(params.OrderBy) > 0 {
+			selectOrderBy(q, params, "attachment")
+		}
+
+		// Relation
+		if params.Relation != nil {
+			q = selectRelation(q, params)
+		}
 	}
 
 	if err := q.Scan(ctx); err != nil {

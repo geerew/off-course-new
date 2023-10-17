@@ -175,7 +175,9 @@ func Test_GetScans(t *testing.T) {
 		courses := NewTestCourses(t, db, 5)
 		scans := NewTestScans(t, db, courses)
 
-		result, err := GetScans(ctx, db, &database.DatabaseParams{OrderBy: []string{"created_at desc"}})
+		dbParams := &database.DatabaseParams{OrderBy: []string{"created_at desc"}}
+
+		result, err := GetScans(ctx, db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 5)
 		assert.Equal(t, scans[4].ID, result[0].ID)

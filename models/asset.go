@@ -145,8 +145,16 @@ func GetAssetsByCourseId(ctx context.Context, db database.Database, params *data
 
 	q := db.DB().NewSelect().Model(&assets).Where("asset.course_id = ?", id)
 
-	if params != nil && params.Relation != nil {
-		q = selectRelation(q, params)
+	if params != nil {
+		// Order by
+		if len(params.OrderBy) > 0 {
+			selectOrderBy(q, params, "asset")
+		}
+
+		// Relation
+		if params.Relation != nil {
+			q = selectRelation(q, params)
+		}
 	}
 
 	if err := q.Scan(ctx); err != nil {

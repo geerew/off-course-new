@@ -205,7 +205,9 @@ func Test_GetAttachments(t *testing.T) {
 		assets := NewTestAssets(t, db, courses, 2)
 		attachments := NewTestAttachments(t, db, assets, 2)
 
-		result, err := GetAttachments(ctx, db, &database.DatabaseParams{OrderBy: []string{"created_at desc"}})
+		dbParams := &database.DatabaseParams{OrderBy: []string{"created_at desc"}}
+
+		result, err := GetAttachments(ctx, db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 20)
 		assert.Equal(t, attachments[19].ID, result[0].ID)
@@ -504,6 +506,23 @@ func Test_GetAttachmentsByAssetId(t *testing.T) {
 		assert.Equal(t, attachments[5].ID, result[1].ID)
 	})
 
+	t.Run("orderby", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
+
+		dbParams := &database.DatabaseParams{OrderBy: []string{"created_at desc"}}
+
+		result, err := GetAttachmentsByAssetId(ctx, db, dbParams, assets[2].ID)
+		require.Nil(t, err)
+		require.Len(t, result, 2)
+		assert.Equal(t, attachments[5].ID, result[0].ID)
+		assert.Equal(t, attachments[4].ID, result[1].ID)
+	})
+
 	t.Run("relations", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
@@ -608,6 +627,25 @@ func Test_GetAttachmentsByCourseId(t *testing.T) {
 		assert.Equal(t, attachments[5].ID, result[1].ID)
 		assert.Equal(t, attachments[6].ID, result[2].ID)
 		assert.Equal(t, attachments[7].ID, result[3].ID)
+	})
+
+	t.Run("orderby", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 2)
+
+		dbParams := &database.DatabaseParams{OrderBy: []string{"created_at desc"}}
+
+		result, err := GetAttachmentsByCourseId(ctx, db, dbParams, courses[1].ID)
+		require.Nil(t, err)
+		require.Len(t, result, 4)
+		assert.Equal(t, attachments[7].ID, result[0].ID)
+		assert.Equal(t, attachments[6].ID, result[1].ID)
+		assert.Equal(t, attachments[5].ID, result[2].ID)
+		assert.Equal(t, attachments[4].ID, result[3].ID)
 	})
 
 	t.Run("relations", func(t *testing.T) {

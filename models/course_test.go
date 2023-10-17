@@ -260,7 +260,9 @@ func Test_GetCourses(t *testing.T) {
 
 		courses := NewTestCourses(t, db, 5)
 
-		result, err := GetCourses(ctx, db, &database.DatabaseParams{OrderBy: []string{"created_at desc"}})
+		dbParams := &database.DatabaseParams{OrderBy: []string{"created_at desc"}}
+
+		result, err := GetCourses(ctx, db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 5)
 		assert.Equal(t, courses[4].ID, result[0].ID)
@@ -567,49 +569,6 @@ func Test_GetCourseById(t *testing.T) {
 		assert.Len(t, result.Assets[0].Attachments, 2)
 		assert.Equal(t, attachments[12].ID, result.Assets[0].Attachments[0].ID)
 	})
-
-	// 	t.Run("preload orderby", func(t *testing.T) {
-	// 		_, db, ctx, teardown := setup(t)
-	// 		defer teardown(t)
-
-	// 		// Create 1 course with 5 assets
-	// 		course := NewTestCourses(t, db, 1)[0]
-	// 		assets := CreateTestAssets(t, db, []*Course{course}, 5)
-
-	// 		preload := []database.Preload{
-	// 			{Table: "Assets", OrderBy: "created_at desc"},
-	// 			// {Table: "Assets.Attachments"},
-	// 		}
-
-	// 		result, err := GetCourse(db, course.ID, &database.DatabaseParams{Preload: preload})
-	// 		require.Nil(t, err)
-	// 		assert.Equal(t, course.ID, result.ID)
-
-	// 		// Assert the assets. The last created asset should now be the first result in the assets
-	// 		// slice
-	// 		require.Len(t, result.Assets, 5)
-	// 		assert.Equal(t, assets[4].ID, result.Assets[0].ID)
-	// 	})
-
-	// 	t.Run("error preload orderby", func(t *testing.T) {
-	// 		_, db, ctx, teardown := setup(t)
-	// 		defer teardown(t)
-
-	// 		// Create 1 course
-	// 		course := NewTestCourses(t, db, 1)[0]
-
-	// 		// No column
-	// 		preload := []database.Preload{{Table: "Assets", OrderBy: "error_test desc"}}
-	// 		result, err := GetCourse(db, course.ID, &database.DatabaseParams{Preload: preload})
-	// 		require.ErrorContains(t, err, "no such column: error_test")
-	// 		assert.Nil(t, result)
-
-	// 		// Invalid syntax
-	// 		preload = []database.Preload{{Table: "Assets", OrderBy: "error_test invalid"}}
-	// 		result, err = GetCourse(db, course.ID, &database.DatabaseParams{Preload: preload})
-	// 		require.ErrorContains(t, err, "near \"invalid\": syntax error")
-	// 		assert.Nil(t, result)
-	// 	})
 
 	t.Run("db error", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
