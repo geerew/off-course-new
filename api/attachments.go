@@ -1,34 +1,30 @@
 package api
 
-// // import (
-// // 	"time"
+import (
+	"github.com/geerew/off-course/database"
+	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils/types"
+)
 
-// // 	"github.com/geerew/off-course/database"
-// // 	"github.com/geerew/off-course/models"
-// // 	"github.com/gofiber/fiber/v2"
-// // 	"github.com/rs/zerolog/log"
-// // 	"gorm.io/gorm"
-// // )
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// // // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+type attachments struct {
+	db database.Database
+}
 
-// // type attachments struct {
-// // 	db database.Database
-// // }
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// // // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+type attachmentResponse struct {
+	ID        string         `json:"id"`
+	AssetId   string         `json:"assetId"`
+	CourseID  string         `json:"courseId"`
+	Title     string         `json:"title"`
+	Path      string         `json:"path"`
+	CreatedAt types.DateTime `json:"createdAt"`
+	UpdatedAt types.DateTime `json:"updatedAt"`
+}
 
-// // type attachmentResponse struct {
-// // 	ID        string    `json:"id"`
-// // 	AssetId   string    `json:"assetId"`
-// // 	CourseID  string    `json:"courseId"`
-// // 	Title     string    `json:"title"`
-// // 	Path      string    `json:"path"`
-// // 	CreatedAt time.Time `json:"createdAt"`
-// // 	UpdatedAt time.Time `json:"updatedAt"`
-// // }
-
-// // // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // // func bindAttachmentsApi(router fiber.Router, db database.Database) {
 // // 	api := attachments{db: db}
@@ -65,7 +61,7 @@ package api
 // // 	attachment, err := models.GetAttachment(api.db, id)
 
 // // 	if err != nil {
-// // 		if err == gorm.ErrRecordNotFound {
+// // 		if err == sql.ErrNoRows {
 // // 			return c.Status(fiber.StatusNotFound).SendString("Not found")
 // // 		}
 
@@ -78,23 +74,23 @@ package api
 // // 	return c.Status(fiber.StatusOK).JSON(toAttachmentResponse([]*models.Attachment{attachment})[0])
 // // }
 
-// // // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// // // HELPER
-// // // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// HELPER
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// // func toAttachmentResponse(attachments []*models.Attachment) []*attachmentResponse {
-// // 	responses := []*attachmentResponse{}
-// // 	for _, attachment := range attachments {
-// // 		responses = append(responses, &attachmentResponse{
-// // 			ID:        attachment.ID,
-// // 			AssetId:   attachment.AssetID,
-// // 			CourseID:  attachment.CourseID,
-// // 			Title:     attachment.Title,
-// // 			Path:      attachment.Path,
-// // 			CreatedAt: attachment.CreatedAt,
-// // 			UpdatedAt: attachment.UpdatedAt,
-// // 		})
-// // 	}
+func toAttachmentResponse(attachments []*models.Attachment) []*attachmentResponse {
+	responses := []*attachmentResponse{}
+	for _, attachment := range attachments {
+		responses = append(responses, &attachmentResponse{
+			ID:        attachment.ID,
+			AssetId:   attachment.AssetID,
+			CourseID:  attachment.CourseID,
+			Title:     attachment.Title,
+			Path:      attachment.Path,
+			CreatedAt: attachment.CreatedAt,
+			UpdatedAt: attachment.UpdatedAt,
+		})
+	}
 
-// // 	return responses
-// // }
+	return responses
+}

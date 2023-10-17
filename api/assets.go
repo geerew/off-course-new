@@ -1,41 +1,35 @@
 package api
 
-// import (
-// 	"time"
+import (
+	"github.com/geerew/off-course/database"
+	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils/types"
+)
 
-// 	"github.com/geerew/off-course/database"
-// 	"github.com/geerew/off-course/models"
-// 	"github.com/geerew/off-course/utils/pagination"
-// 	"github.com/geerew/off-course/utils/types"
-// 	"github.com/gofiber/fiber/v2"
-// 	"github.com/rs/zerolog/log"
-// 	"gorm.io/gorm"
-// )
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+type assets struct {
+	db database.Database
+}
 
-// type assets struct {
-// 	db database.Database
-// }
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+type assetResponse struct {
+	ID        string         `json:"id"`
+	CourseID  string         `json:"courseId"`
+	Title     string         `json:"title"`
+	Prefix    int            `json:"prefix"`
+	Chapter   string         `json:"chapter"`
+	Path      string         `json:"path"`
+	Type      types.Asset    `json:"assetType"`
+	Started   bool           `json:"started"`
+	Finished  bool           `json:"finished"`
+	CreatedAt types.DateTime `json:"createdAt"`
+	UpdatedAt types.DateTime `json:"updatedAt"`
 
-// type assetResponse struct {
-// 	ID        string      `json:"id"`
-// 	CourseID  string      `json:"courseId"`
-// 	Title     string      `json:"title"`
-// 	Prefix    int         `json:"prefix"`
-// 	Chapter   string      `json:"chapter"`
-// 	Path      string      `json:"path"`
-// 	Type      types.Asset `json:"assetType"`
-// 	Started   bool        `json:"started"`
-// 	Finished  bool        `json:"finished"`
-// 	CreatedAt time.Time   `json:"createdAt"`
-// 	UpdatedAt time.Time   `json:"updatedAt"`
-
-// 	// Association
-// 	Attachments []*attachmentResponse `json:"attachments,omitempty"`
-// }
+	// Association
+	Attachments []*attachmentResponse `json:"attachments,omitempty"`
+}
 
 // // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -88,7 +82,7 @@ package api
 // 	asset, err := models.GetAsset(api.db, id, &database.DatabaseParams{Preload: true})
 
 // 	if err != nil {
-// 		if err == gorm.ErrRecordNotFound {
+// 		if err == sql.ErrNoRows {
 // 			return c.Status(fiber.StatusNotFound).SendString("Not found")
 // 		}
 
@@ -101,31 +95,31 @@ package api
 // 	return c.Status(fiber.StatusOK).JSON(toAssetResponse([]*models.Asset{asset})[0])
 // }
 
-// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// // HELPER
-// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// HELPER
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// func toAssetResponse(assets []*models.Asset) []*assetResponse {
-// 	responses := []*assetResponse{}
-// 	for _, asset := range assets {
-// 		responses = append(responses, &assetResponse{
-// 			ID:        asset.ID,
-// 			CourseID:  asset.CourseID,
-// 			Title:     asset.Title,
-// 			Prefix:    asset.Prefix,
-// 			Chapter:   asset.Chapter,
-// 			Path:      asset.Path,
-// 			Type:      asset.Type,
-// 			Started:   asset.Started,
-// 			Finished:  asset.Finished,
-// 			CreatedAt: asset.CreatedAt,
-// 			UpdatedAt: asset.UpdatedAt,
+func toAssetResponse(assets []*models.Asset) []*assetResponse {
+	responses := []*assetResponse{}
+	for _, asset := range assets {
+		responses = append(responses, &assetResponse{
+			ID:        asset.ID,
+			CourseID:  asset.CourseID,
+			Title:     asset.Title,
+			Prefix:    asset.Prefix,
+			Chapter:   asset.Chapter,
+			Path:      asset.Path,
+			Type:      asset.Type,
+			Started:   asset.Started,
+			Finished:  asset.Finished,
+			CreatedAt: asset.CreatedAt,
+			UpdatedAt: asset.UpdatedAt,
 
-// 			// Association
-// 			Attachments: toAttachmentResponse(asset.Attachments),
-// 		})
+			// Association
+			Attachments: toAttachmentResponse(asset.Attachments),
+		})
 
-// 	}
+	}
 
-// 	return responses
-// }
+	return responses
+}

@@ -57,6 +57,7 @@ func (api *scans) getScans(c *fiber.Ctx) error {
 		Pagination: pagination.New(c),
 	}
 
+	// Include relations
 	if c.QueryBool("expand", false) {
 		dbParams.Relation = []database.Relation{{Struct: "Course"}}
 	}
@@ -87,6 +88,7 @@ func (api *scans) getScan(c *fiber.Ctx) error {
 
 	dbParams := &database.DatabaseParams{}
 
+	// Include relations
 	if c.QueryBool("expand", false) {
 		dbParams.Relation = []database.Relation{{Struct: "Course"}}
 	}
@@ -114,6 +116,7 @@ func (api *scans) getScanByCourseId(c *fiber.Ctx) error {
 
 	dbParams := &database.DatabaseParams{}
 
+	// Include relations
 	if c.QueryBool("expand", false) {
 		dbParams.Relation = []database.Relation{{Struct: "Course"}}
 	}
