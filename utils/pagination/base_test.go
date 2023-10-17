@@ -26,6 +26,7 @@ func Test_NewPagination(t *testing.T) {
 
 		assert.Equal(t, 1, p.page)
 		assert.Equal(t, DefaultPerPage, p.perPage)
+		assert.Equal(t, 1, p.TotalItems())
 	})
 
 	t.Run("values", func(t *testing.T) {
@@ -36,8 +37,9 @@ func Test_NewPagination(t *testing.T) {
 
 		p := New(c)
 		p.SetCount(24)
+
 		assert.Equal(t, 2, p.page)
-		assert.Equal(t, 24, p.totalItems)
+		assert.Equal(t, 24, p.TotalItems())
 		assert.Equal(t, 3, p.totalPages)
 	})
 
@@ -52,7 +54,7 @@ func Test_NewPagination(t *testing.T) {
 
 		assert.Equal(t, 1, p.page)
 		assert.Equal(t, DefaultPerPage, p.perPage)
-		assert.Equal(t, 24, p.totalItems)
+		assert.Equal(t, 24, p.TotalItems())
 		assert.Equal(t, 1, p.totalPages)
 	})
 }
@@ -82,6 +84,7 @@ func Test_Limit(t *testing.T) {
 
 		p := New(c)
 		p.SetCount(1)
+
 		assert.Equal(t, tt.expected, p.Limit())
 	}
 }
@@ -112,6 +115,7 @@ func Test_Offset(t *testing.T) {
 
 		p := New(c)
 		p.SetCount(1)
+
 		assert.Equal(t, tt.expected, p.Offset())
 	}
 }
@@ -140,8 +144,7 @@ func Test_Page(t *testing.T) {
 		c.Request().SetRequestURI("/dummy?" + PageQueryParam + "=" + tt.in)
 		defer app.ReleaseCtx(c)
 
-		actual := page(c)
-		assert.Equal(t, tt.expected, actual)
+		assert.Equal(t, tt.expected, page(c))
 	}
 }
 
@@ -169,8 +172,7 @@ func Test_PerPage(t *testing.T) {
 		c.Request().SetRequestURI("/dummy?" + PerPageQueryParam + "=" + tt.in)
 		defer app.ReleaseCtx(c)
 
-		actual := perPage(c)
-		assert.Equal(t, tt.expected, actual)
+		assert.Equal(t, tt.expected, perPage(c))
 	}
 }
 

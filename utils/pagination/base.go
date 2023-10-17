@@ -68,6 +68,13 @@ func (p *Pagination) Offset() int {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Offset calculates and return an offset value
+func (p *Pagination) TotalItems() int {
+	return p.totalItems
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // SetCount sets the total number of items and calculates the total number of pages
 func (p *Pagination) SetCount(count int) {
 	p.totalItems = count
