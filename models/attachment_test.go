@@ -180,11 +180,12 @@ func Test_GetAttachments(t *testing.T) {
 		result, err := GetAttachments(ctx, db, &database.DatabaseParams{Pagination: p})
 		require.Nil(t, err)
 		require.Len(t, result, 10)
+		require.Equal(t, 16, p.TotalItems())
 		assert.Equal(t, attachments[9].ID, result[9].ID)
 		assert.Equal(t, attachments[9].CourseID, result[9].CourseID)
 		assert.Equal(t, attachments[9].AssetID, result[9].AssetID)
 
-		// Page 2 with 10 items
+		// Page 2 with 6 items
 		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=2" + "&" + pagination.PerPageQueryParam + "=10")
 		p = pagination.New(c)
 
@@ -192,6 +193,7 @@ func Test_GetAttachments(t *testing.T) {
 		result, err = GetAttachments(ctx, db, &database.DatabaseParams{Pagination: p})
 		require.Nil(t, err)
 		require.Len(t, result, 6)
+		require.Equal(t, 16, p.TotalItems())
 		assert.Equal(t, attachments[15].ID, result[5].ID)
 		assert.Equal(t, attachments[15].CourseID, result[5].CourseID)
 		assert.Equal(t, attachments[15].AssetID, result[5].AssetID)
@@ -575,6 +577,46 @@ func Test_GetAttachmentsByAssetId(t *testing.T) {
 		assert.Equal(t, assets[6].ID, result[0].Asset.ID)
 	})
 
+	t.Run("pagination", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 2)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 16)
+
+		// Pagination context
+		app := fiber.New()
+		c := app.AcquireCtx(&fasthttp.RequestCtx{})
+		defer app.ReleaseCtx(c)
+
+		// Page 1 with 10 items
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
+		p := pagination.New(c)
+
+		// Assert the last asset in the paginated response
+		result, err := GetAttachmentsByAssetId(ctx, db, &database.DatabaseParams{Pagination: p}, assets[2].ID)
+		require.Nil(t, err)
+		require.Len(t, result, 10)
+		require.Equal(t, 16, p.TotalItems())
+		assert.Equal(t, attachments[41].ID, result[9].ID)
+		assert.Equal(t, attachments[41].Title, result[9].Title)
+		assert.Equal(t, attachments[41].Path, result[9].Path)
+
+		// Page 2 with 6 items
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=2" + "&" + pagination.PerPageQueryParam + "=10")
+		p = pagination.New(c)
+
+		// Assert the last asset in the paginated response
+		result, err = GetAttachmentsByAssetId(ctx, db, &database.DatabaseParams{Pagination: p}, assets[2].ID)
+		require.Nil(t, err)
+		require.Len(t, result, 6)
+		require.Equal(t, 16, p.TotalItems())
+		assert.Equal(t, attachments[47].ID, result[5].ID)
+		assert.Equal(t, attachments[47].Title, result[5].Title)
+		assert.Equal(t, attachments[47].Path, result[5].Path)
+	})
+
 	t.Run("db error", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
@@ -582,6 +624,18 @@ func Test_GetAttachmentsByAssetId(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Attachment{}).Exec(ctx)
 		require.Nil(t, err)
 
+		app := fiber.New()
+		c := app.AcquireCtx(&fasthttp.RequestCtx{})
+		defer app.ReleaseCtx(c)
+
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
+		p := pagination.New(c)
+
+		// With pagination
+		_, err = GetAttachmentsByAssetId(ctx, db, &database.DatabaseParams{Pagination: p}, "1")
+		require.ErrorContains(t, err, "no such table: attachments")
+
+		// Without pagination
 		_, err = GetAttachmentsByAssetId(ctx, db, nil, "1")
 		require.ErrorContains(t, err, "no such table: attachments")
 	})
@@ -700,12 +754,63 @@ func Test_GetAttachmentsByCourseId(t *testing.T) {
 		assert.Equal(t, assets[6].ID, result[0].Asset.ID)
 	})
 
+	t.Run("pagination", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 5)
+		assets := NewTestAssets(t, db, courses, 2)
+		attachments := NewTestAttachments(t, db, assets, 7)
+
+		// Pagination context
+		app := fiber.New()
+		c := app.AcquireCtx(&fasthttp.RequestCtx{})
+		defer app.ReleaseCtx(c)
+
+		// Page 1 with 10 items
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
+		p := pagination.New(c)
+
+		// Assert the last asset in the paginated response
+		result, err := GetAttachmentsByCourseId(ctx, db, &database.DatabaseParams{Pagination: p}, courses[2].ID)
+		require.Nil(t, err)
+		require.Len(t, result, 10)
+		require.Equal(t, 14, p.TotalItems())
+		assert.Equal(t, attachments[37].ID, result[9].ID)
+		assert.Equal(t, attachments[37].Title, result[9].Title)
+		assert.Equal(t, attachments[37].Path, result[9].Path)
+
+		// Page 2 with 6 items
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=2" + "&" + pagination.PerPageQueryParam + "=10")
+		p = pagination.New(c)
+
+		// Assert the last asset in the paginated response
+		result, err = GetAttachmentsByCourseId(ctx, db, &database.DatabaseParams{Pagination: p}, courses[2].ID)
+		require.Nil(t, err)
+		require.Len(t, result, 4)
+		require.Equal(t, 14, p.TotalItems())
+		assert.Equal(t, attachments[41].ID, result[3].ID)
+		assert.Equal(t, attachments[41].Title, result[3].Title)
+		assert.Equal(t, attachments[41].Path, result[3].Path)
+	})
+
 	t.Run("db error", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
 		_, err := db.DB().NewDropTable().Model(&Attachment{}).Exec(ctx)
 		require.Nil(t, err)
+
+		app := fiber.New()
+		c := app.AcquireCtx(&fasthttp.RequestCtx{})
+		defer app.ReleaseCtx(c)
+
+		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
+		p := pagination.New(c)
+
+		// With pagination
+		_, err = GetAttachmentsByAssetId(ctx, db, &database.DatabaseParams{Pagination: p}, "1")
+		require.ErrorContains(t, err, "no such table: attachments")
 
 		_, err = GetAttachmentsByCourseId(ctx, db, nil, "1")
 		require.ErrorContains(t, err, "no such table: attachments")

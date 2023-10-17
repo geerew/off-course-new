@@ -237,11 +237,12 @@ func Test_GetCourses(t *testing.T) {
 		result, err := GetCourses(ctx, db, &database.DatabaseParams{Pagination: p})
 		require.Nil(t, err)
 		require.Len(t, result, 10)
+		require.Equal(t, 17, p.TotalItems())
 		assert.Equal(t, courses[9].ID, result[9].ID)
 		assert.Equal(t, courses[9].Title, result[9].Title)
 		assert.Equal(t, courses[9].Path, result[9].Path)
 
-		// Page 2 with 10 items
+		// Page 2 with 7 items
 		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=2" + "&" + pagination.PerPageQueryParam + "=10")
 		p = pagination.New(c)
 
@@ -249,6 +250,7 @@ func Test_GetCourses(t *testing.T) {
 		result, err = GetCourses(ctx, db, &database.DatabaseParams{Pagination: p})
 		require.Nil(t, err)
 		require.Len(t, result, 7)
+		require.Equal(t, 17, p.TotalItems())
 		assert.Equal(t, courses[16].ID, result[6].ID)
 		assert.Equal(t, courses[16].Title, result[6].Title)
 		assert.Equal(t, courses[16].Path, result[6].Path)

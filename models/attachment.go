@@ -139,6 +139,20 @@ func GetAttachmentsByAssetId(ctx context.Context, db database.Database, params *
 	q := db.DB().NewSelect().Model(&attachments).Where("attachment.asset_id = ?", id)
 
 	if params != nil {
+		// Pagination
+		if params.Pagination != nil {
+			// Set the where to the asset ID
+			params.Where = []database.Where{{Column: "attachment.asset_id", Value: id}}
+
+			if count, err := CountAttachments(ctx, db, params); err != nil {
+				return nil, err
+			} else {
+				params.Pagination.SetCount(count)
+			}
+
+			q = q.Offset(params.Pagination.Offset()).Limit(params.Pagination.Limit())
+		}
+
 		// Order by
 		if len(params.OrderBy) > 0 {
 			selectOrderBy(q, params, "attachment")
@@ -166,6 +180,20 @@ func GetAttachmentsByCourseId(ctx context.Context, db database.Database, params 
 	q := db.DB().NewSelect().Model(&attachments).Where("attachment.course_id = ?", id)
 
 	if params != nil {
+		// Pagination
+		if params.Pagination != nil {
+			// Set the where to the course ID
+			params.Where = []database.Where{{Column: "attachment.course_id", Value: id}}
+
+			if count, err := CountAttachments(ctx, db, params); err != nil {
+				return nil, err
+			} else {
+				params.Pagination.SetCount(count)
+			}
+
+			q = q.Offset(params.Pagination.Offset()).Limit(params.Pagination.Limit())
+		}
+
 		// Order by
 		if len(params.OrderBy) > 0 {
 			selectOrderBy(q, params, "attachment")

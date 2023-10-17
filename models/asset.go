@@ -146,6 +146,20 @@ func GetAssetsByCourseId(ctx context.Context, db database.Database, params *data
 	q := db.DB().NewSelect().Model(&assets).Where("asset.course_id = ?", id)
 
 	if params != nil {
+		// Pagination
+		if params.Pagination != nil {
+			// Set the where to the course ID
+			params.Where = []database.Where{{Column: "asset.course_id", Value: id}}
+
+			if count, err := CountAssets(ctx, db, params); err != nil {
+				return nil, err
+			} else {
+				params.Pagination.SetCount(count)
+			}
+
+			q = q.Offset(params.Pagination.Offset()).Limit(params.Pagination.Limit())
+		}
+
 		// Order by
 		if len(params.OrderBy) > 0 {
 			selectOrderBy(q, params, "asset")
