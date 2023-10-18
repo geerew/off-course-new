@@ -79,7 +79,8 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 	if c.QueryBool("expand", false) {
 		dbParams.Relation = []database.Relation{
 			{Struct: "Assets", OrderBy: []string{"chapter asc", "prefix asc"}},
-			{Struct: "Assets.Attachments", OrderBy: []string{"title asc"}}}
+			{Struct: "Assets.Attachments", OrderBy: []string{"title asc"}},
+		}
 	}
 
 	courses, err := models.GetCourses(c.UserContext(), api.db, dbParams)
@@ -112,7 +113,8 @@ func (api *courses) getCourse(c *fiber.Ctx) error {
 	if c.QueryBool("expand", false) {
 		dbParams.Relation = []database.Relation{
 			{Struct: "Assets", OrderBy: []string{"chapter asc", "prefix asc"}},
-			{Struct: "Assets.Attachments", OrderBy: []string{"title asc"}}}
+			{Struct: "Assets.Attachments", OrderBy: []string{"title asc"}},
+		}
 	}
 
 	course, err := models.GetCourseById(c.UserContext(), api.db, dbParams, id)
@@ -262,7 +264,8 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 	// Include relations
 	if c.QueryBool("expand", false) {
 		dbParams.Relation = []database.Relation{
-			{Struct: "Attachments", OrderBy: []string{"title asc"}}}
+			{Struct: "Attachments", OrderBy: []string{"title asc"}},
+		}
 	}
 
 	assets, err := models.GetAssetsByCourseId(c.UserContext(), api.db, dbParams, id)
@@ -307,7 +310,8 @@ func (api *courses) getAsset(c *fiber.Ctx) error {
 	dbParams := &database.DatabaseParams{}
 	if c.QueryBool("expand", false) {
 		dbParams.Relation = []database.Relation{
-			{Struct: "Attachments", OrderBy: []string{"title asc"}}}
+			{Struct: "Attachments", OrderBy: []string{"title asc"}},
+		}
 	}
 
 	asset, err := models.GetAssetById(c.UserContext(), api.db, dbParams, assetId)

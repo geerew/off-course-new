@@ -58,7 +58,8 @@ func (api *assets) getAssets(c *fiber.Ctx) error {
 
 	if c.QueryBool("expand", false) {
 		dbParams.Relation = []database.Relation{
-			{Struct: "Attachments", OrderBy: []string{"title asc"}}}
+			{Struct: "Attachments", OrderBy: []string{"title asc"}},
+		}
 	}
 
 	assets, err := models.GetAssets(c.UserContext(), api.db, dbParams)
@@ -89,7 +90,8 @@ func (api *assets) getAsset(c *fiber.Ctx) error {
 	dbParams := &database.DatabaseParams{}
 	if c.QueryBool("expand", false) {
 		dbParams.Relation = []database.Relation{
-			{Struct: "Attachments", OrderBy: []string{"title asc"}}}
+			{Struct: "Attachments", OrderBy: []string{"title asc"}},
+		}
 	}
 
 	asset, err := models.GetAssetById(c.UserContext(), api.db, dbParams, id)
