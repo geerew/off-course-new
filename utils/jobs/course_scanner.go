@@ -304,6 +304,12 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 		return err
 	}
 
+	// Update the course updated_at now that the scan is complete
+	err = models.UpdateCourseUpdatedAt(cs.ctx, cs.db, course)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

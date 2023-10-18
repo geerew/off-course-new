@@ -644,6 +644,7 @@ func Test_CreateCourse(t *testing.T) {
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func Test_UpdateCourseCardPath(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
@@ -758,6 +759,84 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 		require.Nil(t, err)
 
 		err = UpdateCourseCardPath(ctx, db, course, "123")
+		require.ErrorContains(t, err, "no such table: courses")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_UpdateCourseUpdatedAt(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+
+		// Store the original course
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
+		origCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		err = UpdateCourseUpdatedAt(ctx, db, course)
+		require.Nil(t, err)
+
+		// Assert there were changes to the DB
+		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
+		updatedCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+		assert.NotEqual(t, origCourse.UpdatedAt, updatedCourse.UpdatedAt)
+		assert.NotEqual(t, origCourse.UpdatedAt, course.UpdatedAt)
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+		course.ID = ""
+
+		err := UpdateCourseUpdatedAt(ctx, db, course)
+		assert.ErrorContains(t, err, "course ID cannot be empty")
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+
+		// Store the original course
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
+		origCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+
+		// Change the ID
+		course.ID = "invalid"
+
+		err = UpdateCourseUpdatedAt(ctx, db, course)
+		require.Nil(t, err)
+
+		// Assert there were no changes
+		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: origCourse.ID}}}
+		updatedCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+		assert.Equal(t, origCourse.UpdatedAt.String(), updatedCourse.UpdatedAt.String())
+		assert.Equal(t, origCourse.UpdatedAt.String(), course.UpdatedAt.String())
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+
+		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
+		require.Nil(t, err)
+
+		err = UpdateCourseUpdatedAt(ctx, db, course)
 		require.ErrorContains(t, err, "no such table: courses")
 	})
 }

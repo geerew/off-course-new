@@ -182,21 +182,52 @@ func UpdateCourseCardPath(ctx context.Context, db database.Database, course *Cou
 
 	ts := types.NowDateTime()
 
-	// Update the status
+	// Update the card_path and updated_at
 	if res, err := db.DB().NewUpdate().Model(course).
 		Set("card_path = ?", newCardPath).
 		Set("updated_at = ?", ts).
 		WherePK().Exec(ctx); err != nil {
 		return err
 	} else {
+		// Nothing was changed so return
 		count, _ := res.RowsAffected()
 		if count == 0 {
 			return nil
 		}
 	}
 
-	// Update the original scan struct
+	// Update the original course struct
 	course.CardPath = newCardPath
+	course.UpdatedAt = ts
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// UpdateCourseUpdatedAt updates the course `updated_at`
+func UpdateCourseUpdatedAt(ctx context.Context, db database.Database, course *Course) error {
+	// Require an ID
+	if course.ID == "" {
+		return errors.New("course ID cannot be empty")
+	}
+
+	ts := types.NowDateTime()
+
+	// Update the updated_at
+	if res, err := db.DB().NewUpdate().Model(course).
+		Set("updated_at = ?", ts).
+		WherePK().Exec(ctx); err != nil {
+		return err
+	} else {
+		// Nothing was changed so return
+		count, _ := res.RowsAffected()
+		if count == 0 {
+			return nil
+		}
+	}
+
+	// Update the original course struct
 	course.UpdatedAt = ts
 
 	return nil
