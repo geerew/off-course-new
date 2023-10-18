@@ -37,7 +37,7 @@ func CountCourses(ctx context.Context, db database.Database, params *database.Da
 	q := db.DB().NewSelect().Model((*Course)(nil))
 
 	if params != nil && params.Where != nil {
-		q = selectWhere(q, params, "course")
+		q = selectWhere(q, params.Where, "course")
 	}
 
 	return q.Count(ctx)
@@ -71,16 +71,16 @@ func GetCourses(ctx context.Context, db database.Database, params *database.Data
 
 		// Relations
 		if params.Relation != nil {
-			q = selectRelation(q, params)
+			q = selectRelation(q, params.Relation)
 		}
 
 		// Order by
 		if len(params.OrderBy) > 0 {
-			selectOrderBy(q, params, "course")
+			selectOrderBy(q, params.OrderBy, "course")
 		}
 		// Where
 		if params.Where != nil {
-			q = selectWhere(q, params, "course")
+			q = selectWhere(q, params.Where, "course")
 		}
 	}
 
@@ -110,12 +110,12 @@ func GetCourse(ctx context.Context, db database.Database, params *database.Datab
 
 	// Where
 	if params.Where != nil {
-		q = selectWhere(q, params, "course")
+		q = selectWhere(q, params.Where, "course")
 	}
 
 	// Relations
 	if params.Relation != nil {
-		q = selectRelation(q, params)
+		q = selectRelation(q, params.Relation)
 	}
 
 	if err := q.Scan(ctx); err != nil {
@@ -140,7 +140,7 @@ func GetCourseById(ctx context.Context, db database.Database, params *database.D
 		Where("Course.id = ?", id)
 
 	if params != nil && params.Relation != nil {
-		q = selectRelation(q, params)
+		q = selectRelation(q, params.Relation)
 	}
 
 	if err := q.Scan(ctx); err != nil {

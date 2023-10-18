@@ -30,7 +30,7 @@ func CountScans(ctx context.Context, db database.Database, params *database.Data
 	q := db.DB().NewSelect().Model((*Scan)(nil))
 
 	if params != nil && params.Where != nil {
-		q = selectWhere(q, params, "scan")
+		q = selectWhere(q, params.Where, "scan")
 	}
 
 	return q.Count(ctx)
@@ -57,18 +57,18 @@ func GetScans(ctx context.Context, db database.Database, params *database.Databa
 		}
 
 		if params.Relation != nil {
-			q = selectRelation(q, params)
+			q = selectRelation(q, params.Relation)
 		}
 
 		// Order by
 		if len(params.OrderBy) > 0 {
-			selectOrderBy(q, params, "scan")
+			selectOrderBy(q, params.OrderBy, "scan")
 		}
 
 		// Where
 		if params.Where != nil {
 			if params.Where != nil {
-				q = selectWhere(q, params, "scan")
+				q = selectWhere(q, params.Where, "scan")
 			}
 		}
 	}
@@ -92,12 +92,12 @@ func GetScan(ctx context.Context, db database.Database, params *database.Databas
 
 	// Where
 	if params.Where != nil {
-		q = selectWhere(q, params, "scan")
+		q = selectWhere(q, params.Where, "scan")
 	}
 
 	// Relations
 	if params.Relation != nil {
-		q = selectRelation(q, params)
+		q = selectRelation(q, params.Relation)
 	}
 
 	if err := q.Scan(ctx); err != nil {
@@ -116,7 +116,7 @@ func GetScanById(ctx context.Context, db database.Database, params *database.Dat
 	q := db.DB().NewSelect().Model(scan).Where("scan.id = ?", id)
 
 	if params != nil && params.Relation != nil {
-		q = selectRelation(q, params)
+		q = selectRelation(q, params.Relation)
 	}
 
 	if err := q.Scan(ctx); err != nil {
@@ -135,7 +135,7 @@ func GetScanByCourseId(ctx context.Context, db database.Database, params *databa
 	q := db.DB().NewSelect().Model(scan).Where("scan.course_id = ?", id)
 
 	if params != nil && params.Relation != nil {
-		q = selectRelation(q, params)
+		q = selectRelation(q, params.Relation)
 	}
 
 	if err := q.Scan(ctx); err != nil {

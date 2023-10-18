@@ -41,7 +41,7 @@ func CountAssets(ctx context.Context, db database.Database, params *database.Dat
 	q := db.DB().NewSelect().Model((*Asset)(nil))
 
 	if params != nil && params.Where != nil {
-		q = selectWhere(q, params, "asset")
+		q = selectWhere(q, params.Where, "asset")
 	}
 
 	return q.Count(ctx)
@@ -68,18 +68,18 @@ func GetAssets(ctx context.Context, db database.Database, params *database.Datab
 		}
 
 		if params.Relation != nil {
-			q = selectRelation(q, params)
+			q = selectRelation(q, params.Relation)
 		}
 
 		// Order by
 		if len(params.OrderBy) > 0 {
-			selectOrderBy(q, params, "asset")
+			selectOrderBy(q, params.OrderBy, "asset")
 		}
 
 		// Where
 		if params.Where != nil {
 			if params.Where != nil {
-				q = selectWhere(q, params, "asset")
+				q = selectWhere(q, params.Where, "asset")
 			}
 		}
 	}
@@ -103,12 +103,12 @@ func GetAsset(ctx context.Context, db database.Database, params *database.Databa
 
 	// Where
 	if params.Where != nil {
-		q = selectWhere(q, params, "asset")
+		q = selectWhere(q, params.Where, "asset")
 	}
 
 	// Relations
 	if params.Relation != nil {
-		q = selectRelation(q, params)
+		q = selectRelation(q, params.Relation)
 	}
 
 	if err := q.Scan(ctx); err != nil {
@@ -127,7 +127,7 @@ func GetAssetById(ctx context.Context, db database.Database, params *database.Da
 	q := db.DB().NewSelect().Model(asset).Where("asset.id = ?", id)
 
 	if params != nil && params.Relation != nil {
-		q = selectRelation(q, params)
+		q = selectRelation(q, params.Relation)
 	}
 
 	if err := q.Scan(ctx); err != nil {
@@ -162,12 +162,12 @@ func GetAssetsByCourseId(ctx context.Context, db database.Database, params *data
 
 		// Order by
 		if len(params.OrderBy) > 0 {
-			selectOrderBy(q, params, "asset")
+			selectOrderBy(q, params.OrderBy, "asset")
 		}
 
 		// Relation
 		if params.Relation != nil {
-			q = selectRelation(q, params)
+			q = selectRelation(q, params.Relation)
 		}
 	}
 
@@ -225,7 +225,7 @@ func NewTestAssets(t *testing.T, db database.Database, courses []*Course, assets
 		for j := 0; j < assetsPerCourse; j++ {
 			title := fmt.Sprintf("%s.mp4", security.PseudorandomString(8))
 			prefix := rand.Intn(100-1) + 1
-			chapter := fmt.Sprintf("chapter %s", security.PseudorandomString(2))
+			chapter := fmt.Sprintf("%d chapter %s", j, security.PseudorandomString(2))
 
 			a := &Asset{
 				CourseID: courses[i].ID,

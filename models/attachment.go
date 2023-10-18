@@ -34,7 +34,7 @@ func CountAttachments(ctx context.Context, db database.Database, params *databas
 	q := db.DB().NewSelect().Model((*Attachment)(nil))
 
 	if params != nil && params.Where != nil {
-		q = selectWhere(q, params, "attachment")
+		q = selectWhere(q, params.Where, "attachment")
 	}
 
 	return q.Count(ctx)
@@ -61,18 +61,18 @@ func GetAttachments(ctx context.Context, db database.Database, params *database.
 		}
 
 		if params.Relation != nil {
-			q = selectRelation(q, params)
+			q = selectRelation(q, params.Relation)
 		}
 
 		// Order by
 		if len(params.OrderBy) > 0 {
-			selectOrderBy(q, params, "attachment")
+			selectOrderBy(q, params.OrderBy, "attachment")
 		}
 
 		// Where
 		if params.Where != nil {
 			if params.Where != nil {
-				q = selectWhere(q, params, "attachment")
+				q = selectWhere(q, params.Where, "attachment")
 			}
 		}
 	}
@@ -96,12 +96,12 @@ func GetAttachment(ctx context.Context, db database.Database, params *database.D
 
 	// Where
 	if params.Where != nil {
-		q = selectWhere(q, params, "attachment")
+		q = selectWhere(q, params.Where, "attachment")
 	}
 
 	// Relations
 	if params.Relation != nil {
-		q = selectRelation(q, params)
+		q = selectRelation(q, params.Relation)
 	}
 
 	if err := q.Scan(ctx); err != nil {
@@ -120,7 +120,7 @@ func GetAttachmentById(ctx context.Context, db database.Database, params *databa
 	q := db.DB().NewSelect().Model(attachment).Where("attachment.id = ?", id)
 
 	if params != nil && params.Relation != nil {
-		q = selectRelation(q, params)
+		q = selectRelation(q, params.Relation)
 	}
 
 	if err := q.Scan(ctx); err != nil {
@@ -155,12 +155,12 @@ func GetAttachmentsByAssetId(ctx context.Context, db database.Database, params *
 
 		// Order by
 		if len(params.OrderBy) > 0 {
-			selectOrderBy(q, params, "attachment")
+			selectOrderBy(q, params.OrderBy, "attachment")
 		}
 
 		// Relation
 		if params.Relation != nil {
-			q = selectRelation(q, params)
+			q = selectRelation(q, params.Relation)
 		}
 	}
 
@@ -196,12 +196,12 @@ func GetAttachmentsByCourseId(ctx context.Context, db database.Database, params 
 
 		// Order by
 		if len(params.OrderBy) > 0 {
-			selectOrderBy(q, params, "attachment")
+			selectOrderBy(q, params.OrderBy, "attachment")
 		}
 
 		// Relation
 		if params.Relation != nil {
-			q = selectRelation(q, params)
+			q = selectRelation(q, params.Relation)
 		}
 	}
 

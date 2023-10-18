@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/geerew/off-course/database"
@@ -48,19 +49,17 @@ func (b *BaseModel) RefreshUpdatedAt() {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func selectWhere(q *bun.SelectQuery, params *database.DatabaseParams, table string) *bun.SelectQuery {
-	if params != nil && params.Where != nil {
-		for _, where := range params.Where {
-			// Update the column with the default table name when a table is not present
-			if !strings.Contains(where.Column, ".") {
-				where.Column = table + "." + where.Column
-			}
+func selectWhere(q *bun.SelectQuery, wheres []database.Where, table string) *bun.SelectQuery {
+	for _, where := range wheres {
+		// Update the column with the default table name when a table is not present
+		if !strings.Contains(where.Column, ".") {
+			where.Column = table + "." + where.Column
+		}
 
-			if where.Query == "" {
-				q = q.Where("? = ?", bun.Ident(where.Column), where.Value)
-			} else {
-				q = q.Where(where.Query, bun.Ident(where.Column), where.Value)
-			}
+		if where.Query == "" {
+			q = q.Where("? = ?", bun.Ident(where.Column), where.Value)
+		} else {
+			q = q.Where(where.Query, bun.Ident(where.Column), where.Value)
 		}
 	}
 
@@ -68,23 +67,23 @@ func selectWhere(q *bun.SelectQuery, params *database.DatabaseParams, table stri
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-func selectOrderBy(q *bun.SelectQuery, params *database.DatabaseParams, table string) *bun.SelectQuery {
-	if params != nil && params.OrderBy != nil {
-		orderBys := []string{}
+func selectOrderBy(q *bun.SelectQuery, orderBy []string, table string) *bun.SelectQuery {
+	orderBys := []string{}
 
-		// The orderby can come in 2 forms:
-		//  - A single string with comma separated columns
-		//  - An array of strings with each string being a column
-		for _, orderBy := range params.OrderBy {
-			// Split the string by comma into slice
-			parts := strings.Split(orderBy, ",")
-			for _, part := range parts {
-				if !strings.Contains(part, ".") {
-					orderBys = append(orderBys, table+"."+part)
-				}
+	// The orderby can come in 2 forms:
+	//  - A single string with comma separated columns
+	//  - An array of strings with each string being a column
+	for _, o := range orderBy {
+		// Split the string by comma into slice
+		parts := strings.Split(o, ",")
+		for _, part := range parts {
+			if !strings.Contains(part, ".") {
+				orderBys = append(orderBys, table+"."+part)
 			}
 		}
+	}
 
+	if len(orderBys) > 0 {
 		q = q.Order(orderBys...)
 	}
 
@@ -93,25 +92,30 @@ func selectOrderBy(q *bun.SelectQuery, params *database.DatabaseParams, table st
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func selectRelation(q *bun.SelectQuery, params *database.DatabaseParams) *bun.SelectQuery {
-	if params != nil && params.Relation != nil {
-		for _, relation := range params.Relation {
-			// Select specific columns from the relation and/or order by specific columns
-			if len(relation.Cols) > 0 || len(relation.OrderBy) > 0 {
-				q = q.Relation(relation.Struct, func(q *bun.SelectQuery) *bun.SelectQuery {
-					for _, col := range relation.Cols {
-						q = q.Column(col)
-					}
+func selectRelation(q *bun.SelectQuery, relations []database.Relation) *bun.SelectQuery {
+	for _, relation := range relations {
+		// Make a copy so that it can be used in the SelectQuery closure
+		relation := relation
 
-					if len(relation.OrderBy) > 0 {
-						q = q.Order(relation.OrderBy...)
-					}
+		// Select specific columns from the relation and/or order by specific columns
+		if len(relation.Cols) > 0 || len(relation.OrderBy) > 0 {
 
-					return q
-				})
-			} else {
-				q = q.Relation(relation.Struct)
-			}
+			fmt.Println("in here", relation.Struct)
+			q = q.Relation(relation.Struct, func(q *bun.SelectQuery) *bun.SelectQuery {
+
+				for _, col := range relation.Cols {
+					q = q.Column(col)
+				}
+
+				if len(relation.OrderBy) > 0 {
+					fmt.Println("orderby", relation)
+					q = q.Order(relation.OrderBy...)
+				}
+
+				return q
+			})
+		} else {
+			q = q.Relation(relation.Struct)
 		}
 	}
 

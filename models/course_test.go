@@ -391,8 +391,11 @@ func Test_GetCourse(t *testing.T) {
 		// Assets and attachments relation
 		// ----------------------------
 		dbParams = &database.DatabaseParams{
-			Where:    []database.Where{{Column: "id", Value: courses[3].ID}},
-			Relation: []database.Relation{{Struct: "Assets"}, {Struct: "Assets.Attachments"}},
+			Where: []database.Where{{Column: "id", Value: courses[3].ID}},
+			Relation: []database.Relation{
+				{Struct: "Assets", OrderBy: []string{"chapter asc", "prefix asc"}},
+				{Struct: "Assets.Attachments"},
+			},
 		}
 
 		result, err = GetCourse(ctx, db, dbParams)
