@@ -1,8 +1,9 @@
-import type { Course } from './models';
+import { array, number, object, type Output } from 'valibot';
+import { CourseSchema } from './models';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export type PaginationData = {
+export type PaginationParams = {
 	page: number;
 	perPage: number;
 	perPages: number[];
@@ -12,10 +13,12 @@ export type PaginationData = {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export type PaginationResponse = {
-	page: number;
-	perPage: number;
-	totalItems: number;
-	totalPages: number;
-	items: Course[];
-};
+export const PaginationSchema = object({
+	page: number(),
+	perPage: number(),
+	totalItems: number(),
+	totalPages: number(),
+	items: array(CourseSchema)
+});
+
+export type Pagination = Output<typeof PaginationSchema>;

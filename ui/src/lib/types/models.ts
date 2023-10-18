@@ -1,24 +1,61 @@
+import { array, boolean, enumType, object, optional, string, type Output } from 'valibot';
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Scan Status
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+const ScanStatusSchema = enumType(['waiting', 'processing', '']);
+export type ScanStatus = Output<typeof ScanStatusSchema>;
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Asset
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+const AssetTypeSchema = enumType(['video', 'html', 'pdf']);
+export type AssetType = Output<typeof AssetTypeSchema>;
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+export const AssetSchema = object({
+	id: string(),
+	courseId: string(),
+	title: string(),
+	prefix: string(),
+	chapter: string(),
+	path: string(),
+	assetType: AssetTypeSchema,
+	started: boolean(),
+	finished: boolean(),
+	createdAt: string(),
+	updatedAt: string()
+});
+
+export type Asset = Output<typeof AssetSchema>;
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Course
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export type Course = {
-	id: string;
-	title: string;
-	path: string;
-	hasCard: boolean;
-	completed: boolean;
-	scanStatus: ScanStatus;
-	createdAt: string;
-	updatedAt: string;
+export const CourseSchema = object({
+	id: string(),
+	title: string(),
+	path: string(),
+	hasCard: boolean(),
+	started: boolean(),
+	finished: boolean(),
+	scanStatus: ScanStatusSchema,
+	createdAt: string(),
+	updatedAt: string(),
 
-	// Associations
-	assets: Asset[];
-};
+	// Relations
+	assets: optional(array(AssetSchema))
+});
+
+export type Course = Output<typeof CourseSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export type CoursesGet = {
+export type CoursesGetParams = {
 	orderBy?: string;
 	includeAssets?: boolean;
 	page?: number;
@@ -27,37 +64,15 @@ export type CoursesGet = {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export type CourseGet = {
+export type CourseGetParams = {
 	includeAssets?: boolean;
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export type CoursePost = {
+export type CoursePostParams = {
 	title: string;
 	path: string;
-};
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Asset
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-export type AssetType = 'video' | 'html' | 'pdf';
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-export type Asset = {
-	id: string;
-	courseId: string;
-	title: string;
-	prefix: number;
-	chapter: string;
-	path: string;
-	assetType: AssetType;
-	started: boolean;
-	finished: boolean;
-	createdAt: string;
-	updatedAt: string;
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -68,20 +83,18 @@ export type CourseChapters = Record<string, Asset[]>;
 // Scan
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export type Scan = {
-	id: string;
-	course: string;
-	status: ScanStatus;
-	createdAt: string;
-	updatedAt: string;
-};
+export const ScanSchema = object({
+	id: string(),
+	courseId: string(),
+	status: ScanStatusSchema,
+	createdAt: string(),
+	updatedAt: string()
+});
+
+export type Scan = Output<typeof ScanSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export type ScanPost = {
+export type ScanPostParams = {
 	courseId: string;
 };
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-export type ScanStatus = 'waiting' | 'processing' | '';
