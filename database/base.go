@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
@@ -96,6 +97,11 @@ func (s *SqliteDb) Bootstrap() error {
 	}
 
 	db := bun.NewDB(sqldb, sqlitedialect.New())
+
+	// Set the max open connections to 4x the number of CPUs
+	maxOpenConns := 4 * runtime.GOMAXPROCS(0)
+	db.SetMaxIdleConns(maxOpenConns)
+	db.SetMaxOpenConns(maxOpenConns)
 
 	// db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 	// db.AddQueryHook(hook)
