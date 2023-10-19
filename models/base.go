@@ -1,7 +1,6 @@
 package models
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/geerew/off-course/database"
@@ -99,16 +98,12 @@ func selectRelation(q *bun.SelectQuery, relations []database.Relation) *bun.Sele
 
 		// Select specific columns from the relation and/or order by specific columns
 		if len(relation.Cols) > 0 || len(relation.OrderBy) > 0 {
-
-			fmt.Println("in here", relation.Struct)
 			q = q.Relation(relation.Struct, func(q *bun.SelectQuery) *bun.SelectQuery {
-
 				for _, col := range relation.Cols {
 					q = q.Column(col)
 				}
 
 				if len(relation.OrderBy) > 0 {
-					fmt.Println("orderby", relation)
 					q = q.Order(relation.OrderBy...)
 				}
 
