@@ -238,15 +238,15 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 
 					// Add the existing asset as an attachment
 					attachmentsMap[chapter][fileInfo.prefix] = append(attachmentsMap[chapter][fileInfo.prefix], &models.Attachment{
-						Title:    existingAsset.Title,
+						Title:    existingAsset.Title + filepath.Ext(existingAsset.Path),
 						Path:     existingAsset.Path,
 						CourseID: course.ID,
 					})
 				} else {
 					// This new asset has a lower priority than the existing asset so add it as an attachment
 					attachmentsMap[chapter][fileInfo.prefix] = append(attachmentsMap[chapter][fileInfo.prefix], &models.Attachment{
-						Title:    newAsset.Title,
-						Path:     newAsset.Path,
+						Title:    fileInfo.titleWithExt,
+						Path:     file,
 						CourseID: course.ID,
 					})
 				}
@@ -254,7 +254,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 		} else {
 			// File is an attachment
 			attachmentsMap[chapter][fileInfo.prefix] = append(attachmentsMap[chapter][fileInfo.prefix], &models.Attachment{
-				Title:    fileInfo.title,
+				Title:    fileInfo.titleWithExt,
 				Path:     file,
 				CourseID: course.ID,
 			})
@@ -318,11 +318,12 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type fileInfo struct {
-	prefix    int
-	title     string
-	ext       string
-	assetType types.Asset
-	isAsset   bool
+	prefix       int
+	title        string
+	ext          string
+	titleWithExt string
+	assetType    types.Asset
+	isAsset      bool
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -363,6 +364,8 @@ func buildFileInfo(fileName string) *fileInfo {
 		return nil
 	}
 
+	fileInfo.titleWithExt = fileInfo.title
+
 	// Get the extension from the fileName without the leading dot (ex file.txt -> txt)
 	ext := filepath.Ext(fileName)
 	if ext == "" {
@@ -371,6 +374,7 @@ func buildFileInfo(fileName string) *fileInfo {
 		return fileInfo
 	} else {
 		fileInfo.ext = ext[1:]
+		fileInfo.titleWithExt = fileInfo.title + "." + fileInfo.ext
 	}
 
 	// Set whether this is an asset or attachment

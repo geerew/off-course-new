@@ -751,35 +751,32 @@ func Test_BuildFileInfo(t *testing.T) {
 			expected *fileInfo
 		}{
 			// Various valid formats of prefix/title/extension
-			{"0    file 0.avi", &fileInfo{prefix: 0, title: "file 0", ext: "avi", assetType: *types.NewAsset("avi"), isAsset: true}},
-			{"001 file 1.avi", &fileInfo{prefix: 1, title: "file 1", ext: "avi", assetType: *types.NewAsset("avi"), isAsset: true}},
-			{"1 - file.avi", &fileInfo{prefix: 1, title: "file", ext: "avi", assetType: *types.NewAsset("avi"), isAsset: true}},
-			{"1-file.avi", &fileInfo{prefix: 1, title: "file", ext: "avi", assetType: *types.NewAsset("avi"), isAsset: true}},
-			{"1 --- file.avi", &fileInfo{prefix: 1, title: "file", ext: "avi", assetType: *types.NewAsset("avi"), isAsset: true}},
-			{"1 file.avi", &fileInfo{prefix: 1, title: "file", ext: "avi", assetType: *types.NewAsset("avi"), isAsset: true}},
+			{"0    file 0.avi", &fileInfo{prefix: 0, title: "file 0", ext: "avi", titleWithExt: "file 0.avi", assetType: *types.NewAsset("avi"), isAsset: true}},
+			{"001 file 1.avi", &fileInfo{prefix: 1, title: "file 1", ext: "avi", titleWithExt: "file 1.avi", assetType: *types.NewAsset("avi"), isAsset: true}},
+			{"1 - file.avi", &fileInfo{prefix: 1, title: "file", ext: "avi", titleWithExt: "file.avi", assetType: *types.NewAsset("avi"), isAsset: true}},
+			{"1-file.avi", &fileInfo{prefix: 1, title: "file", ext: "avi", titleWithExt: "file.avi", assetType: *types.NewAsset("avi"), isAsset: true}},
+			{"1 --- file.avi", &fileInfo{prefix: 1, title: "file", ext: "avi", titleWithExt: "file.avi", assetType: *types.NewAsset("avi"), isAsset: true}},
+			{"1 file.avi", &fileInfo{prefix: 1, title: "file", ext: "avi", titleWithExt: "file.avi", assetType: *types.NewAsset("avi"), isAsset: true}},
 			// Videos
-			{"1 - video.avi", &fileInfo{prefix: 1, title: "video", ext: "avi", assetType: *types.NewAsset("avi"), isAsset: true}},
-			{"1 - video.mkv", &fileInfo{prefix: 1, title: "video", ext: "mkv", assetType: *types.NewAsset("mkv"), isAsset: true}},
-			{"1 - video.flac", &fileInfo{prefix: 1, title: "video", ext: "flac", assetType: *types.NewAsset("flac"), isAsset: true}},
-			{"1 - video.mp4", &fileInfo{prefix: 1, title: "video", ext: "mp4", assetType: *types.NewAsset("mp4"), isAsset: true}},
-			{"1 - video.m4a", &fileInfo{prefix: 1, title: "video", ext: "m4a", assetType: *types.NewAsset("m4a"), isAsset: true}},
-			{"1 - video.mp3", &fileInfo{prefix: 1, title: "video", ext: "mp3", assetType: *types.NewAsset("mp3"), isAsset: true}},
-			{"1 - video.ogv", &fileInfo{prefix: 1, title: "video", ext: "ogv", assetType: *types.NewAsset("ogv"), isAsset: true}},
-			{"1 - video.ogm", &fileInfo{prefix: 1, title: "video", ext: "ogm", assetType: *types.NewAsset("ogm"), isAsset: true}},
-			{"1 - video.ogg", &fileInfo{prefix: 1, title: "video", ext: "ogg", assetType: *types.NewAsset("ogg"), isAsset: true}},
-			{"1 - video.oga", &fileInfo{prefix: 1, title: "video", ext: "oga", assetType: *types.NewAsset("oga"), isAsset: true}},
-			{"1 - video.opus", &fileInfo{prefix: 1, title: "video", ext: "opus", assetType: *types.NewAsset("opus"), isAsset: true}},
-			{"1 - video.webm", &fileInfo{prefix: 1, title: "video", ext: "webm", assetType: *types.NewAsset("webm"), isAsset: true}},
-			{"1 - video.wav", &fileInfo{prefix: 1, title: "video", ext: "wav", assetType: *types.NewAsset("wav"), isAsset: true}},
+			{"1 - video.avi", &fileInfo{prefix: 1, title: "video", ext: "avi", titleWithExt: "video.avi", assetType: *types.NewAsset("avi"), isAsset: true}},
+			{"1 - video.mkv", &fileInfo{prefix: 1, title: "video", ext: "mkv", titleWithExt: "video.mkv", assetType: *types.NewAsset("mkv"), isAsset: true}},
+			{"1 - video.flac", &fileInfo{prefix: 1, title: "video", ext: "flac", titleWithExt: "video.flac", assetType: *types.NewAsset("flac"), isAsset: true}},
+			{"1 - video.mp4", &fileInfo{prefix: 1, title: "video", ext: "mp4", titleWithExt: "video.mp4", assetType: *types.NewAsset("mp4"), isAsset: true}},
+			{"1 - video.m4a", &fileInfo{prefix: 1, title: "video", ext: "m4a", titleWithExt: "video.m4a", assetType: *types.NewAsset("m4a"), isAsset: true}},
+			{"1 - video.mp3", &fileInfo{prefix: 1, title: "video", ext: "mp3", titleWithExt: "video.mp3", assetType: *types.NewAsset("mp3"), isAsset: true}},
+			{"1 - video.ogv", &fileInfo{prefix: 1, title: "video", ext: "ogv", titleWithExt: "video.ogv", assetType: *types.NewAsset("ogv"), isAsset: true}},
+			{"1 - video.ogm", &fileInfo{prefix: 1, title: "video", ext: "ogm", titleWithExt: "video.ogm", assetType: *types.NewAsset("ogm"), isAsset: true}},
+			{"1 - video.ogg", &fileInfo{prefix: 1, title: "video", ext: "ogg", titleWithExt: "video.ogg", assetType: *types.NewAsset("ogg"), isAsset: true}},
+			{"1 - video.oga", &fileInfo{prefix: 1, title: "video", ext: "oga", titleWithExt: "video.oga", assetType: *types.NewAsset("oga"), isAsset: true}},
+			{"1 - video.opus", &fileInfo{prefix: 1, title: "video", ext: "opus", titleWithExt: "video.opus", assetType: *types.NewAsset("opus"), isAsset: true}},
+			{"1 - video.webm", &fileInfo{prefix: 1, title: "video", ext: "webm", titleWithExt: "video.webm", assetType: *types.NewAsset("webm"), isAsset: true}},
+			{"1 - video.wav", &fileInfo{prefix: 1, title: "video", ext: "wav", titleWithExt: "video.wav", assetType: *types.NewAsset("wav"), isAsset: true}},
+			// PDF
 			// Document
-			{"1 - doc.html", &fileInfo{prefix: 1, title: "doc", ext: "html", assetType: *types.NewAsset("html"), isAsset: true}},
-			{"1 - doc.htm", &fileInfo{prefix: 1, title: "doc", ext: "htm", assetType: *types.NewAsset("htm"), isAsset: true}},
-			// Images
-			// {"1 - image.jpg", &FileInfo{prefix: "1", title: "image", Extension: MediaTypeJpg, Category: MediaCategoryImage}},
-			// {"1 - image.jpeg", &FileInfo{prefix: "1", title: "image", Extension: MediaTypeJpeg, Category: MediaCategoryImage}},
-			// {"1 - image.png", &FileInfo{prefix: "1", title: "image", Extension: MediaTypePng, Category: MediaCategoryImage}},
-			// {"1 - image.webp", &FileInfo{prefix: "1", title: "image", Extension: MediaTypeWebp, Category: MediaCategoryImage}},
-			// {"1 - image.tiff", &FileInfo{prefix: "1", title: "image", Extension: MediaTypeTiff, Category: MediaCategoryImage}},
+			{"1 - doc.pdf", &fileInfo{prefix: 1, title: "doc", ext: "pdf", titleWithExt: "doc.pdf", assetType: *types.NewAsset("pdf"), isAsset: true}},
+			// HTML
+			{"1 - index.html", &fileInfo{prefix: 1, title: "index", ext: "html", titleWithExt: "index.html", assetType: *types.NewAsset("html"), isAsset: true}},
+			{"1 - index.htm", &fileInfo{prefix: 1, title: "index", ext: "htm", titleWithExt: "index.htm", assetType: *types.NewAsset("htm"), isAsset: true}},
 		}
 
 		for _, tt := range tests {
@@ -794,12 +791,12 @@ func Test_BuildFileInfo(t *testing.T) {
 			expected *fileInfo
 		}{
 			// Various valid formats of prefix/title/extension
-			{"0    file 0", &fileInfo{prefix: 0, title: "file 0", isAsset: false}},
-			{"001    file 1", &fileInfo{prefix: 1, title: "file 1", isAsset: false}},
-			{"1 - file", &fileInfo{prefix: 1, title: "file", isAsset: false}},
-			{"1-file", &fileInfo{prefix: 1, title: "file", isAsset: false}},
-			{"1 --- file", &fileInfo{prefix: 1, title: "file", isAsset: false}},
-			{"1 file.txt", &fileInfo{prefix: 1, title: "file", ext: "txt", isAsset: false}},
+			{"0    file 0", &fileInfo{prefix: 0, title: "file 0", titleWithExt: "file 0", isAsset: false}},
+			{"001    file 1", &fileInfo{prefix: 1, title: "file 1", titleWithExt: "file 1", isAsset: false}},
+			{"1 - file", &fileInfo{prefix: 1, title: "file", titleWithExt: "file", isAsset: false}},
+			{"1-file", &fileInfo{prefix: 1, title: "file", titleWithExt: "file", isAsset: false}},
+			{"1 --- file", &fileInfo{prefix: 1, title: "file", titleWithExt: "file", isAsset: false}},
+			{"1 file.txt", &fileInfo{prefix: 1, title: "file", ext: "txt", titleWithExt: "file.txt", isAsset: false}},
 		}
 
 		for _, tt := range tests {
