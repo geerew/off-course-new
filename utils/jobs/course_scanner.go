@@ -238,14 +238,14 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 
 					// Add the existing asset as an attachment
 					attachmentsMap[chapter][fileInfo.prefix] = append(attachmentsMap[chapter][fileInfo.prefix], &models.Attachment{
-						Title:    existingAsset.Title + filepath.Ext(existingAsset.Path),
+						Title:    fileInfo.fullTitle,
 						Path:     existingAsset.Path,
 						CourseID: course.ID,
 					})
 				} else {
 					// This new asset has a lower priority than the existing asset so add it as an attachment
 					attachmentsMap[chapter][fileInfo.prefix] = append(attachmentsMap[chapter][fileInfo.prefix], &models.Attachment{
-						Title:    fileInfo.titleWithExt,
+						Title:    fileInfo.fullTitle,
 						Path:     file,
 						CourseID: course.ID,
 					})
@@ -254,7 +254,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 		} else {
 			// File is an attachment
 			attachmentsMap[chapter][fileInfo.prefix] = append(attachmentsMap[chapter][fileInfo.prefix], &models.Attachment{
-				Title:    fileInfo.titleWithExt,
+				Title:    fileInfo.fullTitle,
 				Path:     file,
 				CourseID: course.ID,
 			})
@@ -318,12 +318,12 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type fileInfo struct {
-	prefix       int
-	title        string
-	ext          string
-	titleWithExt string
-	assetType    types.Asset
-	isAsset      bool
+	prefix    int
+	title     string
+	ext       string
+	fullTitle string
+	assetType types.Asset
+	isAsset   bool
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -354,27 +354,29 @@ func buildFileInfo(fileName string) *fileInfo {
 		return nil
 	}
 
-	// Convert the prefix to a number. We don't need to check for errors here because the regex
+	// The prefix
+	prefix := matches[re.SubexpIndex("Prefix")]
+
 	// ensures that the prefix is a number. For example, this will turn 001 into 1
-	fileInfo.prefix, _ = strconv.Atoi(matches[re.SubexpIndex("Prefix")])
+	fileInfo.prefix, _ = strconv.Atoi(prefix)
 	fileInfo.title = matches[re.SubexpIndex("Title")]
 
-	// When the title is empty, return nil so that this file is ignored
+	// When there is no title, this is not an asset
 	if fileInfo.title == "" {
-		return nil
+		fileInfo.isAsset = false
+		fileInfo.fullTitle = fileName
+		return fileInfo
 	}
-
-	fileInfo.titleWithExt = fileInfo.title
 
 	// Get the extension from the fileName without the leading dot (ex file.txt -> txt)
 	ext := filepath.Ext(fileName)
 	if ext == "" {
 		// No extension. This is not an asset
 		fileInfo.isAsset = false
-		return fileInfo
+		fileInfo.fullTitle = fileInfo.title
 	} else {
 		fileInfo.ext = ext[1:]
-		fileInfo.titleWithExt = fileInfo.title + "." + fileInfo.ext
+		fileInfo.fullTitle = fileInfo.title + "." + fileInfo.ext
 	}
 
 	// Set whether this is an asset or attachment
