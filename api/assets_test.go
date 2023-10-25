@@ -20,11 +20,11 @@ import (
 
 func TestAssets_GetAssets(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
-		_, db, _, _, teardown := setup(t)
+		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
 		f := fiber.New()
-		bindAssetsApi(f.Group("/api"), db)
+		bindAssetsApi(f.Group("/api"), appFs, db)
 
 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
 		assert.NoError(t, err)
@@ -39,11 +39,11 @@ func TestAssets_GetAssets(t *testing.T) {
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
-		_, db, _, _, teardown := setup(t)
+		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
 		f := fiber.New()
-		bindAssetsApi(f.Group("/api"), db)
+		bindAssetsApi(f.Group("/api"), appFs, db)
 
 		// Create 2 courses with 5 assets each with 2 attachments each
 		courses := models.NewTestCourses(t, db, 2)
@@ -76,11 +76,11 @@ func TestAssets_GetAssets(t *testing.T) {
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
-		_, db, _, _, teardown := setup(t)
+		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
 		f := fiber.New()
-		bindAssetsApi(f.Group("/api"), db)
+		bindAssetsApi(f.Group("/api"), appFs, db)
 
 		// Create 2 courses with 5 assets each (10 assets total)
 		courses := models.NewTestCourses(t, db, 2)
@@ -111,11 +111,11 @@ func TestAssets_GetAssets(t *testing.T) {
 	})
 
 	t.Run("200 (expand)", func(t *testing.T) {
-		_, db, _, _, teardown := setup(t)
+		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
 		f := fiber.New()
-		bindAssetsApi(f.Group("/api"), db)
+		bindAssetsApi(f.Group("/api"), appFs, db)
 
 		// Create 5 courses with 5 assets each
 		courses := models.NewTestCourses(t, db, 3)
@@ -151,11 +151,11 @@ func TestAssets_GetAssets(t *testing.T) {
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
-		_, db, _, _, teardown := setup(t)
+		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
 		f := fiber.New()
-		bindAssetsApi(f.Group("/api"), db)
+		bindAssetsApi(f.Group("/api"), appFs, db)
 
 		// Create 3 courses with 6 assets each (18 assets total)
 		courses := models.NewTestCourses(t, db, 3)
@@ -222,11 +222,11 @@ func TestAssets_GetAssets(t *testing.T) {
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		_, db, _, _, teardown := setup(t)
+		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
 		f := fiber.New()
-		bindAssetsApi(f.Group("/api"), db)
+		bindAssetsApi(f.Group("/api"), appFs, db)
 
 		// Drop the assets table
 		_, err := db.DB().NewDropTable().Model(&models.Asset{}).Exec(context.Background())
@@ -242,11 +242,11 @@ func TestAssets_GetAssets(t *testing.T) {
 
 func TestAssets_GetAsset(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
-		_, db, _, _, teardown := setup(t)
+		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
 		f := fiber.New()
-		bindAssetsApi(f.Group("/api"), db)
+		bindAssetsApi(f.Group("/api"), appFs, db)
 
 		// Create 2 courses with 5 assets with 2 attachments
 		courses := models.NewTestCourses(t, db, 2)
@@ -269,11 +269,11 @@ func TestAssets_GetAsset(t *testing.T) {
 	})
 
 	t.Run("200 (expand)", func(t *testing.T) {
-		_, db, _, _, teardown := setup(t)
+		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
 		f := fiber.New()
-		bindAssetsApi(f.Group("/api"), db)
+		bindAssetsApi(f.Group("/api"), appFs, db)
 
 		courses := models.NewTestCourses(t, db, 5)
 		assets := models.NewTestAssets(t, db, courses, 5)
@@ -299,11 +299,11 @@ func TestAssets_GetAsset(t *testing.T) {
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
-		_, db, _, _, teardown := setup(t)
+		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
 		f := fiber.New()
-		bindAssetsApi(f.Group("/api"), db)
+		bindAssetsApi(f.Group("/api"), appFs, db)
 
 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/assets/test", nil))
 		assert.NoError(t, err)
@@ -311,11 +311,11 @@ func TestAssets_GetAsset(t *testing.T) {
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		_, db, _, _, teardown := setup(t)
+		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
 		f := fiber.New()
-		bindAssetsApi(f.Group("/api"), db)
+		bindAssetsApi(f.Group("/api"), appFs, db)
 
 		// Drop the table
 		_, err := db.DB().NewDropTable().Model(&models.Asset{}).Exec(context.Background())

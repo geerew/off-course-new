@@ -5,6 +5,7 @@ import (
 
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
@@ -14,7 +15,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type assets struct {
-	db database.Database
+	appFs *appFs.AppFs
+	db    database.Database
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -38,8 +40,8 @@ type assetResponse struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func bindAssetsApi(router fiber.Router, db database.Database) {
-	api := assets{db: db}
+func bindAssetsApi(router fiber.Router, appFs *appFs.AppFs, db database.Database) {
+	api := assets{appFs: appFs, db: db}
 
 	subGroup := router.Group("/assets")
 

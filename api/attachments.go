@@ -5,16 +5,20 @@ import (
 
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/afero"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type attachments struct {
-	db database.Database
+	appFs *appFs.AppFs
+	db    database.Database
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -31,14 +35,15 @@ type attachmentResponse struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func bindAttachmentsApi(router fiber.Router, db database.Database) {
-	api := attachments{db: db}
+func bindAttachmentsApi(router fiber.Router, appFs *appFs.AppFs, db database.Database) {
+	api := attachments{appFs: appFs, db: db}
 
 	subGroup := router.Group("/attachments")
 
 	// Assets
 	subGroup.Get("", api.getAttachments)
 	subGroup.Get("/:id", api.getAttachment)
+	subGroup.Get("/:id/download", api.downloadAttachment)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -87,6 +92,35 @@ func (api *attachments) getAttachment(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(toAttachmentResponse([]*models.Attachment{attachment})[0])
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (api *attachments) downloadAttachment(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	attachment, err := models.GetAttachmentById(c.UserContext(), api.db, nil, id)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).SendString("Not found")
+		}
+
+		log.Err(err).Msg("error looking up attachment")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error looking up attachment - " + err.Error(),
+		})
+	}
+
+	// Check for invalid path
+	if exists, err := afero.Exists(api.appFs.Fs, attachment.Path); err != nil || !exists {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "attachment does not exist",
+		})
+	}
+
+	c.Set(fiber.HeaderContentDisposition, `attachment; filename="`+attachment.Title+`"`)
+	return filesystem.SendFile(c, afero.NewHttpFs(api.appFs.Fs), attachment.Path)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

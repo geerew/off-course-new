@@ -96,8 +96,8 @@ func initRouter(config *RouterConfig) *fiber.App {
 	api := router.Group("/api")
 	bindFsApi(api, config.AppFs)
 	bindCoursesApi(api, config.AppFs, config.Db, config.CourseScanner)
-	// bindAssetsApi(api, config.Db)
-	bindAttachmentsApi(api, config.Db)
+	bindAssetsApi(api, config.AppFs, config.Db)
+	bindAttachmentsApi(api, config.AppFs, config.Db)
 	bindScansApi(api, config.AppFs, config.Db, config.CourseScanner)
 
 	return router

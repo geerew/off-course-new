@@ -260,7 +260,7 @@ func NewTestCourses(t *testing.T, db database.Database, count int) []*Course {
 	for i := 0; i < count; i++ {
 		c := &Course{
 			Title: security.PseudorandomString(8),
-			Path:  fmt.Sprintf("%s/%s", security.PseudorandomString(5), security.PseudorandomString(5)),
+			Path:  fmt.Sprintf("/%s/%s", security.PseudorandomString(5), security.PseudorandomString(5)),
 		}
 
 		c.RefreshId()

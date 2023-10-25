@@ -20,8 +20,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type courses struct {
-	db            database.Database
 	appFs         *appFs.AppFs
+	db            database.Database
 	courseScanner *jobs.CourseScanner
 }
 
