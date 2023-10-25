@@ -5,7 +5,7 @@
 	import { AddCoursesDrawer, DeleteCourseDialog } from '$components/settings';
 	import { TableCourseAction, TableCourseTitle, TableDate } from '$components/table';
 	import type { Course } from '$lib/types/models';
-	import type { PaginationData } from '$lib/types/pagination';
+	import type { PaginationParams } from '$lib/types/pagination';
 	import { AddScan, GetCourses } from '$lib/utils/api';
 	import { cn, flattenOrderBy, isBrowser } from '$lib/utils/general';
 	import { createDialog } from '@melt-ui/svelte';
@@ -32,7 +32,7 @@
 	let gotError = false;
 
 	// Pagination
-	let pagination: PaginationData = {
+	let pagination: PaginationParams = {
 		page: 1,
 		perPage: 25,
 		perPages: [10, 25, 100, 200],

@@ -1,4 +1,14 @@
-import { array, boolean, enumType, object, optional, string, type Output } from 'valibot';
+import {
+	array,
+	boolean,
+	enumType,
+	merge,
+	number,
+	object,
+	optional,
+	string,
+	type Output
+} from 'valibot';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Scan Status
@@ -6,6 +16,32 @@ import { array, boolean, enumType, object, optional, string, type Output } from 
 
 const ScanStatusSchema = enumType(['waiting', 'processing', '']);
 export type ScanStatus = Output<typeof ScanStatusSchema>;
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+export const BaseSchema = object({
+	id: string(),
+	createdAt: string(),
+	updatedAt: string()
+});
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Attachment
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+export const AttachmentSchema = merge([
+	BaseSchema,
+	object({
+		courseId: string(),
+		assetId: string(),
+		title: string(),
+		path: string()
+	})
+]);
+
+export type Attachment = Output<typeof AttachmentSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Asset
@@ -16,19 +52,22 @@ export type AssetType = Output<typeof AssetTypeSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export const AssetSchema = object({
-	id: string(),
-	courseId: string(),
-	title: string(),
-	prefix: string(),
-	chapter: string(),
-	path: string(),
-	assetType: AssetTypeSchema,
-	started: boolean(),
-	finished: boolean(),
-	createdAt: string(),
-	updatedAt: string()
-});
+export const AssetSchema = merge([
+	BaseSchema,
+	object({
+		courseId: string(),
+		title: string(),
+		prefix: number(),
+		chapter: string(),
+		path: string(),
+		assetType: AssetTypeSchema,
+		started: boolean(),
+		finished: boolean(),
+
+		// Relations
+		attachments: optional(array(AttachmentSchema))
+	})
+]);
 
 export type Asset = Output<typeof AssetSchema>;
 
@@ -36,20 +75,20 @@ export type Asset = Output<typeof AssetSchema>;
 // Course
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export const CourseSchema = object({
-	id: string(),
-	title: string(),
-	path: string(),
-	hasCard: boolean(),
-	started: boolean(),
-	finished: boolean(),
-	scanStatus: ScanStatusSchema,
-	createdAt: string(),
-	updatedAt: string(),
+export const CourseSchema = merge([
+	BaseSchema,
+	object({
+		title: string(),
+		path: string(),
+		hasCard: boolean(),
+		started: boolean(),
+		finished: boolean(),
+		scanStatus: ScanStatusSchema,
 
-	// Relations
-	assets: optional(array(AssetSchema))
-});
+		// Relations
+		assets: optional(array(AssetSchema))
+	})
+]);
 
 export type Course = Output<typeof CourseSchema>;
 
@@ -57,7 +96,7 @@ export type Course = Output<typeof CourseSchema>;
 
 export type CoursesGetParams = {
 	orderBy?: string;
-	includeAssets?: boolean;
+	expand?: boolean;
 	page?: number;
 	perPage?: number;
 };
@@ -65,7 +104,7 @@ export type CoursesGetParams = {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 export type CourseGetParams = {
-	includeAssets?: boolean;
+	expand?: boolean;
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -83,13 +122,13 @@ export type CourseChapters = Record<string, Asset[]>;
 // Scan
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export const ScanSchema = object({
-	id: string(),
-	courseId: string(),
-	status: ScanStatusSchema,
-	createdAt: string(),
-	updatedAt: string()
-});
+export const ScanSchema = merge([
+	BaseSchema,
+	object({
+		courseId: string(),
+		status: ScanStatusSchema
+	})
+]);
 
 export type Scan = Output<typeof ScanSchema>;
 

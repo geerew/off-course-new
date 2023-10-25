@@ -8,7 +8,7 @@
 	import TableDate from '$components/table/TableDate.svelte';
 	import { addToast } from '$lib/stores/addToast';
 	import type { Course, CourseChapters } from '$lib/types/models';
-	import { AddScan, COURSE_API, GetCourse, GetScanByCourseId } from '$lib/utils/api';
+	import { AddScan, COURSE_API, ErrorMessage, GetCourse, GetScanByCourseId } from '$lib/utils/api';
 	import { buildChapterStructure, cn, isBrowser } from '$lib/utils/general';
 	import { createAccordion, createAvatar, createDialog } from '@melt-ui/svelte';
 	import type { AxiosError } from 'axios';
@@ -73,7 +73,7 @@
 		const id = params && params.get('id');
 		if (!id) return false;
 
-		return await GetCourse(id, { includeAssets: true }, true)
+		return await GetCourse(id, { expand: true })
 			.then(async (resp) => {
 				if (!resp) return false;
 				course = { ...resp };
@@ -85,17 +85,22 @@
 
 				// Display the card
 				if (course && course.hasCard) {
-					console.log('setting card');
 					src.set(`${COURSE_API}/${course.id}/card?b=${new Date().getTime()}`);
 				} else {
-					console.log('clearing card');
 					src.set('');
 				}
 
 				return true;
 			})
 			.catch((err) => {
-				console.error(err);
+				const errMsg = ErrorMessage(err);
+				console.error(errMsg);
+				$addToast({
+					data: {
+						message: errMsg,
+						status: 'error'
+					}
+				});
 				return false;
 			});
 	};
@@ -104,7 +109,7 @@
 	// When the scan finishes, clear the interval and set the status to an empty string.
 	const startPolling = () => {
 		scanPoll = setInterval(async () => {
-			await GetScanByCourseId(course.id, true)
+			await GetScanByCourseId(course.id)
 				.then((resp) => {
 					if (resp && resp.status !== course.scanStatus) {
 						course.scanStatus = resp.status;
@@ -116,14 +121,14 @@
 						// the latest course details
 						await getCourse();
 					} else {
-						// Some other error
+						const errMsg = ErrorMessage(err);
+						console.error(errMsg);
 						$addToast({
 							data: {
-								message: `Failed to get scan`,
+								message: ErrorMessage(errMsg),
 								status: 'error'
 							}
 						});
-						console.error(err);
 					}
 
 					course.scanStatus = '';
@@ -300,14 +305,16 @@
 								use:item
 								class={cn('flex flex-col', !lastChapter && 'border-b')}
 							>
-								<!-- Chapter Title -->
+								<!-- Chapter title (button) -->
 								<button
 									{...$trigger(chapter)}
 									use:trigger
-									class="hover:bg-accent-1 flex w-full px-4 py-5"
+									class="hover:bg-accent-1 flex w-full items-center px-4 py-5"
 								>
-									<!-- <Icons.hash class="" /> -->
 									<span class="grow text-start text-base">{chapter}</span>
+									<span class="text-foreground-muted shrink-0 px-2.5"
+										>({chapters[chapter].length})</span
+									>
 									<Icons.chevronRight
 										class={cn('h-4 w-4 duration-200', $isSelected(chapter) && 'rotate-90')}
 									/>

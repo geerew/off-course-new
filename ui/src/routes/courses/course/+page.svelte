@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { Error, Loading } from '$components';
+	import { addToast } from '$lib/stores/addToast';
 	import type { Course } from '$lib/types/models';
-	import { GetCourse } from '$lib/utils/api';
+	import { ErrorMessage, GetCourse } from '$lib/utils/api';
 	import { isBrowser } from '$lib/utils/general';
 	import { onMount } from 'svelte';
 
@@ -31,7 +32,7 @@
 		const id = params && params.get('id');
 		if (!id) return false;
 
-		return await GetCourse(id, { includeAssets: true }, true)
+		return await GetCourse(id, { expand: true })
 			.then((resp) => {
 				if (!resp) return false;
 
@@ -39,7 +40,14 @@
 				return true;
 			})
 			.catch((err) => {
-				console.error(err);
+				const errMsg = ErrorMessage(err);
+				console.error(errMsg);
+				$addToast({
+					data: {
+						message: errMsg,
+						status: 'error'
+					}
+				});
 				return false;
 			});
 	};

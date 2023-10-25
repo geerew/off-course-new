@@ -22,11 +22,14 @@ export const FS_API =
 export const COURSE_API =
 	process.env.NODE_ENV === 'production' ? '/api/courses' : `${PUBLIC_BACKEND}/api/courses`;
 
+export const ATTACHMENT_API =
+	process.env.NODE_ENV === 'production' ? '/api/courses' : `${PUBLIC_BACKEND}/api/attachments`;
+
 export const SCAN_API =
 	process.env.NODE_ENV === 'production' ? '/api/scans' : `${PUBLIC_BACKEND}/api/scans`;
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-const ErrorMessage = (error: Error) => {
+export const ErrorMessage = (error: Error) => {
 	return axios.isAxiosError(error) && error.response?.data ? error.response.data : error.message;
 };
 
@@ -52,7 +55,7 @@ export const GetFileSystem = async (path?: string): Promise<FileSystem | undefin
 			fsInfo = result.output;
 		})
 		.catch((error: Error) => {
-			throw ErrorMessage(error);
+			throw error;
 		});
 
 	return fsInfo;
@@ -74,7 +77,7 @@ export const GetCourses = async (params?: CoursesGetParams): Promise<Pagination>
 			resp = result.output;
 		})
 		.catch((error: Error) => {
-			throw ErrorMessage(error);
+			throw error;
 		});
 
 	if (!resp) throw new Error('Courses were not found');
@@ -108,7 +111,7 @@ export const GetAllCourses = async (params?: CoursesGetParams): Promise<Course[]
 				}
 			})
 			.catch((error) => {
-				throw ErrorMessage(error);
+				throw error;
 			});
 	}
 
@@ -127,7 +130,7 @@ export const GetCourse = async (id: string, params?: CourseGetParams): Promise<C
 			course = result.output;
 		})
 		.catch((error: Error) => {
-			throw ErrorMessage(error);
+			throw error;
 		});
 
 	if (!course) throw new Error('Course was not found');
@@ -151,7 +154,7 @@ export const AddCourse = async (data: CoursePostParams): Promise<Course> => {
 			course = result.output;
 		})
 		.catch((error: Error) => {
-			throw ErrorMessage(error);
+			throw error;
 		});
 
 	if (!course) throw new Error('Course was not created');
@@ -162,10 +165,29 @@ export const AddCourse = async (data: CoursePostParams): Promise<Course> => {
 // DELETE a course
 export const DeleteCourse = async (id: string): Promise<boolean> => {
 	await axios.delete(`${COURSE_API}/${id}`).catch((error: Error) => {
-		throw ErrorMessage(error);
+		throw error;
 	});
 
 	return true;
+};
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Attachments
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// DOWNLOAD an attachment
+export const DownloadAttachment = async (id: string): Promise<boolean> => {
+	await axios
+		.get(`${ATTACHMENT_API}/${id}/download`)
+		.then((response: AxiosResponse) => {
+			console.log(response);
+			return true;
+		})
+		.catch((error: Error) => {
+			throw error;
+		});
+
+	return false;
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -184,7 +206,7 @@ export const GetScanByCourseId = async (id: string): Promise<Scan> => {
 			scan = result.output;
 		})
 		.catch((error: AxiosError) => {
-			throw ErrorMessage(error);
+			throw error;
 		});
 
 	if (!scan) throw new Error('Scan was not found');
@@ -208,7 +230,7 @@ export const AddScan = async (data: ScanPostParams): Promise<Scan> => {
 			scan = result.output;
 		})
 		.catch((error: Error) => {
-			throw ErrorMessage(error);
+			throw error;
 		});
 
 	if (!scan) throw new Error('Scan was not started');

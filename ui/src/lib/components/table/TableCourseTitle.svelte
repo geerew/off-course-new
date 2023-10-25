@@ -31,7 +31,7 @@
 	// When the scan finishes, we clear the interval and set the status to an empty string.
 	const startPolling = () => {
 		scanPoll = setInterval(async () => {
-			await GetScanByCourseId(course.id, true)
+			await GetScanByCourseId(course.id)
 				.then((resp) => {
 					if (resp && resp.status !== course.scanStatus) {
 						course.scanStatus = resp.status;

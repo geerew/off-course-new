@@ -12,6 +12,7 @@ import {
 	CircleOff,
 	CornerRightDown,
 	CornerUpLeft,
+	Download,
 	FileCode2,
 	FileText,
 	FileVideo,
@@ -20,6 +21,7 @@ import {
 	Hexagon,
 	Info,
 	MoreHorizontal,
+	Paperclip,
 	Play,
 	RefreshCw,
 	Search,
@@ -38,6 +40,7 @@ export type Icon = LucideIcon;
 
 export const Icons = {
 	arrowUpDown: ArrowUpDown,
+	attachment: Paperclip,
 	bookPlus: BookPlus,
 	calendarPlus: CalendarPlus,
 	calendarSearch: CalendarSearch,
@@ -50,6 +53,7 @@ export const Icons = {
 	cornerRightDown: CornerRightDown,
 	cornerUpLeft: CornerUpLeft,
 	delete: Trash2,
+	download: Download,
 	errorCircle: XCircle,
 	fileHtml: FileCode2,
 	filePdf: FileText,

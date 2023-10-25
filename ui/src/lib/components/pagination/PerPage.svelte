@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Icons } from '$components/icons';
 	import type { ClassName } from '$lib/types/general';
-	import type { PaginationData } from '$lib/types/pagination';
+	import type { PaginationParams } from '$lib/types/pagination';
 	import { createSelect, type SelectOption } from '@melt-ui/svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { writable } from 'svelte/store';
@@ -14,10 +14,10 @@
 	// ----------------------
 
 	// The number of items per page
-	export let perPage: PaginationData['perPage'];
+	export let perPage: PaginationParams['perPage'];
 
 	// The number of items per page
-	export let perPages: PaginationData['perPages'];
+	export let perPages: PaginationParams['perPages'];
 
 	export { className as class };
 

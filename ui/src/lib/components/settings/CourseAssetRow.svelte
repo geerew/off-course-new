@@ -2,6 +2,7 @@
 	import { Separator } from '$components';
 	import { Icons } from '$components/icons';
 	import type { Asset } from '$lib/types/models';
+	import AttachmentsPopover from './internal/AttachmentsPopover.svelte';
 
 	// ----------------------
 	// Exports
@@ -29,6 +30,8 @@
 		</span>
 
 		<Separator orientation="vertical" class=" h-4" />
+
+		<!-- Completion status -->
 		{#if asset.finished}
 			<span class="token !bg-success">
 				<Icons.checkCircle class="icon" />
@@ -44,6 +47,13 @@
 				<Icons.circle class="icon" />
 				not started
 			</span>
+		{/if}
+
+		<!-- Attachments -->
+		{#if asset.attachments && asset.attachments.length > 0}
+			<Separator orientation="vertical" class=" h-4" />
+
+			<AttachmentsPopover attachments={asset.attachments} />
 		{/if}
 	</div>
 </div>

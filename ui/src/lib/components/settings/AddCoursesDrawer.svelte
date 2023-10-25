@@ -2,8 +2,8 @@
 	import { Loading } from '$components';
 	import { Icons } from '$components/icons';
 	import { addToast } from '$lib/stores/addToast';
-	import type { FileInfo, FileSystemInfo } from '$lib/types/fileSystem';
-	import { AddCourse, GetAllCourses, GetFileSystem } from '$lib/utils/api';
+	import type { FileInfo, FileSystem } from '$lib/types/fileSystem';
+	import { AddCourse, ErrorMessage, GetAllCourses, GetFileSystem } from '$lib/utils/api';
 	import { createDialog } from '@melt-ui/svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
@@ -36,7 +36,7 @@
 	let refreshing = false;
 
 	// Holds the information about this path, such as files and directories
-	let pathInfo: FileSystemInfo;
+	let pathInfo: FileSystem;
 
 	// This is bound to the content element and used to reset the scroll position to the top
 	// following navigation
@@ -109,16 +109,26 @@
 		// Pull the existing courses so we can identify already added courses. This is used to stop
 		// the user for selecting/unselecting existing courses
 		if (getExistingCourses) {
-			const success = await GetAllCourses({}, true)
+			const success = await GetAllCourses({})
 				.then((courses) => {
 					existingCourses.push(...courses.map((c) => c.path));
 					getExistingCourses = false;
 					return true;
 				})
 				.catch((err) => {
+					const errMsg = ErrorMessage(err);
+
 					gotError = true;
 					loadingDrives = false;
-					console.error(err);
+					console.error(errMsg);
+
+					$addToast({
+						data: {
+							message: errMsg,
+							status: 'error'
+						}
+					});
+
 					return false;
 				});
 
@@ -127,7 +137,7 @@
 
 		// Pull the filesystem information for this path. When the path is empty it will load
 		// drive information
-		await GetFileSystem(path, true)
+		await GetFileSystem(path)
 			.then((resp) => {
 				if (body) body.scrollTop = 0;
 
@@ -172,14 +182,22 @@
 				}
 			})
 			.catch((err) => {
+				const errMsg = ErrorMessage(err);
 				if (path) {
-					console.error(err);
+					console.error(errMsg);
 					loadingPath = false;
 					// TODO: Go back to previous path
 				} else {
 					gotError = true;
 					loadingDrives = false;
 				}
+
+				$addToast({
+					data: {
+						message: errMsg,
+						status: 'error'
+					}
+				});
 			});
 	};
 
