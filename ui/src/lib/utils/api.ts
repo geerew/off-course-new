@@ -172,25 +172,6 @@ export const DeleteCourse = async (id: string): Promise<boolean> => {
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Attachments
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// DOWNLOAD an attachment
-export const DownloadAttachment = async (id: string): Promise<boolean> => {
-	await axios
-		.get(`${ATTACHMENT_API}/${id}/download`)
-		.then((response: AxiosResponse) => {
-			console.log(response);
-			return true;
-		})
-		.catch((error: Error) => {
-			throw error;
-		});
-
-	return false;
-};
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Scans
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
