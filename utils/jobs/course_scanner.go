@@ -238,7 +238,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 
 					// Add the existing asset as an attachment
 					attachmentsMap[chapter][fileInfo.prefix] = append(attachmentsMap[chapter][fileInfo.prefix], &models.Attachment{
-						Title:    fileInfo.fullTitle,
+						Title:    existingAsset.Title + filepath.Ext(existingAsset.Path),
 						Path:     existingAsset.Path,
 						CourseID: course.ID,
 					})

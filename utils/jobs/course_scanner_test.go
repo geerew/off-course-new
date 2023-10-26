@@ -641,6 +641,7 @@ func Test_CourseProcessor(t *testing.T) {
 		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
+		assert.Equal(t, "a.pdf", attachments[0].Title)
 		assert.Equal(t, pdfFile, attachments[0].Path)
 
 		// ----------------------------
@@ -668,6 +669,9 @@ func Test_CourseProcessor(t *testing.T) {
 		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, attachments, 2)
+		assert.Equal(t, "a.pdf", attachments[0].Title)
+		assert.Equal(t, pdfFile, attachments[0].Path)
+		assert.Equal(t, "b.html", attachments[1].Title)
 		assert.Equal(t, htmlFile, attachments[1].Path)
 
 		// ----------------------------
@@ -691,6 +695,11 @@ func Test_CourseProcessor(t *testing.T) {
 		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, attachments, 3)
+		assert.Equal(t, "a.pdf", attachments[0].Title)
+		assert.Equal(t, pdfFile, attachments[0].Path)
+		assert.Equal(t, "b.html", attachments[1].Title)
+		assert.Equal(t, htmlFile, attachments[1].Path)
+		assert.Equal(t, "d.html", attachments[2].Title)
 		assert.Equal(t, htmlFile2, attachments[2].Path)
 
 		// ----------------------------
@@ -714,6 +723,13 @@ func Test_CourseProcessor(t *testing.T) {
 		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
 		require.Nil(t, err)
 		require.Len(t, attachments, 4)
+		assert.Equal(t, "a.pdf", attachments[0].Title)
+		assert.Equal(t, pdfFile, attachments[0].Path)
+		assert.Equal(t, "b.html", attachments[1].Title)
+		assert.Equal(t, htmlFile, attachments[1].Path)
+		assert.Equal(t, "d.html", attachments[2].Title)
+		assert.Equal(t, htmlFile2, attachments[2].Path)
+		assert.Equal(t, "e.pdf", attachments[3].Title)
 		assert.Equal(t, pdfFile2, attachments[3].Path)
 	})
 }
