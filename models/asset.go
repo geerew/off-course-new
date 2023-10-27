@@ -215,6 +215,76 @@ func DeleteAsset(ctx context.Context, db database.Database, id string) (int, err
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// UpdateAssetStarted updates the asset started
+func UpdateAssetStarted(ctx context.Context, db database.Database, asset *Asset, started bool) error {
+	if asset.Started == started {
+		return nil
+	}
+
+	// Require an ID
+	if asset.ID == "" {
+		return errors.New("asset ID cannot be empty")
+	}
+
+	// Set a new timestamp
+	ts := types.NowDateTime()
+
+	if res, err := db.DB().NewUpdate().Model(asset).
+		Set("started = ?", started).
+		Set("updated_at = ?", ts).
+		WherePK().Exec(ctx); err != nil {
+		return err
+	} else {
+		count, _ := res.RowsAffected()
+		if count == 0 {
+			return nil
+		}
+	}
+
+	// Update the original asset struct
+	asset.Started = started
+	asset.UpdatedAt = ts
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// UpdateAssetFinished updates the asset finished
+func UpdateAssetFinished(ctx context.Context, db database.Database, asset *Asset, finished bool) error {
+	if asset.Finished == finished {
+		return nil
+	}
+
+	// Require an ID
+	if asset.ID == "" {
+		return errors.New("asset ID cannot be empty")
+	}
+
+	// Set a new timestamp
+	ts := types.NowDateTime()
+
+	if res, err := db.DB().NewUpdate().Model(asset).
+		Set("finished = ?", finished).
+		Set("updated_at = ?", ts).
+		WherePK().Exec(ctx); err != nil {
+		return err
+	} else {
+		count, _ := res.RowsAffected()
+		if count == 0 {
+			return nil
+		}
+	}
+
+	// Update the original asset struct
+	asset.Finished = finished
+	asset.UpdatedAt = ts
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // NewTestAssets creates n number of assets for each course in the slice. If a db is provided, the
 // assets will be inserted into the db
 //

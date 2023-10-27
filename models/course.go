@@ -250,6 +250,76 @@ func DeleteCourse(ctx context.Context, db database.Database, id string) (int, er
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// UpdateCourseStarted updates the course started
+func UpdateCourseStarted(ctx context.Context, db database.Database, course *Course, started bool) error {
+	if course.Started == started {
+		return nil
+	}
+
+	// Require an ID
+	if course.ID == "" {
+		return errors.New("course ID cannot be empty")
+	}
+
+	// Set a new timestamp
+	ts := types.NowDateTime()
+
+	if res, err := db.DB().NewUpdate().Model(course).
+		Set("started = ?", started).
+		Set("updated_at = ?", ts).
+		WherePK().Exec(ctx); err != nil {
+		return err
+	} else {
+		count, _ := res.RowsAffected()
+		if count == 0 {
+			return nil
+		}
+	}
+
+	// Update the original course struct
+	course.Started = started
+	course.UpdatedAt = ts
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// UpdateCourseFinished updates the course finished
+func UpdateCourseFinished(ctx context.Context, db database.Database, course *Course, finished bool) error {
+	if course.Finished == finished {
+		return nil
+	}
+
+	// Require an ID
+	if course.ID == "" {
+		return errors.New("course ID cannot be empty")
+	}
+
+	// Set a new timestamp
+	ts := types.NowDateTime()
+
+	if res, err := db.DB().NewUpdate().Model(course).
+		Set("finished = ?", finished).
+		Set("updated_at = ?", ts).
+		WherePK().Exec(ctx); err != nil {
+		return err
+	} else {
+		count, _ := res.RowsAffected()
+		if count == 0 {
+			return nil
+		}
+	}
+
+	// Update the original course struct
+	course.Finished = finished
+	course.UpdatedAt = ts
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // NewTestCourses creates n number of courses. If a db if provided, the courses will be inserted
 // into the db
 //

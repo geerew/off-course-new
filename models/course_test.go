@@ -876,3 +876,234 @@ func Test_DeleteCourse(t *testing.T) {
 		assert.Equal(t, 0, count)
 	})
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_UpdateCourseStarted(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
+
+		origCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+		require.False(t, origCourse.Started)
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		err = UpdateCourseStarted(ctx, db, course, true)
+		require.Nil(t, err)
+
+		// Get the updated scan and ensure the status was updated
+		updatedCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+		assert.True(t, updatedCourse.Started)
+		assert.NotEqual(t, origCourse.UpdatedAt.String(), updatedCourse.UpdatedAt.String())
+
+		// Ensure the original scan struct was updated
+		assert.True(t, course.Started)
+		assert.NotEqual(t, origCourse.UpdatedAt.String(), course.UpdatedAt.String())
+	})
+
+	t.Run("no change", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
+
+		origCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		err = UpdateCourseStarted(ctx, db, course, false)
+		require.Nil(t, err)
+
+		// Assert there were no changes to the DB
+		updatedCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+		assert.False(t, updatedCourse.Started)
+		assert.Equal(t, origCourse.UpdatedAt.String(), updatedCourse.UpdatedAt.String())
+
+		// Assert there were no changes to the original struct
+		assert.False(t, course.Started)
+		assert.Equal(t, origCourse.UpdatedAt.String(), course.UpdatedAt.String())
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+
+		course.ID = ""
+
+		err := UpdateCourseStarted(ctx, db, course, true)
+		assert.ErrorContains(t, err, "course ID cannot be empty")
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
+
+		origCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+
+		// Change the ID
+		course.ID = "invalid"
+
+		err = UpdateCourseStarted(ctx, db, course, true)
+		require.Nil(t, err)
+
+		// Assert there were no changes to the DB
+		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: origCourse.ID}}}
+		updatedCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+		assert.False(t, updatedCourse.Started)
+		assert.Equal(t, origCourse.UpdatedAt.String(), updatedCourse.UpdatedAt.String())
+
+		// Assert there were no changes to the original struct
+		assert.False(t, course.Started)
+		assert.Equal(t, origCourse.UpdatedAt.String(), course.UpdatedAt.String())
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+
+		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
+		require.Nil(t, err)
+
+		err = UpdateCourseStarted(ctx, db, course, true)
+		require.ErrorContains(t, err, "no such table: courses")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_UpdateCourseFinished(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
+
+		origCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+		require.False(t, origCourse.Finished)
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		err = UpdateCourseFinished(ctx, db, course, true)
+		require.Nil(t, err)
+
+		// Get the updated scan and ensure the status was updated
+		updatedCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+		assert.True(t, updatedCourse.Finished)
+		assert.NotEqual(t, origCourse.UpdatedAt.String(), updatedCourse.UpdatedAt.String())
+
+		// Ensure the original scan struct was updated
+		assert.True(t, course.Finished)
+		assert.NotEqual(t, origCourse.UpdatedAt.String(), course.UpdatedAt.String())
+	})
+
+	t.Run("no change", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
+
+		origCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+		require.False(t, origCourse.Finished)
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		err = UpdateCourseFinished(ctx, db, course, false)
+		require.Nil(t, err)
+
+		// Assert there were no changes to the DB
+		updatedCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+		assert.False(t, updatedCourse.Finished)
+		assert.Equal(t, origCourse.UpdatedAt.String(), updatedCourse.UpdatedAt.String())
+
+		// Assert there were no changes to the original struct
+		assert.False(t, course.Finished)
+		assert.Equal(t, origCourse.UpdatedAt.String(), course.UpdatedAt.String())
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+
+		course.ID = ""
+
+		err := UpdateCourseFinished(ctx, db, course, true)
+		assert.ErrorContains(t, err, "course ID cannot be empty")
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+
+		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
+
+		origCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+
+		// Change the ID
+		course.ID = "invalid"
+
+		err = UpdateCourseFinished(ctx, db, course, true)
+		require.Nil(t, err)
+
+		// Assert there were no changes to the DB
+		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: origCourse.ID}}}
+		updatedCourse, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+		assert.False(t, updatedCourse.Finished)
+		assert.Equal(t, origCourse.UpdatedAt.String(), updatedCourse.UpdatedAt.String())
+
+		// Assert there were no changes to the original struct
+		assert.False(t, course.Finished)
+		assert.Equal(t, origCourse.UpdatedAt.String(), course.UpdatedAt.String())
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+
+		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
+		require.Nil(t, err)
+
+		err = UpdateCourseFinished(ctx, db, course, true)
+		require.ErrorContains(t, err, "no such table: courses")
+	})
+}
