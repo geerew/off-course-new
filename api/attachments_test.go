@@ -261,7 +261,7 @@ func TestAttachments_GetAttachment(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestAttachments_DownloadAttachment(t *testing.T) {
+func TestAttachments_ServeAttachment(t *testing.T) {
 	t.Run("200 (ok)", func(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
@@ -277,11 +277,29 @@ func TestAttachments_DownloadAttachment(t *testing.T) {
 		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(attachments[2].Path), os.ModePerm))
 		require.Nil(t, afero.WriteFile(appFs.Fs, attachments[2].Path, []byte("hello"), os.ModePerm))
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/"+attachments[2].ID+"/download", nil))
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/"+attachments[2].ID+"/serve", nil))
 		assert.NoError(t, err)
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 		body, _ := io.ReadAll(resp.Body)
 		assert.Equal(t, "hello", string(body))
+	})
+
+	t.Run("400 (invalid path)", func(t *testing.T) {
+		appFs, db, _, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindAttachmentsApi(f.Group("/api"), appFs, db)
+
+		courses := models.NewTestCourses(t, db, 2)
+		assets := models.NewTestAssets(t, db, courses, 5)
+		attachments := models.NewTestAttachments(t, db, assets, 2)
+
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/"+attachments[6].ID+"/serve", nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		assert.Contains(t, string(body), "attachment does not exist")
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
@@ -291,7 +309,7 @@ func TestAttachments_DownloadAttachment(t *testing.T) {
 		f := fiber.New()
 		bindAttachmentsApi(f.Group("/api"), appFs, db)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/test/download", nil))
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/test/serve", nil))
 		assert.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, resp.StatusCode)
 	})
@@ -307,26 +325,8 @@ func TestAttachments_DownloadAttachment(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&models.Attachment{}).Exec(context.Background())
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/test/download", nil))
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/test/serve", nil))
 		assert.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-	})
-
-	t.Run("400 (invalid path)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
-
-		f := fiber.New()
-		bindAttachmentsApi(f.Group("/api"), appFs, db)
-
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 5)
-		attachments := models.NewTestAttachments(t, db, assets, 2)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/attachments/"+attachments[6].ID+"/download", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
-		body, _ := io.ReadAll(resp.Body)
-		assert.Contains(t, string(body), "attachment does not exist")
 	})
 }

@@ -7,11 +7,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/gofiber/fiber/v2"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -322,6 +325,126 @@ func TestAssets_GetAsset(t *testing.T) {
 		require.Nil(t, err)
 
 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/assets/test", nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestAssets_ServeAsset(t *testing.T) {
+	t.Run("200 (full video)", func(t *testing.T) {
+		appFs, db, _, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindAssetsApi(f.Group("/api"), appFs, db)
+
+		courses := models.NewTestCourses(t, db, 2)
+		assets := models.NewTestAssets(t, db, courses, 5)
+
+		// Create the asset path
+		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(assets[1].Path), os.ModePerm))
+		require.Nil(t, afero.WriteFile(appFs.Fs, assets[1].Path, []byte("video"), os.ModePerm))
+
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/assets/"+assets[1].ID+"/serve", nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		assert.Equal(t, "video", string(body))
+	})
+
+	t.Run("200 (stream video)", func(t *testing.T) {
+		appFs, db, _, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindAssetsApi(f.Group("/api"), appFs, db)
+
+		courses := models.NewTestCourses(t, db, 2)
+		assets := models.NewTestAssets(t, db, courses, 5)
+
+		// Create the asset path
+		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(assets[1].Path), os.ModePerm))
+		require.Nil(t, afero.WriteFile(appFs.Fs, assets[1].Path, []byte("video"), os.ModePerm))
+
+		// Create the request and add the range header
+		req := httptest.NewRequest(http.MethodGet, "/api/assets/"+assets[1].ID+"/serve", nil)
+		req.Header.Add("Range", "bytes=0-")
+
+		resp, err := f.Test(req)
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusPartialContent, resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		assert.Equal(t, "video", string(body))
+	})
+
+	t.Run("400 (invalid path)", func(t *testing.T) {
+		appFs, db, _, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindAssetsApi(f.Group("/api"), appFs, db)
+
+		courses := models.NewTestCourses(t, db, 2)
+		assets := models.NewTestAssets(t, db, courses, 2)
+
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/assets/"+assets[1].ID+"/serve", nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		assert.Contains(t, string(body), "asset does not exist")
+	})
+
+	t.Run("400 (invalid video range)", func(t *testing.T) {
+		appFs, db, _, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindAssetsApi(f.Group("/api"), appFs, db)
+
+		courses := models.NewTestCourses(t, db, 2)
+		assets := models.NewTestAssets(t, db, courses, 5)
+
+		// Create the asset path
+		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(assets[1].Path), os.ModePerm))
+		require.Nil(t, afero.WriteFile(appFs.Fs, assets[1].Path, []byte("video"), os.ModePerm))
+
+		// Create the request and add the range header
+		req := httptest.NewRequest(http.MethodGet, "/api/assets/"+assets[1].ID+"/serve", nil)
+		req.Header.Add("Range", "bytes=10-1")
+
+		resp, err := f.Test(req)
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		assert.Contains(t, string(body), "range start cannot be greater than end")
+	})
+
+	t.Run("404 (not found)", func(t *testing.T) {
+		appFs, db, _, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindAssetsApi(f.Group("/api"), appFs, db)
+
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/assets/test/serve", nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+	})
+
+	t.Run("500 (internal error)", func(t *testing.T) {
+		appFs, db, _, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindAssetsApi(f.Group("/api"), appFs, db)
+
+		// Drop the table
+		_, err := db.DB().NewDropTable().Model(&models.Asset{}).Exec(context.Background())
+		require.Nil(t, err)
+
+		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/assets/test/serve", nil))
 		assert.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	})

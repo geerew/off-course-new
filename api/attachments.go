@@ -43,7 +43,7 @@ func bindAttachmentsApi(router fiber.Router, appFs *appFs.AppFs, db database.Dat
 	// Assets
 	subGroup.Get("", api.getAttachments)
 	subGroup.Get("/:id", api.getAttachment)
-	subGroup.Get("/:id/download", api.downloadAttachment)
+	subGroup.Get("/:id/serve", api.serveAttachment)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -96,7 +96,7 @@ func (api *attachments) getAttachment(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *attachments) downloadAttachment(c *fiber.Ctx) error {
+func (api *attachments) serveAttachment(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	attachment, err := models.GetAttachmentById(c.UserContext(), api.db, nil, id)
