@@ -898,7 +898,7 @@ func Test_DeleteAsset(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func Test_UpdateAssetStarted(t *testing.T) {
+func Test_UpdateAsset(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
@@ -911,172 +911,32 @@ func Test_UpdateAssetStarted(t *testing.T) {
 		origAsset, err := GetAsset(ctx, db, dbParams)
 		require.Nil(t, err)
 		require.False(t, origAsset.Started)
-
-		// Give time to allow `updated at` to be different
-		time.Sleep(time.Millisecond * 1)
-
-		err = UpdateAssetStarted(ctx, db, asset, true)
-		require.Nil(t, err)
-
-		// Get the updated scan and ensure the status was updated
-		updatedAsset, err := GetAsset(ctx, db, dbParams)
-		require.Nil(t, err)
-		assert.True(t, updatedAsset.Started)
-		assert.NotEqual(t, origAsset.UpdatedAt.String(), updatedAsset.UpdatedAt.String())
-
-		// Ensure the original scan struct was updated
-		assert.True(t, asset.Started)
-		assert.NotEqual(t, origAsset.UpdatedAt.String(), asset.UpdatedAt.String())
-	})
-
-	t.Run("no change", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		course := NewTestCourses(t, db, 1)[0]
-		asset := NewTestAssets(t, db, []*Course{course}, 1)[0]
-
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: asset.ID}}}
-
-		origAsset, err := GetAsset(ctx, db, dbParams)
-		require.Nil(t, err)
-
-		// Give time to allow `updated at` to be different
-		time.Sleep(time.Millisecond * 1)
-
-		err = UpdateAssetStarted(ctx, db, asset, false)
-		require.Nil(t, err)
-
-		// Assert there were no changes to the DB
-		updatedAsset, err := GetAsset(ctx, db, dbParams)
-		require.Nil(t, err)
-		assert.False(t, updatedAsset.Started)
-		assert.Equal(t, origAsset.UpdatedAt.String(), updatedAsset.UpdatedAt.String())
-
-		// Assert there were no changes to the original struct
-		assert.False(t, asset.Started)
-		assert.Equal(t, origAsset.UpdatedAt.String(), asset.UpdatedAt.String())
-	})
-
-	t.Run("empty id", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		course := NewTestCourses(t, db, 1)[0]
-		asset := NewTestAssets(t, db, []*Course{course}, 1)[0]
-
-		asset.ID = ""
-
-		err := UpdateAssetStarted(ctx, db, asset, true)
-		assert.ErrorContains(t, err, "asset ID cannot be empty")
-	})
-
-	t.Run("invalid id", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		course := NewTestCourses(t, db, 1)[0]
-		asset := NewTestAssets(t, db, []*Course{course}, 1)[0]
-
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: asset.ID}}}
-
-		origAsset, err := GetAsset(ctx, db, dbParams)
-		require.Nil(t, err)
-
-		// Change the ID
-		asset.ID = "invalid"
-
-		err = UpdateAssetStarted(ctx, db, asset, true)
-		require.Nil(t, err)
-
-		// Assert there were no changes to the DB
-		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: origAsset.ID}}}
-		updatedAsset, err := GetAsset(ctx, db, dbParams)
-		require.Nil(t, err)
-		assert.False(t, updatedAsset.Started)
-		assert.Equal(t, origAsset.UpdatedAt.String(), updatedAsset.UpdatedAt.String())
-
-		// Assert there were no changes to the original struct
-		assert.False(t, asset.Started)
-		assert.Equal(t, origAsset.UpdatedAt.String(), asset.UpdatedAt.String())
-	})
-
-	t.Run("db error", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		course := NewTestCourses(t, db, 1)[0]
-		asset := NewTestAssets(t, db, []*Course{course}, 1)[0]
-
-		_, err := db.DB().NewDropTable().Model(&Asset{}).Exec(ctx)
-		require.Nil(t, err)
-
-		err = UpdateAssetStarted(ctx, db, asset, true)
-		require.ErrorContains(t, err, "no such table: assets")
-	})
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func Test_UpdateAssetFinished(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		course := NewTestCourses(t, db, 1)[0]
-		asset := NewTestAssets(t, db, []*Course{course}, 1)[0]
-
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: asset.ID}}}
-
-		origAsset, err := GetAsset(ctx, db, dbParams)
-		require.Nil(t, err)
 		require.False(t, origAsset.Finished)
 
 		// Give time to allow `updated at` to be different
 		time.Sleep(time.Millisecond * 1)
 
-		err = UpdateAssetFinished(ctx, db, asset, true)
+		// Update started and finished. Path and title should not change
+		asset.Started = true
+		asset.Finished = true
+		asset.Path = "/new/path"
+		asset.Title = "New Title"
+
+		err = UpdateAsset(ctx, db, asset)
 		require.Nil(t, err)
 
 		// Get the updated scan and ensure the status was updated
 		updatedAsset, err := GetAsset(ctx, db, dbParams)
 		require.Nil(t, err)
+
+		// Assert started, finished, and updatedAt changed
+		assert.True(t, updatedAsset.Started)
 		assert.True(t, updatedAsset.Finished)
 		assert.NotEqual(t, origAsset.UpdatedAt.String(), updatedAsset.UpdatedAt.String())
 
-		// Ensure the original scan struct was updated
-		assert.True(t, asset.Finished)
-		assert.NotEqual(t, origAsset.UpdatedAt.String(), asset.UpdatedAt.String())
-	})
-
-	t.Run("no change", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		course := NewTestCourses(t, db, 1)[0]
-		asset := NewTestAssets(t, db, []*Course{course}, 1)[0]
-
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: asset.ID}}}
-
-		origAsset, err := GetAsset(ctx, db, dbParams)
-		require.Nil(t, err)
-		require.False(t, origAsset.Finished)
-
-		// Give time to allow `updated at` to be different
-		time.Sleep(time.Millisecond * 1)
-
-		err = UpdateAssetFinished(ctx, db, asset, false)
-		require.Nil(t, err)
-
-		// Assert there were no changes to the DB
-		updatedAsset, err := GetAsset(ctx, db, dbParams)
-		require.Nil(t, err)
-		assert.False(t, updatedAsset.Finished)
-		assert.Equal(t, origAsset.UpdatedAt.String(), updatedAsset.UpdatedAt.String())
-
-		// Assert there were no changes to the original struct
-		assert.False(t, asset.Finished)
-		assert.Equal(t, origAsset.UpdatedAt.String(), asset.UpdatedAt.String())
+		// Assert the title and path did not change
+		assert.Equal(t, origAsset.Title, updatedAsset.Title)
+		assert.Equal(t, origAsset.Path, updatedAsset.Path)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
@@ -1088,7 +948,7 @@ func Test_UpdateAssetFinished(t *testing.T) {
 
 		asset.ID = ""
 
-		err := UpdateAssetFinished(ctx, db, asset, true)
+		err := UpdateAsset(ctx, db, asset)
 		assert.ErrorContains(t, err, "asset ID cannot be empty")
 	})
 
@@ -1107,18 +967,18 @@ func Test_UpdateAssetFinished(t *testing.T) {
 		// Change the ID
 		asset.ID = "invalid"
 
-		err = UpdateAssetFinished(ctx, db, asset, true)
+		err = UpdateAsset(ctx, db, asset)
 		require.Nil(t, err)
 
 		// Assert there were no changes to the DB
 		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: origAsset.ID}}}
 		updatedAsset, err := GetAsset(ctx, db, dbParams)
 		require.Nil(t, err)
-		assert.False(t, updatedAsset.Finished)
+		assert.False(t, updatedAsset.Started)
 		assert.Equal(t, origAsset.UpdatedAt.String(), updatedAsset.UpdatedAt.String())
 
 		// Assert there were no changes to the original struct
-		assert.False(t, asset.Finished)
+		assert.False(t, asset.Started)
 		assert.Equal(t, origAsset.UpdatedAt.String(), asset.UpdatedAt.String())
 	})
 
@@ -1132,7 +992,7 @@ func Test_UpdateAssetFinished(t *testing.T) {
 		_, err := db.DB().NewDropTable().Model(&Asset{}).Exec(ctx)
 		require.Nil(t, err)
 
-		err = UpdateAssetFinished(ctx, db, asset, true)
+		err = UpdateAsset(ctx, db, asset)
 		require.ErrorContains(t, err, "no such table: assets")
 	})
 }
