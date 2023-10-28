@@ -647,6 +647,104 @@ func TestCourses_Card(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func TestCourses_UpdateCourse(t *testing.T) {
+	t.Run("200 (found)", func(t *testing.T) {
+		appFs, db, courseScanner, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+
+		course := models.NewTestCourses(t, db, 1)[0]
+
+		// Store the original
+		origCourse, err := models.GetCourseById(context.Background(), db, nil, course.ID)
+		require.Nil(t, err)
+
+		// Update
+		course.Title = "new title"
+		course.Path = "/new/path"
+		course.Started = true
+		course.Finished = true
+
+		data, err := json.Marshal(toCourseResponse([]*models.Course{course})[0])
+		require.Nil(t, err)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/courses/"+course.ID, strings.NewReader(string(data)))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := f.Test(req)
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		body, _ := io.ReadAll(resp.Body)
+
+		var respData courseResponse
+		err = json.Unmarshal(body, &respData)
+		require.Nil(t, err)
+
+		assert.Equal(t, origCourse.ID, respData.ID)
+		assert.Equal(t, origCourse.Title, respData.Title)
+		assert.Equal(t, origCourse.Path, respData.Path)
+
+		// Assert the updated values
+		assert.True(t, respData.Started)
+		assert.True(t, respData.Finished)
+		assert.NotEqual(t, origCourse.UpdatedAt.String(), respData.UpdatedAt.String())
+	})
+
+	t.Run("400 (invalid data)", func(t *testing.T) {
+		appFs, db, courseScanner, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/courses/test", strings.NewReader(`bob`))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := f.Test(req)
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("404 (not found)", func(t *testing.T) {
+		appFs, db, courseScanner, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/courses/test", strings.NewReader(`{"id": "1234567"}`))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := f.Test(req)
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+	})
+
+	t.Run("500 (internal error)", func(t *testing.T) {
+		appFs, db, courseScanner, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+
+		// Drop the table
+		_, err := db.DB().NewDropTable().Model(&models.Course{}).Exec(context.Background())
+		require.Nil(t, err)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/courses/test", strings.NewReader(`{"id": "1234567"}`))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := f.Test(req)
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func TestCourses_GetAssets(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
 		appFs, db, courseScanner, _, teardown := setup(t)

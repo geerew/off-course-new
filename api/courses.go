@@ -52,6 +52,7 @@ func bindCoursesApi(router fiber.Router, appFs *appFs.AppFs, db database.Databas
 	subGroup.Get("", api.getCourses)
 	subGroup.Get("/:id", api.getCourse)
 	subGroup.Post("", api.createCourse)
+	subGroup.Put("/:id", api.updateCourse)
 	subGroup.Delete("/:id", api.deleteCourse)
 
 	// Card
@@ -182,6 +183,47 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(toCourseResponse([]*models.Course{course})[0])
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (api *courses) updateCourse(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	// Parse the request body to get the updated fields
+	newCourse := &courseResponse{}
+	if err := c.BodyParser(newCourse); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Failed to parse request body",
+		})
+	}
+
+	// Get the course from the database
+	existingCourse, err := models.GetCourseById(c.UserContext(), api.db, nil, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).SendString("Not found")
+		}
+
+		log.Err(err).Msg("error looking up course")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error looking up course - " + err.Error(),
+		})
+	}
+
+	// We currently only update started and finished. Card path (for now) is internal. Should
+	// this change, we need to update this code
+	existingCourse.Started = newCourse.Started
+	existingCourse.Finished = newCourse.Finished
+
+	if err := models.UpdateCourse(c.UserContext(), api.db, existingCourse); err != nil {
+		log.Err(err).Msg("error updating course")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error updating course - " + err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(toCourseResponse([]*models.Course{existingCourse})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

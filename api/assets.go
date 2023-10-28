@@ -60,6 +60,7 @@ func bindAssetsApi(router fiber.Router, appFs *appFs.AppFs, db database.Database
 	// Assets
 	subGroup.Get("", api.getAssets)
 	subGroup.Get("/:id", api.getAsset)
+	subGroup.Put("/:id", api.updateAsset)
 	subGroup.Get("/:id/serve", api.serveAsset)
 }
 
@@ -123,6 +124,47 @@ func (api *assets) getAsset(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(toAssetResponse([]*models.Asset{asset})[0])
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (api *assets) updateAsset(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	// Parse the request body to get the updated fields
+	newAsset := &assetResponse{}
+	if err := c.BodyParser(newAsset); err != nil {
+		fmt.Println(err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Failed to parse request body",
+		})
+	}
+
+	// Get the asset from the database
+	existingAsset, err := models.GetAssetById(c.UserContext(), api.db, nil, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).SendString("Not found")
+		}
+
+		log.Err(err).Msg("error looking up asset")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error looking up asset - " + err.Error(),
+		})
+	}
+
+	// We currently only update started and finished
+	existingAsset.Started = newAsset.Started
+	existingAsset.Finished = newAsset.Finished
+
+	if err := models.UpdateAsset(c.UserContext(), api.db, existingAsset); err != nil {
+		log.Err(err).Msg("error updating asset")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error updating asset - " + err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(toAssetResponse([]*models.Asset{existingAsset})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

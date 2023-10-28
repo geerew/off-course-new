@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/geerew/off-course/models"
@@ -325,6 +326,107 @@ func TestAssets_GetAsset(t *testing.T) {
 		require.Nil(t, err)
 
 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/assets/test", nil))
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestAssets_UpdateAsset(t *testing.T) {
+	t.Run("200 (found)", func(t *testing.T) {
+		appFs, db, _, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindAssetsApi(f.Group("/api"), appFs, db)
+
+		// Create 1 courses with 1 asset
+		course := models.NewTestCourses(t, db, 1)[0]
+		asset := models.NewTestAssets(t, db, []*models.Course{course}, 1)[0]
+
+		// Store the original asset
+		origAsset, err := models.GetAssetById(context.Background(), db, nil, asset.ID)
+		require.Nil(t, err)
+
+		// Update the asset
+		asset.Title = "new title"
+		asset.Path = "/new/path"
+		asset.Started = true
+		asset.Finished = true
+
+		data, err := json.Marshal(toAssetResponse([]*models.Asset{asset})[0])
+		require.Nil(t, err)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/assets/"+asset.ID, strings.NewReader(string(data)))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := f.Test(req)
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		body, _ := io.ReadAll(resp.Body)
+
+		var respData assetResponse
+		err = json.Unmarshal(body, &respData)
+		require.Nil(t, err)
+
+		assert.Equal(t, origAsset.ID, respData.ID)
+		assert.Equal(t, origAsset.CourseID, respData.CourseID)
+		assert.Equal(t, origAsset.Title, respData.Title)
+		assert.Equal(t, origAsset.Path, respData.Path)
+
+		// Assert the updated values
+		assert.True(t, respData.Started)
+		assert.True(t, respData.Finished)
+		assert.NotEqual(t, origAsset.UpdatedAt.String(), respData.UpdatedAt.String())
+	})
+
+	t.Run("400 (invalid data)", func(t *testing.T) {
+		appFs, db, _, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindAssetsApi(f.Group("/api"), appFs, db)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/assets/test", strings.NewReader(`bob`))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := f.Test(req)
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("404 (not found)", func(t *testing.T) {
+		appFs, db, _, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindAssetsApi(f.Group("/api"), appFs, db)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/assets/test", strings.NewReader(`{"id": "1234567"}`))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := f.Test(req)
+		assert.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+	})
+
+	t.Run("500 (internal error)", func(t *testing.T) {
+		appFs, db, _, _, teardown := setup(t)
+		defer teardown(t)
+
+		f := fiber.New()
+		bindAssetsApi(f.Group("/api"), appFs, db)
+
+		// Drop the table
+		_, err := db.DB().NewDropTable().Model(&models.Asset{}).Exec(context.Background())
+		require.Nil(t, err)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/assets/test", strings.NewReader(`{"id": "1234567"}`))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := f.Test(req)
 		assert.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	})

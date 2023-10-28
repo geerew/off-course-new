@@ -232,7 +232,6 @@ func UpdateAsset(ctx context.Context, db database.Database, asset *Asset) error 
 		return err
 	} else {
 		count, _ := res.RowsAffected()
-		fmt.Println(count)
 		if count == 0 {
 			return nil
 		}
