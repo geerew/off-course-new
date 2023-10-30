@@ -254,6 +254,9 @@
 			});
 
 			pathInfo = { ...pathInfo };
+
+			// Update the selected courses array to trigger a re-render
+			selectedCourses = { ...selectedCourses };
 		}
 	}
 </script>
