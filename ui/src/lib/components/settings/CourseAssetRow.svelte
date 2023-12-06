@@ -52,7 +52,6 @@
 		<!-- Attachments -->
 		{#if asset.attachments && asset.attachments.length > 0}
 			<Separator orientation="vertical" class=" h-4" />
-
 			<AttachmentsPopover attachments={asset.attachments} />
 		{/if}
 	</div>
@@ -60,8 +59,7 @@
 
 <style lang="postcss">
 	.token {
-		@apply inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded px-2 py-1.5 text-center text-xs;
-		@apply bg-accent-1;
+		@apply inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded border px-2 py-1 text-center text-xs;
 
 		& > :global(.icon) {
 			@apply h-4 w-4;

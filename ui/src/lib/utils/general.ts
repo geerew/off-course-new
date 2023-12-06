@@ -66,22 +66,23 @@ export function flattenOrderBy(sortKeys: SortKey[]): string | undefined {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+export const NO_CHAPTER = '(no chapter)';
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 /**
  * Constructs a chapter-based structure for the given course assets.
  *
  * @function
- * @param {Asset[]} courseAssets - An array of assets associated with a course.
+ * @param {Asset[]} courseAssets - An array of assets associated with a course
  * @returns {CourseChapters} - An object with chapter names as keys and an array of associated
- * assets as values. Assets without a chapter are grouped under the '(no chapter)' key.
+ * assets as values. Assets without a chapter are grouped under the `NO_CHAPTER` key
  */
 export function buildChapterStructure(courseAssets: Asset[]): CourseChapters {
 	const chapters: CourseChapters = {};
 
 	// Loop through each asset and build the chapter structure
 	for (const courseAsset of courseAssets) {
-		const chapter = courseAsset.chapter || '(no chapter)';
+		const chapter = courseAsset.chapter || NO_CHAPTER;
 		!chapters[chapter] ? (chapters[chapter] = [courseAsset]) : chapters[chapter]?.push(courseAsset);
 	}
 

@@ -37,8 +37,6 @@
 	// stop the polling on destroy
 	let scanPoll = -1;
 
-	let cardEl: HTMLImageElement;
-
 	// Create a delete dialog
 	const deleteDialog = createDialog({
 		role: 'alertdialog'
@@ -55,7 +53,7 @@
 		multiple: true
 	});
 
-	//
+	// Renders the course card
 	const {
 		elements: { image, fallback },
 		options: { src }
@@ -189,6 +187,11 @@
 			<div class="container flex items-center py-4 md:py-6">
 				<span class="grow text-base font-semibold md:text-lg">{course.title}</span>
 				<div class="flex flex-row items-center gap-5">
+					<!-- Open -->
+					<a class="action hover:bg-accent-1 border" href="/courses/course?id={course.id}">
+						Open
+					</a>
+
 					<!-- Scan -->
 					<button
 						disabled={course.scanStatus !== ''}
@@ -226,7 +229,7 @@
 			<div class="flex flex-col gap-8 lg:flex-row">
 				<!-- Card -->
 				<div class="order-1 flex h-48 w-full shrink-0 place-content-center lg:order-2 lg:w-[20rem]">
-					<img bind:this={cardEl} {...$image} alt="Avatar" class="rounded-md" />
+					<img {...$image} alt="Avatar" class="rounded-md" />
 					<div
 						class="bg-accent-1 flex h-48 w-[20rem] !cursor-default place-content-center items-center rounded-md lg:w-full"
 						{...$fallback}
@@ -303,7 +306,11 @@
 							<div
 								{...$item(chapter)}
 								use:item
-								class={cn('flex flex-col', !lastChapter && 'border-b')}
+								class={cn(
+									'flex flex-col',
+									!lastChapter && 'border-b',
+									$isSelected(chapter) && 'bg-accent-1'
+								)}
 							>
 								<!-- Chapter title (button) -->
 								<button
@@ -325,12 +332,19 @@
 										{...$content(chapter)}
 										use:content
 										transition:slide
-										class="bg-background-muted border-t px-5 md:px-8"
+										class="bg-background border-t"
 									>
 										{#each chapters[chapter] as asset, i}
 											{@const lastAsset = chapters[chapter].length - 1 == i}
-											<div class={cn('flex gap-3 py-5 ', !lastAsset && 'border-b')}>
-												<CourseAssetRow {asset} />
+											<div
+												class={cn(
+													'full-border group relative flex flex-col px-5 text-sm md:px-8',
+													lastAsset && 'hover:after:!-bottom-px'
+												)}
+											>
+												<div class={cn('flex py-4 ', !lastAsset && 'border-b')}>
+													<CourseAssetRow {asset} />
+												</div>
 											</div>
 										{/each}
 									</div>
@@ -368,5 +382,10 @@
 				@apply h-4 w-4 stroke-[1.5];
 			}
 		}
+	}
+
+	.full-border {
+		@apply hover:before:bg-border hover:before:absolute hover:before:-top-px hover:before:left-0 hover:before:z-10 hover:before:h-px hover:before:w-full;
+		@apply hover:after:bg-border hover:after:absolute hover:after:bottom-0 hover:after:left-0 hover:after:z-10 hover:after:h-px hover:after:w-full;
 	}
 </style>

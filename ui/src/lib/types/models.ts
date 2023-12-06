@@ -29,8 +29,6 @@ export const BaseSchema = object({
 // Attachment
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 export const AttachmentSchema = merge([
 	BaseSchema,
 	object({

@@ -1,8 +1,10 @@
 import { PUBLIC_BACKEND } from '$env/static/public';
 import { FileSystemSchema, type FileSystem } from '$lib/types/fileSystem';
 import {
+	AssetSchema,
 	CourseSchema,
 	ScanSchema,
+	type Asset,
 	type Course,
 	type CourseGetParams,
 	type CoursePostParams,
@@ -22,8 +24,11 @@ export const FS_API =
 export const COURSE_API =
 	process.env.NODE_ENV === 'production' ? '/api/courses' : `${PUBLIC_BACKEND}/api/courses`;
 
+export const ASSET_API =
+	process.env.NODE_ENV === 'production' ? '/api/assets' : `${PUBLIC_BACKEND}/api/assets`;
+
 export const ATTACHMENT_API =
-	process.env.NODE_ENV === 'production' ? '/api/courses' : `${PUBLIC_BACKEND}/api/attachments`;
+	process.env.NODE_ENV === 'production' ? '/api/attachments' : `${PUBLIC_BACKEND}/api/attachments`;
 
 export const SCAN_API =
 	process.env.NODE_ENV === 'production' ? '/api/scans' : `${PUBLIC_BACKEND}/api/scans`;
@@ -162,6 +167,26 @@ export const AddCourse = async (data: CoursePostParams): Promise<Course> => {
 	return course;
 };
 
+// PUT an course to update it
+export const UpdateCourse = async (course: Course): Promise<boolean> => {
+	const res = await axios
+		.put(`${COURSE_API}/${course.id}`, course, {
+			headers: {
+				'content-type': 'application/json'
+			}
+		})
+		.then((response: AxiosResponse) => {
+			if (!safeParse(CourseSchema, response.data).success)
+				throw new Error('Invalid response from server');
+			return true;
+		})
+		.catch((error: Error) => {
+			throw error;
+		});
+
+	return res;
+};
+
 // DELETE a course
 export const DeleteCourse = async (id: string): Promise<boolean> => {
 	await axios.delete(`${COURSE_API}/${id}`).catch((error: Error) => {
@@ -169,6 +194,30 @@ export const DeleteCourse = async (id: string): Promise<boolean> => {
 	});
 
 	return true;
+};
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Assets
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// PUT an asset to update it
+export const UpdateAsset = async (asset: Asset): Promise<boolean> => {
+	const res = await axios
+		.put(`${ASSET_API}/${asset.id}`, asset, {
+			headers: {
+				'content-type': 'application/json'
+			}
+		})
+		.then((response: AxiosResponse) => {
+			if (!safeParse(AssetSchema, response.data).success)
+				throw new Error('Invalid response from server');
+			return true;
+		})
+		.catch((error: Error) => {
+			throw error;
+		});
+
+	return res;
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
