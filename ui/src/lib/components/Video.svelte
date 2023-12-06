@@ -361,10 +361,6 @@
 		stroke-dashoffset: 290;
 	}
 
-	.progress-ring__icon {
-		transition: fill 0.35s;
-	}
-
 	/* Trigger the animation when video ends */
 	.animate-ring {
 		animation: fillRing 5s linear forwards;
