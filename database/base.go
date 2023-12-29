@@ -121,8 +121,22 @@ func (s *SqliteDb) Bootstrap() error {
 	// 	return err
 	// }
 
-	// Enable foreign keys
-	db.Exec("PRAGMA foreign_keys = ON")
+	// Setup the default DB connection
+	//
+	// Note: busy_timeout needs to be set BEFORE journal_mode
+	_, err = db.Exec(`
+		PRAGMA busy_timeout       = 10000;
+		PRAGMA journal_mode       = WAL;
+		PRAGMA journal_size_limit = 200000000;
+		PRAGMA synchronous        = NORMAL;
+		PRAGMA foreign_keys       = ON;
+		PRAGMA temp_store         = MEMORY;
+		PRAGMA cache_size         = -16000;
+	`)
+
+	if err != nil {
+		return err
+	}
 
 	s.db = db
 
