@@ -134,10 +134,10 @@
 
 	// ----------------------
 
-	// This is triggered when the checkbox for an asset is clicked. It flips the current `finished`
-	// state. So if the asset is finished, it will be set to unfinished, and vice versa. It will
-	// then update the course to
-	const updateAssetFinished = async (assetId: string) => {
+	// It flips the current `finished`  state. So if the asset is finished, it will be set to
+	// unfinished, and vice versa. It then determines if the course is completed or not and updates
+	// the course accordingly
+	const flipAssetFinishedState = async (assetId: string) => {
 		if (!course.assets) return;
 
 		// Get the asset
@@ -184,6 +184,35 @@
 
 		// Update the course
 		await updateCourse();
+	};
+
+	// ----------------------
+
+	// When the asset is a video, this will be called as the video is played and the time
+	// progresses. The data is stored in the backend and used when the asset is reloaded
+	const updateAssetProgress = async (assetId: string, progress: number) => {
+		if (!course.assets) return;
+
+		// Get the asset
+		const asset = course.assets.find((a) => a.id === assetId);
+		if (!asset) return;
+
+		// Set the progress
+		asset.progress = progress;
+
+		// Update the asset
+		await UpdateAsset(asset).catch((err) => {
+			const errMsg = ErrorMessage(err);
+			console.error(errMsg);
+			$addToast({
+				data: {
+					message: errMsg,
+					status: 'error'
+				}
+			});
+
+			return;
+		});
 	};
 
 	// ----------------------
@@ -375,7 +404,7 @@
 												<button
 													class="flex"
 													on:click|stopPropagation={() => {
-														updateAssetFinished(asset.id);
+														flipAssetFinishedState(asset.id);
 													}}
 												>
 													<input tabindex="0" type="checkbox" checked={asset.finished} />
@@ -426,6 +455,7 @@
 				{#if selectedAsset && selectedAsset.assetType === 'video'}
 					<Video
 						id={selectedAsset.id}
+						startTime={selectedAsset.progress}
 						prevVideo={prevAsset}
 						nextVideo={nextAsset}
 						on:started={() => {
@@ -433,10 +463,15 @@
 							if (!selectedAsset || course.started) return;
 							updateCourse();
 						}}
+						on:progress={(e) => {
+							// Update the asset progress
+							if (!selectedAsset) return;
+							updateAssetProgress(selectedAsset.id, e.detail);
+						}}
 						on:finished={() => {
 							// Video finished. Mark the asset as finished
 							if (!selectedAsset || selectedAsset.finished) return;
-							updateAssetFinished(selectedAsset.id);
+							flipAssetFinishedState(selectedAsset.id);
 						}}
 						on:previous={() => {
 							if (!prevAsset) return;

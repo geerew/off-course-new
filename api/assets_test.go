@@ -352,7 +352,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		// Update the asset
 		asset.Title = "new title"
 		asset.Path = "/new/path"
-		asset.Started = true
+		asset.Progress = 45
 		asset.Finished = true
 
 		data, err := json.Marshal(toAssetResponse([]*models.Asset{asset})[0])
@@ -377,7 +377,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		assert.Equal(t, origAsset.Path, respData.Path)
 
 		// Assert the updated values
-		assert.True(t, respData.Started)
+		assert.Equal(t, 45, respData.Progress)
 		assert.True(t, respData.Finished)
 		assert.NotEqual(t, origAsset.UpdatedAt.String(), respData.UpdatedAt.String())
 	})

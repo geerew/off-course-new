@@ -32,7 +32,7 @@ func init() {
 				chapter     TEXT,
 				type        TEXT NOT NULL,
 				path        TEXT UNIQUE NOT NULL,
-				started     BOOLEAN NOT NULL DEFAULT FALSE,
+				progress    INTEGER DEFAULT 0,
 				finished    BOOLEAN NOT NULL DEFAULT FALSE,
 				created_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
 				updated_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),

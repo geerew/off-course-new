@@ -36,7 +36,7 @@ type assetResponse struct {
 	Chapter   string         `json:"chapter"`
 	Path      string         `json:"path"`
 	Type      types.Asset    `json:"assetType"`
-	Started   bool           `json:"started"`
+	Progress  int            `json:"progress"`
 	Finished  bool           `json:"finished"`
 	CreatedAt types.DateTime `json:"createdAt"`
 	UpdatedAt types.DateTime `json:"updatedAt"`
@@ -153,8 +153,8 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 		})
 	}
 
-	// We currently only update started and finished
-	existingAsset.Started = newAsset.Started
+	// We currently only update progress (when a video asset) and finished
+	existingAsset.Progress = newAsset.Progress
 	existingAsset.Finished = newAsset.Finished
 
 	if err := models.UpdateAsset(c.UserContext(), api.db, existingAsset); err != nil {
@@ -217,7 +217,7 @@ func toAssetResponse(assets []*models.Asset) []*assetResponse {
 			Chapter:   asset.Chapter,
 			Path:      asset.Path,
 			Type:      asset.Type,
-			Started:   asset.Started,
+			Progress:  asset.Progress,
 			Finished:  asset.Finished,
 			CreatedAt: asset.CreatedAt,
 			UpdatedAt: asset.UpdatedAt,

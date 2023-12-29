@@ -910,14 +910,14 @@ func Test_UpdateAsset(t *testing.T) {
 
 		origAsset, err := GetAsset(ctx, db, dbParams)
 		require.Nil(t, err)
-		require.False(t, origAsset.Started)
+		require.Zero(t, origAsset.Progress)
 		require.False(t, origAsset.Finished)
 
 		// Give time to allow `updated at` to be different
 		time.Sleep(time.Millisecond * 1)
 
-		// Update started and finished. Path and title should not change
-		asset.Started = true
+		// Update progress and finished. Path and title should not change
+		asset.Progress = 30
 		asset.Finished = true
 		asset.Path = "/new/path"
 		asset.Title = "New Title"
@@ -929,8 +929,8 @@ func Test_UpdateAsset(t *testing.T) {
 		updatedAsset, err := GetAsset(ctx, db, dbParams)
 		require.Nil(t, err)
 
-		// Assert started, finished, and updatedAt changed
-		assert.True(t, updatedAsset.Started)
+		// Assert progress, finished, and updatedAt changed
+		assert.Equal(t, 30, updatedAsset.Progress)
 		assert.True(t, updatedAsset.Finished)
 		assert.NotEqual(t, origAsset.UpdatedAt.String(), updatedAsset.UpdatedAt.String())
 
@@ -974,11 +974,11 @@ func Test_UpdateAsset(t *testing.T) {
 		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: origAsset.ID}}}
 		updatedAsset, err := GetAsset(ctx, db, dbParams)
 		require.Nil(t, err)
-		assert.False(t, updatedAsset.Started)
+		assert.Zero(t, updatedAsset.Progress)
 		assert.Equal(t, origAsset.UpdatedAt.String(), updatedAsset.UpdatedAt.String())
 
 		// Assert there were no changes to the original struct
-		assert.False(t, asset.Started)
+		assert.Zero(t, asset.Progress)
 		assert.Equal(t, origAsset.UpdatedAt.String(), asset.UpdatedAt.String())
 	})
 

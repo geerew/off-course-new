@@ -59,7 +59,7 @@ export const AssetSchema = merge([
 		chapter: string(),
 		path: string(),
 		assetType: AssetTypeSchema,
-		started: boolean(),
+		progress: number(),
 		finished: boolean(),
 
 		// Relations

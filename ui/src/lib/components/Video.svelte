@@ -13,6 +13,7 @@
 
 	// An asset id
 	export let id: string;
+	export let startTime = 0;
 	export let prevVideo: Asset | null = null;
 	export let nextVideo: Asset | null = null;
 
@@ -27,6 +28,8 @@
 	//  - When the next button is clicked, a 'next' event is fired
 	const dispatch =
 		createEventDispatcher<Record<'started' | 'finished' | 'previous' | 'next', boolean>>();
+
+	const progressDispatch = createEventDispatcher<Record<'progress', number>>();
 
 	// The video element
 	let videoEl: HTMLVideoElement;
@@ -57,7 +60,7 @@
 	// ----------------------
 
 	// Manage the video time updating
-	const handleTimeUpdate = () => {
+	const handleTimeChange = () => {
 		// Get the current time and duration
 		const currentTime = player.currentTime();
 		const videoDuration = player.duration();
@@ -66,6 +69,9 @@
 		const currentSecond = Math.floor(currentTime);
 
 		if (currentSecond !== lastLoggedSecond) {
+			// Update the current progress
+			progressDispatch('progress', currentSecond);
+
 			// When the currentSecond is greater than 6, dispatch the started event. This will mark
 			// course as started
 			if (currentSecond >= 6 && !startedTrigger) {
@@ -120,16 +126,22 @@
 			autoplay: true,
 			preload: 'auto',
 			fluid: true,
+
 			playbackRates: [0.5, 1, 1.5, 2]
 		});
 
 		// Manage the time update
-		player.on('timeupdate', handleTimeUpdate);
+		player.on('timeupdate', handleTimeChange);
 
 		// Show spinner and hide big play button while loading
 		player.on('loadstart', () => {
 			player.getChild('BigPlayButton')!.hide();
 			player.addClass('vjs-waiting');
+		});
+
+		// When the video metadata is loaded, set the start time
+		player.on('loadedmetadata', function () {
+			player.currentTime(startTime);
 		});
 
 		// Hide spinner and show big play button when the video can play

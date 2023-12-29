@@ -37,7 +37,7 @@
 				<Icons.checkCircle class="icon" />
 				completed
 			</span>
-		{:else if asset.started}
+		{:else if asset.progress > 0}
 			<span class="token !bg-secondary">
 				<Icons.halfCircle class="icon [&>:nth-child(n+2)]:fill-white" />
 				started

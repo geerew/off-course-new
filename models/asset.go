@@ -24,7 +24,7 @@ type Asset struct {
 	Chapter  string
 	Type     types.Asset `bun:",notnull,default:null"`
 	Path     string      `bun:",unique,notnull,default:null"`
-	Started  bool
+	Progress int         `bun:",default:0"`
 	Finished bool
 
 	// Belongs to
@@ -215,7 +215,7 @@ func DeleteAsset(ctx context.Context, db database.Database, id string) (int, err
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UpdateAsset updates the asset. Currently only the started and finished fields can be updated
+// UpdateAsset updates the asset. Currently only the progress and finished fields can be updated
 func UpdateAsset(ctx context.Context, db database.Database, asset *Asset) error {
 	// Require an ID
 	if asset.ID == "" {
@@ -226,7 +226,7 @@ func UpdateAsset(ctx context.Context, db database.Database, asset *Asset) error 
 	ts := types.NowDateTime()
 
 	if res, err := db.DB().NewUpdate().Model(asset).
-		Set("started = ?", asset.Started).
+		Set("progress = ?", asset.Progress).
 		Set("finished = ?", asset.Finished).
 		Set("updated_at = ?", ts).WherePK().Exec(ctx); err != nil {
 		return err
@@ -264,7 +264,7 @@ func NewTestAssets(t *testing.T, db database.Database, courses []*Course, assets
 				Chapter:  chapter,
 				Type:     *types.NewAsset("mp4"),
 				Path:     fmt.Sprintf("%s/%s/%d %s", courses[i].Path, chapter, prefix, title),
-				Started:  false,
+				Progress: 0,
 				Finished: false,
 			}
 
