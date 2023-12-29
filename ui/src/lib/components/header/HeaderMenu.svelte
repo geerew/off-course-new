@@ -77,12 +77,7 @@
 				</div>
 
 				<div class="flex w-64 select-none items-center justify-center pt-2.5">
-					<a
-						href={site.links.github}
-						target="_blank"
-						rel="noreferrer"
-						class="flex items-center px-1"
-					>
+					<a href={site.links.github} target="_blank" rel="noreferrer" class="flex items-center">
 						<div
 							class="hover:bg-accent-1 group rounded-md p-1.5 text-sm font-semibold duration-200"
 						>

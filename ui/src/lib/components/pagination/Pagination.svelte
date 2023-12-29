@@ -95,7 +95,7 @@
 <style lang="postcss">
 	button {
 		@apply relative inline-flex items-center justify-center whitespace-nowrap rounded border-y px-3 py-2 text-center text-sm;
-		@apply enabled:hover:bg-accent-1/50 disabled:text-foreground-muted;
+		@apply enabled:hover:bg-accent-1/50 disabled:text-foreground-muted duration-0;
 	}
 
 	.previous {

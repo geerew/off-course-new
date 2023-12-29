@@ -297,6 +297,13 @@
 		<div class="bg-background-muted w-full border-b">
 			<div class="container flex h-[var(--course-header-height)] items-center">
 				<span class="grow text-base font-semibold md:text-lg">{course.title}</span>
+				<a
+					href="/settings/courses/course?id={course.id}"
+					class="hover:bg-accent-1 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm duration-200"
+				>
+					<Icons.infoCircle class="h-4 w-4" />
+					<span>Details</span>
+				</a>
 			</div>
 		</div>
 
