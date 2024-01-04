@@ -19,12 +19,13 @@ import (
 type Course struct {
 	BaseModel
 
-	Title      string `bun:",notnull,default:null"`
-	Path       string `bun:",unique,notnull,default:null"`
-	CardPath   string
-	Started    bool `bun:",notnull,default:false"`
-	Finished   bool `bun:",notnull,default:false"`
-	ScanStatus string
+	Title       string `bun:",notnull,default:null"`
+	Path        string `bun:",unique,notnull,default:null"`
+	CardPath    string
+	Started     bool
+	Percent     int `bun:",notnull,default:0"`
+	CompletedAt types.DateTime
+	ScanStatus  string
 
 	// Has many
 	Assets []*Asset `bun:"rel:has-many,join:id=course_id"`
@@ -32,7 +33,7 @@ type Course struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// CountCourses returns the number of courses
+// CountCourses counts the number of courses
 func CountCourses(ctx context.Context, db database.Database, params *database.DatabaseParams) (int, error) {
 	q := db.DB().NewSelect().Model((*Course)(nil))
 
@@ -45,7 +46,7 @@ func CountCourses(ctx context.Context, db database.Database, params *database.Da
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetCourses returns a slice of courses
+// GetCourses selects courses
 func GetCourses(ctx context.Context, db database.Database, params *database.DatabaseParams) ([]*Course, error) {
 	var courses []*Course
 
@@ -54,8 +55,15 @@ func GetCourses(ctx context.Context, db database.Database, params *database.Data
 		NewSelect().
 		Model(&courses).
 		ColumnExpr("Course.*").
-		ColumnExpr("?.? AS ?", bun.Ident("scans"), bun.Ident("status"), bun.Ident("scan_status")).
-		Join("LEFT JOIN ?0 ON (?0.?1 = ?2.?3)", bun.Ident("scans"), bun.Ident("course_id"), bun.Ident("course"), bun.Ident("id"))
+		ColumnExpr("?.? AS ?",
+			bun.Ident("scans"),
+			bun.Ident("status"),
+			bun.Ident("scan_status")).
+		Join("LEFT JOIN ?0 ON (?0.?1 = ?2.?3)",
+			bun.Ident("scans"),
+			bun.Ident("course_id"),
+			bun.Ident("course"),
+			bun.Ident("id"))
 
 	if params != nil {
 		// Pagination
@@ -93,7 +101,7 @@ func GetCourses(ctx context.Context, db database.Database, params *database.Data
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetCourse returns a course based upon the where clause in the database params
+// GetCourse selects a course based upon the where clause in the database params
 func GetCourse(ctx context.Context, db database.Database, params *database.DatabaseParams) (*Course, error) {
 	if params == nil || params.Where == nil {
 		return nil, errors.New("where clause required")
@@ -105,8 +113,15 @@ func GetCourse(ctx context.Context, db database.Database, params *database.Datab
 		NewSelect().
 		Model(course).
 		ColumnExpr("Course.*").
-		ColumnExpr("?.? AS ?", bun.Ident("scans"), bun.Ident("status"), bun.Ident("scan_status")).
-		Join("LEFT JOIN ?0 ON (?0.?1 = ?2.?3)", bun.Ident("scans"), bun.Ident("course_id"), bun.Ident("course"), bun.Ident("id"))
+		ColumnExpr("?.? AS ?",
+			bun.Ident("scans"),
+			bun.Ident("status"),
+			bun.Ident("scan_status")).
+		Join("LEFT JOIN ?0 ON (?0.?1 = ?2.?3)",
+			bun.Ident("scans"),
+			bun.Ident("course_id"),
+			bun.Ident("course"),
+			bun.Ident("id"))
 
 	// Where
 	if params.Where != nil {
@@ -127,7 +142,7 @@ func GetCourse(ctx context.Context, db database.Database, params *database.Datab
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetCourseById returns a course for the given ID
+// GetCourseById selects a course for the given ID
 func GetCourseById(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) (*Course, error) {
 	course := &Course{}
 
@@ -135,8 +150,15 @@ func GetCourseById(ctx context.Context, db database.Database, params *database.D
 		NewSelect().
 		Model(course).
 		ColumnExpr("Course.*").
-		ColumnExpr("?.? AS ?", bun.Ident("scans"), bun.Ident("status"), bun.Ident("scan_status")).
-		Join("LEFT JOIN ?0 ON (?0.?1 = ?2.?3)", bun.Ident("scans"), bun.Ident("course_id"), bun.Ident("course"), bun.Ident("id")).
+		ColumnExpr("?.? AS ?",
+			bun.Ident("scans"),
+			bun.Ident("status"),
+			bun.Ident("scan_status")).
+		Join("LEFT JOIN ?0 ON (?0.?1 = ?2.?3)",
+			bun.Ident("scans"),
+			bun.Ident("course_id"),
+			bun.Ident("course"),
+			bun.Ident("id")).
 		Where("Course.id = ?", id)
 
 	if params != nil && params.Relation != nil {
@@ -152,7 +174,7 @@ func GetCourseById(ctx context.Context, db database.Database, params *database.D
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// CreateCourse creates a new course
+// CreateCourse inserts a new course
 func CreateCourse(ctx context.Context, db database.Database, course *Course) error {
 	course.RefreshId()
 	course.RefreshCreatedAt()
@@ -168,31 +190,35 @@ func CreateCourse(ctx context.Context, db database.Database, course *Course) err
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UpdateCourseCardPath updates the course `card_path`
-func UpdateCourseCardPath(ctx context.Context, db database.Database, course *Course, newCardPath string) error {
-	// Do nothing when the card path is the same
-	if course.CardPath == newCardPath {
-		return nil
+// UpdateCourseCardPath updates `card_path`
+func UpdateCourseCardPath(ctx context.Context, db database.Database, id string, newCardPath string) (*Course, error) {
+	// Require an ID
+	if id == "" {
+		return nil, errors.New("course ID cannot be empty")
 	}
 
-	// Require an ID
-	if course.ID == "" {
-		return errors.New("course ID cannot be empty")
+	// Get the course
+	course, err := GetCourseById(ctx, db, nil, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Nothing to do
+	if course.CardPath == newCardPath {
+		return course, nil
 	}
 
 	ts := types.NowDateTime()
 
-	// Update the card_path and updated_at
 	if res, err := db.DB().NewUpdate().Model(course).
 		Set("card_path = ?", newCardPath).
 		Set("updated_at = ?", ts).
 		WherePK().Exec(ctx); err != nil {
-		return err
+		return nil, err
 	} else {
-		// Nothing was changed so return
 		count, _ := res.RowsAffected()
 		if count == 0 {
-			return nil
+			return course, nil
 		}
 	}
 
@@ -200,40 +226,97 @@ func UpdateCourseCardPath(ctx context.Context, db database.Database, course *Cou
 	course.CardPath = newCardPath
 	course.UpdatedAt = ts
 
-	return nil
+	return course, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UpdateCourseUpdatedAt updates the course `updated_at`
-func UpdateCourse(ctx context.Context, db database.Database, course *Course) error {
+// UpdateCoursePercent updates `percent` and `completed_at` (if percent is 100)
+func UpdateCoursePercent(ctx context.Context, db database.Database, id string, percent int) (*Course, error) {
 	// Require an ID
-	if course.ID == "" {
-		return errors.New("course ID cannot be empty")
+	if id == "" {
+		return nil, errors.New("course ID cannot be empty")
 	}
 
-	ts := types.NowDateTime()
+	// Get the course
+	course, err := GetCourseById(ctx, db, nil, id)
+	if err != nil {
+		return nil, err
+	}
 
-	// Update the updated_at
+	// Nothing to do
+	if course.Percent == percent {
+		return course, nil
+	}
+
+	// Keep the percent between 0 and 100
+	if percent < 0 {
+		percent = 0
+	} else if percent > 100 {
+		percent = 100
+	}
+
+	updatedAt := types.NowDateTime()
+
+	// Set the completed at date when the percent is 100
+	var completedAt types.DateTime
+	if percent == 100 {
+		completedAt = updatedAt
+	}
+
 	if res, err := db.DB().NewUpdate().Model(course).
-		Set("card_path = ?", course.CardPath).
-		Set("started = ?", course.Started).
-		Set("finished = ?", course.Finished).
-		Set("updated_at = ?", ts).
+		Set("percent = ?", percent).
+		Set("completed_at = ?", completedAt).
+		Set("updated_at = ?", updatedAt).
 		WherePK().Exec(ctx); err != nil {
-		return err
+		return nil, err
 	} else {
 		// Nothing was changed so return
 		count, _ := res.RowsAffected()
 		if count == 0 {
-			return nil
+			return course, nil
 		}
 	}
 
-	// Update the original course struct
+	course.Percent = percent
+	course.CompletedAt = completedAt
+	course.UpdatedAt = updatedAt
+
+	return course, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// UpdateCourseCompleted updates `completed` and `completed_at`
+func UpdateCourseUpdatedAt(ctx context.Context, db database.Database, id string) (*Course, error) {
+	// Require an ID
+	if id == "" {
+		return nil, errors.New("course ID cannot be empty")
+	}
+
+	// Get the course
+	course, err := GetCourseById(ctx, db, nil, id)
+	if err != nil {
+		return nil, err
+	}
+
+	ts := types.NowDateTime()
+
+	if res, err := db.DB().NewUpdate().Model(course).
+		Set("updated_at = ?", ts).
+		WherePK().Exec(ctx); err != nil {
+		return nil, err
+	} else {
+		// Nothing was changed so return
+		count, _ := res.RowsAffected()
+		if count == 0 {
+			return course, nil
+		}
+	}
+
 	course.UpdatedAt = ts
 
-	return nil
+	return course, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

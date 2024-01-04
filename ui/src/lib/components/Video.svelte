@@ -22,7 +22,6 @@
 	// ----------------------
 
 	// Types
-	//  - When the video starts playing and get past 5 seconds, a 'started' event is fired
 	//  - When the video ends (- 5 seconds) a 'finished' event is fired
 	//  - When the previous button is clicked, a 'previous' event is fired
 	//  - When the next button is clicked, a 'next' event is fired
@@ -40,8 +39,6 @@
 	// Used to only do stuff when the logged second changes
 	let lastLoggedSecond: number = -1;
 
-	// True when the video starts playing and moves past 5 seconds
-	let startedTrigger = false;
 	// True when the videos moves past 5 seconds before the end
 	let endedTrigger = false;
 
@@ -72,13 +69,6 @@
 			// Update the current progress
 			progressDispatch('progress', currentSecond);
 
-			// When the currentSecond is greater than 6, dispatch the started event. This will mark
-			// course as started
-			if (currentSecond >= 6 && !startedTrigger) {
-				dispatch('started', true);
-				startedTrigger = true;
-			}
-
 			// When the currentSecond is greater than 0 and the currentSecond is greater than the
 			// duration - 5, dispatch the finished event. This will mark the video as finished
 			if (currentSecond > 0 && currentSecond >= videoDuration - 5 && !endedTrigger) {
@@ -108,7 +98,6 @@
 	// Reset things when the video changes
 	$: {
 		if (id) {
-			startedTrigger = false;
 			endedTrigger = false;
 			lastLoggedSecond = -1;
 			videoEnded = false;

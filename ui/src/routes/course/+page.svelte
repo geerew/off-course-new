@@ -5,7 +5,7 @@
 	import AttachmentsPopover from '$components/settings/internal/AttachmentsPopover.svelte';
 	import { addToast } from '$lib/stores/addToast';
 	import type { Asset, Course, CourseChapters } from '$lib/types/models';
-	import { ErrorMessage, GetCourse, UpdateAsset, UpdateCourse } from '$lib/utils/api';
+	import { ErrorMessage, GetCourse, UpdateAsset } from '$lib/utils/api';
 	import { NO_CHAPTER, buildChapterStructure, cn, isBrowser } from '$lib/utils/general';
 	import { createAccordion } from '@melt-ui/svelte';
 	import { onMount } from 'svelte';
@@ -46,10 +46,9 @@
 	// Functions
 	// ----------------------
 
-	// Gets the course id from the search params and queries the api for the course. It finds the
-	// assets and attachments associated with this course and builds a chapter structure. It also
-	// finds the first asset that is not finished, or if the course is completed, finds the first
-	// asset and sets it as the selected asset
+	// Gets the course id from the search params and queries the api for the course + assets +
+	// attachments. It will then build a chapter structure and selected the first asset that is not
+	// marked as completed. If the course is completed, it will select the first asset in the course.
 	const getCourse = async () => {
 		if (!isBrowser) return false;
 
@@ -117,14 +116,14 @@
 		for (const chapterKey in chapters) {
 			const chapterAssets = chapters[chapterKey];
 
-			// Find the first asset in the current chapter that's not finished
+			// Find the first asset in the current chapter that's not completed
 			for (const asset of chapterAssets) {
 				// When the course has been completed, return the first asset regardless of whether it
 				// is finished or not
-				if (course.finished) return asset;
+				if (course.percent === 100) return asset;
 
-				// If the asset is not finished, return it
-				if (!asset.finished) return asset;
+				// If the asset is not completed, return it
+				if (!asset.completed) return asset;
 			}
 		}
 
@@ -134,9 +133,9 @@
 
 	// ----------------------
 
-	// It flips the current `finished`  state. So if the asset is finished, it will be set to
-	// unfinished, and vice versa. It then determines if the course is completed or not and updates
-	// the course accordingly
+	// It flips the current `completed` state. So if the asset is completed, it will be marked as
+	// not completed, and vice versa. It then determines if the course is completed or not and
+	// updates the course accordingly
 	const flipAssetFinishedState = async (assetId: string) => {
 		if (!course.assets) return;
 
@@ -144,8 +143,8 @@
 		const asset = course.assets.find((a) => a.id === assetId);
 		if (!asset) return;
 
-		// Flip the finished state
-		asset.finished ? (asset.finished = false) : (asset.finished = true);
+		// Flip
+		asset.completed ? (asset.completed = false) : (asset.completed = true);
 
 		// Update the finished state for the asset
 		await UpdateAsset(asset).catch((err) => {
@@ -163,27 +162,6 @@
 
 		// Update the chapters (for reactivity)
 		chapters = { ...chapters };
-
-		// Count the number of assets that are finished for this course and update the course
-		// started/finished accordingly
-		const numAssets = course.assets.length;
-		const finishedAssets = course.assets.filter((a) => a.finished).length;
-
-		if (finishedAssets === numAssets) {
-			// If all assets are finished, update the course to finished
-			course.finished = true;
-		} else if (finishedAssets === 0) {
-			// If no assets are finished, update the course to not started
-			course.finished = false;
-			course.started = false;
-		} else {
-			// If some assets are finished, update the course to started
-			course.finished = false;
-			course.started = true;
-		}
-
-		// Update the course
-		await updateCourse();
 	};
 
 	// ----------------------
@@ -212,23 +190,6 @@
 			});
 
 			return;
-		});
-	};
-
-	// ----------------------
-
-	// Update the course. Called when information about the asset changes, such as the video
-	// finishes
-	const updateCourse = async () => {
-		await UpdateCourse(course).catch((err) => {
-			const errMsg = ErrorMessage(err);
-			console.error(errMsg);
-			$addToast({
-				data: {
-					message: errMsg,
-					status: 'error'
-				}
-			});
 		});
 	};
 
@@ -294,7 +255,7 @@
 	{:else if invalidCourseId}
 		<Error />
 	{:else}
-		<div class="bg-background-muted w-full border-b">
+		<div class="w-full border-b">
 			<div class="container flex h-[var(--course-header-height)] items-center">
 				<span class="grow text-base font-semibold md:text-lg">{course.title}</span>
 				<a
@@ -307,7 +268,9 @@
 			</div>
 		</div>
 
-		<div class="container flex-1 items-start !pl-4 lg:grid lg:grid-cols-[300px_minmax(0,1fr)]">
+		<div
+			class="container flex-1 items-start px-4 md:px-8 lg:grid lg:grid-cols-[300px_minmax(0,1fr)]"
+		>
 			<!-- Chapters -->
 			<div
 				class="lg:sticky lg:left-0 lg:top-0 lg:h-[calc(100vh-var(--header-height)-var(--course-header-height)-1px)] lg:overflow-y-auto lg:border-r"
@@ -320,7 +283,7 @@
 					{#each Object.keys(chapters) as chapter, i}
 						{@const [prefix, ...rest] = chapter.split(' ')}
 						{@const title = rest.join(' ')}
-						{@const finishedCount = chapters[chapter].filter((a) => a.finished).length}
+						{@const completedCount = chapters[chapter].filter((a) => a.completed).length}
 
 						<div
 							{...$item(chapter)}
@@ -346,10 +309,10 @@
 								<div
 									class={cn(
 										'flex text-xs',
-										finishedCount === chapters[chapter].length && 'text-success'
+										completedCount === chapters[chapter].length && 'text-success'
 									)}
 								>
-									{finishedCount} of {chapters[chapter].length}
+									{completedCount} of {chapters[chapter].length}
 									completed
 								</div>
 							</button>
@@ -414,7 +377,7 @@
 														flipAssetFinishedState(asset.id);
 													}}
 												>
-													<input tabindex="0" type="checkbox" checked={asset.finished} />
+													<input tabindex="0" type="checkbox" checked={asset.completed} />
 												</button>
 
 												<div class="flex select-none flex-col gap-3">
@@ -465,19 +428,21 @@
 						startTime={selectedAsset.progress}
 						prevVideo={prevAsset}
 						nextVideo={nextAsset}
-						on:started={() => {
-							// Video started. Mark the course as started
-							if (!selectedAsset || course.started) return;
-							updateCourse();
-						}}
 						on:progress={(e) => {
 							// Update the asset progress
 							if (!selectedAsset) return;
+
+							// This will automatically happen in the backend (due to a DB trigger)
+							// so we don't need to worry about it. Just set it manually
+							if (e.detail > 5 && !course.started) {
+								course.started = true;
+							}
+
 							updateAssetProgress(selectedAsset.id, e.detail);
 						}}
 						on:finished={() => {
-							// Video finished. Mark the asset as finished
-							if (!selectedAsset || selectedAsset.finished) return;
+							// Video finished. Mark the asset as completed
+							if (!selectedAsset || selectedAsset.completed) return;
 							flipAssetFinishedState(selectedAsset.id);
 						}}
 						on:previous={() => {

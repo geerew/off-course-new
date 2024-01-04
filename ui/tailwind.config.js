@@ -20,11 +20,14 @@ export default {
 			colors: {
 				background: {
 					DEFAULT: 'hsl(var(--background))',
-					muted: 'hsl(var(--background-muted))'
+					'alt-1': 'hsl(var(--background-alt-1))'
 				},
 				foreground: {
 					DEFAULT: 'hsl(var(--foreground))',
 					muted: 'hsl(var(--foreground-muted))'
+				},
+				muted: {
+					DEFAULT: 'hsl(var(--muted))'
 				},
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',

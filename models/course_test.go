@@ -36,6 +36,33 @@ func Test_CountCourses(t *testing.T) {
 		assert.Equal(t, count, 5)
 	})
 
+	t.Run("started and completed", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 2)
+		assets := NewTestAssets(t, db, courses, 2)
+
+		// For the first asset, set the progress and mark as completed
+		_, err := UpdateAssetProgress(ctx, db, assets[0].ID, 50)
+		require.Nil(t, err)
+		_, err = UpdateAssetCompleted(ctx, db, assets[0].ID, true)
+		require.Nil(t, err)
+
+		result, err := GetCourses(ctx, db, nil)
+		require.Nil(t, err)
+
+		// Asset the first course
+		assert.Equal(t, courses[0].ID, result[0].ID)
+		assert.True(t, result[0].Started)
+		assert.Equal(t, 50, result[0].Percent)
+
+		// Asset the second course
+		assert.Equal(t, courses[1].ID, result[1].ID)
+		assert.False(t, result[1].Started)
+		assert.Zero(t, result[1].Percent)
+	})
+
 	t.Run("where", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
@@ -103,8 +130,7 @@ func Test_GetCourses(t *testing.T) {
 		assert.Equal(t, courses[0].Title, result[0].Title)
 		assert.Equal(t, courses[0].Path, result[0].Path)
 		assert.Empty(t, courses[0].CardPath)
-		assert.False(t, courses[0].Started)
-		assert.False(t, courses[0].Finished)
+		assert.Zero(t, courses[0].Percent)
 		assert.False(t, courses[0].CreatedAt.IsZero())
 		assert.False(t, courses[0].UpdatedAt.IsZero())
 
@@ -346,8 +372,7 @@ func Test_GetCourse(t *testing.T) {
 		assert.Equal(t, courses[2].Title, result.Title)
 		assert.Equal(t, courses[2].Path, result.Path)
 		assert.Empty(t, courses[2].CardPath)
-		assert.False(t, courses[2].Started)
-		assert.False(t, courses[2].Finished)
+		assert.Zero(t, courses[2].Percent)
 		assert.False(t, courses[2].CreatedAt.IsZero())
 		assert.False(t, courses[2].UpdatedAt.IsZero())
 
@@ -357,6 +382,30 @@ func Test_GetCourse(t *testing.T) {
 
 		// Relations are empty
 		assert.Nil(t, courses[2].Assets)
+	})
+
+	t.Run("started and completed", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+		assets := NewTestAssets(t, db, []*Course{course}, 2)
+
+		// For the first asset, set the progress and set to completed
+		_, err := UpdateAssetProgress(ctx, db, assets[0].ID, 50)
+		require.Nil(t, err)
+		_, err = UpdateAssetCompleted(ctx, db, assets[0].ID, true)
+		require.Nil(t, err)
+
+		dbParams := &database.DatabaseParams{
+			Where: []database.Where{{Column: "id", Value: course.ID}},
+		}
+
+		result, err := GetCourse(ctx, db, dbParams)
+		require.Nil(t, err)
+		assert.Equal(t, course.ID, result.ID)
+		assert.True(t, result.Started)
+		assert.Equal(t, 50, result.Percent)
 	})
 
 	t.Run("relations", func(t *testing.T) {
@@ -517,8 +566,7 @@ func Test_GetCourseById(t *testing.T) {
 		assert.Equal(t, courses[2].Title, result.Title)
 		assert.Equal(t, courses[2].Path, result.Path)
 		assert.Empty(t, courses[2].CardPath)
-		assert.False(t, courses[2].Started)
-		assert.False(t, courses[2].Finished)
+		assert.Zero(t, courses[2].Percent)
 		assert.False(t, courses[2].CreatedAt.IsZero())
 		assert.False(t, courses[2].UpdatedAt.IsZero())
 
@@ -528,6 +576,26 @@ func Test_GetCourseById(t *testing.T) {
 
 		// Relations are empty
 		assert.Nil(t, courses[2].Assets)
+	})
+
+	t.Run("started and completed", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+		assets := NewTestAssets(t, db, []*Course{course}, 2)
+
+		// For the first asset, set the progress and set to completed
+		_, err := UpdateAssetProgress(ctx, db, assets[0].ID, 50)
+		require.Nil(t, err)
+		_, err = UpdateAssetCompleted(ctx, db, assets[0].ID, true)
+		require.Nil(t, err)
+
+		result, err := GetCourseById(ctx, db, nil, course.ID)
+		require.Nil(t, err)
+		assert.Equal(t, course.ID, result.ID)
+		assert.True(t, result.Started)
+		assert.Equal(t, 50, result.Percent)
 	})
 
 	t.Run("relations", func(t *testing.T) {
@@ -599,8 +667,7 @@ func Test_CreateCourse(t *testing.T) {
 		err := CreateCourse(ctx, db, course)
 		require.Nil(t, err)
 		assert.NotEmpty(t, course.ID)
-		assert.False(t, course.Started)
-		assert.False(t, course.Finished)
+		assert.Zero(t, course.Percent)
 		assert.Empty(t, course.CardPath)
 		assert.Empty(t, course.ScanStatus)
 		assert.False(t, course.CreatedAt.IsZero())
@@ -653,212 +720,240 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
-		require.Empty(t, course.CardPath)
-
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
-		origCourse, err := GetCourse(ctx, db, dbParams)
-		require.Nil(t, err)
+		origCourse := NewTestCourses(t, db, 1)[0]
+		require.Empty(t, origCourse.CardPath)
 
 		// Give time to allow `updated at` to be different
 		time.Sleep(time.Millisecond * 1)
 
 		// Update the card path
-		err = UpdateCourseCardPath(ctx, db, course, "/path/to/card.jpg")
+		updatedCourse, err := UpdateCourseCardPath(ctx, db, origCourse.ID, "/path/to/card.jpg")
 		require.Nil(t, err)
-
-		// Get the updated course
-		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
-		updatedCourse, err := GetCourse(ctx, db, dbParams)
-		require.Nil(t, err)
-		assert.Equal(t, "/path/to/card.jpg", updatedCourse.CardPath)
+		require.Equal(t, "/path/to/card.jpg", updatedCourse.CardPath)
 		assert.NotEqual(t, origCourse.UpdatedAt, updatedCourse.UpdatedAt)
-
-		// Ensure the original course struct was updated
-		assert.Equal(t, "/path/to/card.jpg", course.CardPath)
-		assert.NotEqual(t, origCourse.UpdatedAt, course.UpdatedAt)
 	})
 
-	t.Run("same card path", func(t *testing.T) {
+	t.Run("no change", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
-		require.Empty(t, course.CardPath)
-
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
-
-		origCourse, err := GetCourse(ctx, db, dbParams)
-		require.Nil(t, err)
+		origCourse := NewTestCourses(t, db, 1)[0]
+		require.Empty(t, origCourse.CardPath)
 
 		// Give time to allow `updated at` to be different
 		time.Sleep(time.Millisecond * 1)
 
-		err = UpdateCourseCardPath(ctx, db, course, "")
-		require.Nil(t, err)
-
-		// Assert there were no changes to the DB
-
-		updatedCourse, err := GetCourse(ctx, db, dbParams)
+		updatedCourse, err := UpdateCourseCardPath(ctx, db, origCourse.ID, "")
 		require.Nil(t, err)
 		assert.Empty(t, updatedCourse.CardPath)
 		assert.Equal(t, origCourse.UpdatedAt.String(), updatedCourse.UpdatedAt.String())
-
-		// Assert there were no changes to the original struct
-		assert.Empty(t, course.CardPath)
-		assert.Equal(t, origCourse.UpdatedAt.String(), course.UpdatedAt.String())
 	})
 
 	t.Run("empty id", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
-
-		course.ID = ""
-
-		err := UpdateCourseCardPath(ctx, db, course, "123")
+		updatedCourse, err := UpdateCourseCardPath(ctx, db, "", "/path/to/card.jpg")
 		assert.ErrorContains(t, err, "course ID cannot be empty")
+		assert.Nil(t, updatedCourse)
 	})
 
-	t.Run("invalid id", func(t *testing.T) {
+	t.Run("no course with id", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
-
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
-
-		origCourse, err := GetCourse(ctx, db, dbParams)
-		require.Nil(t, err)
-
-		// Change the ID
-		course.ID = "invalid"
-
-		// Update the scan status to waiting
-		err = UpdateCourseCardPath(ctx, db, course, "1234")
-		require.Nil(t, err)
-
-		// Assert there were no changes to the DB
-		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: origCourse.ID}}}
-
-		updatedCourse, err := GetCourse(ctx, db, dbParams)
-		require.Nil(t, err)
-		assert.Empty(t, updatedCourse.CardPath)
-		assert.Equal(t, origCourse.UpdatedAt.String(), updatedCourse.UpdatedAt.String())
-
-		// Assert there were no changes to the original struct
-		assert.Empty(t, course.CardPath)
-		assert.Equal(t, origCourse.UpdatedAt.String(), course.UpdatedAt.String())
+		updatedCourse, err := UpdateCourseCardPath(ctx, db, "1234", "/path/to/card.jpg")
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, updatedCourse)
 	})
 
 	t.Run("db error", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
+		origCourse := NewTestCourses(t, db, 1)[0]
 
 		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
 		require.Nil(t, err)
 
-		err = UpdateCourseCardPath(ctx, db, course, "123")
+		updatedCourse, err := UpdateCourseCardPath(ctx, db, origCourse.ID, "/path/to/card.jpg")
 		require.ErrorContains(t, err, "no such table: courses")
+		assert.Nil(t, updatedCourse)
 	})
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func Test_UpdateCourse(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
+func Test_UpdateCoursePercent(t *testing.T) {
+	t.Run("success (10)", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
-
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
-
-		// Store the original course
-		origCourse, err := GetCourse(ctx, db, dbParams)
-		require.Nil(t, err)
-		require.False(t, origCourse.Started)
-		require.False(t, origCourse.Finished)
+		origCourse := NewTestCourses(t, db, 1)[0]
+		require.Zero(t, origCourse.Percent)
+		require.Empty(t, origCourse.CompletedAt)
 
 		// Give time to allow `updated at` to be different
 		time.Sleep(time.Millisecond * 1)
 
-		// Update started, finished and card path. Path and title should not change
-		course.Started = true
-		course.Finished = true
-		course.CardPath = "/new/card/path"
-		course.Path = "/new/path"
-		course.Title = "New title"
-
-		err = UpdateCourse(ctx, db, course)
+		c, err := UpdateCoursePercent(ctx, db, origCourse.ID, 10)
 		require.Nil(t, err)
+		require.NotNil(t, c)
+		assert.Equal(t, 10, c.Percent)
+		assert.Empty(t, c.CompletedAt)
+		assert.NotEqual(t, origCourse.UpdatedAt, c.UpdatedAt)
+	})
 
-		// Assert there were changes to the DB
-		updatedCourse, err := GetCourse(ctx, db, dbParams)
+	t.Run("success (100)", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
 
+		origCourse := NewTestCourses(t, db, 1)[0]
+		require.Zero(t, origCourse.Percent)
+		require.Empty(t, origCourse.CompletedAt)
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		c, err := UpdateCoursePercent(ctx, db, origCourse.ID, 100)
 		require.Nil(t, err)
+		require.NotNil(t, c)
+		assert.Equal(t, 100, c.Percent)
+		assert.NotEmpty(t, c.CompletedAt)
+		assert.NotEqual(t, origCourse.UpdatedAt, c.UpdatedAt)
+	})
 
-		// Assert started, finished, card path and updated at changed
-		assert.True(t, updatedCourse.Started)
-		assert.True(t, updatedCourse.Finished)
-		assert.NotEqual(t, origCourse.CardPath, updatedCourse.CardPath)
-		assert.NotEqual(t, origCourse.UpdatedAt, updatedCourse.UpdatedAt)
+	t.Run("out of bounds", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
 
-		// Assert the title and path did not change
-		assert.Equal(t, origCourse.Title, updatedCourse.Title)
-		assert.Equal(t, origCourse.Path, updatedCourse.Path)
+		origCourse := NewTestCourses(t, db, 1)[0]
+		require.Zero(t, origCourse.Percent)
+		require.Empty(t, origCourse.CompletedAt)
+
+		// ----------------------------
+		// Below 0
+		// ----------------------------
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		c1, err := UpdateCoursePercent(ctx, db, origCourse.ID, -1)
+		require.Nil(t, err)
+		assert.Zero(t, c1.Percent)
+		assert.Empty(t, c1.CompletedAt)
+		assert.NotEqual(t, origCourse.UpdatedAt.String(), c1.UpdatedAt.String())
+
+		// ----------------------------
+		// Above 100
+		// ----------------------------
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		c2, err := UpdateCoursePercent(ctx, db, origCourse.ID, 200)
+		require.Nil(t, err)
+		assert.Equal(t, 100, c2.Percent)
+		assert.NotEmpty(t, c2.CompletedAt)
+		assert.NotEqual(t, c1.UpdatedAt.String(), c2.UpdatedAt.String())
+	})
+
+	t.Run("no change", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		origCourse := NewTestCourses(t, db, 1)[0]
+		require.Zero(t, origCourse.Percent)
+		require.Empty(t, origCourse.CompletedAt)
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		c, err := UpdateCoursePercent(ctx, db, origCourse.ID, 0)
+		require.Nil(t, err)
+		assert.Zero(t, c.Percent)
+		assert.Empty(t, c.CompletedAt)
+		assert.Equal(t, origCourse.UpdatedAt.String(), c.UpdatedAt.String())
 	})
 
 	t.Run("empty id", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
-		course.ID = ""
-
-		err := UpdateCourse(ctx, db, course)
+		c, err := UpdateCoursePercent(ctx, db, "", 10)
 		assert.ErrorContains(t, err, "course ID cannot be empty")
+		assert.Nil(t, c)
 	})
 
-	t.Run("invalid id", func(t *testing.T) {
+	t.Run("no course with id", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
-
-		// Store the original course
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: course.ID}}}
-		origCourse, err := GetCourse(ctx, db, dbParams)
-		require.Nil(t, err)
-
-		// Change the ID
-		course.ID = "invalid"
-
-		err = UpdateCourse(ctx, db, course)
-		require.Nil(t, err)
-
-		// Assert there were no changes
-		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: origCourse.ID}}}
-		updatedCourse, err := GetCourse(ctx, db, dbParams)
-		require.Nil(t, err)
-		assert.Equal(t, origCourse.UpdatedAt.String(), updatedCourse.UpdatedAt.String())
-		assert.Equal(t, origCourse.UpdatedAt.String(), course.UpdatedAt.String())
+		c, err := UpdateCoursePercent(ctx, db, "1234", 10)
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, c)
 	})
 
 	t.Run("db error", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
+		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
+		require.Nil(t, err)
+
+		c, err := UpdateCoursePercent(ctx, db, "1234", 10)
+		require.ErrorContains(t, err, "no such table: courses")
+		assert.Nil(t, c)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_UpdateCourseUpdatedAt(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		origCourse := NewTestCourses(t, db, 1)[0]
+		require.Empty(t, origCourse.CompletedAt)
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		updatedCourse, err := UpdateCourseUpdatedAt(ctx, db, origCourse.ID)
+		require.Nil(t, err)
+		require.NotNil(t, updatedCourse)
+		assert.NotEqual(t, origCourse.UpdatedAt, updatedCourse.UpdatedAt)
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		updatedCourse, err := UpdateCourseUpdatedAt(ctx, db, "")
+		assert.ErrorContains(t, err, "course ID cannot be empty")
+		assert.Nil(t, updatedCourse)
+	})
+
+	t.Run("no course with id", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		updatedCourse, err := UpdateCourseUpdatedAt(ctx, db, "1234")
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, updatedCourse)
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
 
 		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
 		require.Nil(t, err)
 
-		err = UpdateCourse(ctx, db, course)
+		updatedCourse, err := UpdateCourseUpdatedAt(ctx, db, "1234")
 		require.ErrorContains(t, err, "no such table: courses")
+		assert.Nil(t, updatedCourse)
 	})
 }
 

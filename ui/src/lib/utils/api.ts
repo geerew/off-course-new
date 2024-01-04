@@ -98,7 +98,7 @@ export const GetAllCourses = async (params?: CoursesGetParams): Promise<Course[]
 	let getMore = true;
 
 	while (getMore) {
-		await GetCourses({ orderBy: params?.orderBy, page: page, perPage: 100 })
+		await GetCourses({ ...params, page: page, perPage: 100 })
 			.then((data) => {
 				if (data && data.totalItems > 0) {
 					const result = safeParse(PaginationSchema, data);

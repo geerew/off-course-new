@@ -32,7 +32,7 @@
 		<Separator orientation="vertical" class=" h-4" />
 
 		<!-- Completion status -->
-		{#if asset.finished}
+		{#if asset.completed}
 			<span class="token !bg-success">
 				<Icons.checkCircle class="icon" />
 				completed

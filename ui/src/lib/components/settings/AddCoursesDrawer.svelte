@@ -289,7 +289,7 @@
 				<div
 					{...$title}
 					use:title
-					class="bg-background-muted flex h-16 shrink-0 items-center justify-between border-b px-3 text-base font-medium"
+					class="bg-background-alt-1 flex h-16 shrink-0 items-center justify-between border-b px-3 text-base font-medium"
 				>
 					<div class="flex items-center gap-2">
 						<Icons.bookPlus class="h-4 w-4" />
@@ -369,7 +369,7 @@
 
 				<!-- Footer -->
 				<div
-					class="bg-background-muted flex h-16 shrink-0 items-center justify-between border-t px-3 py-4 font-medium"
+					class="bg-background-alt-1 flex h-16 shrink-0 items-center justify-between border-t px-3 py-4 font-medium"
 				>
 					<div class="flex gap-3">
 						<!-- Select all -->

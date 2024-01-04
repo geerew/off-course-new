@@ -1,29 +1,25 @@
 export const header = [
 	{
-		title: 'Courses',
-		href: '/courses/',
-	},
-	{
 		title: 'Settings',
-		href: '/settings/',
-	},
+		href: '/settings/'
+	}
 ];
 
 export const settings = [
 	{
 		title: 'Courses',
-		href: '/settings/courses',
+		href: '/settings/courses'
 	},
 	{
 		title: 'Files',
-		href: '/settings/files',
+		href: '/settings/files'
 	},
 	{
 		title: 'Tags',
-		href: '/settings/tags',
+		href: '/settings/tags'
 	},
 	{
 		title: 'Logs',
-		href: '/settings/logs',
-	},
+		href: '/settings/logs'
+	}
 ];

@@ -29,17 +29,18 @@ type assets struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type assetResponse struct {
-	ID        string         `json:"id"`
-	CourseID  string         `json:"courseId"`
-	Title     string         `json:"title"`
-	Prefix    int            `json:"prefix"`
-	Chapter   string         `json:"chapter"`
-	Path      string         `json:"path"`
-	Type      types.Asset    `json:"assetType"`
-	Progress  int            `json:"progress"`
-	Finished  bool           `json:"finished"`
-	CreatedAt types.DateTime `json:"createdAt"`
-	UpdatedAt types.DateTime `json:"updatedAt"`
+	ID          string         `json:"id"`
+	CourseID    string         `json:"courseId"`
+	Title       string         `json:"title"`
+	Prefix      int            `json:"prefix"`
+	Chapter     string         `json:"chapter"`
+	Path        string         `json:"path"`
+	Type        types.Asset    `json:"assetType"`
+	Progress    int            `json:"progress"`
+	Completed   bool           `json:"completed"`
+	CompletedAt types.DateTime `json:"completedAt"`
+	CreatedAt   types.DateTime `json:"createdAt"`
+	UpdatedAt   types.DateTime `json:"updatedAt"`
 
 	// Association
 	Attachments []*attachmentResponse `json:"attachments,omitempty"`
@@ -132,39 +133,41 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// Parse the request body to get the updated fields
-	newAsset := &assetResponse{}
-	if err := c.BodyParser(newAsset); err != nil {
-		fmt.Println(err)
+	reqAsset := &assetResponse{}
+	if err := c.BodyParser(reqAsset); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Failed to parse request body",
 		})
 	}
 
-	// Get the asset from the database
-	existingAsset, err := models.GetAssetById(c.UserContext(), api.db, nil, id)
-	if err != nil {
+	var updatedAsset *models.Asset
+	var err error
+
+	// Update progress
+	if _, err = models.UpdateAssetProgress(c.UserContext(), api.db, id, reqAsset.Progress); err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
 		}
 
-		log.Err(err).Msg("error looking up asset")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up asset - " + err.Error(),
-		})
-	}
-
-	// We currently only update progress (when a video asset) and finished
-	existingAsset.Progress = newAsset.Progress
-	existingAsset.Finished = newAsset.Finished
-
-	if err := models.UpdateAsset(c.UserContext(), api.db, existingAsset); err != nil {
 		log.Err(err).Msg("error updating asset")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "error updating asset - " + err.Error(),
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(toAssetResponse([]*models.Asset{existingAsset})[0])
+	// Update completed
+	if updatedAsset, err = models.UpdateAssetCompleted(c.UserContext(), api.db, id, reqAsset.Completed); err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).SendString("Not found")
+		}
+
+		log.Err(err).Msg("error updating asset")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error updating asset - " + err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(toAssetResponse([]*models.Asset{updatedAsset})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -210,17 +213,18 @@ func toAssetResponse(assets []*models.Asset) []*assetResponse {
 	responses := []*assetResponse{}
 	for _, asset := range assets {
 		responses = append(responses, &assetResponse{
-			ID:        asset.ID,
-			CourseID:  asset.CourseID,
-			Title:     asset.Title,
-			Prefix:    asset.Prefix,
-			Chapter:   asset.Chapter,
-			Path:      asset.Path,
-			Type:      asset.Type,
-			Progress:  asset.Progress,
-			Finished:  asset.Finished,
-			CreatedAt: asset.CreatedAt,
-			UpdatedAt: asset.UpdatedAt,
+			ID:          asset.ID,
+			CourseID:    asset.CourseID,
+			Title:       asset.Title,
+			Prefix:      asset.Prefix,
+			Chapter:     asset.Chapter,
+			Path:        asset.Path,
+			Type:        asset.Type,
+			Progress:    asset.Progress,
+			Completed:   asset.Completed,
+			CompletedAt: asset.CompletedAt,
+			CreatedAt:   asset.CreatedAt,
+			UpdatedAt:   asset.UpdatedAt,
 
 			// Association
 			Attachments: toAttachmentResponse(asset.Attachments),

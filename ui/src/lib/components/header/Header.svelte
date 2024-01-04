@@ -9,7 +9,7 @@
 
 <header
 	class={cn(
-		'bg-background-muted w-full border-b',
+		'w-full border-b',
 		$page.url.pathname.startsWith('/settings') ? '' : 'h-[var(--header-height)]'
 	)}
 >

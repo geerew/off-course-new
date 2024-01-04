@@ -60,7 +60,8 @@ export const AssetSchema = merge([
 		path: string(),
 		assetType: AssetTypeSchema,
 		progress: number(),
-		finished: boolean(),
+		completed: boolean(),
+		completedAt: string(),
 
 		// Relations
 		attachments: optional(array(AttachmentSchema))
@@ -80,7 +81,8 @@ export const CourseSchema = merge([
 		path: string(),
 		hasCard: boolean(),
 		started: boolean(),
-		finished: boolean(),
+		percent: number(),
+		completedAt: string(),
 		scanStatus: ScanStatusSchema,
 
 		// Relations
@@ -95,6 +97,7 @@ export type Course = Output<typeof CourseSchema>;
 export type CoursesGetParams = {
 	orderBy?: string;
 	expand?: boolean;
+	started?: boolean;
 	page?: number;
 	perPage?: number;
 };

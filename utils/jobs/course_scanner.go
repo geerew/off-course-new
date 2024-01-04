@@ -263,7 +263,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 
 	// Update the card path for this course
 	if course.CardPath != cardPath {
-		if err := models.UpdateCourseCardPath(cs.ctx, cs.db, course, cardPath); err != nil {
+		if course, err = models.UpdateCourseCardPath(cs.ctx, cs.db, course.ID, cardPath); err != nil {
 			return err
 		}
 	}
@@ -305,7 +305,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 	}
 
 	// Update the course updated_at now that the scan is complete
-	err = models.UpdateCourse(cs.ctx, cs.db, course)
+	course, err = models.UpdateCourseUpdatedAt(cs.ctx, cs.db, course.ID)
 	if err != nil {
 		return err
 	}

@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { Error, Loading } from '$components';
+	import { CourseCard, Error, Loading } from '$components';
 	import { Icons } from '$components/icons';
 	import { DeleteCourseDialog } from '$components/settings';
 	import CourseAssetRow from '$components/settings/CourseAssetRow.svelte';
 	import TableDate from '$components/table/TableDate.svelte';
 	import { addToast } from '$lib/stores/addToast';
 	import type { Course, CourseChapters } from '$lib/types/models';
-	import { AddScan, COURSE_API, ErrorMessage, GetCourse, GetScanByCourseId } from '$lib/utils/api';
+	import { AddScan, ErrorMessage, GetCourse, GetScanByCourseId } from '$lib/utils/api';
 	import { buildChapterStructure, cn, isBrowser } from '$lib/utils/general';
-	import { createAccordion, createAvatar, createDialog } from '@melt-ui/svelte';
+	import { createAccordion, createDialog } from '@melt-ui/svelte';
 	import type { AxiosError } from 'axios';
 	import { onDestroy, onMount } from 'svelte';
 	import { slide } from 'svelte/transition';
@@ -53,12 +53,6 @@
 		multiple: true
 	});
 
-	// Renders the course card
-	const {
-		elements: { image, fallback },
-		options: { src }
-	} = createAvatar();
-
 	// ----------------------
 	// Functions
 	// ----------------------
@@ -79,13 +73,6 @@
 				// build the assets chapter structure
 				if (course.assets) {
 					chapters = buildChapterStructure(course.assets);
-				}
-
-				// Display the card
-				if (course && course.hasCard) {
-					src.set(`${COURSE_API}/${course.id}/card?b=${new Date().getTime()}`);
-				} else {
-					src.set('');
 				}
 
 				return true;
@@ -182,15 +169,13 @@
 	{:else if invalidCourseId}
 		<Error />
 	{:else}
-		<div class="bg-background-muted w-full border-b">
+		<div class="w-full border-b">
 			<!-- Header -->
 			<div class="container flex items-center py-4 md:py-6">
 				<span class="grow text-base font-semibold md:text-lg">{course.title}</span>
 				<div class="flex flex-row items-center gap-5">
 					<!-- Open -->
-					<a class="action hover:bg-accent-1 border" href="/courses/course?id={course.id}">
-						Open
-					</a>
+					<a class="action hover:bg-accent-1 border" href="/course?id={course.id}"> Open </a>
 
 					<!-- Scan -->
 					<button
@@ -228,15 +213,10 @@
 			<!-- Course Details -->
 			<div class="flex flex-col gap-8 lg:flex-row">
 				<!-- Card -->
-				<div class="order-1 flex h-48 w-full shrink-0 place-content-center lg:order-2 lg:w-[20rem]">
-					<img {...$image} alt="Avatar" class="rounded-md" />
-					<div
-						class="bg-accent-1 flex h-48 w-[20rem] !cursor-default place-content-center items-center rounded-md lg:w-full"
-						{...$fallback}
-					>
-						<Icons.play class="h-12 w-12 fill-gray-400 text-gray-400" />
-					</div>
-				</div>
+				<CourseCard
+					{course}
+					class="order-1 flex h-48 w-full shrink-0 place-content-center lg:order-2 lg:w-[20rem]"
+				/>
 
 				<div class="order-2 flex w-full flex-col gap-5 lg:order-1">
 					<!-- Path -->

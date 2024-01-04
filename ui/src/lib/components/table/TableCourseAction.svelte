@@ -37,7 +37,7 @@
 
 {#if $open}
 	<div class="menu" {...$menu} use:menu transition:fly={{ duration: 150, y: -10 }}>
-		<a class="item hover:bg-accent-1" {...$item} use:item href="/courses/course?id={course.id}">
+		<a class="item hover:bg-accent-1" {...$item} use:item href="/course?id={course.id}">
 			Go to ...
 		</a>
 

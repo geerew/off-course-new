@@ -898,101 +898,201 @@ func Test_DeleteAsset(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func Test_UpdateAsset(t *testing.T) {
+func Test_UpdateAssetProgress(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
 		course := NewTestCourses(t, db, 1)[0]
-		asset := NewTestAssets(t, db, []*Course{course}, 1)[0]
-
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: asset.ID}}}
-
-		origAsset, err := GetAsset(ctx, db, dbParams)
-		require.Nil(t, err)
+		origAsset := NewTestAssets(t, db, []*Course{course}, 1)[0]
 		require.Zero(t, origAsset.Progress)
-		require.False(t, origAsset.Finished)
+
+		// ----------------------------
+		// Set to 30
+		// ----------------------------
 
 		// Give time to allow `updated at` to be different
 		time.Sleep(time.Millisecond * 1)
 
-		// Update progress and finished. Path and title should not change
-		asset.Progress = 30
-		asset.Finished = true
-		asset.Path = "/new/path"
-		asset.Title = "New Title"
-
-		err = UpdateAsset(ctx, db, asset)
+		a1, err := UpdateAssetProgress(ctx, db, origAsset.ID, 30)
 		require.Nil(t, err)
+		assert.Equal(t, 30, a1.Progress)
+		assert.NotEqual(t, origAsset.UpdatedAt.String(), a1.UpdatedAt.String())
 
-		// Get the updated scan and ensure the status was updated
-		updatedAsset, err := GetAsset(ctx, db, dbParams)
+		// ----------------------------
+		// Set to 0 (by setting a negative value)
+		// ----------------------------
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		a2, err := UpdateAssetProgress(ctx, db, origAsset.ID, -1)
 		require.Nil(t, err)
+		assert.Zero(t, a2.Progress)
+		assert.NotEqual(t, a1.UpdatedAt.String(), a2.UpdatedAt.String())
+	})
 
-		// Assert progress, finished, and updatedAt changed
-		assert.Equal(t, 30, updatedAsset.Progress)
-		assert.True(t, updatedAsset.Finished)
-		assert.NotEqual(t, origAsset.UpdatedAt.String(), updatedAsset.UpdatedAt.String())
+	t.Run("no change", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
 
-		// Assert the title and path did not change
-		assert.Equal(t, origAsset.Title, updatedAsset.Title)
-		assert.Equal(t, origAsset.Path, updatedAsset.Path)
+		course := NewTestCourses(t, db, 1)[0]
+		origAsset := NewTestAssets(t, db, []*Course{course}, 1)[0]
+		require.Zero(t, origAsset.Progress)
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		a, err := UpdateAssetProgress(ctx, db, origAsset.ID, 0)
+		require.Nil(t, err)
+		assert.Zero(t, a.Progress)
+		assert.Equal(t, origAsset.UpdatedAt.String(), a.UpdatedAt.String())
 	})
 
 	t.Run("empty id", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
-		asset := NewTestAssets(t, db, []*Course{course}, 1)[0]
-
-		asset.ID = ""
-
-		err := UpdateAsset(ctx, db, asset)
+		a, err := UpdateAssetProgress(ctx, db, "", 30)
 		assert.ErrorContains(t, err, "asset ID cannot be empty")
+		assert.Nil(t, a)
 	})
 
-	t.Run("invalid id", func(t *testing.T) {
+	t.Run("no asset with id", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
-		asset := NewTestAssets(t, db, []*Course{course}, 1)[0]
-
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: asset.ID}}}
-
-		origAsset, err := GetAsset(ctx, db, dbParams)
-		require.Nil(t, err)
-
-		// Change the ID
-		asset.ID = "invalid"
-
-		err = UpdateAsset(ctx, db, asset)
-		require.Nil(t, err)
-
-		// Assert there were no changes to the DB
-		dbParams = &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: origAsset.ID}}}
-		updatedAsset, err := GetAsset(ctx, db, dbParams)
-		require.Nil(t, err)
-		assert.Zero(t, updatedAsset.Progress)
-		assert.Equal(t, origAsset.UpdatedAt.String(), updatedAsset.UpdatedAt.String())
-
-		// Assert there were no changes to the original struct
-		assert.Zero(t, asset.Progress)
-		assert.Equal(t, origAsset.UpdatedAt.String(), asset.UpdatedAt.String())
+		a, err := UpdateAssetProgress(ctx, db, "1234", 30)
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, a)
 	})
 
 	t.Run("db error", func(t *testing.T) {
 		_, db, ctx, teardown := setup(t)
 		defer teardown(t)
 
+		_, err := db.DB().NewDropTable().Model(&Asset{}).Exec(ctx)
+		require.Nil(t, err)
+
+		a, err := UpdateAssetProgress(ctx, db, "1234", 30)
+		require.ErrorContains(t, err, "no such table: assets")
+		assert.Nil(t, a)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_UpdateAssetCompleted(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
 		course := NewTestCourses(t, db, 1)[0]
-		asset := NewTestAssets(t, db, []*Course{course}, 1)[0]
+		assets := NewTestAssets(t, db, []*Course{course}, 10)
+		require.False(t, assets[0].Completed)
+		require.Empty(t, assets[0].CompletedAt)
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		// ----------------------------
+		// Set asset 1 to true
+		// ----------------------------
+		a1, err := UpdateAssetCompleted(ctx, db, assets[0].ID, true)
+		require.Nil(t, err)
+		require.NotNil(t, a1)
+		assert.True(t, a1.Completed)
+		assert.NotEmpty(t, a1.CompletedAt)
+		assert.NotEqual(t, assets[0].UpdatedAt, a1.UpdatedAt)
+
+		// Asset the course percentage is updated
+		c1, err := GetCourseById(ctx, db, nil, course.ID)
+		require.Nil(t, err)
+		assert.Equal(t, 10, c1.Percent)
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		// ----------------------------
+		// Set asset 2 to true
+		// ----------------------------
+		a2, err := UpdateAssetCompleted(ctx, db, assets[1].ID, true)
+		require.Nil(t, err)
+		require.NotNil(t, a2)
+		assert.True(t, a2.Completed)
+		assert.NotEmpty(t, a2.CompletedAt)
+		assert.NotEqual(t, a1.UpdatedAt, a2.UpdatedAt)
+
+		// Asset the course percentage is updated
+		c2, err := GetCourseById(ctx, db, nil, course.ID)
+		require.Nil(t, err)
+		assert.Equal(t, 20, c2.Percent)
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		// ----------------------------
+		// Set asset 2 to false
+		// ----------------------------
+		a3, err := UpdateAssetCompleted(ctx, db, assets[1].ID, false)
+		require.Nil(t, err)
+		require.NotNil(t, a3)
+		assert.False(t, a3.Completed)
+		assert.Empty(t, a3.CompletedAt)
+		assert.NotEqual(t, a2.UpdatedAt, a3.UpdatedAt)
+
+		// Asset the course percentage is updated
+		c3, err := GetCourseById(ctx, db, nil, course.ID)
+		require.Nil(t, err)
+		assert.Equal(t, 10, c3.Percent)
+	})
+
+	t.Run("no change", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		course := NewTestCourses(t, db, 1)[0]
+		origAsset := NewTestAssets(t, db, []*Course{course}, 1)[0]
+		require.False(t, origAsset.Completed)
+		require.Empty(t, origAsset.CompletedAt)
+
+		// Give time to allow `updated at` to be different
+		time.Sleep(time.Millisecond * 1)
+
+		a, err := UpdateAssetCompleted(ctx, db, origAsset.ID, false)
+		require.Nil(t, err)
+		assert.False(t, a.Completed)
+		assert.Empty(t, a.CompletedAt)
+		assert.Equal(t, origAsset.UpdatedAt.String(), a.UpdatedAt.String())
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		a, err := UpdateAssetCompleted(ctx, db, "", true)
+		assert.ErrorContains(t, err, "asset ID cannot be empty")
+		assert.Nil(t, a)
+	})
+
+	t.Run("no asset with id", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
+
+		a, err := UpdateAssetCompleted(ctx, db, "1234", true)
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, a)
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, db, ctx, teardown := setup(t)
+		defer teardown(t)
 
 		_, err := db.DB().NewDropTable().Model(&Asset{}).Exec(ctx)
 		require.Nil(t, err)
 
-		err = UpdateAsset(ctx, db, asset)
+		a, err := UpdateAssetCompleted(ctx, db, "1234", true)
 		require.ErrorContains(t, err, "no such table: assets")
+		assert.Nil(t, a)
 	})
 }
