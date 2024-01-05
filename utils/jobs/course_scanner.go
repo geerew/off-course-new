@@ -228,10 +228,9 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 				if newAsset.Type.IsVideo() && !existingAsset.Type.IsVideo() ||
 					newAsset.Type.IsHTML() && existingAsset.Type.IsPDF() {
 					// This new asset has a higher priority than the existing asset. Update the
-					// asset map with the new asset and set the existing asset as an attachment
+					// asset map with the new asset and set the existing asset as an attachment.
 					//
-					//  - Video assets have a higher priority than pdf/html assets
-					//  - Html assets have a higher priority than pdf assets
+					// The priority order is video > html > pdf
 					log.Debug().Str("file", file).Str("existing file", existingAsset.Path).Msg("replacing existing asset")
 
 					assetsMap[chapter][fileInfo.prefix] = newAsset
