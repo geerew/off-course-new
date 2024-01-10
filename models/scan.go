@@ -75,10 +75,16 @@ func CreateScan(db database.Database, s *Scan) error {
 	s.RefreshCreatedAt()
 	s.RefreshUpdatedAt()
 
+	// Default status to waiting
+	status := s.Status
+	if status == (types.ScanStatus{}) {
+		status = types.NewScanStatus(types.ScanStatusWaiting)
+	}
+
 	builder := sq.StatementBuilder.
 		Insert(TableScans()).
 		Columns("id", "course_id", "status", "created_at", "updated_at").
-		Values(s.ID, NilStr(s.CourseID), NilStr(s.Status.String()), s.CreatedAt, s.UpdatedAt)
+		Values(s.ID, NilStr(s.CourseID), NilStr(status.String()), s.CreatedAt, s.UpdatedAt)
 
 	query, args, err := builder.ToSql()
 	if err != nil {
@@ -86,6 +92,9 @@ func CreateScan(db database.Database, s *Scan) error {
 	}
 
 	_, err = db.Exec(query, args...)
+
+	s.Status = status
+
 	return err
 }
 

@@ -79,31 +79,3 @@ func NilStr(s string) any {
 
 	return s
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// func selectRelation(q *bun.SelectQuery, relations []database.Relation) *bun.SelectQuery {
-// 	for _, relation := range relations {
-// 		// Make a copy so that it can be used in the SelectQuery closure
-// 		relation := relation
-
-// 		// Select specific columns from the relation and/or order by specific columns
-// 		if len(relation.Columns) > 0 || len(relation.OrderBy) > 0 {
-// 			q = q.Relation(relation.Table, func(q *bun.SelectQuery) *bun.SelectQuery {
-// 				for _, col := range relation.Columns {
-// 					q = q.Column(col)
-// 				}
-
-// 				if len(relation.OrderBy) > 0 {
-// 					q = q.Order(relation.OrderBy...)
-// 				}
-
-// 				return q
-// 			})
-// 		} else {
-// 			q = q.Relation(relation.Table)
-// 		}
-// 	}
-
-// 	return q
-// }

@@ -76,6 +76,19 @@ func Test_CreateScan(t *testing.T) {
 		assert.False(t, newS.UpdatedAt.IsZero())
 	})
 
+	t.Run("missing status", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 1)
+		s := NewTestScans(t, nil, courses)[0]
+		s.Status = types.ScanStatus{}
+
+		err := CreateScan(db, s)
+		require.Nil(t, err)
+		assert.True(t, s.Status.IsWaiting())
+	})
+
 	t.Run("duplicate course id", func(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
@@ -102,12 +115,6 @@ func Test_CreateScan(t *testing.T) {
 		s.CourseID = ""
 		assert.ErrorContains(t, CreateScan(db, s), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", TableScans()))
 		s.CourseID = "1234"
-
-		// Missing status
-		assert.ErrorContains(t, CreateScan(db, s), fmt.Sprintf("NOT NULL constraint failed: %s.status", TableScans()))
-		s.Status = types.ScanStatus{}
-		assert.ErrorContains(t, CreateScan(db, s), fmt.Sprintf("NOT NULL constraint failed: %s.status", TableScans()))
-		s.Status = types.NewScanStatus(types.ScanStatusWaiting)
 
 		// Invalid Course ID
 		assert.ErrorContains(t, CreateScan(db, s), "FOREIGN KEY constraint failed")

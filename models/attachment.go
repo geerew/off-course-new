@@ -103,8 +103,6 @@ func GetAttachments(db database.Database, params *database.DatabaseParams) ([]*A
 		return nil, err
 	}
 
-	fmt.Println(query, args) // tMP
-
 	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, err
