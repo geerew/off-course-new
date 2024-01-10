@@ -2,105 +2,77 @@ package models
 
 import (
 	"database/sql"
+	"fmt"
 	"testing"
-	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/utils/pagination"
-	"github.com/gofiber/fiber/v2"
+	"github.com/geerew/off-course/utils/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/valyala/fasthttp"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func Test_CountCourses(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		count, err := CountCourses(ctx, db, nil)
+		count, err := CountCourses(db, nil)
 		require.Nil(t, err)
-		assert.Equal(t, count, 0)
+		assert.Zero(t, count)
 	})
 
 	t.Run("entries", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
 		NewTestCourses(t, db, 5)
 
-		count, err := CountCourses(ctx, db, nil)
+		count, err := CountCourses(db, nil)
 		require.Nil(t, err)
 		assert.Equal(t, count, 5)
 	})
 
-	t.Run("started and completed", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		courses := NewTestCourses(t, db, 2)
-		assets := NewTestAssets(t, db, courses, 2)
-
-		// For the first asset, set the progress and mark as completed
-		_, err := UpdateAssetProgress(ctx, db, assets[0].ID, 50)
-		require.Nil(t, err)
-		_, err = UpdateAssetCompleted(ctx, db, assets[0].ID, true)
-		require.Nil(t, err)
-
-		result, err := GetCourses(ctx, db, nil)
-		require.Nil(t, err)
-
-		// Asset the first course
-		assert.Equal(t, courses[0].ID, result[0].ID)
-		assert.True(t, result[0].Started)
-		assert.Equal(t, 50, result[0].Percent)
-
-		// Asset the second course
-		assert.Equal(t, courses[1].ID, result[1].ID)
-		assert.False(t, result[1].Started)
-		assert.Zero(t, result[1].Percent)
-	})
-
 	t.Run("where", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 5)
+		courses := NewTestCourses(t, db, 3)
 
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: courses[1].ID}}}
-
-		count, err := CountCourses(ctx, db, dbParams)
+		// ----------------------------
+		// EQUALS ID
+		// ----------------------------
+		count, err := CountCourses(db, &database.DatabaseParams{Where: sq.Eq{TableCourses() + ".id": courses[2].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 
-		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "id", Value: courses[0].ID}}}
-
-		count, err = CountCourses(ctx, db, dbParams)
+		// ----------------------------
+		// NOT EQUALS ID
+		// ----------------------------
+		count, err = CountCourses(db, &database.DatabaseParams{Where: sq.NotEq{TableCourses() + ".id": courses[2].ID}})
 		require.Nil(t, err)
-		assert.Equal(t, 1, count)
+		assert.Equal(t, 2, count)
+
+		// ----------------------------
+		// ERROR
+		// ----------------------------
+		count, err = CountCourses(db, &database.DatabaseParams{Where: sq.Eq{"": ""}})
+		require.ErrorContains(t, err, "syntax error")
+		assert.Equal(t, -1, count)
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := db.DB().NewDropTable().Model((*Course)(nil)).Exec(ctx)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + TableCourses())
 		require.Nil(t, err)
 
-		_, err = CountCourses(ctx, db, nil)
-		require.ErrorContains(t, err, "no such table: courses")
-	})
-
-	t.Run("error where", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "", Value: ""}}}
-		count, err := CountCourses(ctx, db, dbParams)
-		require.ErrorContains(t, err, "syntax error")
-		assert.Equal(t, 0, count)
+		_, err = CountCourses(db, nil)
+		require.ErrorContains(t, err, "no such table: "+TableCourses())
 	})
 }
 
@@ -108,238 +80,176 @@ func Test_CountCourses(t *testing.T) {
 
 func Test_GetCourses(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses, err := GetCourses(ctx, db, nil)
+		courses, err := GetCourses(db, nil)
 		require.Nil(t, err)
-		require.Len(t, courses, 0)
+		require.Zero(t, courses)
 	})
 
-	t.Run("entries", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+	t.Run("found", func(t *testing.T) {
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
 		courses := NewTestCourses(t, db, 5)
-		NewTestScans(t, db, courses)
 
-		result, err := GetCourses(ctx, db, nil)
+		result, err := GetCourses(db, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 5)
-		assert.Equal(t, courses[0].ID, result[0].ID)
-		assert.Equal(t, courses[0].Title, result[0].Title)
-		assert.Equal(t, courses[0].Path, result[0].Path)
-		assert.Empty(t, courses[0].CardPath)
-		assert.Zero(t, courses[0].Percent)
-		assert.False(t, courses[0].CreatedAt.IsZero())
-		assert.False(t, courses[0].UpdatedAt.IsZero())
-
-		// Scan status
-		require.NotEmpty(t, result[0].ScanStatus)
-		assert.Equal(t, "waiting", result[0].ScanStatus)
-
-		// Relations are empty
-		assert.Nil(t, result[0].Assets)
-	})
-
-	t.Run("relations", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		courses := NewTestCourses(t, db, 5)
-		assets := NewTestAssets(t, db, courses, 2)
-		attachments := NewTestAttachments(t, db, assets, 2)
 
 		// ----------------------------
-		// Assets relation
+		// Scan
 		// ----------------------------
-		relation := []database.Relation{{Struct: "Assets"}}
+		assert.Empty(t, result[1].ScanStatus)
+		NewTestScans(t, db, []*Course{courses[1]})
 
-		result, err := GetCourses(ctx, db, &database.DatabaseParams{Relation: relation})
+		result, err = GetCourses(db, nil)
 		require.Nil(t, err)
-		require.Len(t, result, 5)
-		assert.Equal(t, courses[0].ID, result[0].ID)
-
-		// Assert the assets
-		require.NotNil(t, result[0].Assets)
-		require.Len(t, result[0].Assets, 2)
-		assert.Equal(t, assets[0].ID, result[0].Assets[0].ID)
-
-		// Asset the attachments for the first asset is nil
-		assert.Nil(t, result[0].Assets[0].Attachments)
+		assert.Equal(t, courses[1].ID, result[1].ID)
+		assert.Equal(t, string(types.ScanStatusWaiting), result[1].ScanStatus)
 
 		// ----------------------------
-		// Assets and attachments relation
+		// Progress
 		// ----------------------------
-		relation = []database.Relation{{Struct: "Assets"}, {Struct: "Assets.Attachments"}}
+		for _, c := range result {
+			require.False(t, c.Started)
+			require.True(t, c.StartedAt.IsZero())
+			require.Zero(t, c.Percent)
+			require.True(t, c.CompletedAt.IsZero())
+		}
 
-		result, err = GetCourses(ctx, db, &database.DatabaseParams{Relation: relation})
+		// Set course 1 as started and course 3 as completed
+		_, err = UpdateCourseProgressStarted(db, courses[0].ID, true)
 		require.Nil(t, err)
-		require.Len(t, result, 5)
-		assert.Equal(t, courses[0].ID, result[0].ID)
+		_, err = UpdateCourseProgressStarted(db, courses[2].ID, true)
+		require.Nil(t, err)
+		_, err = UpdateCourseProgressPercent(db, courses[2].ID, 100)
+		require.Nil(t, err)
 
-		// Assert the assets
-		require.NotNil(t, result[0].Assets)
-		require.Len(t, result[0].Assets, 2)
-		assert.Equal(t, assets[0].ID, result[0].Assets[0].ID)
-
-		// Asset the attachments
-		assert.NotNil(t, result[0].Assets[0].Attachments)
-		assert.Len(t, result[0].Assets[0].Attachments, 2)
-		assert.Equal(t, attachments[0].ID, result[0].Assets[0].Attachments[0].ID)
-	})
-
-	t.Run("relations orderBy", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		courses := NewTestCourses(t, db, 5)
-		assets := NewTestAssets(t, db, courses, 2)
-		attachments := NewTestAttachments(t, db, assets, 2)
-
-		// ----------------------------
-		// Assets relation
-		// ----------------------------
+		// Find started courses (not completed)
 		dbParams := &database.DatabaseParams{
-			Relation: []database.Relation{{Struct: "Assets", OrderBy: []string{"created_at desc"}}},
+			Where: sq.And{sq.Eq{TableCoursesProgress() + ".started": true}, sq.NotEq{TableCoursesProgress() + ".percent": 100}},
 		}
-
-		result, err := GetCourses(ctx, db, dbParams)
+		result, err = GetCourses(db, dbParams)
 		require.Nil(t, err)
-		require.Len(t, result, 5)
+		require.Len(t, result, 1)
 		assert.Equal(t, courses[0].ID, result[0].ID)
 
-		// Assert the assets. The last asset created (for this course) should be the first item in
-		// the assets slice
-		require.NotNil(t, result[0].Assets)
-		require.Len(t, result[0].Assets, 2)
-		assert.Equal(t, assets[1].ID, result[0].Assets[0].ID)
-		assert.Equal(t, assets[0].ID, result[0].Assets[1].ID)
-
-		// Asset the attachments for the first asset is nil
-		assert.Nil(t, result[0].Assets[0].Attachments)
-
-		// ----------------------------
-		// Assets and attachments relation
-		// ----------------------------
-		dbParams = &database.DatabaseParams{
-			Relation: []database.Relation{{Struct: "Assets"}, {Struct: "Assets.Attachments", OrderBy: []string{"created_at desc"}}},
-		}
-
-		result, err = GetCourses(ctx, db, dbParams)
+		// Find completed courses
+		result, err = GetCourses(db, &database.DatabaseParams{Where: sq.Eq{TableCoursesProgress() + ".percent": 100}})
 		require.Nil(t, err)
-		require.Len(t, result, 5)
-		assert.Equal(t, courses[0].ID, result[0].ID)
-
-		// Assert the assets
-		require.NotNil(t, result[0].Assets)
-		require.Len(t, result[0].Assets, 2)
-		assert.Equal(t, assets[0].ID, result[0].Assets[0].ID)
-
-		// Asset the attachments. The last attachment created (for this course) should be the
-		// first item in the result slice
-		assert.NotNil(t, result[0].Assets[0].Attachments)
-		assert.Len(t, result[0].Assets[0].Attachments, 2)
-		assert.Equal(t, attachments[1].ID, result[0].Assets[0].Attachments[0].ID)
-		assert.Equal(t, attachments[0].ID, result[0].Assets[0].Attachments[1].ID)
-	})
-
-	t.Run("pagination", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		courses := NewTestCourses(t, db, 17)
-
-		// Pagination context
-		app := fiber.New()
-		c := app.AcquireCtx(&fasthttp.RequestCtx{})
-		defer app.ReleaseCtx(c)
-
-		// Page 1 with 10 items
-		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
-		p := pagination.New(c)
-
-		// Assert the last course in the pagination response
-		result, err := GetCourses(ctx, db, &database.DatabaseParams{Pagination: p})
-		require.Nil(t, err)
-		require.Len(t, result, 10)
-		require.Equal(t, 17, p.TotalItems())
-		assert.Equal(t, courses[9].ID, result[9].ID)
-		assert.Equal(t, courses[9].Title, result[9].Title)
-		assert.Equal(t, courses[9].Path, result[9].Path)
-
-		// Page 2 with 7 items
-		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=2" + "&" + pagination.PerPageQueryParam + "=10")
-		p = pagination.New(c)
-
-		// Assert the last course in the pagination response
-		result, err = GetCourses(ctx, db, &database.DatabaseParams{Pagination: p})
-		require.Nil(t, err)
-		require.Len(t, result, 7)
-		require.Equal(t, 17, p.TotalItems())
-		assert.Equal(t, courses[16].ID, result[6].ID)
-		assert.Equal(t, courses[16].Title, result[6].Title)
-		assert.Equal(t, courses[16].Path, result[6].Path)
+		require.Len(t, result, 1)
+		assert.Equal(t, courses[2].ID, result[0].ID)
 	})
 
 	t.Run("orderby", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 5)
+		courses := NewTestCourses(t, db, 3)
 
+		// ----------------------------
+		// Descending
+		// ----------------------------
 		dbParams := &database.DatabaseParams{OrderBy: []string{"created_at desc"}}
-
-		result, err := GetCourses(ctx, db, dbParams)
+		result, err := GetCourses(db, dbParams)
 		require.Nil(t, err)
-		require.Len(t, result, 5)
-		assert.Equal(t, courses[4].ID, result[0].ID)
-		assert.Equal(t, courses[4].Title, result[0].Title)
-		assert.Equal(t, courses[4].Path, result[0].Path)
+		require.Len(t, result, 3)
+		assert.Equal(t, courses[2].ID, result[0].ID)
+
+		// ----------------------------
+		// Ascending
+		// ----------------------------
+		result, err = GetCourses(db, &database.DatabaseParams{OrderBy: []string{"created_at asc"}})
+		require.Nil(t, err)
+		require.Len(t, result, 3)
+		assert.Equal(t, courses[0].ID, result[0].ID)
+
+		// ----------------------------
+		// Error
+		// ----------------------------
+		dbParams = &database.DatabaseParams{OrderBy: []string{"unit_test asc"}}
+		result, err = GetCourses(db, dbParams)
+		require.ErrorContains(t, err, "no such column")
+		assert.Nil(t, result)
 	})
 
 	t.Run("where", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 5)
+		courses := NewTestCourses(t, db, 3)
 
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: courses[2].ID}}}
-
-		result, err := GetCourses(ctx, db, dbParams)
+		// ----------------------------
+		// EQUALS ID
+		// ----------------------------
+		result, err := GetCourses(db, &database.DatabaseParams{Where: sq.Eq{TableCourses() + ".id": courses[2].ID}})
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, courses[2].ID, result[0].ID)
 
-		dbParams = &database.DatabaseParams{Where: []database.Where{{Query: "? = ?", Column: "id", Value: courses[3].ID}}}
-
-		result, err = GetCourses(ctx, db, dbParams)
+		// ----------------------------
+		// EQUALS ID OR ID
+		// ----------------------------
+		dbParams := &database.DatabaseParams{
+			Where:   sq.Or{sq.Eq{TableCourses() + ".id": courses[1].ID}, sq.Eq{TableCourses() + ".id": courses[2].ID}},
+			OrderBy: []string{"created_at asc"},
+		}
+		result, err = GetCourses(db, dbParams)
 		require.Nil(t, err)
-		require.Len(t, result, 1)
-		assert.Equal(t, courses[3].ID, result[0].ID)
+		require.Len(t, result, 2)
+		assert.Equal(t, courses[1].ID, result[0].ID)
+		assert.Equal(t, courses[2].ID, result[1].ID)
+
+		// ----------------------------
+		// ERROR
+		// ----------------------------
+		result, err = GetCourses(db, &database.DatabaseParams{Where: sq.Eq{"": ""}})
+		require.ErrorContains(t, err, "syntax error")
+		assert.Nil(t, result)
+	})
+
+	t.Run("pagination", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		courses := NewTestCourses(t, db, 17)
+
+		// ----------------------------
+		// Page 1 with 10 items
+		// ----------------------------
+		p := pagination.New(1, 10)
+
+		result, err := GetCourses(db, &database.DatabaseParams{Pagination: p})
+		require.Nil(t, err)
+		require.Len(t, result, 10)
+		require.Equal(t, 17, p.TotalItems())
+		assert.Equal(t, courses[0].ID, result[0].ID)
+		assert.Equal(t, courses[9].ID, result[9].ID)
+
+		// ----------------------------
+		// Page 2 with 7 items
+		// ----------------------------
+		p = pagination.New(2, 10)
+
+		result, err = GetCourses(db, &database.DatabaseParams{Pagination: p})
+		require.Nil(t, err)
+		require.Len(t, result, 7)
+		require.Equal(t, 17, p.TotalItems())
+		assert.Equal(t, courses[10].ID, result[0].ID)
+		assert.Equal(t, courses[16].ID, result[6].ID)
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + TableCourses())
 		require.Nil(t, err)
 
-		app := fiber.New()
-		c := app.AcquireCtx(&fasthttp.RequestCtx{})
-		defer app.ReleaseCtx(c)
-
-		c.Request().SetRequestURI("/dummy?" + pagination.PageQueryParam + "=1" + "&" + pagination.PerPageQueryParam + "=10")
-		p := pagination.New(c)
-
-		// With pagination
-		_, err = GetCourses(ctx, db, &database.DatabaseParams{Pagination: p})
-		require.ErrorContains(t, err, "no such table: courses")
-
-		// Without pagination
-		_, err = GetCourses(ctx, db, nil)
-		require.ErrorContains(t, err, "no such table: courses")
+		_, err = GetCourses(db, nil)
+		require.ErrorContains(t, err, "no such table: "+TableCourses())
 	})
 }
 
@@ -347,311 +257,83 @@ func Test_GetCourses(t *testing.T) {
 
 func Test_GetCourse(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: "1"}}}
-
-		course, err := GetCourse(ctx, db, dbParams)
+		c, err := GetCourse(db, "1234")
 		assert.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, course)
+		assert.Nil(t, c)
 	})
 
 	t.Run("found", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 5)
-		NewTestScans(t, db, courses)
+		courses := NewTestCourses(t, db, 2)
 
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: courses[2].ID}}}
-
-		result, err := GetCourse(ctx, db, dbParams)
+		c, err := GetCourse(db, courses[1].ID)
 		require.Nil(t, err)
-		assert.Equal(t, courses[2].ID, result.ID)
-		assert.Equal(t, courses[2].Title, result.Title)
-		assert.Equal(t, courses[2].Path, result.Path)
-		assert.Empty(t, courses[2].CardPath)
-		assert.Zero(t, courses[2].Percent)
-		assert.False(t, courses[2].CreatedAt.IsZero())
-		assert.False(t, courses[2].UpdatedAt.IsZero())
+		assert.Equal(t, courses[1].ID, c.ID)
+		assert.Empty(t, courses[1].ScanStatus)
 
-		// Scan status
-		require.NotEmpty(t, result.ScanStatus)
-		assert.Equal(t, "waiting", result.ScanStatus)
+		// ----------------------------
+		// scan
+		// ----------------------------
+		NewTestScans(t, db, []*Course{courses[1]})
 
-		// Relations are empty
-		assert.Nil(t, courses[2].Assets)
+		c, err = GetCourse(db, courses[1].ID)
+		require.Nil(t, err)
+		assert.Equal(t, string(types.ScanStatusWaiting), c.ScanStatus)
+
+		// ----------------------------
+		// Progress
+		// ----------------------------
+		require.False(t, c.Started)
+		require.True(t, c.StartedAt.IsZero())
+		require.Zero(t, c.Percent)
+		require.True(t, c.CompletedAt.IsZero())
+
+		// Set to started
+		_, err = UpdateCourseProgressStarted(db, courses[1].ID, true)
+		require.Nil(t, err)
+
+		c, err = GetCourse(db, courses[1].ID)
+		require.Nil(t, err)
+		require.True(t, c.Started)
+		require.False(t, c.StartedAt.IsZero())
+		require.Zero(t, c.Percent)
+		require.True(t, c.CompletedAt.IsZero())
+
+		// Set to completed
+		_, err = UpdateCourseProgressPercent(db, courses[1].ID, 100)
+		require.Nil(t, err)
+
+		c, err = GetCourse(db, courses[1].ID)
+		require.Nil(t, err)
+		require.True(t, c.Started)
+		require.False(t, c.StartedAt.IsZero())
+		require.Equal(t, 100, c.Percent)
+		require.False(t, c.CompletedAt.IsZero())
 	})
 
-	t.Run("started and completed", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+	t.Run("empty id", func(t *testing.T) {
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
-		assets := NewTestAssets(t, db, []*Course{course}, 2)
-
-		// For the first asset, set the progress and set to completed
-		_, err := UpdateAssetProgress(ctx, db, assets[0].ID, 50)
-		require.Nil(t, err)
-		_, err = UpdateAssetCompleted(ctx, db, assets[0].ID, true)
-		require.Nil(t, err)
-
-		dbParams := &database.DatabaseParams{
-			Where: []database.Where{{Column: "id", Value: course.ID}},
-		}
-
-		result, err := GetCourse(ctx, db, dbParams)
-		require.Nil(t, err)
-		assert.Equal(t, course.ID, result.ID)
-		assert.True(t, result.Started)
-		assert.Equal(t, 50, result.Percent)
-	})
-
-	t.Run("relations", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		courses := NewTestCourses(t, db, 5)
-		assets := NewTestAssets(t, db, courses, 2)
-		attachments := NewTestAttachments(t, db, assets, 2)
-
-		// ----------------------------
-		// Assets relation
-		// ----------------------------
-		dbParams := &database.DatabaseParams{
-			Where:    []database.Where{{Column: "id", Value: courses[2].ID}},
-			Relation: []database.Relation{{Struct: "Assets"}},
-		}
-
-		result, err := GetCourse(ctx, db, dbParams)
-		require.Nil(t, err)
-		assert.Equal(t, courses[2].ID, result.ID)
-
-		// Assert the assets
-		require.NotNil(t, result.Assets)
-		require.Len(t, result.Assets, 2)
-		assert.Equal(t, assets[4].ID, result.Assets[0].ID)
-
-		// Asset the attachments for the first asset is nil
-		assert.Nil(t, result.Assets[0].Attachments)
-
-		// ----------------------------
-		// Assets and attachments relation
-		// ----------------------------
-		dbParams = &database.DatabaseParams{
-			Where: []database.Where{{Column: "id", Value: courses[3].ID}},
-			Relation: []database.Relation{
-				{Struct: "Assets", OrderBy: []string{"chapter asc", "prefix asc"}},
-				{Struct: "Assets.Attachments"},
-			},
-		}
-
-		result, err = GetCourse(ctx, db, dbParams)
-		require.Nil(t, err)
-		assert.Equal(t, courses[3].ID, result.ID)
-
-		// Assert the assets
-		require.NotNil(t, result.Assets)
-		require.Len(t, result.Assets, 2)
-		assert.Equal(t, assets[6].ID, result.Assets[0].ID)
-
-		// Asset the attachments
-		assert.NotNil(t, result.Assets[0].Attachments)
-		assert.Len(t, result.Assets[0].Attachments, 2)
-		assert.Equal(t, attachments[12].ID, result.Assets[0].Attachments[0].ID)
-	})
-
-	t.Run("relations orderBy", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		courses := NewTestCourses(t, db, 5)
-		assets := NewTestAssets(t, db, courses, 2)
-		attachments := NewTestAttachments(t, db, assets, 2)
-
-		// ----------------------------
-		// Assets relation
-		// ----------------------------
-		dbParams := &database.DatabaseParams{
-			Where:    []database.Where{{Column: "id", Value: courses[2].ID}},
-			Relation: []database.Relation{{Struct: "Assets", OrderBy: []string{"created_at desc"}}},
-		}
-
-		result, err := GetCourse(ctx, db, dbParams)
-		require.Nil(t, err)
-		assert.Equal(t, courses[2].ID, result.ID)
-
-		// Assert the assets. The last asset created (for this course) should be the first item in
-		// the assets slice
-		require.NotNil(t, result.Assets)
-		require.Len(t, result.Assets, 2)
-		assert.Equal(t, assets[5].ID, result.Assets[0].ID)
-		assert.Equal(t, assets[4].ID, result.Assets[1].ID)
-
-		// Asset the attachments for the first asset is nil
-		assert.Nil(t, result.Assets[0].Attachments)
-
-		// ----------------------------
-		// Assets and attachments relation
-		// ----------------------------
-		dbParams = &database.DatabaseParams{
-			Where:    []database.Where{{Column: "id", Value: courses[3].ID}},
-			Relation: []database.Relation{{Struct: "Assets"}, {Struct: "Assets.Attachments", OrderBy: []string{"created_at desc"}}},
-		}
-
-		result, err = GetCourse(ctx, db, dbParams)
-		require.Nil(t, err)
-		assert.Equal(t, courses[3].ID, result.ID)
-
-		// Assert the assets
-		require.NotNil(t, result.Assets)
-		require.Len(t, result.Assets, 2)
-		assert.Equal(t, assets[6].ID, result.Assets[0].ID)
-
-		// Asset the attachments. The last attachment created (for this course) should be the
-		// first item in the result slice
-		assert.NotNil(t, result.Assets[0].Attachments)
-		assert.Len(t, result.Assets[0].Attachments, 2)
-		assert.Equal(t, attachments[13].ID, result.Assets[0].Attachments[0].ID)
-		assert.Equal(t, attachments[12].ID, result.Assets[0].Attachments[1].ID)
+		c, err := GetCourse(db, "")
+		require.EqualError(t, err, "id cannot be empty")
+		assert.Nil(t, c)
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := db.DB().NewDropTable().Model((*Course)(nil)).Exec(ctx)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + TableCourses())
 		require.Nil(t, err)
 
-		dbParams := &database.DatabaseParams{Where: []database.Where{{Column: "id", Value: "1"}}}
-		_, err = GetCourse(ctx, db, dbParams)
-		require.ErrorContains(t, err, "no such table: courses")
-	})
-
-	t.Run("missing where clause", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
-		require.Nil(t, err)
-
-		_, err = GetCourse(ctx, db, nil)
-		require.ErrorContains(t, err, "where clause required")
-	})
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func Test_GetCourseById(t *testing.T) {
-	t.Run("not found", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		course, err := GetCourseById(ctx, db, nil, "1")
-		assert.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, course)
-	})
-
-	t.Run("found", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		courses := NewTestCourses(t, db, 5)
-		NewTestScans(t, db, courses)
-
-		result, err := GetCourseById(ctx, db, nil, courses[2].ID)
-		require.Nil(t, err)
-		assert.Equal(t, courses[2].ID, result.ID)
-		assert.Equal(t, courses[2].Title, result.Title)
-		assert.Equal(t, courses[2].Path, result.Path)
-		assert.Empty(t, courses[2].CardPath)
-		assert.Zero(t, courses[2].Percent)
-		assert.False(t, courses[2].CreatedAt.IsZero())
-		assert.False(t, courses[2].UpdatedAt.IsZero())
-
-		// Scan status
-		require.NotEmpty(t, result.ScanStatus)
-		assert.Equal(t, "waiting", result.ScanStatus)
-
-		// Relations are empty
-		assert.Nil(t, courses[2].Assets)
-	})
-
-	t.Run("started and completed", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		course := NewTestCourses(t, db, 1)[0]
-		assets := NewTestAssets(t, db, []*Course{course}, 2)
-
-		// For the first asset, set the progress and set to completed
-		_, err := UpdateAssetProgress(ctx, db, assets[0].ID, 50)
-		require.Nil(t, err)
-		_, err = UpdateAssetCompleted(ctx, db, assets[0].ID, true)
-		require.Nil(t, err)
-
-		result, err := GetCourseById(ctx, db, nil, course.ID)
-		require.Nil(t, err)
-		assert.Equal(t, course.ID, result.ID)
-		assert.True(t, result.Started)
-		assert.Equal(t, 50, result.Percent)
-	})
-
-	t.Run("relations", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		courses := NewTestCourses(t, db, 5)
-		assets := NewTestAssets(t, db, courses, 2)
-		attachments := NewTestAttachments(t, db, assets, 2)
-
-		// ----------------------------
-		// Assets relation
-		// ----------------------------
-		dbParams := &database.DatabaseParams{Relation: []database.Relation{{Struct: "Assets"}}}
-
-		result, err := GetCourseById(ctx, db, dbParams, courses[2].ID)
-		require.Nil(t, err)
-		assert.Equal(t, courses[2].ID, result.ID)
-
-		// Assert the assets
-		require.NotNil(t, result.Assets)
-		require.Len(t, result.Assets, 2)
-		assert.Equal(t, assets[4].ID, result.Assets[0].ID)
-
-		// Asset the attachments for the first asset is nil
-		assert.Nil(t, result.Assets[0].Attachments)
-
-		// ----------------------------
-		// Assets and attachments relation
-		// ----------------------------
-		dbParams = &database.DatabaseParams{Relation: []database.Relation{{Struct: "Assets"}, {Struct: "Assets.Attachments"}}}
-
-		result, err = GetCourseById(ctx, db, dbParams, courses[3].ID)
-		require.Nil(t, err)
-		assert.Equal(t, courses[3].ID, result.ID)
-
-		// Assert the assets
-		require.NotNil(t, result.Assets)
-		require.Len(t, result.Assets, 2)
-		assert.Equal(t, assets[6].ID, result.Assets[0].ID)
-
-		// Asset the attachments
-		assert.NotNil(t, result.Assets[0].Attachments)
-		assert.Len(t, result.Assets[0].Attachments, 2)
-		assert.Equal(t, attachments[12].ID, result.Assets[0].Attachments[0].ID)
-	})
-
-	t.Run("db error", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		_, err := db.DB().NewDropTable().Model((*Course)(nil)).Exec(ctx)
-		require.Nil(t, err)
-
-		_, err = GetCourseById(ctx, db, nil, "1")
-		require.ErrorContains(t, err, "no such table: courses")
+		_, err = GetCourse(db, "1234")
+		require.ErrorContains(t, err, "no such table: "+TableCourses())
 	})
 }
 
@@ -659,57 +341,63 @@ func Test_GetCourseById(t *testing.T) {
 
 func Test_CreateCourse(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		course := &Course{Title: "Course 1", Path: "/course1"}
+		c := NewTestCourses(t, nil, 1)[0]
 
-		err := CreateCourse(ctx, db, course)
+		err := CreateCourse(db, c)
 		require.Nil(t, err)
-		assert.NotEmpty(t, course.ID)
-		assert.Zero(t, course.Percent)
-		assert.Empty(t, course.CardPath)
-		assert.Empty(t, course.ScanStatus)
-		assert.False(t, course.CreatedAt.IsZero())
-		assert.False(t, course.UpdatedAt.IsZero())
 
-		count, err := CountCourses(ctx, db, nil)
+		newC, err := GetCourse(db, c.ID)
 		require.Nil(t, err)
-		assert.Equal(t, 1, count)
+		assert.NotEmpty(t, newC.ID)
+		assert.Equal(t, c.Title, newC.Title)
+		assert.Equal(t, c.Path, newC.Path)
+		assert.Empty(t, newC.CardPath)
+		assert.False(t, newC.CreatedAt.IsZero())
+		assert.False(t, newC.UpdatedAt.IsZero())
+		//Scan status
+		assert.Empty(t, newC.ScanStatus)
+		// Progress
+		assert.False(t, newC.Started)
+		assert.True(t, newC.StartedAt.IsZero())
+		assert.Zero(t, newC.Percent)
+		assert.True(t, newC.CompletedAt.IsZero())
 	})
 
 	t.Run("duplicate paths", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, nil, 1)[0]
+		c := NewTestCourses(t, nil, 1)[0]
 
-		err := CreateCourse(ctx, db, course)
+		err := CreateCourse(db, c)
 		require.Nil(t, err)
-		assert.NotEmpty(t, course.ID)
 
-		err = CreateCourse(ctx, db, course)
-		assert.ErrorContains(t, err, "UNIQUE constraint failed: courses.path")
+		err = CreateCourse(db, c)
+		assert.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.path", TableCourses()))
 	})
 
 	t.Run("constraint errors", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		// Path
-		course := &Course{Title: "Course 1"}
-		err := CreateCourse(ctx, db, course)
-		assert.ErrorContains(t, err, "NOT NULL constraint failed: courses.path")
+		// No title
+		c := &Course{}
+		assert.ErrorContains(t, CreateCourse(db, c), fmt.Sprintf("NOT NULL constraint failed: %s.title", TableCourses()))
+		c.Title = ""
+		assert.ErrorContains(t, CreateCourse(db, c), fmt.Sprintf("NOT NULL constraint failed: %s.title", TableCourses()))
+		c.Title = "Course 1"
 
-		// Title
-		course = &Course{Path: "/course 1"}
-		err = CreateCourse(ctx, db, course)
-		assert.ErrorContains(t, err, "NOT NULL constraint failed: courses.title")
+		// No path
+		assert.ErrorContains(t, CreateCourse(db, c), fmt.Sprintf("NOT NULL constraint failed: %s.path", TableCourses()))
+		c.Path = ""
+		assert.ErrorContains(t, CreateCourse(db, c), fmt.Sprintf("NOT NULL constraint failed: %s.path", TableCourses()))
+		c.Path = "/course 1"
 
 		// Success
-		course = &Course{Title: "Course 1", Path: "/course 1"}
-		err = CreateCourse(ctx, db, course)
-		assert.Nil(t, err)
+		assert.Nil(t, CreateCourse(db, c))
 	})
 }
 
@@ -717,193 +405,58 @@ func Test_CreateCourse(t *testing.T) {
 
 func Test_UpdateCourseCardPath(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
 		origCourse := NewTestCourses(t, db, 1)[0]
 		require.Empty(t, origCourse.CardPath)
 
-		// Give time to allow `updated at` to be different
-		time.Sleep(time.Millisecond * 1)
-
-		// Update the card path
-		updatedCourse, err := UpdateCourseCardPath(ctx, db, origCourse.ID, "/path/to/card.jpg")
+		updatedCourse, err := UpdateCourseCardPath(db, origCourse.ID, "/path/to/card.jpg")
 		require.Nil(t, err)
 		require.Equal(t, "/path/to/card.jpg", updatedCourse.CardPath)
 		assert.NotEqual(t, origCourse.UpdatedAt, updatedCourse.UpdatedAt)
 	})
 
+	t.Run("empty id", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		updatedCourse, err := UpdateCourseCardPath(db, "", "")
+		assert.EqualError(t, err, "id cannot be empty")
+		assert.Nil(t, updatedCourse)
+	})
+
 	t.Run("no change", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
 		origCourse := NewTestCourses(t, db, 1)[0]
 		require.Empty(t, origCourse.CardPath)
 
-		// Give time to allow `updated at` to be different
-		time.Sleep(time.Millisecond * 1)
-
-		updatedCourse, err := UpdateCourseCardPath(ctx, db, origCourse.ID, "")
+		updatedCourse, err := UpdateCourseCardPath(db, origCourse.ID, "")
 		require.Nil(t, err)
 		assert.Empty(t, updatedCourse.CardPath)
 		assert.Equal(t, origCourse.UpdatedAt.String(), updatedCourse.UpdatedAt.String())
 	})
 
-	t.Run("empty id", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		updatedCourse, err := UpdateCourseCardPath(ctx, db, "", "/path/to/card.jpg")
-		assert.ErrorContains(t, err, "course ID cannot be empty")
-		assert.Nil(t, updatedCourse)
-	})
-
 	t.Run("no course with id", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		updatedCourse, err := UpdateCourseCardPath(ctx, db, "1234", "/path/to/card.jpg")
+		updatedCourse, err := UpdateCourseCardPath(db, "1234", "/path/to/card.jpg")
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, updatedCourse)
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		origCourse := NewTestCourses(t, db, 1)[0]
-
-		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + TableCourses())
 		require.Nil(t, err)
 
-		updatedCourse, err := UpdateCourseCardPath(ctx, db, origCourse.ID, "/path/to/card.jpg")
-		require.ErrorContains(t, err, "no such table: courses")
-		assert.Nil(t, updatedCourse)
-	})
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func Test_UpdateCoursePercent(t *testing.T) {
-	t.Run("success (10)", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		origCourse := NewTestCourses(t, db, 1)[0]
-		require.Zero(t, origCourse.Percent)
-		require.Empty(t, origCourse.CompletedAt)
-
-		// Give time to allow `updated at` to be different
-		time.Sleep(time.Millisecond * 1)
-
-		c, err := UpdateCoursePercent(ctx, db, origCourse.ID, 10)
-		require.Nil(t, err)
-		require.NotNil(t, c)
-		assert.Equal(t, 10, c.Percent)
-		assert.Empty(t, c.CompletedAt)
-		assert.NotEqual(t, origCourse.UpdatedAt, c.UpdatedAt)
-	})
-
-	t.Run("success (100)", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		origCourse := NewTestCourses(t, db, 1)[0]
-		require.Zero(t, origCourse.Percent)
-		require.Empty(t, origCourse.CompletedAt)
-
-		// Give time to allow `updated at` to be different
-		time.Sleep(time.Millisecond * 1)
-
-		c, err := UpdateCoursePercent(ctx, db, origCourse.ID, 100)
-		require.Nil(t, err)
-		require.NotNil(t, c)
-		assert.Equal(t, 100, c.Percent)
-		assert.NotEmpty(t, c.CompletedAt)
-		assert.NotEqual(t, origCourse.UpdatedAt, c.UpdatedAt)
-	})
-
-	t.Run("out of bounds", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		origCourse := NewTestCourses(t, db, 1)[0]
-		require.Zero(t, origCourse.Percent)
-		require.Empty(t, origCourse.CompletedAt)
-
-		// ----------------------------
-		// Below 0
-		// ----------------------------
-
-		// Give time to allow `updated at` to be different
-		time.Sleep(time.Millisecond * 1)
-
-		c1, err := UpdateCoursePercent(ctx, db, origCourse.ID, -1)
-		require.Nil(t, err)
-		assert.Zero(t, c1.Percent)
-		assert.Empty(t, c1.CompletedAt)
-		assert.NotEqual(t, origCourse.UpdatedAt.String(), c1.UpdatedAt.String())
-
-		// ----------------------------
-		// Above 100
-		// ----------------------------
-
-		// Give time to allow `updated at` to be different
-		time.Sleep(time.Millisecond * 1)
-
-		c2, err := UpdateCoursePercent(ctx, db, origCourse.ID, 200)
-		require.Nil(t, err)
-		assert.Equal(t, 100, c2.Percent)
-		assert.NotEmpty(t, c2.CompletedAt)
-		assert.NotEqual(t, c1.UpdatedAt.String(), c2.UpdatedAt.String())
-	})
-
-	t.Run("no change", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		origCourse := NewTestCourses(t, db, 1)[0]
-		require.Zero(t, origCourse.Percent)
-		require.Empty(t, origCourse.CompletedAt)
-
-		// Give time to allow `updated at` to be different
-		time.Sleep(time.Millisecond * 1)
-
-		c, err := UpdateCoursePercent(ctx, db, origCourse.ID, 0)
-		require.Nil(t, err)
-		assert.Zero(t, c.Percent)
-		assert.Empty(t, c.CompletedAt)
-		assert.Equal(t, origCourse.UpdatedAt.String(), c.UpdatedAt.String())
-	})
-
-	t.Run("empty id", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		c, err := UpdateCoursePercent(ctx, db, "", 10)
-		assert.ErrorContains(t, err, "course ID cannot be empty")
-		assert.Nil(t, c)
-	})
-
-	t.Run("no course with id", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		c, err := UpdateCoursePercent(ctx, db, "1234", 10)
-		assert.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, c)
-	})
-
-	t.Run("db error", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
-		defer teardown(t)
-
-		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
-		require.Nil(t, err)
-
-		c, err := UpdateCoursePercent(ctx, db, "1234", 10)
-		require.ErrorContains(t, err, "no such table: courses")
-		assert.Nil(t, c)
+		_, err = UpdateCourseCardPath(db, "1234", "/path/to/card.jpg")
+		require.ErrorContains(t, err, "no such table: "+TableCourses())
 	})
 }
 
@@ -911,49 +464,43 @@ func Test_UpdateCoursePercent(t *testing.T) {
 
 func Test_UpdateCourseUpdatedAt(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
 		origCourse := NewTestCourses(t, db, 1)[0]
-		require.Empty(t, origCourse.CompletedAt)
 
-		// Give time to allow `updated at` to be different
-		time.Sleep(time.Millisecond * 1)
-
-		updatedCourse, err := UpdateCourseUpdatedAt(ctx, db, origCourse.ID)
+		updatedCourse, err := UpdateCourseUpdatedAt(db, origCourse.ID)
 		require.Nil(t, err)
-		require.NotNil(t, updatedCourse)
 		assert.NotEqual(t, origCourse.UpdatedAt, updatedCourse.UpdatedAt)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		updatedCourse, err := UpdateCourseUpdatedAt(ctx, db, "")
-		assert.ErrorContains(t, err, "course ID cannot be empty")
+		updatedCourse, err := UpdateCourseUpdatedAt(db, "")
+		assert.EqualError(t, err, "id cannot be empty")
 		assert.Nil(t, updatedCourse)
 	})
 
 	t.Run("no course with id", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		updatedCourse, err := UpdateCourseUpdatedAt(ctx, db, "1234")
+		updatedCourse, err := UpdateCourseUpdatedAt(db, "1234")
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, updatedCourse)
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + TableCourses())
 		require.Nil(t, err)
 
-		updatedCourse, err := UpdateCourseUpdatedAt(ctx, db, "1234")
-		require.ErrorContains(t, err, "no such table: courses")
-		assert.Nil(t, updatedCourse)
+		_, err = UpdateCourseUpdatedAt(db, "1234")
+		require.ErrorContains(t, err, "no such table: "+TableCourses())
 	})
 }
 
@@ -961,31 +508,39 @@ func Test_UpdateCourseUpdatedAt(t *testing.T) {
 
 func Test_DeleteCourse(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
 		course := NewTestCourses(t, db, 1)[0]
 
-		count, err := DeleteCourse(ctx, db, course.ID)
+		err := DeleteCourse(db, course.ID)
 		require.Nil(t, err)
-		assert.Equal(t, 1, count)
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		err := DeleteCourse(db, "")
+		assert.ErrorContains(t, err, "id cannot be empty")
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		err := DeleteCourse(db, "1234")
+		assert.Nil(t, err)
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, db, ctx, teardown := setup(t)
+		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		// Invalid ID
-		count, err := DeleteCourse(ctx, db, "1")
-		require.Nil(t, err)
-		assert.Equal(t, 0, count)
-
-		// Drop the table
-		_, err = db.DB().NewDropTable().Model(&Course{}).Exec(ctx)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + TableCourses())
 		require.Nil(t, err)
 
-		count, err = DeleteCourse(ctx, db, "1")
-		assert.ErrorContains(t, err, "no such table: courses")
-		assert.Equal(t, 0, count)
+		err = DeleteCourse(db, "1234")
+		require.ErrorContains(t, err, "no such table: "+TableCourses())
 	})
 }

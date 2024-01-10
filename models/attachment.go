@@ -1,13 +1,17 @@
 package models
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Defines a model for the table `attachments`
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 import (
-	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/utils/security"
 	"github.com/stretchr/testify/require"
@@ -15,156 +19,108 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Attachments defines the model for an attachment
+//
+// As this changes, update `scanAttachmentRow()`
 type Attachment struct {
 	BaseModel
-	CourseID string
-	AssetID  string
-	Title    string `bun:",notnull,default:null"`
-	Path     string `bun:",unique,notnull,default:null"`
 
-	// Belongs to
-	Course *Course `bun:"rel:belongs-to,join:course_id=id"`
-	Asset  *Asset  `bun:"rel:belongs-to,join:asset_id=id"`
+	AssetID string
+	Title   string
+	Path    string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// CountAttachments returns the number of attachments
-func CountAttachments(ctx context.Context, db database.Database, params *database.DatabaseParams) (int, error) {
-	q := db.DB().NewSelect().Model((*Attachment)(nil))
+// TableAttachments returns the table name for the attachments table
+func TableAttachments() string {
+	return "attachments"
+}
 
-	if params != nil && params.Where != nil {
-		q = selectWhere(q, params.Where, "attachment")
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// CountAttachments counts the number of attachments
+func CountAttachments(db database.Database, params *database.DatabaseParams) (int, error) {
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select("COUNT(*)").
+		From(TableAttachments())
+
+	// Add where clauses if necessary
+	if params != nil && params.Where != "" {
+		builder = builder.Where(params.Where)
 	}
 
-	return q.Count(ctx)
+	// Build the query
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return -1, err
+	}
+
+	// Execute the query
+	var count int
+	err = db.QueryRow(query, args...).Scan(&count)
+	if err != nil {
+		return -1, err
+	}
+
+	return count, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetAttachments returns a slice of attachments
-func GetAttachments(ctx context.Context, db database.Database, params *database.DatabaseParams) ([]*Attachment, error) {
+// GetAttachments selects attachments
+func GetAttachments(db database.Database, params *database.DatabaseParams) ([]*Attachment, error) {
 	var attachments []*Attachment
 
-	q := db.DB().NewSelect().Model(&attachments)
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select(TableAttachments() + ".*").
+		From(TableAttachments())
 
 	if params != nil {
-		// Pagination
+		// ORDER BY
+		if params != nil && len(params.OrderBy) > 0 {
+			builder = builder.OrderBy(params.OrderBy...)
+		}
+
+		// WHERE
+		if params.Where != "" {
+			builder = builder.Where(params.Where)
+		}
+
+		// PAGINATION
 		if params.Pagination != nil {
-			if count, err := CountAttachments(ctx, db, params); err != nil {
+			var err error
+			if builder, err = paginate(db, params, builder, CountAttachments); err != nil {
 				return nil, err
-			} else {
-				params.Pagination.SetCount(count)
-			}
-
-			q = q.Offset(params.Pagination.Offset()).Limit(params.Pagination.Limit())
-		}
-
-		if params.Relation != nil {
-			q = selectRelation(q, params.Relation)
-		}
-
-		// Order by
-		if len(params.OrderBy) > 0 {
-			selectOrderBy(q, params.OrderBy, "attachment")
-		}
-
-		// Where
-		if params.Where != nil {
-			if params.Where != nil {
-				q = selectWhere(q, params.Where, "attachment")
 			}
 		}
 	}
 
-	err := q.Scan(ctx)
-
-	return attachments, err
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// GetAttachment returns an attachment based upon the where clause in the database params
-func GetAttachment(ctx context.Context, db database.Database, params *database.DatabaseParams) (*Attachment, error) {
-	if params == nil || params.Where == nil {
-		return nil, errors.New("where clause required")
-	}
-
-	attachment := &Attachment{}
-
-	q := db.DB().NewSelect().Model(attachment)
-
-	// Where
-	if params.Where != nil {
-		q = selectWhere(q, params.Where, "attachment")
-	}
-
-	// Relations
-	if params.Relation != nil {
-		q = selectRelation(q, params.Relation)
-	}
-
-	if err := q.Scan(ctx); err != nil {
+	query, args, err := builder.ToSql()
+	if err != nil {
 		return nil, err
 	}
 
-	return attachment, nil
-}
+	fmt.Println(query, args) // tMP
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// GetAttachmentById returns an attachment for the given ID
-func GetAttachmentById(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) (*Attachment, error) {
-	attachment := &Attachment{}
-
-	q := db.DB().NewSelect().Model(attachment).Where("attachment.id = ?", id)
-
-	if params != nil && params.Relation != nil {
-		q = selectRelation(q, params.Relation)
-	}
-
-	if err := q.Scan(ctx); err != nil {
+	rows, err := db.Query(query, args...)
+	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	return attachment, nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// GetAttachmentById returns a slice of attachments for the given asset ID
-func GetAttachmentsByAssetId(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) ([]*Attachment, error) {
-	var attachments []*Attachment
-
-	q := db.DB().NewSelect().Model(&attachments).Where("attachment.asset_id = ?", id)
-
-	if params != nil {
-		// Pagination
-		if params.Pagination != nil {
-			// Set the where to the asset ID
-			params.Where = []database.Where{{Column: "attachment.asset_id", Value: id}}
-
-			if count, err := CountAttachments(ctx, db, params); err != nil {
-				return nil, err
-			} else {
-				params.Pagination.SetCount(count)
-			}
-
-			q = q.Offset(params.Pagination.Offset()).Limit(params.Pagination.Limit())
+	for rows.Next() {
+		a, err := scanAttachmentRow(rows)
+		if err != nil {
+			return nil, err
 		}
 
-		// Order by
-		if len(params.OrderBy) > 0 {
-			selectOrderBy(q, params.OrderBy, "attachment")
-		}
-
-		// Relation
-		if params.Relation != nil {
-			q = selectRelation(q, params.Relation)
-		}
+		attachments = append(attachments, a)
 	}
 
-	if err := q.Scan(ctx); err != nil {
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
@@ -173,108 +129,133 @@ func GetAttachmentsByAssetId(ctx context.Context, db database.Database, params *
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetAttachmentsByCourseId returns a slice of attachments for the given course ID
-func GetAttachmentsByCourseId(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) ([]*Attachment, error) {
-	var attachments []*Attachment
-
-	q := db.DB().NewSelect().Model(&attachments).Where("attachment.course_id = ?", id)
-
-	if params != nil {
-		// Pagination
-		if params.Pagination != nil {
-			// Set the where to the course ID
-			params.Where = []database.Where{{Column: "attachment.course_id", Value: id}}
-
-			if count, err := CountAttachments(ctx, db, params); err != nil {
-				return nil, err
-			} else {
-				params.Pagination.SetCount(count)
-			}
-
-			q = q.Offset(params.Pagination.Offset()).Limit(params.Pagination.Limit())
-		}
-
-		// Order by
-		if len(params.OrderBy) > 0 {
-			selectOrderBy(q, params.OrderBy, "attachment")
-		}
-
-		// Relation
-		if params.Relation != nil {
-			q = selectRelation(q, params.Relation)
-		}
+// GetAttachment selects an attachment for the given ID
+func GetAttachment(db database.Database, id string) (*Attachment, error) {
+	if id == "" {
+		return nil, errors.New("id cannot be empty")
 	}
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select(TableAttachments() + ".*").
+		From(TableAttachments()).
+		Where(sq.Eq{TableAttachments() + ".id": id})
 
-	if err := q.Scan(ctx); err != nil {
+	query, args, err := builder.ToSql()
+	if err != nil {
 		return nil, err
 	}
 
-	return attachments, nil
+	row := db.QueryRow(query, args...)
+	if row.Err() != nil {
+		return nil, row.Err()
+	}
+
+	attachment, err := scanAttachmentRow(row)
+	if err != nil {
+		return nil, err
+	}
+
+	return attachment, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // CreateAttachment inserts a new attachment
-func CreateAttachment(ctx context.Context, db database.Database, attachment *Attachment) error {
-	attachment.RefreshId()
-	attachment.RefreshCreatedAt()
-	attachment.RefreshUpdatedAt()
+func CreateAttachment(db database.Database, a *Attachment) error {
+	a.RefreshId()
+	a.RefreshCreatedAt()
+	a.RefreshUpdatedAt()
 
-	_, err := db.DB().NewInsert().Model(attachment).Exec(ctx)
+	builder := sq.StatementBuilder.
+		Insert(TableAttachments()).
+		Columns("id", "asset_id", "title", "path", "created_at", "updated_at").
+		Values(a.ID, NilStr(a.AssetID), NilStr(a.Title), NilStr(a.Path), a.CreatedAt, a.UpdatedAt)
+
+	query, args, err := builder.ToSql()
 	if err != nil {
 		return err
 	}
 
-	return nil
+	_, err = db.Exec(query, args...)
+	return err
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // DeleteAttachment deletes an attachment with the given ID
-func DeleteAttachment(ctx context.Context, db database.Database, id string) (int, error) {
-	attachment := &Attachment{}
-	attachment.SetId(id)
-
-	if res, err := db.DB().NewDelete().Model(attachment).WherePK().Exec(ctx); err != nil {
-		return 0, err
-	} else {
-		count, _ := res.RowsAffected()
-		return int(count), err
+func DeleteAttachment(db database.Database, id string) error {
+	if id == "" {
+		return errors.New("id cannot be empty")
 	}
+
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Delete(TableAttachments()).
+		Where(sq.Eq{"id": id})
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(query, args...)
+	return err
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // NewTestAttachments creates n number of attachments for each asset in the slice. If a db is
-// provided, the attachments will be inserted into the db
+// provided, a DB insert will be performed
 //
 // THIS IS FOR TESTING PURPOSES
 func NewTestAttachments(t *testing.T, db database.Database, assets []*Asset, attachmentsPerAsset int) []*Attachment {
 	attachments := []*Attachment{}
+
 	for i := 0; i < len(assets); i++ {
 		for j := 0; j < attachmentsPerAsset; j++ {
-			title := fmt.Sprintf("%s.txt", security.PseudorandomString(8))
-
-			a := &Attachment{
-				CourseID: assets[i].CourseID,
-				AssetID:  assets[i].ID,
-				Title:    title,
-				Path:     fmt.Sprintf("%s/%d %s", filepath.Dir(assets[i].Path), assets[i].Prefix, title),
-			}
+			a := &Attachment{}
 
 			a.RefreshId()
 			a.RefreshCreatedAt()
 			a.RefreshUpdatedAt()
 
+			a.AssetID = assets[i].ID
+			a.Title = security.PseudorandomString(6)
+			a.Path = fmt.Sprintf("%s/%d %s", filepath.Dir(assets[i].Path), assets[i].Prefix.Int16, a.Title)
+
 			if db != nil {
-				_, err := db.DB().NewInsert().Model(a).Exec(context.Background())
+				err := CreateAttachment(db, a)
 				require.Nil(t, err)
+
+				// This allows the created/updated times to be different when inserting multiple rows
+				time.Sleep(time.Millisecond * 1)
 			}
 
 			attachments = append(attachments, a)
-			time.Sleep(1 * time.Millisecond)
 		}
 	}
 
 	return attachments
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// scanAttachmentRow scans an attachment row
+func scanAttachmentRow(scannable Scannable) (*Attachment, error) {
+	var a Attachment
+
+	err := scannable.Scan(
+		&a.ID,
+		&a.AssetID,
+		&a.Title,
+		&a.Path,
+		&a.CreatedAt,
+		&a.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &a, nil
 }

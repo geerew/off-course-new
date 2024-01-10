@@ -1,180 +1,182 @@
 package models
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Defines a model for the table `assets`
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 import (
-	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"math/rand"
 	"testing"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/utils/security"
 	"github.com/geerew/off-course/utils/types"
-	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Asset defines the model for a course
+//
+// As this changes, update `scanAssetRow()`
 type Asset struct {
 	BaseModel
-	CourseID    string `bun:",notnull"`
-	Title       string `bun:",notnull,default:null"`
-	Prefix      int    `bun:",notnull,default:null"`
-	Chapter     string
-	Type        types.Asset `bun:",notnull,default:null"`
-	Path        string      `bun:",unique,notnull,default:null"`
-	Progress    int         `bun:",default:0"`
+
+	CourseID string
+	Title    string
+	Prefix   sql.NullInt16
+	Chapter  string
+	Type     types.Asset
+	Path     string
+
+	// --------------------------------
+	// Not in this table, but added via a join
+	// --------------------------------
+
+	// Asset Progress
+	VideoPos    int
 	Completed   bool
 	CompletedAt types.DateTime
 
-	// Belongs to
-	Course *Course `bun:"rel:belongs-to,join:course_id=id"`
+	// Attachments
+	Attachments []*Attachment
+}
 
-	// Has many
-	Attachments []*Attachment `bun:"rel:has-many,join:id=asset_id"`
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TableAssets returns the table name for the assets table
+func TableAssets() string {
+	return "assets"
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // CountAssets counts the number of assets
-func CountAssets(ctx context.Context, db database.Database, params *database.DatabaseParams) (int, error) {
-	q := db.DB().NewSelect().Model((*Asset)(nil))
+func CountAssets(db database.Database, params *database.DatabaseParams) (int, error) {
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select("COUNT(*)").
+		From(TableAssets())
 
-	if params != nil && params.Where != nil {
-		q = selectWhere(q, params.Where, "asset")
+	// Add where clauses if necessary
+	if params != nil && params.Where != "" {
+		builder = builder.Where(params.Where)
 	}
 
-	return q.Count(ctx)
+	// Build the query
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return -1, err
+	}
+
+	// Execute the query
+	var count int
+	err = db.QueryRow(query, args...).Scan(&count)
+	if err != nil {
+		return -1, err
+	}
+
+	return count, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GetAssets selects assets
-func GetAssets(ctx context.Context, db database.Database, params *database.DatabaseParams) ([]*Asset, error) {
+//
+// It performs lefts joins
+//   - assets progress table to set `video_pos`, `completed`, and `completed_at`
+//
+// It then gets the attachments for each asset
+func GetAssets(db database.Database, params *database.DatabaseParams) ([]*Asset, error) {
 	var assets []*Asset
 
-	q := db.DB().NewSelect().Model(&assets)
+	cols := []string{
+		TableAssets() + ".*",
+		TableAssetsProgress() + ".video_pos",
+		TableAssetsProgress() + ".completed",
+		TableAssetsProgress() + ".completed_at",
+	}
+
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select(cols...).
+		From(TableAssets()).
+		LeftJoin(TableAssetsProgress() + " ON " + TableAssets() + ".id = " + TableAssetsProgress() + ".asset_id")
 
 	if params != nil {
-		// Pagination
+		// ORDER BY
+		if params != nil && len(params.OrderBy) > 0 {
+			builder = builder.OrderBy(params.OrderBy...)
+		}
+
+		// WHERE
+		if params.Where != "" {
+			builder = builder.Where(params.Where)
+		}
+
+		// PAGINATION
 		if params.Pagination != nil {
-			if count, err := CountAssets(ctx, db, params); err != nil {
+			var err error
+			if builder, err = paginate(db, params, builder, CountAssets); err != nil {
 				return nil, err
-			} else {
-				params.Pagination.SetCount(count)
-			}
-
-			q = q.Offset(params.Pagination.Offset()).Limit(params.Pagination.Limit())
-		}
-
-		if params.Relation != nil {
-			q = selectRelation(q, params.Relation)
-		}
-
-		// Order by
-		if len(params.OrderBy) > 0 {
-			selectOrderBy(q, params.OrderBy, "asset")
-		}
-
-		// Where
-		if params.Where != nil {
-			if params.Where != nil {
-				q = selectWhere(q, params.Where, "asset")
 			}
 		}
 	}
 
-	err := q.Scan(ctx)
-
-	return assets, err
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// GetAsset selects an asset based upon the where clause in the database params
-func GetAsset(ctx context.Context, db database.Database, params *database.DatabaseParams) (*Asset, error) {
-	if params == nil || params.Where == nil {
-		return nil, errors.New("where clause required")
-	}
-
-	asset := &Asset{}
-
-	q := db.DB().NewSelect().Model(asset)
-
-	// Where
-	if params.Where != nil {
-		q = selectWhere(q, params.Where, "asset")
-	}
-
-	// Relations
-	if params.Relation != nil {
-		q = selectRelation(q, params.Relation)
-	}
-
-	if err := q.Scan(ctx); err != nil {
+	query, args, err := builder.ToSql()
+	if err != nil {
 		return nil, err
 	}
 
-	return asset, nil
-}
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	for rows.Next() {
+		a, err := scanAssetRow(rows)
+		if err != nil {
+			return nil, err
+		}
 
-// GetAssetById selects an asset for the given ID
-func GetAssetById(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) (*Asset, error) {
-	asset := &Asset{}
-
-	q := db.DB().NewSelect().Model(asset).Where("asset.id = ?", id)
-
-	if params != nil && params.Relation != nil {
-		q = selectRelation(q, params.Relation)
+		assets = append(assets, a)
 	}
 
-	if err := q.Scan(ctx); err != nil {
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return asset, nil
-}
+	// Get the attachments
+	if len(assets) > 0 {
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// GetAssetById selects assets for the given course ID
-func GetAssetsByCourseId(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) ([]*Asset, error) {
-	var assets []*Asset
-
-	q := db.DB().NewSelect().Model(&assets).Where("asset.course_id = ?", id)
-
-	if params != nil {
-		// Pagination
-		if params.Pagination != nil {
-			// Set the where to the course ID
-			params.Where = []database.Where{{Column: "asset.course_id", Value: id}}
-
-			if count, err := CountAssets(ctx, db, params); err != nil {
-				return nil, err
-			} else {
-				params.Pagination.SetCount(count)
-			}
-
-			q = q.Offset(params.Pagination.Offset()).Limit(params.Pagination.Limit())
+		// Get the asset IDs
+		assetIds := []string{}
+		for _, a := range assets {
+			assetIds = append(assetIds, a.ID)
 		}
 
-		// Order by
-		if len(params.OrderBy) > 0 {
-			selectOrderBy(q, params.OrderBy, "asset")
+		// Get the attachments
+		attachments, err := GetAttachments(db, &database.DatabaseParams{Where: sq.Eq{"asset_id": assetIds}})
+		if err != nil {
+			return nil, err
 		}
 
-		// Relation
-		if params.Relation != nil {
-			q = selectRelation(q, params.Relation)
+		// Store in a map for easy lookup
+		attachmentsMap := map[string][]*Attachment{}
+		for _, a := range attachments {
+			attachmentsMap[a.AssetID] = append(attachmentsMap[a.AssetID], a)
 		}
-	}
 
-	if err := q.Scan(ctx); err != nil {
-		return nil, err
+		// Add attachments to its asset
+		for _, a := range assets {
+			a.Attachments = attachmentsMap[a.ID]
+		}
 	}
 
 	return assets, nil
@@ -182,192 +184,179 @@ func GetAssetsByCourseId(ctx context.Context, db database.Database, params *data
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// GetAsset selects an asset for the given ID
+//
+// It performs a left join to  set `video_pos`, `completed`, and `completed_at` from assets
+// progress and then gets the attachments for the asset
+func GetAsset(db database.Database, id string) (*Asset, error) {
+	if id == "" {
+		return nil, errors.New("id cannot be empty")
+	}
+
+	cols := []string{
+		TableAssets() + ".*",
+		TableAssetsProgress() + ".video_pos",
+		TableAssetsProgress() + ".completed",
+		TableAssetsProgress() + ".completed_at",
+	}
+
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select(cols...).
+		From(TableAssets()).
+		LeftJoin(TableAssetsProgress() + " ON " + TableAssets() + ".id = " + TableAssetsProgress() + ".asset_id").
+		Where(sq.Eq{TableAssets() + ".id": id})
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	row := db.QueryRow(query, args...)
+	if row.Err() != nil {
+		return nil, row.Err()
+	}
+
+	asset, err := scanAssetRow(row)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the attachments
+	attachments, err := GetAttachments(db, &database.DatabaseParams{Where: sq.Eq{"asset_id": asset.ID}})
+	if err != nil {
+		return nil, err
+	}
+
+	asset.Attachments = attachments
+
+	return asset, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // CreateAsset inserts a new asset
-func CreateAsset(ctx context.Context, db database.Database, asset *Asset) error {
-	if asset.Prefix < 0 {
+func CreateAsset(db database.Database, a *Asset) error {
+	if a.Prefix.Valid && a.Prefix.Int16 < 0 {
 		return fmt.Errorf("prefix must be greater than 0")
 	}
 
-	asset.RefreshId()
-	asset.RefreshCreatedAt()
-	asset.RefreshUpdatedAt()
+	a.RefreshId()
+	a.RefreshCreatedAt()
+	a.RefreshUpdatedAt()
 
-	_, err := db.DB().NewInsert().Model(asset).Exec(ctx)
+	builder := sq.StatementBuilder.
+		Insert(TableAssets()).
+		Columns("id", "course_id", "title", "prefix", "chapter", "type", "path", "created_at", "updated_at").
+		Values(a.ID, NilStr(a.CourseID), NilStr(a.Title), a.Prefix, NilStr(a.Chapter), NilStr(a.Type.String()), NilStr(a.Path), a.CreatedAt, a.UpdatedAt)
+
+	query, args, err := builder.ToSql()
 	if err != nil {
 		return err
 	}
 
-	return nil
+	_, err = db.Exec(query, args...)
+	return err
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // DeleteAsset deletes an asset with the given ID
-func DeleteAsset(ctx context.Context, db database.Database, id string) (int, error) {
-	asset := &Asset{}
-	asset.SetId(id)
-
-	if res, err := db.DB().NewDelete().Model(asset).WherePK().Exec(ctx); err != nil {
-		return 0, err
-	} else {
-		count, _ := res.RowsAffected()
-		return int(count), err
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// UpdateAssetProgress updates `progress`
-func UpdateAssetProgress(ctx context.Context, db database.Database, id string, progress int) (*Asset, error) {
-	// Require an ID
+func DeleteAsset(db database.Database, id string) error {
 	if id == "" {
-		return nil, errors.New("asset ID cannot be empty")
+		return errors.New("id cannot be empty")
 	}
 
-	// Get the asset
-	asset, err := GetAssetById(ctx, db, nil, id)
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Delete(TableAssets()).
+		Where(sq.Eq{"id": id})
+
+	query, args, err := builder.ToSql()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// Nothing to do
-	if asset.Progress == progress {
-		return asset, nil
-	}
-
-	// Default to 0
-	if progress < 0 {
-		progress = 0
-	}
-
-	// Set a new timestamp
-	ts := types.NowDateTime()
-
-	if res, err := db.DB().NewUpdate().Model(asset).
-		Set("progress = ?", progress).
-		Set("updated_at = ?", ts).WherePK().Exec(ctx); err != nil {
-		return nil, err
-	} else {
-		count, _ := res.RowsAffected()
-		if count == 0 {
-			return asset, nil
-		}
-	}
-
-	asset.Progress = progress
-	asset.UpdatedAt = ts
-
-	return asset, nil
+	_, err = db.Exec(query, args...)
+	return err
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UpdateAssetCompleted updates `completed` and `completed_at`
-func UpdateAssetCompleted(ctx context.Context, db database.Database, id string, completed bool) (*Asset, error) {
-	// Require an ID
-	if id == "" {
-		return nil, errors.New("asset ID cannot be empty")
-	}
-
-	// Get the asset
-	asset, err := GetAssetById(ctx, db, nil, id)
-	if err != nil {
-		return nil, err
-	}
-
-	// Nothing to do
-	if asset.Completed == completed {
-		return asset, nil
-	}
-
-	// Determine the completed at time based upon the completed flag
-	var completedAt types.DateTime
-	if completed {
-		completedAt = types.NowDateTime()
-	} else {
-		completedAt = types.DateTime{}
-	}
-
-	// Set a new timestamp
-	ts := types.NowDateTime()
-
-	if res, err := db.DB().NewUpdate().Model(asset).
-		Set("completed = ?", completed).
-		Set("completed_at = ?", completedAt).
-		Set("updated_at = ?", ts).WherePK().Exec(ctx); err != nil {
-		return nil, err
-	} else {
-		count, _ := res.RowsAffected()
-		if count == 0 {
-			return asset, nil
-		}
-	}
-
-	asset.Completed = completed
-	asset.CompletedAt = completedAt
-	asset.UpdatedAt = ts
-
-	// Update the course percent by first calculating the percentage of completed assets and then
-	// updating the course
-	var percent float64
-
-	// Calculate the percentage of completed assets. IF this fails just log the error and return
-	if err = db.DB().NewSelect().
-		Table("assets").
-		ColumnExpr("CAST(COUNT(CASE WHEN completed THEN 1 END) * 100 AS FLOAT) / COUNT(*) as completion_percentage").
-		Where("course_id = ?", asset.CourseID).
-		Scan(ctx, &percent); err != nil {
-		log.Err(err).Msg("failed to calculate the percentage of completed assets")
-		return asset, nil
-	}
-
-	// Update the course percent. If this fails just log the error and return
-	if _, err = UpdateCoursePercent(ctx, db, asset.CourseID, int(percent)); err != nil {
-		log.Err(err).Msg("failed to update the course `percent`")
-		return asset, nil
-	}
-
-	return asset, nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// NewTestAssets creates n number of assets for each course in the slice. If a db is provided, the
-// assets will be inserted into the db
+// NewTestAssets creates n number of assets for each course in the slice. If a db is provided, a DB
+// insert will be performed
 //
 // THIS IS FOR TESTING PURPOSES
 func NewTestAssets(t *testing.T, db database.Database, courses []*Course, assetsPerCourse int) []*Asset {
 	assets := []*Asset{}
+
 	for i := 0; i < len(courses); i++ {
 		for j := 0; j < assetsPerCourse; j++ {
-			title := fmt.Sprintf("%s.mp4", security.PseudorandomString(8))
-			prefix := rand.Intn(100-1) + 1
-			chapter := fmt.Sprintf("%d chapter %s", j, security.PseudorandomString(2))
-
-			a := &Asset{
-				CourseID:  courses[i].ID,
-				Title:     title,
-				Prefix:    prefix,
-				Chapter:   chapter,
-				Type:      *types.NewAsset("mp4"),
-				Path:      fmt.Sprintf("%s/%s/%d %s", courses[i].Path, chapter, prefix, title),
-				Progress:  0,
-				Completed: false,
-			}
+			a := &Asset{}
 
 			a.RefreshId()
 			a.RefreshCreatedAt()
 			a.RefreshUpdatedAt()
 
+			a.CourseID = courses[i].ID
+			a.Title = security.PseudorandomString(6)
+			a.Prefix = sql.NullInt16{Int16: int16(rand.Intn(100-1) + 1), Valid: true}
+			a.Chapter = fmt.Sprintf("%d chapter %s", j+1, security.PseudorandomString(2))
+			a.Type = *types.NewAsset("mp4")
+			a.Path = fmt.Sprintf("%s/%s/%d %s.mp4", courses[i].Path, a.Chapter, a.Prefix.Int16, a.Title)
+
 			if db != nil {
-				_, err := db.DB().NewInsert().Model(a).Exec(context.Background())
+				err := CreateAsset(db, a)
 				require.Nil(t, err)
+
+				// This allows the created/updated times to be different when inserting multiple rows
+				time.Sleep(time.Millisecond * 1)
 			}
 
 			assets = append(assets, a)
-			time.Sleep(1 * time.Millisecond)
 		}
 	}
 
 	return assets
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// scanAssetRow scans an asset row
+func scanAssetRow(scannable Scannable) (*Asset, error) {
+	var a Asset
+
+	// Nullable fields
+	var chapter sql.NullString
+	var videoPos sql.NullInt16
+	var completed sql.NullBool
+
+	err := scannable.Scan(
+		&a.ID,
+		&a.CourseID,
+		&a.Title,
+		&a.Prefix,
+		&chapter,
+		&a.Type,
+		&a.Path,
+		&a.CreatedAt,
+		&a.UpdatedAt,
+		// Course progress
+		&videoPos,
+		&completed,
+		&a.CompletedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if chapter.Valid {
+		a.Chapter = chapter.String
+	}
+
+	a.VideoPos = int(videoPos.Int16)
+	a.Completed = completed.Bool
+
+	return &a, nil
 }

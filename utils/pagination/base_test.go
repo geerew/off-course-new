@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -14,14 +15,14 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func Test_NewPagination(t *testing.T) {
+func Test_NewFromApi(t *testing.T) {
 	t.Run("no values", func(t *testing.T) {
 		app := fiber.New()
 		c := app.AcquireCtx(&fasthttp.RequestCtx{})
 		c.Request().SetRequestURI("/dummy")
 		defer app.ReleaseCtx(c)
 
-		p := New(c)
+		p := NewFromApi(c)
 		p.SetCount(1)
 
 		assert.Equal(t, 1, p.page)
@@ -35,7 +36,7 @@ func Test_NewPagination(t *testing.T) {
 		c.Request().SetRequestURI("/dummy?" + PageQueryParam + "=2" + "&" + PerPageQueryParam + "=10")
 		defer app.ReleaseCtx(c)
 
-		p := New(c)
+		p := NewFromApi(c)
 		p.SetCount(24)
 
 		assert.Equal(t, 2, p.page)
@@ -49,7 +50,47 @@ func Test_NewPagination(t *testing.T) {
 		c.Request().SetRequestURI("/dummy?" + PageQueryParam + "=-20" + "&" + PerPageQueryParam + "=bob")
 		defer app.ReleaseCtx(c)
 
-		p := New(c)
+		p := NewFromApi(c)
+		p.SetCount(24)
+
+		assert.Equal(t, 1, p.page)
+		assert.Equal(t, DefaultPerPage, p.perPage)
+		assert.Equal(t, 24, p.TotalItems())
+		assert.Equal(t, 1, p.totalPages)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_New(t *testing.T) {
+	t.Run("no values", func(t *testing.T) {
+		p := New(1, DefaultPerPage)
+		p.SetCount(1)
+
+		assert.Equal(t, 1, p.page)
+		assert.Equal(t, DefaultPerPage, p.perPage)
+		assert.Equal(t, 1, p.TotalItems())
+	})
+
+	t.Run("values", func(t *testing.T) {
+		p := New(2, 10)
+		p.SetCount(24)
+
+		assert.Equal(t, 2, p.page)
+		assert.Equal(t, 24, p.TotalItems())
+		assert.Equal(t, 3, p.totalPages)
+	})
+
+	t.Run("above max", func(t *testing.T) {
+		p := New(1, MaxPerPage+1)
+		p.SetCount(1)
+
+		assert.Equal(t, 1, p.page)
+		assert.Equal(t, MaxPerPage, p.perPage)
+	})
+
+	t.Run("invalid values", func(t *testing.T) {
+		p := New(-1, -1)
 		p.SetCount(24)
 
 		assert.Equal(t, 1, p.page)
@@ -82,7 +123,7 @@ func Test_Limit(t *testing.T) {
 		c.Request().SetRequestURI("/dummy?" + PageQueryParam + "=1" + "&" + PerPageQueryParam + "=" + tt.in)
 		defer app.ReleaseCtx(c)
 
-		p := New(c)
+		p := NewFromApi(c)
 		p.SetCount(1)
 
 		assert.Equal(t, tt.expected, p.Limit())
@@ -113,7 +154,7 @@ func Test_Offset(t *testing.T) {
 		c.Request().SetRequestURI("/dummy?" + PageQueryParam + "=" + tt.page + "&" + PerPageQueryParam + "=" + tt.perPage)
 		defer app.ReleaseCtx(c)
 
-		p := New(c)
+		p := NewFromApi(c)
 		p.SetCount(1)
 
 		assert.Equal(t, tt.expected, p.Offset())
@@ -186,7 +227,7 @@ func Test_BuildResult(t *testing.T) {
 		c.Request().SetRequestURI("/dummy?" + PageQueryParam + "=-20" + "&" + PerPageQueryParam + "=bob")
 		defer app.ReleaseCtx(c)
 
-		p := New(c)
+		p := NewFromApi(c)
 		p.SetCount(24)
 
 		type Data struct {
@@ -218,7 +259,7 @@ func Test_BuildResult(t *testing.T) {
 		c.Request().SetRequestURI("/dummy?" + PageQueryParam + "=-20" + "&" + PerPageQueryParam + "=bob")
 		defer app.ReleaseCtx(c)
 
-		p := New(c)
+		p := NewFromApi(c)
 		p.SetCount(24)
 
 		result, err := p.BuildResult("data")
@@ -232,7 +273,7 @@ func Test_BuildResult(t *testing.T) {
 		c.Request().SetRequestURI("/dummy?" + PageQueryParam + "=-20" + "&" + PerPageQueryParam + "=bob")
 		defer app.ReleaseCtx(c)
 
-		p := New(c)
+		p := NewFromApi(c)
 		p.SetCount(24)
 
 		// Invalid data
@@ -246,4 +287,22 @@ func Test_BuildResult(t *testing.T) {
 		require.EqualError(t, err, "json: unsupported type: chan int")
 		assert.Nil(t, result)
 	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_Apply(t *testing.T) {
+	p := New(1, 10)
+
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select("*").
+		From("dummy")
+
+	builder = p.Apply(builder)
+
+	query, args, err := builder.ToSql()
+	require.Nil(t, err)
+	assert.Equal(t, "SELECT * FROM dummy LIMIT 10 OFFSET 0", query)
+	assert.Nil(t, args)
 }

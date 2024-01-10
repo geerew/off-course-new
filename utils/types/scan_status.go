@@ -91,7 +91,7 @@ func (ss *ScanStatus) UnmarshalJSON(b []byte) error {
 
 // Value implements the `driver.Valuer` interface
 func (ss ScanStatus) Value() (driver.Value, error) {
-	return ss.s, nil
+	return ss.String(), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

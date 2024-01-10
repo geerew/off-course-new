@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strconv"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -43,13 +44,33 @@ type Pagination struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // New creates and returns a pagination
-func New(f *fiber.Ctx) *Pagination {
+func NewFromApi(f *fiber.Ctx) *Pagination {
 	page := page(f)
 	perPage := perPage(f)
 
 	return &Pagination{
 		page:    page,
 		perPage: perPage,
+	}
+}
+
+// New creates and returns a pagination
+func New(p int, pp int) *Pagination {
+	// Normalize the page value
+	if p <= 0 {
+		p = 1
+	}
+
+	// Normalize the perPage value
+	if pp <= 0 {
+		pp = DefaultPerPage
+	} else if pp > MaxPerPage {
+		pp = MaxPerPage
+	}
+
+	return &Pagination{
+		page:    p,
+		perPage: pp,
 	}
 }
 
@@ -79,6 +100,13 @@ func (p *Pagination) TotalItems() int {
 func (p *Pagination) SetCount(count int) {
 	p.totalItems = count
 	p.totalPages = int(math.Ceil(float64(p.totalItems) / float64(p.perPage)))
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Apply applies the pagination to a query builder
+func (p *Pagination) Apply(queryBuilder sq.SelectBuilder) sq.SelectBuilder {
+	return queryBuilder.Offset(uint64(p.Offset())).Limit(uint64(p.Limit()))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

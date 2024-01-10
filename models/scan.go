@@ -1,12 +1,16 @@
 package models
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Defines a model for the table `scans`
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"testing"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/stretchr/testify/require"
@@ -14,221 +18,166 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Scan defines the model for a scan
+//
+// As this changes, update `scanScanRow()`
 type Scan struct {
 	BaseModel
-	CourseID string           `bun:",unique,notnull"`
-	Status   types.ScanStatus `bun:",notnull"`
 
-	// Belongs to
-	Course *Course `bun:"rel:belongs-to,join:course_id=id"`
+	CourseID string
+	Status   types.ScanStatus
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// CountScans returns the number of scans
-func CountScans(ctx context.Context, db database.Database, params *database.DatabaseParams) (int, error) {
-	q := db.DB().NewSelect().Model((*Scan)(nil))
-
-	if params != nil && params.Where != nil {
-		q = selectWhere(q, params.Where, "scan")
-	}
-
-	return q.Count(ctx)
+// TableScans returns the table name for the scans table
+func TableScans() string {
+	return "scans"
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetScans returns a slice of scans
-func GetScans(ctx context.Context, db database.Database, params *database.DatabaseParams) ([]*Scan, error) {
-	var scans []*Scan
-
-	q := db.DB().NewSelect().Model(&scans)
-
-	if params != nil {
-		// Pagination
-		if params.Pagination != nil {
-			if count, err := CountScans(ctx, db, params); err != nil {
-				return nil, err
-			} else {
-				params.Pagination.SetCount(count)
-			}
-
-			q = q.Offset(params.Pagination.Offset()).Limit(params.Pagination.Limit())
-		}
-
-		if params.Relation != nil {
-			q = selectRelation(q, params.Relation)
-		}
-
-		// Order by
-		if len(params.OrderBy) > 0 {
-			selectOrderBy(q, params.OrderBy, "scan")
-		}
-
-		// Where
-		if params.Where != nil {
-			if params.Where != nil {
-				q = selectWhere(q, params.Where, "scan")
-			}
-		}
+// GetScan selects a scan for the given course ID
+func GetScan(db database.Database, courseId string) (*Scan, error) {
+	if courseId == "" {
+		return nil, errors.New("id cannot be empty")
 	}
 
-	err := q.Scan(ctx)
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select(TableScans() + ".*").
+		From(TableScans()).
+		Where(sq.Eq{TableScans() + ".course_id": courseId})
 
-	return scans, err
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// GetScan returns a scan based upon the where clause in the database params
-func GetScan(ctx context.Context, db database.Database, params *database.DatabaseParams) (*Scan, error) {
-	if params == nil || params.Where == nil {
-		return nil, errors.New("where clause required")
-	}
-
-	scan := &Scan{}
-
-	q := db.DB().NewSelect().Model(scan)
-
-	// Where
-	if params.Where != nil {
-		q = selectWhere(q, params.Where, "scan")
-	}
-
-	// Relations
-	if params.Relation != nil {
-		q = selectRelation(q, params.Relation)
-	}
-
-	if err := q.Scan(ctx); err != nil {
+	query, args, err := builder.ToSql()
+	if err != nil {
 		return nil, err
 	}
 
-	return scan, nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// GetScanById returns a scan for the given ID
-func GetScanById(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) (*Scan, error) {
-	scan := &Scan{}
-
-	q := db.DB().NewSelect().Model(scan).Where("scan.id = ?", id)
-
-	if params != nil && params.Relation != nil {
-		q = selectRelation(q, params.Relation)
+	row := db.QueryRow(query, args...)
+	if row.Err() != nil {
+		return nil, row.Err()
 	}
 
-	if err := q.Scan(ctx); err != nil {
+	s, err := scanScanRow(row)
+	if err != nil {
 		return nil, err
 	}
 
-	return scan, nil
+	return s, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetScanByCourseId returns a scan for the given course ID
-func GetScanByCourseId(ctx context.Context, db database.Database, params *database.DatabaseParams, id string) (*Scan, error) {
-	scan := &Scan{}
+// CreateScan inserts a new scan
+func CreateScan(db database.Database, s *Scan) error {
+	s.RefreshId()
+	s.RefreshCreatedAt()
+	s.RefreshUpdatedAt()
 
-	q := db.DB().NewSelect().Model(scan).Where("scan.course_id = ?", id)
+	builder := sq.StatementBuilder.
+		Insert(TableScans()).
+		Columns("id", "course_id", "status", "created_at", "updated_at").
+		Values(s.ID, NilStr(s.CourseID), NilStr(s.Status.String()), s.CreatedAt, s.UpdatedAt)
 
-	if params != nil && params.Relation != nil {
-		q = selectRelation(q, params.Relation)
-	}
-
-	if err := q.Scan(ctx); err != nil {
-		return nil, err
-	}
-
-	return scan, nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// CreateScan inserts a new scan with a status of waiting
-func CreateScan(ctx context.Context, db database.Database, scan *Scan) error {
-	scan.RefreshId()
-	scan.RefreshCreatedAt()
-	scan.RefreshUpdatedAt()
-	scan.Status = types.NewScanStatus(types.ScanStatusWaiting)
-
-	_, err := db.DB().NewInsert().Model(scan).Exec(ctx)
+	query, args, err := builder.ToSql()
 	if err != nil {
 		return err
 	}
 
-	return nil
+	_, err = db.Exec(query, args...)
+	return err
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UpdateScanStatus updates the scan status
-func UpdateScanStatus(ctx context.Context, db database.Database, scan *Scan, newStatus types.ScanStatusType) error {
-	// Do nothing when the status is the same
-	ss := types.NewScanStatus(newStatus)
-	if scan.Status == ss {
-		return nil
+// UpdateScanStatus updates `status` for the scan with the given course ID
+func UpdateScanStatus(db database.Database, courseId string, newStatus types.ScanStatusType) (*Scan, error) {
+	if courseId == "" {
+		return nil, errors.New("id cannot be empty")
 	}
 
-	// Require an ID
-	if scan.ID == "" {
-		return errors.New("scan ID cannot be empty")
+	s, err := GetScan(db, courseId)
+	if err != nil {
+		return nil, err
 	}
 
-	// Set a new timestamp
-	ts := types.NowDateTime()
+	newScanStatus := types.NewScanStatus(newStatus)
 
-	// Update the status
-	if res, err := db.DB().NewUpdate().Model(scan).
-		Set("status = ?", ss).
-		Set("updated_at = ?", ts).
-		WherePK().Exec(ctx); err != nil {
+	// Nothing to do
+	if s.Status == newScanStatus {
+		return s, nil
+	}
+
+	updatedAt := types.NowDateTime()
+
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Update(TableScans()).
+		Set("status", newScanStatus).
+		Set("updated_at", updatedAt).
+		Where("id = ?", s.ID)
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = db.Exec(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	s.Status = newScanStatus
+	s.UpdatedAt = updatedAt
+
+	return s, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// DeleteScan deletes a scan with the given course ID
+func DeleteScan(db database.Database, courseId string) error {
+	if courseId == "" {
+		return errors.New("id cannot be empty")
+	}
+
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Delete(TableScans()).
+		Where(sq.Eq{"course_id": courseId})
+
+	query, args, err := builder.ToSql()
+	if err != nil {
 		return err
-	} else {
-		count, _ := res.RowsAffected()
-		if count == 0 {
-			return nil
-		}
 	}
 
-	// Update the original scan struct
-	scan.Status = ss
-	scan.UpdatedAt = ts
-
-	return nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// DeleteScan deletes a scan with the given ID
-func DeleteScan(ctx context.Context, db database.Database, id string) (int, error) {
-	scan := &Scan{}
-	scan.SetId(id)
-
-	if res, err := db.DB().NewDelete().Model(scan).WherePK().Exec(ctx); err != nil {
-		return 0, err
-	} else {
-		count, _ := res.RowsAffected()
-		return int(count), err
-	}
+	_, err = db.Exec(query, args...)
+	return err
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // NextScan returns the next scan to be processed whose status is `waiting“
-func NextScan(ctx context.Context, db database.Database) (*Scan, error) {
-	var scan Scan
+func NextScan(db database.Database) (*Scan, error) {
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select(TableScans() + ".*").
+		From(TableScans()).
+		Where(sq.Eq{TableScans() + ".status": types.ScanStatusWaiting}).
+		OrderBy(TableScans() + ".created_at ASC")
 
-	err := db.DB().NewSelect().
-		Model(&scan).
-		Relation("Course").
-		Where("scan.status = ?", types.ScanStatusWaiting).
-		Order("scan.created_at ASC").
-		Limit(1).
-		Scan(ctx)
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
+	row := db.QueryRow(query, args...)
+	if row.Err() != nil {
+		return nil, row.Err()
+	}
+
+	s, err := scanScanRow(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -237,35 +186,59 @@ func NextScan(ctx context.Context, db database.Database) (*Scan, error) {
 		return nil, err
 	}
 
-	return &scan, nil
+	return s, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// NewTestScans creates a scan for each course in the slice. If a db is provided, the scans will
-// be inserted into the db
+// NewTestScans creates a scan for each course in the slice. If a db is provided, a DB insert will
+// be performed
 //
 // THIS IS FOR TESTING PURPOSES
 func NewTestScans(t *testing.T, db database.Database, courses []*Course) []*Scan {
 	scans := []*Scan{}
+
 	for i := 0; i < len(courses); i++ {
-		s := &Scan{
-			CourseID: courses[i].ID,
-			Status:   types.NewScanStatus(types.ScanStatusWaiting),
-		}
+		s := &Scan{}
 
 		s.RefreshId()
 		s.RefreshCreatedAt()
 		s.RefreshUpdatedAt()
 
+		s.CourseID = courses[i].ID
+		s.Status = types.NewScanStatus(types.ScanStatusWaiting)
+
 		if db != nil {
-			_, err := db.DB().NewInsert().Model(s).Exec(context.Background())
+			err := CreateScan(db, s)
 			require.Nil(t, err)
+
+			// This allows the created/updated times to be different when inserting multiple rows
+			time.Sleep(time.Millisecond * 1)
 		}
 
 		scans = append(scans, s)
-		time.Sleep(1 * time.Millisecond)
 	}
 
 	return scans
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// scanScanRow scans a scan row
+func scanScanRow(scannable Scannable) (*Scan, error) {
+	var s Scan
+
+	err := scannable.Scan(
+		&s.ID,
+		&s.CourseID,
+		&s.Status,
+		&s.CreatedAt,
+		&s.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &s, nil
 }

@@ -1,21 +1,30 @@
 package models
 
 import (
-	"strings"
-
+	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/utils/security"
 	"github.com/geerew/off-course/utils/types"
-	"github.com/uptrace/bun"
 )
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+type countFn = func(database.Database, *database.DatabaseParams) (int, error)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Scannable is an interface for a database row
+type Scannable interface {
+	Scan(dest ...interface{}) error
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // BaseModel defines the base model for all models
 type BaseModel struct {
-	ID        string         `bun:",pk"`
-	CreatedAt types.DateTime `bun:",nullzero,notnull"`
-	UpdatedAt types.DateTime `bun:",nullzero,notnull"`
+	ID        string
+	CreatedAt types.DateTime
+	UpdatedAt types.DateTime
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -48,71 +57,53 @@ func (b *BaseModel) RefreshUpdatedAt() {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func selectWhere(q *bun.SelectQuery, wheres []database.Where, table string) *bun.SelectQuery {
-	for _, where := range wheres {
-		// Update the column with the default table name when a table is not present
-		if !strings.Contains(where.Column, ".") {
-			where.Column = table + "." + where.Column
-		}
-
-		if where.Query == "" {
-			q = q.Where("? = ?", bun.Ident(where.Column), where.Value)
-		} else {
-			q = q.Where(where.Query, bun.Ident(where.Column), where.Value)
-		}
+// paginate applies pagination to the query
+func paginate(db database.Database, params *database.DatabaseParams, builder sq.SelectBuilder, count countFn) (sq.SelectBuilder, error) {
+	if count, err := count(db, params); err != nil {
+		return builder, err
+	} else {
+		params.Pagination.SetCount(count)
+		builder = params.Pagination.Apply(builder)
 	}
 
-	return q
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-func selectOrderBy(q *bun.SelectQuery, orderBy []string, table string) *bun.SelectQuery {
-	orderBys := []string{}
-
-	// The orderby can come in 2 forms:
-	//  - A single string with comma separated columns
-	//  - An array of strings with each string being a column
-	for _, o := range orderBy {
-		// Split the string by comma into slice
-		parts := strings.Split(o, ",")
-		for _, part := range parts {
-			if !strings.Contains(part, ".") {
-				orderBys = append(orderBys, table+"."+part)
-			}
-		}
-	}
-
-	if len(orderBys) > 0 {
-		q = q.Order(orderBys...)
-	}
-
-	return q
+	return builder, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func selectRelation(q *bun.SelectQuery, relations []database.Relation) *bun.SelectQuery {
-	for _, relation := range relations {
-		// Make a copy so that it can be used in the SelectQuery closure
-		relation := relation
-
-		// Select specific columns from the relation and/or order by specific columns
-		if len(relation.Cols) > 0 || len(relation.OrderBy) > 0 {
-			q = q.Relation(relation.Struct, func(q *bun.SelectQuery) *bun.SelectQuery {
-				for _, col := range relation.Cols {
-					q = q.Column(col)
-				}
-
-				if len(relation.OrderBy) > 0 {
-					q = q.Order(relation.OrderBy...)
-				}
-
-				return q
-			})
-		} else {
-			q = q.Relation(relation.Struct)
-		}
+// NilStr returns nil when a string is empty
+func NilStr(s string) any {
+	if s == "" {
+		return nil
 	}
 
-	return q
+	return s
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// func selectRelation(q *bun.SelectQuery, relations []database.Relation) *bun.SelectQuery {
+// 	for _, relation := range relations {
+// 		// Make a copy so that it can be used in the SelectQuery closure
+// 		relation := relation
+
+// 		// Select specific columns from the relation and/or order by specific columns
+// 		if len(relation.Columns) > 0 || len(relation.OrderBy) > 0 {
+// 			q = q.Relation(relation.Table, func(q *bun.SelectQuery) *bun.SelectQuery {
+// 				for _, col := range relation.Columns {
+// 					q = q.Column(col)
+// 				}
+
+// 				if len(relation.OrderBy) > 0 {
+// 					q = q.Order(relation.OrderBy...)
+// 				}
+
+// 				return q
+// 			})
+// 		} else {
+// 			q = q.Relation(relation.Table)
+// 		}
+// 	}
+
+// 	return q
+// }

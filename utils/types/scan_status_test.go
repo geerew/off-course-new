@@ -118,10 +118,10 @@ func TestScanStatus_UnmarshalJSON(t *testing.T) {
 func TestScanStatus_Value(t *testing.T) {
 	tests := []struct {
 		input    ScanStatusType
-		expected ScanStatusType
+		expected string
 	}{
-		{ScanStatusWaiting, ScanStatusWaiting},
-		{ScanStatusProcessing, ScanStatusProcessing},
+		{ScanStatusWaiting, "waiting"},
+		{ScanStatusProcessing, "processing"},
 	}
 
 	for _, tt := range tests {
