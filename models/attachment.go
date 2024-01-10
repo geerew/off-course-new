@@ -25,9 +25,10 @@ import (
 type Attachment struct {
 	BaseModel
 
-	AssetID string
-	Title   string
-	Path    string
+	CourseID string
+	AssetID  string
+	Title    string
+	Path     string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -166,8 +167,8 @@ func CreateAttachment(db database.Database, a *Attachment) error {
 
 	builder := sq.StatementBuilder.
 		Insert(TableAttachments()).
-		Columns("id", "asset_id", "title", "path", "created_at", "updated_at").
-		Values(a.ID, NilStr(a.AssetID), NilStr(a.Title), NilStr(a.Path), a.CreatedAt, a.UpdatedAt)
+		Columns("id", "course_id", "asset_id", "title", "path", "created_at", "updated_at").
+		Values(a.ID, NilStr(a.CourseID), NilStr(a.AssetID), NilStr(a.Title), NilStr(a.Path), a.CreatedAt, a.UpdatedAt)
 
 	query, args, err := builder.ToSql()
 	if err != nil {
@@ -217,6 +218,7 @@ func NewTestAttachments(t *testing.T, db database.Database, assets []*Asset, att
 			a.RefreshCreatedAt()
 			a.RefreshUpdatedAt()
 
+			a.CourseID = assets[i].CourseID
 			a.AssetID = assets[i].ID
 			a.Title = security.PseudorandomString(6)
 			a.Path = fmt.Sprintf("%s/%d %s", filepath.Dir(assets[i].Path), assets[i].Prefix.Int16, a.Title)
@@ -244,6 +246,7 @@ func scanAttachmentRow(scannable Scannable) (*Attachment, error) {
 
 	err := scannable.Scan(
 		&a.ID,
+		&a.CourseID,
 		&a.AssetID,
 		&a.Title,
 		&a.Path,

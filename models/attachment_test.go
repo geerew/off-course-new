@@ -305,6 +305,7 @@ func Test_CreateAttachment(t *testing.T) {
 		newA, err := GetAttachment(db, attachment.ID)
 		require.Nil(t, err)
 		assert.Equal(t, attachment.ID, newA.ID)
+		assert.Equal(t, attachment.CourseID, newA.CourseID)
 		assert.Equal(t, attachment.AssetID, newA.AssetID)
 		assert.Equal(t, attachment.Title, newA.Title)
 		assert.Equal(t, attachment.Path, newA.Path)
@@ -334,8 +335,14 @@ func Test_CreateAttachment(t *testing.T) {
 		courses := NewTestCourses(t, db, 1)
 		asset := NewTestAssets(t, db, courses, 1)[0]
 
-		// No asset ID
+		// No course ID
 		attachment := &Attachment{}
+		assert.ErrorContains(t, CreateAttachment(db, attachment), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", TableAttachments()))
+		attachment.CourseID = ""
+		assert.ErrorContains(t, CreateAttachment(db, attachment), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", TableAttachments()))
+		attachment.CourseID = "1234"
+
+		// No asset ID
 		assert.ErrorContains(t, CreateAttachment(db, attachment), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", TableAttachments()))
 		attachment.AssetID = ""
 		assert.ErrorContains(t, CreateAttachment(db, attachment), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", TableAttachments()))
@@ -353,11 +360,15 @@ func Test_CreateAttachment(t *testing.T) {
 		assert.ErrorContains(t, CreateAttachment(db, attachment), "NOT NULL constraint failed: attachments.path")
 		attachment.Path = "/course 1/01 attachment"
 
-		// Invalid attachment ID
+		// Invalid course ID
 		assert.ErrorContains(t, CreateAttachment(db, attachment), "FOREIGN KEY constraint failed")
+		attachment.CourseID = asset.CourseID
+
+		// Invalid asset ID
+		assert.ErrorContains(t, CreateAttachment(db, attachment), "FOREIGN KEY constraint failed")
+		attachment.AssetID = asset.ID
 
 		// Success
-		attachment.AssetID = asset.ID
 		assert.Nil(t, CreateAttachment(db, attachment))
 	})
 }

@@ -55,12 +55,14 @@ CREATE TABLE assets_progress (
 --- Attachments information
 CREATE TABLE attachments (
 	id          TEXT PRIMARY KEY NOT NULL,
+	course_id   TEXT NOT NULL,
 	asset_id    TEXT NOT NULL,
 	title       TEXT NOT NULL,
 	path        TEXT UNIQUE NOT NULL,
 	created_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
 	updated_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
 	---
+	FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
 	FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE
 );
 
