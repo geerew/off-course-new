@@ -32,6 +32,7 @@ func Test_GetScan(t *testing.T) {
 		s, err := GetScan(db, scan.CourseID)
 		require.Nil(t, err)
 		assert.Equal(t, scan.ID, s.ID)
+		assert.Equal(t, courses[0].Path, s.CoursePath)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
@@ -269,6 +270,8 @@ func Test_NextScan(t *testing.T) {
 		s, err := NextScan(db)
 		require.Nil(t, err)
 		assert.Equal(t, scans[0].ID, s.ID)
+		assert.Equal(t, courses[0].Path, s.CoursePath)
+
 	})
 
 	t.Run("next", func(t *testing.T) {
@@ -287,6 +290,8 @@ func Test_NextScan(t *testing.T) {
 		s, err := NextScan(db)
 		require.Nil(t, err)
 		assert.Equal(t, scans[1].ID, s.ID)
+		assert.Equal(t, courses[1].Path, s.CoursePath)
+
 	})
 
 	t.Run("empty", func(t *testing.T) {

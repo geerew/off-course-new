@@ -125,7 +125,7 @@ func RemoveDuplicates[T string | int](s []T) []T {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// StructDiffer takes in two slices of type T (left and right) and a key (string) as arguments.
+// DiffStructs takes in two slices of type T (left and right) and a key (string) as arguments.
 // The key defines the which key to use when comparing.
 //
 // It returns two slices:
@@ -141,7 +141,7 @@ func RemoveDuplicates[T string | int](s []T) []T {
 //
 // The function uses maps to optimize lookup operations and determine differences between the
 // slices.
-func StructDiffer[T any](left, right []T, key string) ([]T, []T) {
+func DiffStructs[T any](left, right []T, key string) ([]T, []T) {
 	leftDiff := []T{}
 	rightDiff := []T{}
 

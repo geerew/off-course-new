@@ -145,7 +145,7 @@ func Test_RemoveDuplicates(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func Test_StructDiffer(t *testing.T) {
+func Test_DiffStructs(t *testing.T) {
 	// Set test logger
 	loggerHook := zltest.New(t)
 	log.Logger = zerolog.New(loggerHook)
@@ -157,7 +157,7 @@ func Test_StructDiffer(t *testing.T) {
 	}
 
 	t.Run("not a struct empty", func(t *testing.T) {
-		leftDiff, rightDiff := StructDiffer([]string{"left"}, []string{"right"}, "")
+		leftDiff, rightDiff := DiffStructs([]string{"left"}, []string{"right"}, "")
 		assert.Nil(t, leftDiff)
 		assert.Nil(t, rightDiff)
 
@@ -167,7 +167,7 @@ func Test_StructDiffer(t *testing.T) {
 	})
 
 	t.Run("invalid key", func(t *testing.T) {
-		leftDiff, rightDiff := StructDiffer(
+		leftDiff, rightDiff := DiffStructs(
 			[]testStruct{{ID: 0, Title: "Test"}},
 			[]testStruct{{ID: 0, Title: "Test"}},
 			"Name")
@@ -181,7 +181,7 @@ func Test_StructDiffer(t *testing.T) {
 	})
 
 	t.Run("both empty", func(t *testing.T) {
-		leftDiff, rightDiff := StructDiffer[testStruct](nil, nil, "")
+		leftDiff, rightDiff := DiffStructs[testStruct](nil, nil, "")
 		assert.Nil(t, leftDiff)
 		assert.Nil(t, rightDiff)
 	})
@@ -193,7 +193,7 @@ func Test_StructDiffer(t *testing.T) {
 			right = append(right, &testStruct{ID: i, Title: "Test"})
 		}
 
-		leftDiff, rightDiff := StructDiffer(nil, right, "ID")
+		leftDiff, rightDiff := DiffStructs(nil, right, "ID")
 		assert.Empty(t, leftDiff)
 		require.Len(t, rightDiff, 5)
 	})
@@ -205,7 +205,7 @@ func Test_StructDiffer(t *testing.T) {
 			left = append(left, &testStruct{ID: i, Title: "Test"})
 		}
 
-		leftDiff, rightDiff := StructDiffer(left, nil, "ID")
+		leftDiff, rightDiff := DiffStructs(left, nil, "ID")
 		require.Len(t, leftDiff, 5)
 		assert.Empty(t, rightDiff)
 	})
@@ -219,7 +219,7 @@ func Test_StructDiffer(t *testing.T) {
 			right = append(right, &testStruct{ID: i, Title: "Test"})
 		}
 
-		leftDiff, rightDiff := StructDiffer(left, right, "ID")
+		leftDiff, rightDiff := DiffStructs(left, right, "ID")
 		assert.Empty(t, leftDiff)
 		assert.Empty(t, rightDiff)
 	})
@@ -233,7 +233,7 @@ func Test_StructDiffer(t *testing.T) {
 			right = append(right, &testStruct{ID: i + 5, Title: "Test"})
 		}
 
-		leftDiff, rightDiff := StructDiffer(left, right, "ID")
+		leftDiff, rightDiff := DiffStructs(left, right, "ID")
 		require.Len(t, leftDiff, 5)
 		require.Len(t, rightDiff, 5)
 	})
@@ -253,7 +253,7 @@ func Test_StructDiffer(t *testing.T) {
 		// Give right 1 from left. This means left now only has 4 that right does not have
 		right = append(right, left[0])
 
-		leftDiff, rightDiff := StructDiffer(left, right, "ID")
+		leftDiff, rightDiff := DiffStructs(left, right, "ID")
 		require.Len(t, leftDiff, 4)
 		require.Len(t, rightDiff, 3)
 	})
@@ -270,13 +270,13 @@ func Test_StructDiffer(t *testing.T) {
 		// Give left 1 extra
 		left = append(left, &testStruct{ID: 5, Title: "Test"})
 
-		leftDiff, rightDiff := StructDiffer(left, right, "ID")
+		leftDiff, rightDiff := DiffStructs(left, right, "ID")
 		require.Len(t, leftDiff, 1)
 		require.Len(t, rightDiff, 0)
 
 		// Give right 1 extra (plus the new left one)
 		right = append(right, left[len(left)-1], &testStruct{ID: 6, Title: "Test"})
-		leftDiff, rightDiff = StructDiffer(left, right, "ID")
+		leftDiff, rightDiff = DiffStructs(left, right, "ID")
 		require.Len(t, leftDiff, 0)
 		require.Len(t, rightDiff, 1)
 	})

@@ -1,13 +1,13 @@
 package jobs
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"path/filepath"
 	"regexp"
 	"strconv"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils"
@@ -22,7 +22,6 @@ import (
 type CourseScanner struct {
 	db        database.Database
 	appFs     *appFs.AppFs
-	ctx       context.Context
 	jobSignal chan bool
 	finished  bool
 }
@@ -33,7 +32,6 @@ type CourseScanner struct {
 type CourseScannerConfig struct {
 	Db    database.Database
 	AppFs *appFs.AppFs
-	Ctx   context.Context
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -43,7 +41,6 @@ func NewCourseScanner(config *CourseScannerConfig) *CourseScanner {
 	return &CourseScanner{
 		db:        config.Db,
 		appFs:     config.AppFs,
-		ctx:       config.Ctx,
 		jobSignal: make(chan bool, 1),
 		finished:  false,
 	}
@@ -53,26 +50,22 @@ func NewCourseScanner(config *CourseScannerConfig) *CourseScanner {
 
 // Add inserts a course scan job into the db
 func (cs *CourseScanner) Add(courseId string) (*models.Scan, error) {
-	// Ensure a job does not already exists for this course
-	dbParams := &database.DatabaseParams{Relation: []database.Relation{{Struct: "Course"}}}
 
-	scan, err := models.GetScanByCourseId(cs.ctx, cs.db, dbParams, courseId)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, err
-	} else if scan != nil {
-		log.Debug().Str("path", scan.Course.Path).Msg("scan job already exists")
-		return nil, nil
-	}
-
-	// Get the course
-	course, err := models.GetCourseById(cs.ctx, cs.db, nil, courseId)
+	// Check if the course exists
+	course, err := models.GetCourse(cs.db, courseId)
 	if err != nil {
 		return nil, err
 	}
 
+	// Do nothing when a scan job is already in progress
+	if course.ScanStatus != "" {
+		log.Debug().Str("path", course.Path).Msg("scan already in progress")
+		return nil, nil
+	}
+
 	// Add the job
-	scan = &models.Scan{CourseID: courseId}
-	if err := models.CreateScan(cs.ctx, cs.db, scan); err != nil {
+	scan := &models.Scan{CourseID: courseId}
+	if err := models.CreateScan(cs.db, scan); err != nil {
 		return nil, err
 	}
 
@@ -96,28 +89,28 @@ func (cs *CourseScanner) Worker(processor func(*CourseScanner, *models.Scan) err
 	for {
 		<-cs.jobSignal
 		for {
-			// Get the next scan job
-			scanJob, err := models.NextScan(cs.ctx, cs.db)
+			// Get the next scan
+			nextScan, err := models.NextScan(cs.db)
 			if err != nil {
 				log.Error().Err(err).Msg("error looking up next scan job")
 				break
-			} else if scanJob == nil {
+			} else if nextScan == nil {
 				log.Info().Msg("finished processing all scan jobs")
 				break
 			}
 
-			log.Info().Str("job", scanJob.ID).Str("path", scanJob.Course.Path).Msg("processing scan job")
+			log.Info().Str("job", nextScan.ID).Str("path", nextScan.CoursePath).Msg("processing scan job")
 
-			err = processor(cs, scanJob)
+			err = processor(cs, nextScan)
 			if err != nil {
-				log.Error().Str("job", scanJob.ID).Err(err).Msg("error processing scan job")
+				log.Error().Str("job", nextScan.ID).Err(err).Msg("error processing scan job")
 			} else {
-				log.Info().Str("job", scanJob.ID).Str("path", scanJob.Course.Path).Msg("finished processing scan job")
+				log.Info().Str("job", nextScan.ID).Str("path", nextScan.CoursePath).Msg("finished processing scan job")
 			}
 
 			// Cleanup
-			if _, err := models.DeleteScan(cs.ctx, cs.db, scanJob.ID); err != nil {
-				log.Error().Str("job", scanJob.ID).Err(err).Msg("error deleting scan job")
+			if err := models.DeleteScan(cs.db, nextScan.CourseID); err != nil {
+				log.Error().Str("job", nextScan.ID).Err(err).Msg("error deleting scan job")
 				break
 			}
 		}
@@ -137,19 +130,17 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 		return errors.New("scan cannot be empty")
 	}
 
-	// Set the scan status to processing
-	if err := models.UpdateScanStatus(cs.ctx, cs.db, scan, types.ScanStatusProcessing); err != nil {
+	// Get the course for this scan
+	course, err := models.GetCourse(cs.db, scan.CourseID)
+	if err != nil {
+		log.Debug().Str("course", scan.CourseID).Msg("ignoring scan job as the course no longer exists")
 		return err
 	}
 
-	// Check the course still exists
-	course, err := models.GetCourseById(cs.ctx, cs.db, nil, scan.CourseID)
+	// Set the scan status to processing
+	_, err = models.UpdateScanStatus(cs.db, scan.CourseID, types.ScanStatusProcessing)
 	if err != nil {
 		return err
-	} else if course == nil {
-		// This should never happen due to cascading deletes
-		log.Debug().Str("course", scan.CourseID).Msg("ignoring scan job as the course no longer exists")
-		return nil
 	}
 
 	cardPath := ""
@@ -160,7 +151,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 		return err
 	}
 
-	// A map to hold encountered assets and attachments by chapter and prefix
+	// Maps to hold encountered assets and attachments by [chapter][prefix]
 	assetsMap := assetMap{}
 	attachmentsMap := attachmentMap{}
 
@@ -170,21 +161,21 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 
 		// Get the fileDir from the path (ex /path/to/file.txt -> /path/to)
 		fileDir := filepath.Dir(file)
-		isAtRoot := fileDir == course.Path
+		isRootDir := fileDir == course.Path
 
-		// Check if this file is a card. Only check when not yet set and the file is at the `root`
-		// of this course
-		if cardPath == "" && isAtRoot {
+		// Check if this file is a card. Only check when not yet set and the file exists at the
+		// course root
+		if cardPath == "" && isRootDir {
 			if isCard(fileName) {
 				cardPath = file
 				continue
 			}
 		}
 
-		// Get the chapter for this file. This will be empty if the file is at the the `root` of
-		// this course
+		// Get the chapter for this file. This will be empty when the file exists at the course
+		// root
 		chapter := ""
-		if !isAtRoot {
+		if !isRootDir {
 			chapter = filepath.Base(fileDir)
 		}
 
@@ -198,62 +189,59 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 			attachmentsMap[chapter] = make(map[int][]*models.Attachment)
 		}
 
-		// Determine if this file is an asset or attachment
-		fileInfo := buildFileInfo(fileName)
+		// Parse the file name to see if it is an asset, attachment or neither
+		pfn := parseFileName(fileName)
 
-		if fileInfo == nil {
+		if pfn == nil {
 			log.Debug().Str("file", file).Msg("ignoring file")
 			continue
 		}
 
-		if fileInfo.isAsset {
-			// File is an asset. Check if we have already encountered an asset with the same
-			// prefix for this chapter
-			existingAsset, exists := assetsMap[chapter][fileInfo.prefix]
+		if pfn.asset != nil {
+			// Check if we have an existing asset for this [chapter][prefix]
+			existing, exists := assetsMap[chapter][pfn.prefix]
 
 			newAsset := &models.Asset{
-				Title:    fileInfo.title,
-				Prefix:   fileInfo.prefix,
+				Title:    pfn.title,
+				Prefix:   sql.NullInt16{Int16: int16(pfn.prefix), Valid: true},
 				CourseID: course.ID,
 				Chapter:  chapter,
 				Path:     file,
-				Type:     fileInfo.assetType,
+				Type:     *pfn.asset,
 			}
 
 			if !exists {
-				// Found a new asset for this chapter
-				assetsMap[chapter][fileInfo.prefix] = newAsset
+				// New asset
+				assetsMap[chapter][pfn.prefix] = newAsset
 			} else {
-				// Found an existing asset for this chapter with the same prefix
-				if newAsset.Type.IsVideo() && !existingAsset.Type.IsVideo() ||
-					newAsset.Type.IsHTML() && existingAsset.Type.IsPDF() {
-					// This new asset has a higher priority than the existing asset. Update the
-					// asset map with the new asset and set the existing asset as an attachment.
-					//
-					// The priority order is video > html > pdf
-					log.Debug().Str("file", file).Str("existing file", existingAsset.Path).Msg("replacing existing asset")
+				// Found an existing asset. Check if this new asset has a higher priority than the
+				// existing asset. The priority is video > html > pdf
+				if newAsset.Type.IsVideo() && !existing.Type.IsVideo() ||
+					newAsset.Type.IsHTML() && existing.Type.IsPDF() {
+					// Asset -> Replace the existing asset with the new asset and set the existing
+					// asset as an attachment
+					log.Debug().Str("file", file).Str("existing path", existing.Path).Msg("replacing existing asset")
 
-					assetsMap[chapter][fileInfo.prefix] = newAsset
+					assetsMap[chapter][pfn.prefix] = newAsset
 
-					// Add the existing asset as an attachment
-					attachmentsMap[chapter][fileInfo.prefix] = append(attachmentsMap[chapter][fileInfo.prefix], &models.Attachment{
-						Title:    existingAsset.Title + filepath.Ext(existingAsset.Path),
-						Path:     existingAsset.Path,
+					attachmentsMap[chapter][pfn.prefix] = append(attachmentsMap[chapter][pfn.prefix], &models.Attachment{
+						Title:    existing.Title + filepath.Ext(existing.Path),
+						Path:     existing.Path,
 						CourseID: course.ID,
 					})
 				} else {
-					// This new asset has a lower priority than the existing asset so add it as an attachment
-					attachmentsMap[chapter][fileInfo.prefix] = append(attachmentsMap[chapter][fileInfo.prefix], &models.Attachment{
-						Title:    fileInfo.fullTitle,
+					// Attachment -> This new asset has a lower priority than the existing asset
+					attachmentsMap[chapter][pfn.prefix] = append(attachmentsMap[chapter][pfn.prefix], &models.Attachment{
+						Title:    pfn.attachmentTitle,
 						Path:     file,
 						CourseID: course.ID,
 					})
 				}
 			}
 		} else {
-			// File is an attachment
-			attachmentsMap[chapter][fileInfo.prefix] = append(attachmentsMap[chapter][fileInfo.prefix], &models.Attachment{
-				Title:    fileInfo.fullTitle,
+			// Attachment
+			attachmentsMap[chapter][pfn.prefix] = append(attachmentsMap[chapter][pfn.prefix], &models.Attachment{
+				Title:    pfn.attachmentTitle,
 				Path:     file,
 				CourseID: course.ID,
 			})
@@ -262,7 +250,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 
 	// Update the card path for this course
 	if course.CardPath != cardPath {
-		if course, err = models.UpdateCourseCardPath(cs.ctx, cs.db, course.ID, cardPath); err != nil {
+		if course, err = models.UpdateCourseCardPath(cs.db, course.ID, cardPath); err != nil {
 			return err
 		}
 	}
@@ -275,11 +263,12 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 		}
 	}
 
-	// Update the assets in DB. This will insert new assets and delete assets which no longer
-	// exist. For assets inserts, the ID will not be populated
-	err = updateAssets(cs.ctx, cs.db, course.ID, assets)
-	if err != nil {
-		return err
+	// Update the assets in DB
+	if len(assets) > 0 {
+		err = updateAssets(cs.db, course.ID, assets)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Convert the attachments map to a slice
@@ -296,16 +285,16 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 		}
 	}
 
-	// Update the attachments in DB. This will insert new attachments and delete attachments which
-	// no longer exist
-	err = updateAttachments(cs.ctx, cs.db, course.ID, attachments)
-	if err != nil {
-		return err
+	// Update the attachments in DB
+	if len(attachments) > 0 {
+		err = updateAttachments(cs.db, course.ID, attachments)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Update the course updated_at now that the scan is complete
-	course, err = models.UpdateCourseUpdatedAt(cs.ctx, cs.db, course.ID)
-	if err != nil {
+	if _, err = models.UpdateCourseUpdatedAt(cs.db, course.ID); err != nil {
 		return err
 	}
 
@@ -316,84 +305,91 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 // PRIVATE
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type fileInfo struct {
-	prefix    int
-	title     string
-	ext       string
-	fullTitle string
-	assetType types.Asset
-	isAsset   bool
+// parsedFileName that holds information following a filename being parsed
+type parsedFileName struct {
+	prefix          int
+	title           string
+	ext             string
+	attachmentTitle string
+	asset           *types.Asset
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// buildFileInfo is a rudimentary way of determining if a file is an asset, an attachment, or
-// neither based upon the file name
+// A regex for parsing a file name into a prefix, title, and extension
 //
-// An asset/attachment which match one of the following formats:
+// Valid patterns:
 //
-//   - `<prefix> - <title>.<ext>`
-//   - `<prefix> <title>.<ext>`
+//	 `<prefix>`
+//	 `<prefix>.<ext>`
+//	 `<prefix> <title>`
+//	 `<prefix>-<title>`
+//	 `<prefix> - <title>`
+//	 `<prefix> <title>.<ext>`
+//	 `<prefix>-<title>.<ext>`
+//	 `<prefix> - <title>.<ext>`
 //
-// For example, `01 - My Title.avi` or `2 My Title.pdf`
-//
-// The <ext> is optional and when not present, the file is considered an attachment
-//
-// If the <ext> is present, it must match one of the supported asset types (video, html, pdf) to be
-// considered an asset. If it does not match, the file is considered an attachment
-func buildFileInfo(fileName string) *fileInfo {
-	fileInfo := &fileInfo{}
+//	- <prefix> is required and must be a number
+//	- A dash (-) is optional
+//	- <title> is optional and can be any non-empty string
+//	- <ext> is optional
+var fileNameRegex = regexp.MustCompile(`^\s*(?P<Prefix>[0-9]+)((?:\s+-+\s+|\s+-+|\s+|-+\s*)(?P<Title>[^.][^.]*)?)?(?:\.(?P<Ext>\w+))?$`)
 
-	// Build the regex to extract the prefix and title from the fileName
-	re := regexp.MustCompile(`^\s*(?P<Prefix>[0-9]+)[\s-]*(?P<Title>.*?)(?:\.\w+)?$`)
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	// Parse. When there is no match, return nil so that this file is ignored
-	matches := re.FindStringSubmatch(fileName)
+// parseFileName is a rudimentary function for determining if a file is an asset, attachment, or
+// neither based upon a regex pattern match.
+//
+// A file is an asset when it has a <prefix>, <title>, <ext> and the <ext> is of type video, html,
+// or pdf
+//
+// A file is an attachment when it has a <prefix>, and optionally a <title> and/or <ext>, with the
+// <ext> not being of type video, html, or pdf
+//
+// Nil will be returned A file that does not match the regex is ignored
+func parseFileName(fileName string) *parsedFileName {
+	pfn := &parsedFileName{}
+
+	// Match the file name against the regex and ignore if no match
+	matches := fileNameRegex.FindStringSubmatch(fileName)
 	if len(matches) == 0 {
 		return nil
 	}
 
-	// The prefix
-	prefix := matches[re.SubexpIndex("Prefix")]
-
-	// ensures that the prefix is a number. For example, this will turn 001 into 1
-	fileInfo.prefix, _ = strconv.Atoi(prefix)
-	fileInfo.title = matches[re.SubexpIndex("Title")]
-
-	// When there is no title, this is not an asset
-	if fileInfo.title == "" {
-		fileInfo.isAsset = false
-		fileInfo.fullTitle = fileName
-		return fileInfo
+	// Convert the prefix to an int and ignore if missing or not a number
+	prefix, err := strconv.Atoi(matches[fileNameRegex.SubexpIndex("Prefix")])
+	if err != nil {
+		return nil
 	}
 
-	// Get the extension from the fileName without the leading dot (ex file.txt -> txt)
-	ext := filepath.Ext(fileName)
-	if ext == "" {
-		// No extension. This is not an asset
-		fileInfo.isAsset = false
-		fileInfo.fullTitle = fileInfo.title
-	} else {
-		fileInfo.ext = ext[1:]
-		fileInfo.fullTitle = fileInfo.title + "." + fileInfo.ext
+	pfn.prefix = prefix
+	pfn.title = matches[fileNameRegex.SubexpIndex("Title")]
+
+	// Check the title. When empty, this is an attachment
+	if pfn.title == "" {
+		pfn.attachmentTitle = fileName
+		return pfn
 	}
 
-	// Set whether this is an asset or attachment
-	assetType := types.NewAsset(fileInfo.ext)
-	if assetType == nil {
-		fileInfo.isAsset = false
-	} else {
-		fileInfo.isAsset = true
-		fileInfo.assetType = *assetType
+	// Check the extension. When empty, this is an attachment
+	pfn.ext = matches[fileNameRegex.SubexpIndex("Ext")]
+	if pfn.ext == "" {
+		pfn.attachmentTitle = pfn.title
+		return pfn
 	}
 
-	return fileInfo
+	// Set the attachment title, in the event that this is an attachment
+	pfn.attachmentTitle = pfn.title + "." + pfn.ext
+
+	// Check if this is a valid asset
+	pfn.asset = types.NewAsset(pfn.ext)
+
+	return pfn
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// isCard returns true if the fileName is a card and the extension is supported. For example
-// `card.jpg` or `card.png`
+// isCard returns true if the fileName is `card` and the extension is supported
 func isCard(fileName string) bool {
 	// Get the extension. If there is no extension, return false
 	ext := filepath.Ext(fileName)
@@ -422,40 +418,51 @@ func isCard(fileName string) bool {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func updateAssets(ctx context.Context, db database.Database, courseId string, assets []*models.Asset) error {
-	// Get existing assets for this course
-	existingAssets, err := models.GetAssetsByCourseId(ctx, db, nil, courseId)
+// updateAssets updates the assets in the DB, by comparing the assets found on disk to the assets
+// found in the DB. It will insert new assets and delete assets which no longer exist
+func updateAssets(db database.Database, courseId string, assets []*models.Asset) error {
+	// Get existing assets
+	dbParams := &database.DatabaseParams{
+		Where: sq.Eq{models.TableAssets() + ".course_id": courseId},
+	}
+
+	existingAssets, err := models.GetAssets(db, dbParams)
 	if err != nil {
 		return err
 	}
 
-	// Compare the assets found with what is current in the DB. This will determine what needs to
-	// be added and deleted
-	toAdd, toDelete := utils.StructDiffer(assets, existingAssets, "Path")
+	// Compare the assets found on disk to assets found in DB
+	toAdd, toDelete := utils.DiffStructs(assets, existingAssets, "Path")
 
+	// Add the missing assets
 	for _, asset := range toAdd {
-		err := models.CreateAsset(ctx, db, asset)
+		err := models.CreateAsset(db, asset)
 		if err != nil {
 			log.Err(err).Str("path", asset.Path).Msg("error creating asset")
 			return err
 		}
 	}
 
+	// Delete the irrelevant assets
 	for _, asset := range toDelete {
-		_, err := models.DeleteAsset(ctx, db, asset.ID)
+		err := models.DeleteAsset(db, asset.ID)
 		if err != nil {
 			log.Err(err).Str("path", asset.Path).Msg("error deleting asset")
 			return err
 		}
 	}
 
-	// Set the asset id for those not added. This is required by potential attachments
+	// Assets that already exist in the DB will have an empty ID. We need to map the existing ID
+	// to these assets, so that we can update the attachments with the correct asset ID later on.
+	existingAssetsMap := make(map[string]*models.Asset)
+	for _, asset := range existingAssets {
+		existingAssetsMap[asset.Path] = asset
+	}
+
 	for _, asset := range assets {
 		if asset.ID == "" {
-			for _, existingAsset := range existingAssets {
-				if asset.Path == existingAsset.Path {
-					asset.ID = existingAsset.ID
-				}
+			if existingAsset, exists := existingAssetsMap[asset.Path]; exists {
+				asset.ID = existingAsset.ID
 			}
 		}
 	}
@@ -465,27 +472,35 @@ func updateAssets(ctx context.Context, db database.Database, courseId string, as
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func updateAttachments(ctx context.Context, db database.Database, courseId string, attachments []*models.Attachment) error {
-	// Get existing attachments for this course
-	existingAttachments, err := models.GetAttachmentsByCourseId(ctx, db, nil, courseId)
+// updateAttachments updates the attachments in the DB, by comparing the attachments found on disk
+// to the attachments found in the DB. It will insert new attachments and delete attachments which
+// no longer exist
+func updateAttachments(db database.Database, courseId string, attachments []*models.Attachment) error {
+	// Get existing attachments
+	dbParams := &database.DatabaseParams{
+		Where: sq.Eq{models.TableAttachments() + ".course_id": courseId},
+	}
+
+	existingAttachments, err := models.GetAttachments(db, dbParams)
 	if err != nil {
 		return err
 	}
 
-	// Compare the attachments found with what is current in the DB. This will determine what needs to
-	// be added and deleted
-	toAdd, toDelete := utils.StructDiffer(attachments, existingAttachments, "Path")
+	// Compare the attachments found on disk to attachments found in DB
+	toAdd, toDelete := utils.DiffStructs(attachments, existingAttachments, "Path")
 
+	// Add the missing attachments
 	for _, attachment := range toAdd {
-		err := models.CreateAttachment(ctx, db, attachment)
+		err := models.CreateAttachment(db, attachment)
 		if err != nil {
 			log.Err(err).Str("path", attachment.Path).Msg("error creating attachment")
 			return err
 		}
 	}
 
+	// Delete the irrelevant attachments
 	for _, attachment := range toDelete {
-		_, err := models.DeleteAttachment(ctx, db, attachment.ID)
+		err := models.DeleteAttachment(db, attachment.ID)
 		if err != nil {
 			log.Err(err).Str("path", attachment.Path).Msg("error deleting attachment")
 			return err

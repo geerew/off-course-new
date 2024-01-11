@@ -1,7 +1,6 @@
 package jobs
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -9,15 +8,11 @@ import (
 	"testing"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
-	"github.com/geerew/off-course/migrations"
 	"github.com/geerew/off-course/models"
-	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"github.com/rzajac/zltest"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,7 +21,7 @@ import (
 
 func Test_Add(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
@@ -37,7 +32,7 @@ func Test_Add(t *testing.T) {
 	})
 
 	t.Run("duplicate", func(t *testing.T) {
-		scanner, lh, teardown := setup(t)
+		scanner, lh, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
@@ -51,25 +46,21 @@ func Test_Add(t *testing.T) {
 		require.Nil(t, err)
 		require.NotNil(t, lh.LastEntry())
 		require.Nil(t, scan)
-		lh.LastEntry().ExpMsg("scan job already exists")
+		lh.LastEntry().ExpMsg("scan already in progress")
 		lh.LastEntry().ExpLevel(zerolog.DebugLevel)
 	})
 
 	t.Run("invalid course", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		scan, err := scanner.Add("bob")
+		scan, err := scanner.Add("test")
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, scan)
-
-		count, err := models.CountScans(scanner.ctx, scanner.db, nil)
-		require.Nil(t, err)
-		require.Equal(t, 0, count)
 	})
 
 	t.Run("not blocked", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		courses := models.NewTestCourses(t, scanner.db, 2)
@@ -83,16 +74,17 @@ func Test_Add(t *testing.T) {
 		assert.Equal(t, scan2.CourseID, courses[1].ID)
 	})
 
-	t.Run("scan lookup error", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+	t.Run("db error", func(t *testing.T) {
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		// Drop table
-		_, err := scanner.db.DB().NewDropTable().Model(&models.Scan{}).Exec(scanner.ctx)
+		course := models.NewTestCourses(t, scanner.db, 1)[0]
+
+		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableScans())
 		require.Nil(t, err)
 
-		scan, err := scanner.Add("")
-		require.ErrorContains(t, err, "no such table: scans")
+		scan, err := scanner.Add(course.ID)
+		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", models.TableScans()))
 		assert.Nil(t, scan)
 	})
 }
@@ -101,7 +93,7 @@ func Test_Add(t *testing.T) {
 
 func Test_Worker(t *testing.T) {
 	t.Run("single job", func(t *testing.T) {
-		scanner, lh, teardown := setup(t)
+		scanner, lh, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
@@ -120,9 +112,9 @@ func Test_Worker(t *testing.T) {
 		time.Sleep(time.Millisecond * 3)
 
 		// Assert the scan job was deleted from the DB
-		count, err := models.CountScans(scanner.ctx, scanner.db, nil)
-		require.Nil(t, err)
-		assert.Equal(t, 0, count)
+		s, err := models.GetScan(scanner.db, course.ID)
+		require.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, s)
 
 		// Validate the logs
 		require.NotNil(t, lh.LastEntry())
@@ -133,7 +125,7 @@ func Test_Worker(t *testing.T) {
 	})
 
 	t.Run("several jobs", func(t *testing.T) {
-		scanner, lh, teardown := setup(t)
+		scanner, lh, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		courses := models.NewTestCourses(t, scanner.db, 3)
@@ -149,12 +141,14 @@ func Test_Worker(t *testing.T) {
 		})
 
 		// Give time for the worker to finish
-		time.Sleep(time.Millisecond * 10)
+		time.Sleep(time.Millisecond * 5)
 
 		// Assert the scan job was deleted from the DB
-		count, err := models.CountScans(scanner.ctx, scanner.db, nil)
-		require.Nil(t, err)
-		assert.Equal(t, 0, count)
+		for _, course := range courses {
+			s, err := models.GetScan(scanner.db, course.ID)
+			require.ErrorIs(t, err, sql.ErrNoRows)
+			assert.Nil(t, s)
+		}
 
 		// Validate the logs.
 		require.NotNil(t, lh.LastEntry())
@@ -165,7 +159,7 @@ func Test_Worker(t *testing.T) {
 	})
 
 	t.Run("error processing", func(t *testing.T) {
-		scanner, lh, teardown := setup(t)
+		scanner, lh, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
@@ -192,7 +186,7 @@ func Test_Worker(t *testing.T) {
 	})
 
 	t.Run("scan error", func(t *testing.T) {
-		scanner, lh, teardown := setup(t)
+		scanner, lh, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
@@ -203,7 +197,7 @@ func Test_Worker(t *testing.T) {
 		assert.Equal(t, scan.CourseID, course.ID)
 
 		// Drop the DB
-		_, err = scanner.db.DB().NewDropTable().Model(&models.Scan{}).Exec(scanner.ctx)
+		_, err = scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableScans())
 		require.Nil(t, err)
 
 		// Start the worker
@@ -225,43 +219,30 @@ func Test_Worker(t *testing.T) {
 
 func Test_CourseProcessor(t *testing.T) {
 	t.Run("scan nil", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		err := CourseProcessor(scanner, nil)
 		require.EqualError(t, err, "scan cannot be empty")
 	})
 
-	t.Run("error updating scan status", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
-		defer teardown(t)
-
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
-
-		_, err := scanner.db.DB().NewDropTable().Model(&models.Scan{}).Exec(scanner.ctx)
-		require.Nil(t, err)
-
-		err = CourseProcessor(scanner, scan)
-		require.ErrorContains(t, err, "no such table: scans")
-	})
-
 	t.Run("error getting course", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
 		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
 
-		_, err := scanner.db.DB().NewDropTable().Model(&models.Course{}).Exec(scanner.ctx)
+		// Drop the table
+		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableCourses())
 		require.Nil(t, err)
 
 		err = CourseProcessor(scanner, scan)
-		require.ErrorContains(t, err, "no such table: courses")
+		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", models.TableCourses()))
 	})
 
 	t.Run("path error", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
@@ -271,88 +252,77 @@ func Test_CourseProcessor(t *testing.T) {
 		require.EqualError(t, err, "unable to open path")
 	})
 
-	t.Run("found card", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+	t.Run("card", func(t *testing.T) {
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
+		// ----------------------------
+		// Found card
+		// ----------------------------
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
 		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
 		require.Empty(t, course.CardPath)
 
-		// Create card
-		cardPath := fmt.Sprintf("%s/card.jpg", course.Path)
 		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(cardPath)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", course.Path))
 
 		err := CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		// Asset the course card
-		foundCourse, err := models.GetCourseById(scanner.ctx, scanner.db, nil, course.ID)
+		c, err := models.GetCourse(scanner.db, course.ID)
 		require.Nil(t, err)
-		assert.Equal(t, cardPath, foundCourse.CardPath)
-	})
+		assert.Equal(t, fmt.Sprintf("%s/card.jpg", course.Path), c.CardPath)
 
-	t.Run("ignore card in chapter", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
-		defer teardown(t)
-
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
+		// ----------------------------
+		// Ignore card in chapter
+		// ----------------------------
+		course = models.NewTestCourses(t, scanner.db, 1)[0]
+		scan = models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
 		require.Empty(t, course.CardPath)
 
-		// Create a card within a chapter
 		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
 		scanner.appFs.Fs.Create(fmt.Sprintf("%s/chapter 1/card.jpg", course.Path))
 
-		err := CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		// Assert the course card
-		foundCourse, err := models.GetCourseById(scanner.ctx, scanner.db, nil, course.ID)
+		c, err = models.GetCourse(scanner.db, course.ID)
 		require.Nil(t, err)
-		assert.Empty(t, foundCourse.CardPath)
+		assert.Empty(t, c.CardPath)
 		assert.Empty(t, course.CardPath)
-	})
 
-	t.Run("multiple cards", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
-		defer teardown(t)
-
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
+		// ----------------------------
+		// Multiple cards types
+		// ----------------------------
+		course = models.NewTestCourses(t, scanner.db, 1)[0]
+		scan = models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
 		require.Empty(t, course.CardPath)
 
-		// Create multiple cards. The first one found should be used
-		cardPath1 := fmt.Sprintf("%s/card.jpg", course.Path)
-		cardPath2 := fmt.Sprintf("%s/card.png", course.Path)
 		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(cardPath1)
-		scanner.appFs.Fs.Create(cardPath2)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.png", course.Path))
 
-		err := CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		// Assert the course card
-		foundCourse, err := models.GetCourseById(scanner.ctx, scanner.db, nil, course.ID)
+		c, err = models.GetCourse(scanner.db, course.ID)
 		require.Nil(t, err)
-		assert.Equal(t, cardPath1, foundCourse.CardPath)
+		assert.Equal(t, fmt.Sprintf("%s/card.jpg", course.Path), c.CardPath)
 	})
 
 	t.Run("card error", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
 		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
 		require.Empty(t, course.CardPath)
 
-		cardPath := fmt.Sprintf("%s/card.jpg", course.Path)
 		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(cardPath)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", course.Path))
 
-		// Drop the card path column from the DB
-		_, err := scanner.db.DB().NewDropColumn().Model(&models.Course{}).Column("card_path").Exec(scanner.ctx)
+		// Rename the card_path column
+		_, err := scanner.db.Exec(fmt.Sprintf("ALTER TABLE %s RENAME COLUMN card_path TO ignore_card_path", models.TableCourses()))
 		require.Nil(t, err)
 
 		err = CourseProcessor(scanner, scan)
@@ -360,125 +330,134 @@ func Test_CourseProcessor(t *testing.T) {
 	})
 
 	t.Run("ignore files", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
 		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
 
-		// Create a video file that will be ignored due to no prefix
 		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/video 1", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file 1", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file.file", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file.avi", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/ - file.avi", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/- - file.avi", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/.avi", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/-1 - file.avi", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/a - file.avi", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/1.1 - file.avi", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/2.3-file.avi", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/1file.avi", course.Path))
 
 		err := CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		// Assert the assets
-		assets, err := models.GetAssetsByCourseId(scanner.ctx, scanner.db, nil, course.ID)
+		assets, err := models.GetAssets(scanner.db, &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": course.ID}})
 		require.Nil(t, err)
 		require.Len(t, assets, 0)
 	})
 
 	t.Run("assets", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
 		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
 
-		// Create the 2 assets (including an ignored asset)
+		dbParams := &database.DatabaseParams{
+			OrderBy: []string{"chapter asc", "prefix asc"},
+			Where:   sq.Eq{models.TableAssets() + ".course_id": course.ID},
+		}
+
+		// ----------------------------
+		// Add 2 assets
+		// ----------------------------
 		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 - video.mkv", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/02 - index.html", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 Getting Started/ignored.mp4", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 file 1.mkv", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/02 file 2.html", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/should ignore", course.Path))
 
 		err := CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		// Assert there are 2 assets
-		dbParams := &database.DatabaseParams{OrderBy: []string{"chapter asc", "prefix asc"}}
-		assets, err := models.GetAssetsByCourseId(scanner.ctx, scanner.db, dbParams, course.ID)
+		assets, err := models.GetAssets(scanner.db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 2)
 
-		assert.Equal(t, "video", assets[0].Title)
+		assert.Equal(t, "file 1", assets[0].Title)
 		assert.Equal(t, course.ID, assets[0].CourseID)
-		assert.Equal(t, 1, assets[0].Prefix)
+		assert.Equal(t, 1, int(assets[0].Prefix.Int16))
 		assert.Empty(t, assets[0].Chapter)
 		assert.True(t, assets[0].Type.IsVideo())
 
-		assert.Equal(t, "index", assets[1].Title)
+		assert.Equal(t, "file 2", assets[1].Title)
 		assert.Equal(t, course.ID, assets[1].CourseID)
-		assert.Equal(t, 2, assets[1].Prefix)
+		assert.Equal(t, 2, int(assets[1].Prefix.Int16))
 		assert.Empty(t, assets[1].Chapter)
 		assert.True(t, assets[1].Type.IsHTML())
 
 		// ----------------------------
 		// Delete asset
 		// ----------------------------
-		scanner.appFs.Fs.Remove(fmt.Sprintf("%s/01 - video.mkv", course.Path))
+		scanner.appFs.Fs.Remove(fmt.Sprintf("%s/01 file 1.mkv", course.Path))
 
 		err = CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		// Assert there is 1 asset
-		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, dbParams, course.ID)
+		assets, err = models.GetAssets(scanner.db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 
-		assert.Equal(t, "index", assets[0].Title)
+		assert.Equal(t, "file 2", assets[0].Title)
 		assert.Equal(t, course.ID, assets[0].CourseID)
-		assert.Equal(t, 2, assets[0].Prefix)
+		assert.Equal(t, 2, int(assets[0].Prefix.Int16))
 		assert.Empty(t, assets[0].Chapter)
 		assert.True(t, assets[0].Type.IsHTML())
 
 		// ----------------------------
-		// Add another asset
+		// Add chapter asset
 		// ----------------------------
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 Getting Started/03 - info.pdf", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 Chapter 1/03 file 3.pdf", course.Path))
 
 		err = CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		// Assert there are 2 assets
-		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, dbParams, course.ID)
+		assets, err = models.GetAssets(scanner.db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 2)
 
-		assert.Equal(t, "index", assets[0].Title)
+		assert.Equal(t, "file 2", assets[0].Title)
 		assert.Equal(t, course.ID, assets[0].CourseID)
-		assert.Equal(t, 2, assets[0].Prefix)
+		assert.Equal(t, 2, int(assets[0].Prefix.Int16))
 		assert.Empty(t, assets[0].Chapter)
 		assert.True(t, assets[0].Type.IsHTML())
 
-		assert.Equal(t, "info", assets[1].Title)
+		assert.Equal(t, "file 3", assets[1].Title)
 		assert.Equal(t, course.ID, assets[1].CourseID)
-		assert.Equal(t, 3, assets[1].Prefix)
-		assert.Equal(t, "01 Getting Started", assets[1].Chapter)
-
+		assert.Equal(t, 3, int(assets[1].Prefix.Int16))
+		assert.Equal(t, "01 Chapter 1", assets[1].Chapter)
 		assert.True(t, assets[1].Type.IsPDF())
 	})
 
 	t.Run("assets error", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
 		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
 
 		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 - video.mkv", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mkv", course.Path))
 
-		// Drop the assets table
-		_, err := scanner.db.DB().NewDropTable().Model(&models.Asset{}).Exec(scanner.ctx)
+		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableAssets())
 		require.Nil(t, err)
 
 		err = CourseProcessor(scanner, scan)
-		require.ErrorContains(t, err, "no such table: assets")
+		require.ErrorContains(t, err, "no such table: "+models.TableAssets())
 	})
 
 	t.Run("attachments", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
@@ -486,224 +465,179 @@ func Test_CourseProcessor(t *testing.T) {
 
 		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
 
-		assetDbParams := &database.DatabaseParams{Relation: []database.Relation{{Struct: "Attachments"}}}
-		attachmentDbParams := &database.DatabaseParams{OrderBy: []string{"title asc"}}
+		assetDbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": course.ID}}
+		attachmentDbParams := &database.DatabaseParams{
+			OrderBy: []string{"created_at asc"},
+			Where:   sq.Eq{models.TableAttachments() + ".course_id": course.ID},
+		}
 
-		// Add video asset with 1 attachment
-		videoFile := fmt.Sprintf("%s/01 - video.mp4", course.Path)
-		attachmentFile := fmt.Sprintf("%s/01 - a.txt", course.Path)
-		scanner.appFs.Fs.Create(videoFile)
-		scanner.appFs.Fs.Create(attachmentFile)
+		// ----------------------------
+		// Add 1 asset with 1 attachment
+		// ----------------------------
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mp4", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 info.txt", course.Path))
 
 		err := CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		// Assert the asset
-		assets, err := models.GetAssetsByCourseId(scanner.ctx, scanner.db, assetDbParams, course.ID)
+		assets, err := models.GetAssets(scanner.db, assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, "video", assets[0].Title)
 		assert.Equal(t, course.ID, assets[0].CourseID)
-		assert.Equal(t, 1, assets[0].Prefix)
-		assert.Equal(t, videoFile, assets[0].Path)
+		assert.Equal(t, 1, int(assets[0].Prefix.Int16))
+		assert.Equal(t, fmt.Sprintf("%s/01 video.mp4", course.Path), assets[0].Path)
 		assert.True(t, assets[0].Type.IsVideo())
-		require.Len(t, assets[0].Attachments, 1)
 
-		// Assert there is 1 attachment
-		attachments, err := models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
+		attachments, err := models.GetAttachments(scanner.db, attachmentDbParams)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
-		assert.Equal(t, attachmentFile, attachments[0].Path)
+		assert.Equal(t, "info.txt", attachments[0].Title)
+		assert.Equal(t, fmt.Sprintf("%s/01 info.txt", course.Path), attachments[0].Path)
 
 		// ----------------------------
 		// Add another attachment
 		// ----------------------------
-		attachmentFile2 := fmt.Sprintf("%s/01 - b.zip", course.Path)
-		scanner.appFs.Fs.Create(attachmentFile2)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 code.zip", course.Path))
 
 		err = CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
 		// Assert the asset
-		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, assetDbParams, course.ID)
+		assets, err = models.GetAssets(scanner.db, assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
-		assert.Equal(t, "video", assets[0].Title)
 		require.Len(t, assets[0].Attachments, 2)
 
-		// Assert there are 2 attachments
-		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
+		attachments, err = models.GetAttachments(scanner.db, attachmentDbParams)
 		require.Nil(t, err)
 		require.Len(t, attachments, 2)
-		assert.Equal(t, attachmentFile, attachments[0].Path)
-		assert.Equal(t, attachmentFile2, attachments[1].Path)
+		assert.Equal(t, "info.txt", attachments[0].Title)
+		assert.Equal(t, fmt.Sprintf("%s/01 info.txt", course.Path), attachments[0].Path)
+		assert.Equal(t, "code.zip", attachments[1].Title)
+		assert.Equal(t, fmt.Sprintf("%s/01 code.zip", course.Path), attachments[1].Path)
 
 		// ----------------------------
 		// Delete first attachment
 		// ----------------------------
-		scanner.appFs.Fs.Remove(attachmentFile)
+		scanner.appFs.Fs.Remove(fmt.Sprintf("%s/01 info.txt", course.Path))
 
 		err = CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
 		// Assert the asset
-		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, assetDbParams, course.ID)
+		assets, err = models.GetAssets(scanner.db, assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, "video", assets[0].Title)
 		require.Len(t, assets[0].Attachments, 1)
 
-		// Assert there is 1 attachment
-		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
+		attachments, err = models.GetAttachments(scanner.db, attachmentDbParams)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
-		assert.Equal(t, attachmentFile2, attachments[0].Path)
+		assert.Equal(t, "code.zip", attachments[0].Title)
+		assert.Equal(t, fmt.Sprintf("%s/01 code.zip", course.Path), attachments[0].Path)
 	})
 
 	t.Run("attachments error", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
 		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
 
 		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 - video.mkv", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 - info.txt", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mkv", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 info", course.Path))
 
 		// Drop the attachments table
-		_, err := scanner.db.DB().NewDropTable().Model(&models.Attachment{}).Exec(scanner.ctx)
+		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableAttachments())
 		require.Nil(t, err)
 
 		err = CourseProcessor(scanner, scan)
-		require.ErrorContains(t, err, "no such table: attachments")
+		require.ErrorContains(t, err, "no such table: "+models.TableAttachments())
 	})
 
 	t.Run("asset priority", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
+
+		// ----------------------------
+		// Priority is VIDEO -> HTML -> PDF
+		// ----------------------------
 
 		course := models.NewTestCourses(t, scanner.db, 1)[0]
 		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
 
 		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
 
-		attachmentDbParams := &database.DatabaseParams{OrderBy: []string{"title asc"}}
+		assetDbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": course.ID}}
+		attachmentDbParams := &database.DatabaseParams{
+			OrderBy: []string{"created_at asc"},
+			Where:   sq.Eq{models.TableAttachments() + ".course_id": course.ID},
+		}
 
 		// ----------------------------
-		// PDF
+		// Add PDF (asset)
 		// ----------------------------
-		pdfFile := fmt.Sprintf("%s/01 - a.pdf", course.Path)
+		pdfFile := fmt.Sprintf("%s/01 doc 1.pdf", course.Path)
 		scanner.appFs.Fs.Create(pdfFile)
 
 		err := CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		// Assert the pdf
-		assets, err := models.GetAssetsByCourseId(scanner.ctx, scanner.db, nil, course.ID)
+		assets, err := models.GetAssets(scanner.db, assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
-
-		// Assert the HTML file is the asset
-		assert.Equal(t, "a", assets[0].Title)
-		assert.Equal(t, course.ID, assets[0].CourseID)
-		assert.Equal(t, 1, assets[0].Prefix)
 		assert.Equal(t, pdfFile, assets[0].Path)
 		assert.True(t, assets[0].Type.IsPDF())
-
-		// Assert the attachments
-		attachments, err := models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
-		require.Nil(t, err)
-		assert.Empty(t, attachments)
+		require.Empty(t, assets[0].Attachments)
 
 		// ----------------------------
-		// HTML trumps PDF
+		// Add HTML (asset)
 		// ----------------------------
-		htmlFile := fmt.Sprintf("%s/01 - b.html", course.Path)
+		htmlFile := fmt.Sprintf("%s/01 example.html", course.Path)
 		scanner.appFs.Fs.Create(htmlFile)
 
 		err = CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		// Assert the pdf
-		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, nil, course.ID)
+		assets, err = models.GetAssets(scanner.db, assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
-
-		// Assert the HTML file is the asset
-		assert.Equal(t, "b", assets[0].Title)
-		assert.Equal(t, course.ID, assets[0].CourseID)
-		assert.Equal(t, 1, assets[0].Prefix)
 		assert.Equal(t, htmlFile, assets[0].Path)
 		assert.True(t, assets[0].Type.IsHTML())
+		require.Len(t, assets[0].Attachments, 1)
 
-		// Assert the attachments (pdfFile should be the last attachment)
-		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
+		attachments, err := models.GetAttachments(scanner.db, attachmentDbParams)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
-		assert.Equal(t, "a.pdf", attachments[0].Title)
 		assert.Equal(t, pdfFile, attachments[0].Path)
 
 		// ----------------------------
-		// Video trumps PDF
+		// Add VIDEO (asset)
 		// ----------------------------
-		videoFile := fmt.Sprintf("%s/01 - c.mp4", course.Path)
+		videoFile := fmt.Sprintf("%s/01 video.mp4", course.Path)
 		scanner.appFs.Fs.Create(videoFile)
 
 		err = CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		// Assert the pdf
-		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, nil, course.ID)
+		assets, err = models.GetAssets(scanner.db, assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
-
-		// Assert the video file is the asset
-		assert.Equal(t, "c", assets[0].Title)
-		assert.Equal(t, course.ID, assets[0].CourseID)
-		assert.Equal(t, 1, assets[0].Prefix)
 		assert.Equal(t, videoFile, assets[0].Path)
 		assert.True(t, assets[0].Type.IsVideo())
+		require.Len(t, assets[0].Attachments, 2)
 
-		// Assert the attachments (html file should be the last attachment)
-		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
+		attachments, err = models.GetAttachments(scanner.db, attachmentDbParams)
 		require.Nil(t, err)
 		require.Len(t, attachments, 2)
-		assert.Equal(t, "a.pdf", attachments[0].Title)
 		assert.Equal(t, pdfFile, attachments[0].Path)
-		assert.Equal(t, "b.html", attachments[1].Title)
 		assert.Equal(t, htmlFile, attachments[1].Path)
 
 		// ----------------------------
-		// Another HTML file (should become attachment)
-		// ----------------------------
-		htmlFile2 := fmt.Sprintf("%s/01 - d.html", course.Path)
-		scanner.appFs.Fs.Create(htmlFile2)
-
-		err = CourseProcessor(scanner, scan)
-		require.Nil(t, err)
-
-		// Assert the video file is the asset
-		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, nil, course.ID)
-		require.Nil(t, err)
-		require.Len(t, assets, 1)
-		assert.Equal(t, "c", assets[0].Title)
-		assert.Equal(t, videoFile, assets[0].Path)
-		assert.True(t, assets[0].Type.IsVideo())
-
-		// Assert the attachments (htmlfile2 should be the last attachment)
-		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
-		require.Nil(t, err)
-		require.Len(t, attachments, 3)
-		assert.Equal(t, "a.pdf", attachments[0].Title)
-		assert.Equal(t, pdfFile, attachments[0].Path)
-		assert.Equal(t, "b.html", attachments[1].Title)
-		assert.Equal(t, htmlFile, attachments[1].Path)
-		assert.Equal(t, "d.html", attachments[2].Title)
-		assert.Equal(t, htmlFile2, attachments[2].Path)
-
-		// ----------------------------
-		// Another PDF file (should become attachment)
+		// Add PDF file (attachment)
 		// ----------------------------
 		pdfFile2 := fmt.Sprintf("%s/01 - e.pdf", course.Path)
 		scanner.appFs.Fs.Create(pdfFile2)
@@ -711,26 +645,36 @@ func Test_CourseProcessor(t *testing.T) {
 		err = CourseProcessor(scanner, scan)
 		require.Nil(t, err)
 
-		// Assert the video file is the asset
-		assets, err = models.GetAssetsByCourseId(scanner.ctx, scanner.db, nil, course.ID)
+		assets, err = models.GetAssets(scanner.db, assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
-		assert.Equal(t, "c", assets[0].Title)
 		assert.Equal(t, videoFile, assets[0].Path)
 		assert.True(t, assets[0].Type.IsVideo())
+		require.Len(t, assets[0].Attachments, 3)
 
-		// Assert the attachments (pdfFile2 should be the last attachment)
-		attachments, err = models.GetAttachmentsByCourseId(scanner.ctx, scanner.db, attachmentDbParams, course.ID)
+		attachments, err = models.GetAttachments(scanner.db, attachmentDbParams)
 		require.Nil(t, err)
-		require.Len(t, attachments, 4)
-		assert.Equal(t, "a.pdf", attachments[0].Title)
+		require.Len(t, attachments, 3)
 		assert.Equal(t, pdfFile, attachments[0].Path)
-		assert.Equal(t, "b.html", attachments[1].Title)
 		assert.Equal(t, htmlFile, attachments[1].Path)
-		assert.Equal(t, "d.html", attachments[2].Title)
-		assert.Equal(t, htmlFile2, attachments[2].Path)
-		assert.Equal(t, "e.pdf", attachments[3].Title)
-		assert.Equal(t, pdfFile2, attachments[3].Path)
+		assert.Equal(t, pdfFile2, attachments[2].Path)
+	})
+
+	t.Run("course updated", func(t *testing.T) {
+		scanner, _, teardown := setupCourseScanner(t)
+		defer teardown(t)
+
+		origCourse := models.NewTestCourses(t, scanner.db, 1)[0]
+		scan := models.NewTestScans(t, scanner.db, []*models.Course{origCourse})[0]
+
+		scanner.appFs.Fs.Mkdir(origCourse.Path, os.ModePerm)
+
+		err := CourseProcessor(scanner, scan)
+		require.Nil(t, err)
+
+		updatedCourse, err := models.GetCourse(scanner.db, origCourse.ID)
+		require.Nil(t, err)
+		assert.NotEqual(t, origCourse.UpdatedAt, updatedCourse.UpdatedAt)
 	})
 }
 
@@ -745,79 +689,70 @@ func Test_BuildFileInfo(t *testing.T) {
 			"file.avi",
 			" - file.avi",
 			"- - file.avi",
+			".avi",
 			// Invalid prefix
 			"-1 - file.avi",
 			"a - file.avi",
+			"1.1 - file.avi",
+			"2.3-file.avi",
+			"1file.avi",
 		}
 
 		for _, tt := range tests {
-			fb := buildFileInfo(tt)
+			fb := parseFileName(tt)
 			assert.Nil(t, fb)
 		}
 	})
 
-	t.Run("valid assets", func(t *testing.T) {
+	t.Run("assets", func(t *testing.T) {
 		var tests = []struct {
 			in       string
-			expected *fileInfo
+			expected *parsedFileName
 		}{
-			// Various valid formats of prefix/title/extension
-			{"0    file 0.avi", &fileInfo{prefix: 0, title: "file 0", ext: "avi", fullTitle: "file 0.avi", assetType: *types.NewAsset("avi"), isAsset: true}},
-			{"001 file 1.avi", &fileInfo{prefix: 1, title: "file 1", ext: "avi", fullTitle: "file 1.avi", assetType: *types.NewAsset("avi"), isAsset: true}},
-			{"1 - file.avi", &fileInfo{prefix: 1, title: "file", ext: "avi", fullTitle: "file.avi", assetType: *types.NewAsset("avi"), isAsset: true}},
-			{"1-file.avi", &fileInfo{prefix: 1, title: "file", ext: "avi", fullTitle: "file.avi", assetType: *types.NewAsset("avi"), isAsset: true}},
-			{"1 --- file.avi", &fileInfo{prefix: 1, title: "file", ext: "avi", fullTitle: "file.avi", assetType: *types.NewAsset("avi"), isAsset: true}},
-			{"1 file.avi", &fileInfo{prefix: 1, title: "file", ext: "avi", fullTitle: "file.avi", assetType: *types.NewAsset("avi"), isAsset: true}},
-			// Videos
-			{"1 - video.avi", &fileInfo{prefix: 1, title: "video", ext: "avi", fullTitle: "video.avi", assetType: *types.NewAsset("avi"), isAsset: true}},
-			{"1 - video.mkv", &fileInfo{prefix: 1, title: "video", ext: "mkv", fullTitle: "video.mkv", assetType: *types.NewAsset("mkv"), isAsset: true}},
-			{"1 - video.flac", &fileInfo{prefix: 1, title: "video", ext: "flac", fullTitle: "video.flac", assetType: *types.NewAsset("flac"), isAsset: true}},
-			{"1 - video.mp4", &fileInfo{prefix: 1, title: "video", ext: "mp4", fullTitle: "video.mp4", assetType: *types.NewAsset("mp4"), isAsset: true}},
-			{"1 - video.m4a", &fileInfo{prefix: 1, title: "video", ext: "m4a", fullTitle: "video.m4a", assetType: *types.NewAsset("m4a"), isAsset: true}},
-			{"1 - video.mp3", &fileInfo{prefix: 1, title: "video", ext: "mp3", fullTitle: "video.mp3", assetType: *types.NewAsset("mp3"), isAsset: true}},
-			{"1 - video.ogv", &fileInfo{prefix: 1, title: "video", ext: "ogv", fullTitle: "video.ogv", assetType: *types.NewAsset("ogv"), isAsset: true}},
-			{"1 - video.ogm", &fileInfo{prefix: 1, title: "video", ext: "ogm", fullTitle: "video.ogm", assetType: *types.NewAsset("ogm"), isAsset: true}},
-			{"1 - video.ogg", &fileInfo{prefix: 1, title: "video", ext: "ogg", fullTitle: "video.ogg", assetType: *types.NewAsset("ogg"), isAsset: true}},
-			{"1 - video.oga", &fileInfo{prefix: 1, title: "video", ext: "oga", fullTitle: "video.oga", assetType: *types.NewAsset("oga"), isAsset: true}},
-			{"1 - video.opus", &fileInfo{prefix: 1, title: "video", ext: "opus", fullTitle: "video.opus", assetType: *types.NewAsset("opus"), isAsset: true}},
-			{"1 - video.webm", &fileInfo{prefix: 1, title: "video", ext: "webm", fullTitle: "video.webm", assetType: *types.NewAsset("webm"), isAsset: true}},
-			{"1 - video.wav", &fileInfo{prefix: 1, title: "video", ext: "wav", fullTitle: "video.wav", assetType: *types.NewAsset("wav"), isAsset: true}},
+			// Video (with varied filenames)
+			{"0    file 0.avi", &parsedFileName{prefix: 0, title: "file 0", ext: "avi", attachmentTitle: "file 0.avi", asset: types.NewAsset("avi")}},
+			{"001 file 1.mp4", &parsedFileName{prefix: 1, title: "file 1", ext: "mp4", attachmentTitle: "file 1.mp4", asset: types.NewAsset("mp4")}},
+			{"1-file.ogg", &parsedFileName{prefix: 1, title: "file", ext: "ogg", attachmentTitle: "file.ogg", asset: types.NewAsset("ogg")}},
+			{"2 - file.webm", &parsedFileName{prefix: 2, title: "file", ext: "webm", attachmentTitle: "file.webm", asset: types.NewAsset("webm")}},
+			{"3 -file.m4a", &parsedFileName{prefix: 3, title: "file", ext: "m4a", attachmentTitle: "file.m4a", asset: types.NewAsset("m4a")}},
+			{"4- file.opus", &parsedFileName{prefix: 4, title: "file", ext: "opus", attachmentTitle: "file.opus", asset: types.NewAsset("opus")}},
+			{"5000 --- file.wav", &parsedFileName{prefix: 5000, title: "file", ext: "wav", attachmentTitle: "file.wav", asset: types.NewAsset("wav")}},
+			{"0100 file.mp3", &parsedFileName{prefix: 100, title: "file", ext: "mp3", attachmentTitle: "file.mp3", asset: types.NewAsset("mp3")}},
 			// PDF
-			// Document
-			{"1 - doc.pdf", &fileInfo{prefix: 1, title: "doc", ext: "pdf", fullTitle: "doc.pdf", assetType: *types.NewAsset("pdf"), isAsset: true}},
+			{"1 - doc.pdf", &parsedFileName{prefix: 1, title: "doc", ext: "pdf", attachmentTitle: "doc.pdf", asset: types.NewAsset("pdf")}},
 			// HTML
-			{"1 - index.html", &fileInfo{prefix: 1, title: "index", ext: "html", fullTitle: "index.html", assetType: *types.NewAsset("html"), isAsset: true}},
-			{"1 - index.htm", &fileInfo{prefix: 1, title: "index", ext: "htm", fullTitle: "index.htm", assetType: *types.NewAsset("htm"), isAsset: true}},
+			{"1 index.html", &parsedFileName{prefix: 1, title: "index", ext: "html", attachmentTitle: "index.html", asset: types.NewAsset("html")}},
 		}
 
 		for _, tt := range tests {
-			fb := buildFileInfo(tt.in)
+			fb := parseFileName(tt.in)
 			assert.Equal(t, tt.expected, fb, fmt.Sprintf("error for [%s]", tt.in))
 		}
 	})
 
-	t.Run("valid attachments", func(t *testing.T) {
+	t.Run("attachments", func(t *testing.T) {
 		var tests = []struct {
 			in       string
-			expected *fileInfo
+			expected *parsedFileName
 		}{
-			// No extension (fullTitle should have no prefix)
-			{"0    file 0", &fileInfo{prefix: 0, title: "file 0", fullTitle: "file 0", isAsset: false}},
-			{"001    file 1", &fileInfo{prefix: 1, title: "file 1", fullTitle: "file 1", isAsset: false}},
-			{"1 - file", &fileInfo{prefix: 1, title: "file", fullTitle: "file", isAsset: false}},
-			{"1-file", &fileInfo{prefix: 1, title: "file", fullTitle: "file", isAsset: false}},
-			{"1 --- file", &fileInfo{prefix: 1, title: "file", fullTitle: "file", isAsset: false}},
-			// Non-asset extension (fullTitle should have no prefix)
-			{"1 file.txt", &fileInfo{prefix: 1, title: "file", ext: "txt", fullTitle: "file.txt", isAsset: false}},
-			// No title (fullTitle should match filename)
-			{"01", &fileInfo{prefix: 1, title: "", fullTitle: "01", isAsset: false}},
-			{"1 -.txt", &fileInfo{prefix: 1, title: "", fullTitle: "1 -.txt", isAsset: false}},
-			{"1 .txt", &fileInfo{prefix: 1, title: "", fullTitle: "1 .txt", isAsset: false}},
-			{"1     .pdf", &fileInfo{prefix: 1, title: "", fullTitle: "1     .pdf", isAsset: false}},
+			// No title
+			{"01", &parsedFileName{prefix: 1, title: "", attachmentTitle: "01"}},
+			{"200.pdf", &parsedFileName{prefix: 200, title: "", attachmentTitle: "200.pdf"}},
+			{"1 -.txt", &parsedFileName{prefix: 1, title: "", attachmentTitle: "1 -.txt"}},
+			{"1 .txt", &parsedFileName{prefix: 1, title: "", attachmentTitle: "1 .txt"}},
+			{"1     .pdf", &parsedFileName{prefix: 1, title: "", attachmentTitle: "1     .pdf"}},
+			// No extension (fileName should have no prefix)
+			{"0    file 0", &parsedFileName{prefix: 0, title: "file 0", attachmentTitle: "file 0"}},
+			{"001    file 1", &parsedFileName{prefix: 1, title: "file 1", attachmentTitle: "file 1"}},
+			{"1001 - file", &parsedFileName{prefix: 1001, title: "file", attachmentTitle: "file"}},
+			{"0123-file", &parsedFileName{prefix: 123, title: "file", attachmentTitle: "file"}},
+			{"1 --- file", &parsedFileName{prefix: 1, title: "file", attachmentTitle: "file"}},
+			// Non-asset extension (fileName should have no prefix)
+			{"1 file.txt", &parsedFileName{prefix: 1, title: "file", ext: "txt", attachmentTitle: "file.txt"}},
 		}
 
 		for _, tt := range tests {
-			fb := buildFileInfo(tt.in)
+			fb := parseFileName(tt.in)
 			assert.Equal(t, tt.expected, fb, fmt.Sprintf("error for [%s]", tt.in))
 		}
 	})
@@ -859,246 +794,207 @@ func Test_IsCard(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func Test_UpdateAssets(t *testing.T) {
-	t.Run("db error", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
-		defer teardown(t)
-
-		// Drop the table
-		_, err := scanner.db.DB().NewDropTable().Model(&models.Asset{}).Exec(scanner.ctx)
-		require.Nil(t, err)
-
-		err = updateAssets(scanner.ctx, scanner.db, "1234", []*models.Asset{})
-		require.ErrorContains(t, err, "no such table: assets")
-	})
-
 	t.Run("nothing added or deleted", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		assets := models.NewTestAssets(t, scanner.db, []*models.Course{course}, 10)
+		courses := models.NewTestCourses(t, scanner.db, 1)
+		assets := models.NewTestAssets(t, scanner.db, courses, 10)
 
-		// Assert there are 10 assets
-		count, err := models.CountAssets(scanner.ctx, scanner.db, nil)
-		require.Nil(t, err)
-		assert.Equal(t, 10, count)
-
-		err = updateAssets(scanner.ctx, scanner.db, course.ID, assets)
+		err := updateAssets(scanner.db, courses[0].ID, assets)
 		require.Nil(t, err)
 
-		// Assert there are still 10 assets
-		count, err = models.CountAssets(scanner.ctx, scanner.db, nil)
+		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": courses[0].ID}}
+		count, err := models.CountAssets(scanner.db, dbParams)
 		require.Nil(t, err)
-		assert.Equal(t, 10, count)
+		require.Equal(t, 10, count)
 	})
 
 	t.Run("add", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		// Create 1 course (inserted into DB) with 10 assets (not inserted into DB)
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		assets := models.NewTestAssets(t, nil, []*models.Course{course}, 10)
+		courses := models.NewTestCourses(t, scanner.db, 1)
+		assets := models.NewTestAssets(t, nil, courses, 10)
 
-		// Assert there are no assets
-		count, err := models.CountAssets(scanner.ctx, scanner.db, nil)
+		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": courses[0].ID}}
+
+		// ----------------------------
+		// Add 10 assets
+		// ----------------------------
+		err := updateAssets(scanner.db, courses[0].ID, assets)
 		require.Nil(t, err)
-		assert.Equal(t, 0, count)
 
-		err = updateAssets(scanner.ctx, scanner.db, course.ID, assets)
+		count, err := models.CountAssets(scanner.db, dbParams)
 		require.Nil(t, err)
+		require.Equal(t, 10, count)
 
-		count, err = models.CountAssets(scanner.ctx, scanner.db, nil)
-		require.Nil(t, err)
-		assert.Equal(t, 10, count)
-
+		// ----------------------------
 		// Add another 2 assets
-		assets = append(assets, models.NewTestAssets(t, nil, []*models.Course{course}, 2)...)
+		// ----------------------------
+		additionalAssets := models.NewTestAssets(t, nil, courses, 2)
+		additionalAssets[0].ID = ""
+		additionalAssets[1].ID = ""
+		assets = append(assets, additionalAssets...)
 
-		err = updateAssets(scanner.ctx, scanner.db, course.ID, assets)
+		err = updateAssets(scanner.db, courses[0].ID, assets)
 		require.Nil(t, err)
 
-		count, err = models.CountAssets(scanner.ctx, scanner.db, nil)
+		count, err = models.CountAssets(scanner.db, dbParams)
 		require.Nil(t, err)
-		assert.Equal(t, 12, count)
+		require.Equal(t, 12, count)
+
+		// Ensure all assets have an ID
+		for _, a := range assets {
+			assert.NotEmpty(t, a.ID)
+		}
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		assets := models.NewTestAssets(t, scanner.db, []*models.Course{course}, 12)
+		courses := models.NewTestCourses(t, scanner.db, 1)
+		assets := models.NewTestAssets(t, scanner.db, courses, 12)
 
-		// Assert there are 12 assets
-		count, err := models.CountAssets(scanner.ctx, scanner.db, nil)
-		require.Nil(t, err)
-		assert.Equal(t, 12, count)
+		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": courses[0].ID}}
 
-		// Remove the first 2 assets
+		// ----------------------------
+		// Remove 2 assets
+		// ----------------------------
 		assets = assets[2:]
 
-		err = updateAssets(scanner.ctx, scanner.db, course.ID, assets)
+		err := updateAssets(scanner.db, courses[0].ID, assets)
 		require.Nil(t, err)
 
-		// Assert there are 10 assets
-		count, err = models.CountAssets(scanner.ctx, scanner.db, nil)
+		count, err := models.CountAssets(scanner.db, dbParams)
 		require.Nil(t, err)
-		assert.Equal(t, 10, count)
+		require.Equal(t, 10, count)
 
-		// Remove another 2
+		// ----------------------------
+		// Remove another 2 assets
+		// ----------------------------
 		assets = assets[2:]
 
-		err = updateAssets(scanner.ctx, scanner.db, course.ID, assets)
+		err = updateAssets(scanner.db, courses[0].ID, assets)
 		require.Nil(t, err)
 
-		// Assert there are 8 assets
-		count, err = models.CountAssets(scanner.ctx, scanner.db, nil)
+		count, err = models.CountAssets(scanner.db, dbParams)
 		require.Nil(t, err)
-		assert.Equal(t, 8, count)
+		require.Equal(t, 8, count)
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		scanner, _, teardown := setupCourseScanner(t)
+		defer teardown(t)
+
+		// Drop the table
+		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableAssets())
+		require.Nil(t, err)
+
+		err = updateAssets(scanner.db, "1234", []*models.Asset{})
+		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", models.TableAssets()))
 	})
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func Test_UpdateAttachments(t *testing.T) {
-	t.Run("db error)", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
-		defer teardown(t)
-
-		// Drop the table
-		_, err := scanner.db.DB().NewDropTable().Model(&models.Attachment{}).Exec(scanner.ctx)
-		require.Nil(t, err)
-
-		err = updateAttachments(scanner.ctx, scanner.db, "1234", []*models.Attachment{})
-		require.ErrorContains(t, err, "no such table: attachments")
-	})
-
 	t.Run("nothing added or delete)", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		asset := models.NewTestAssets(t, scanner.db, []*models.Course{course}, 1)[0]
-		attachments := models.NewTestAttachments(t, scanner.db, []*models.Asset{asset}, 10)
+		courses := models.NewTestCourses(t, scanner.db, 1)
+		assets := models.NewTestAssets(t, scanner.db, courses, 1)
+		attachments := models.NewTestAttachments(t, scanner.db, assets, 10)
 
-		// Assert there are 10 attachments
-		count, err := models.CountAttachments(scanner.ctx, scanner.db, nil)
-		require.Nil(t, err)
-		assert.Equal(t, 10, count)
-
-		err = updateAttachments(scanner.ctx, scanner.db, course.ID, attachments)
+		err := updateAttachments(scanner.db, courses[0].ID, attachments)
 		require.Nil(t, err)
 
-		// Assert there are still 10 attachments
-		count, err = models.CountAttachments(scanner.ctx, scanner.db, nil)
+		count, err := models.CountAttachments(scanner.db, &database.DatabaseParams{Where: sq.Eq{models.TableAttachments() + ".course_id": courses[0].ID}})
 		require.Nil(t, err)
-		assert.Equal(t, 10, count)
+		require.Equal(t, 10, count)
 	})
 
 	t.Run("add", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		// Create 1 course (inserted into DB) with 1 assets (inserted into DB) with 10 attachments
-		// (not inserted into DB)
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		asset := models.NewTestAssets(t, scanner.db, []*models.Course{course}, 1)[0]
-		attachments := models.NewTestAttachments(t, nil, []*models.Asset{asset}, 10)
+		courses := models.NewTestCourses(t, scanner.db, 1)
+		assets := models.NewTestAssets(t, scanner.db, courses, 1)
+		attachments := models.NewTestAttachments(t, nil, assets, 10)
 
-		// Assert there are no assets
-		count, err := models.CountAttachments(scanner.ctx, scanner.db, nil)
-		require.Nil(t, err)
-		assert.Equal(t, 0, count)
+		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAttachments() + ".course_id": courses[0].ID}}
 
-		err = updateAttachments(scanner.ctx, scanner.db, course.ID, attachments)
+		// ----------------------------
+		// Add 10 attachments
+		// ----------------------------
+		err := updateAttachments(scanner.db, courses[0].ID, attachments)
 		require.Nil(t, err)
 
-		count, err = models.CountAttachments(scanner.ctx, scanner.db, nil)
+		count, err := models.CountAttachments(scanner.db, dbParams)
 		require.Nil(t, err)
-		assert.Equal(t, 10, count)
+		require.Equal(t, 10, count)
 
+		// ----------------------------
 		// Add another 2 attachments
-		attachments = append(attachments, models.NewTestAttachments(t, nil, []*models.Asset{asset}, 2)...)
+		// ----------------------------
+		additionalAttachments := models.NewTestAttachments(t, nil, assets, 2)
+		attachments = append(attachments, additionalAttachments...)
 
-		err = updateAttachments(scanner.ctx, scanner.db, course.ID, attachments)
+		err = updateAttachments(scanner.db, courses[0].ID, attachments)
 		require.Nil(t, err)
 
-		count, err = models.CountAttachments(scanner.ctx, scanner.db, nil)
+		count, err = models.CountAttachments(scanner.db, dbParams)
 		require.Nil(t, err)
-		assert.Equal(t, 12, count)
+		require.Equal(t, 12, count)
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		scanner, _, teardown := setup(t)
+		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		// Create 1 course (inserted into DB) with 1 assets (inserted into DB) with 10 attachments
-		// (not inserted into DB)
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		asset := models.NewTestAssets(t, scanner.db, []*models.Course{course}, 1)[0]
-		attachments := models.NewTestAttachments(t, scanner.db, []*models.Asset{asset}, 12)
+		courses := models.NewTestCourses(t, scanner.db, 1)
+		assets := models.NewTestAssets(t, scanner.db, courses, 1)
+		attachments := models.NewTestAttachments(t, scanner.db, assets, 12)
 
-		// Assert there are 12 attachments
-		count, err := models.CountAttachments(scanner.ctx, scanner.db, nil)
-		require.Nil(t, err)
-		assert.Equal(t, 12, count)
+		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAttachments() + ".course_id": courses[0].ID}}
 
-		// Remove the first 2 attachments
+		// ----------------------------
+		// Remove 2 attachments
+		// ----------------------------
 		attachments = attachments[2:]
 
-		err = updateAttachments(scanner.ctx, scanner.db, course.ID, attachments)
+		err := updateAttachments(scanner.db, courses[0].ID, attachments)
 		require.Nil(t, err)
 
-		// Assert there are 10 assets
-		count, err = models.CountAttachments(scanner.ctx, scanner.db, nil)
+		count, err := models.CountAttachments(scanner.db, dbParams)
 		require.Nil(t, err)
-		assert.Equal(t, 10, count)
+		require.Equal(t, 10, count)
 
-		// Remove another 2
+		// ----------------------------
+		// Remove another 2 attachments
+		// ----------------------------
 		attachments = attachments[2:]
 
-		err = updateAttachments(scanner.ctx, scanner.db, course.ID, attachments)
+		err = updateAttachments(scanner.db, courses[0].ID, attachments)
 		require.Nil(t, err)
 
-		// Assert there are 8 assets
-		count, err = models.CountAttachments(scanner.ctx, scanner.db, nil)
+		count, err = models.CountAttachments(scanner.db, dbParams)
 		require.Nil(t, err)
-		assert.Equal(t, 8, count)
-	})
-}
+		require.Equal(t, 8, count)
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// HELPERS
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func setup(t *testing.T) (*CourseScanner, *zltest.Tester, func(t *testing.T)) {
-	// Set test logger
-	loggerHook := zltest.New(t)
-	log.Logger = zerolog.New(loggerHook).Level(zerolog.DebugLevel)
-
-	appFs := appFs.NewAppFs(afero.NewMemMapFs())
-
-	db := database.NewSqliteDB(&database.SqliteDbConfig{
-		IsDebug: false,
-		DataDir: "./co_data",
-		AppFs:   appFs,
 	})
 
-	// Force DB to be in-memory
-	os.Setenv("OC_InMemDb", "true")
+	t.Run("db error", func(t *testing.T) {
+		scanner, _, teardown := setupCourseScanner(t)
+		defer teardown(t)
 
-	require.Nil(t, db.Bootstrap())
-	require.Nil(t, migrations.Up(db))
+		// Drop the table
+		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableAttachments())
+		require.Nil(t, err)
 
-	courseScanner := NewCourseScanner(&CourseScannerConfig{
-		Db:    db,
-		AppFs: appFs,
-		Ctx:   context.Background(),
+		err = updateAttachments(scanner.db, "1234", []*models.Attachment{})
+		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", models.TableAttachments()))
 	})
-
-	// teardown
-	return courseScanner, loggerHook, func(t *testing.T) {
-		os.Unsetenv("OC_InMemDb")
-	}
 }

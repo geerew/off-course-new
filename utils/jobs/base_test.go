@@ -1,4 +1,4 @@
-package models
+package jobs
 
 import (
 	"os"
@@ -15,7 +15,8 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func setup(t *testing.T) (*appFs.AppFs, database.Database, func(t *testing.T)) {
+// SetupCourseScanner sets up a course scanner for testing
+func setupCourseScanner(t *testing.T) (*CourseScanner, *zltest.Tester, func(t *testing.T)) {
 	loggerHook := zltest.New(t)
 	log.Logger = zerolog.New(loggerHook).Level(zerolog.DebugLevel)
 
@@ -32,8 +33,13 @@ func setup(t *testing.T) (*appFs.AppFs, database.Database, func(t *testing.T)) {
 
 	require.Nil(t, db.Bootstrap())
 
+	courseScanner := NewCourseScanner(&CourseScannerConfig{
+		Db:    db,
+		AppFs: appFs,
+	})
+
 	// teardown
-	return appFs, db, func(t *testing.T) {
+	return courseScanner, loggerHook, func(t *testing.T) {
 		os.Unsetenv("OC_InMemDb")
 	}
 }

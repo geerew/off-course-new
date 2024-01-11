@@ -26,6 +26,11 @@ type Scan struct {
 
 	CourseID string
 	Status   types.ScanStatus
+
+	// --------------------------------
+	// Not in this table, but added via a join
+	// --------------------------------
+	CoursePath string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -43,11 +48,17 @@ func GetScan(db database.Database, courseId string) (*Scan, error) {
 		return nil, errors.New("id cannot be empty")
 	}
 
+	cols := []string{
+		TableScans() + ".*",
+		TableCourses() + ".path AS course_path",
+	}
+
 	builder := sq.StatementBuilder.
 		PlaceholderFormat(sq.Question).
-		Select(TableScans() + ".*").
+		Select(cols...).
 		From(TableScans()).
-		Where(sq.Eq{TableScans() + ".course_id": courseId})
+		Where(sq.Eq{TableScans() + ".course_id": courseId}).
+		LeftJoin(TableCourses() + " ON " + TableScans() + ".course_id = " + TableCourses() + ".id")
 
 	query, args, err := builder.ToSql()
 	if err != nil {
@@ -169,11 +180,18 @@ func DeleteScan(db database.Database, courseId string) error {
 
 // NextScan returns the next scan to be processed whose status is `waiting“
 func NextScan(db database.Database) (*Scan, error) {
+
+	cols := []string{
+		TableScans() + ".*",
+		TableCourses() + ".path AS course_path",
+	}
+
 	builder := sq.StatementBuilder.
 		PlaceholderFormat(sq.Question).
-		Select(TableScans() + ".*").
+		Select(cols...).
 		From(TableScans()).
 		Where(sq.Eq{TableScans() + ".status": types.ScanStatusWaiting}).
+		LeftJoin(TableCourses() + " ON " + TableScans() + ".course_id = " + TableCourses() + ".id").
 		OrderBy(TableScans() + ".created_at ASC")
 
 	query, args, err := builder.ToSql()
@@ -243,6 +261,7 @@ func scanScanRow(scannable Scannable) (*Scan, error) {
 		&s.Status,
 		&s.CreatedAt,
 		&s.UpdatedAt,
+		&s.CoursePath,
 	)
 
 	if err != nil {
