@@ -1,14 +1,12 @@
 package api
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
 	"github.com/geerew/off-course/database"
-	"github.com/geerew/off-course/migrations"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/jobs"
 	"github.com/rs/zerolog"
@@ -63,12 +61,10 @@ func setup(t *testing.T) (*appFs.AppFs, database.Database, *jobs.CourseScanner, 
 	os.Setenv("OC_InMemDb", "true")
 
 	require.Nil(t, db.Bootstrap())
-	require.Nil(t, migrations.Up(db))
 
 	courseScanner := jobs.NewCourseScanner(&jobs.CourseScannerConfig{
 		Db:    db,
 		AppFs: appFs,
-		Ctx:   context.Background(),
 	})
 
 	// teardown

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/geerew/off-course/utils"
+	"github.com/geerew/off-course/utils/appFs"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,14 +28,9 @@ func TestFsPath(t *testing.T) {
 		appFs.Fs.Create("/file2")
 		appFs.Fs.Create("/file3")
 
-		f := fiber.New()
-		bindFsApi(f.Group("/api"), appFs)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/filesystem/"+utils.EncodeString("/"), nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		status, body, err := fsRequestHelper(t, appFs, http.MethodGet, "/api/filesystem/"+utils.EncodeString("/"))
+		require.Nil(t, err)
+		assert.Equal(t, http.StatusOK, status)
 
 		var respData fileSystemResponse
 		err = json.Unmarshal(body, &respData)
@@ -48,26 +44,36 @@ func TestFsPath(t *testing.T) {
 		appFs, _, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindFsApi(f.Group("/api"), appFs)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/filesystem/"+utils.EncodeString("nonexistent/path"), nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+		status, _, err := fsRequestHelper(t, appFs, http.MethodGet, "/api/filesystem/"+utils.EncodeString("nonexistent/path"))
+		require.Nil(t, err)
+		assert.Equal(t, http.StatusNotFound, status)
 	})
 
 	t.Run("400 (decode error)", func(t *testing.T) {
 		appFs, _, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindFsApi(f.Group("/api"), appFs)
+		status, body, err := fsRequestHelper(t, appFs, http.MethodGet, "/api/filesystem/`")
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/filesystem/`", nil))
 		assert.NoError(t, err)
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		require.Equal(t, http.StatusBadRequest, status)
 		assert.Equal(t, "failed to decode path", string(body))
 	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// HELPERS
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func fsRequestHelper(t *testing.T, appFs *appFs.AppFs, method string, target string) (int, []byte, error) {
+	f := fiber.New()
+	bindFsApi(f.Group("/api"), appFs)
+
+	resp, err := f.Test(httptest.NewRequest(method, target, nil))
+	if err != nil {
+		return -1, nil, err
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, body, err
 }

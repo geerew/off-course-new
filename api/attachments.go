@@ -51,10 +51,10 @@ func bindAttachmentsApi(router fiber.Router, appFs *appFs.AppFs, db database.Dat
 func (api *attachments) getAttachments(c *fiber.Ctx) error {
 	dbParams := &database.DatabaseParams{
 		OrderBy:    []string{c.Query("orderBy", []string{"created_at desc"}...)},
-		Pagination: pagination.New(c),
+		Pagination: pagination.NewFromApi(c),
 	}
 
-	attachments, err := models.GetAttachments(c.UserContext(), api.db, dbParams)
+	attachments, err := models.GetAttachments(api.db, dbParams)
 	if err != nil {
 		log.Err(err).Msg("error looking up attachments")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -62,7 +62,7 @@ func (api *attachments) getAttachments(c *fiber.Ctx) error {
 		})
 	}
 
-	pResult, err := dbParams.Pagination.BuildResult(toAttachmentResponse(attachments))
+	pResult, err := dbParams.Pagination.BuildResult(attachmentResponseHelper(attachments))
 	if err != nil {
 		log.Err(err).Msg("error building pagination result")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -78,7 +78,7 @@ func (api *attachments) getAttachments(c *fiber.Ctx) error {
 func (api *attachments) getAttachment(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	attachment, err := models.GetAttachmentById(c.UserContext(), api.db, nil, id)
+	attachment, err := models.GetAttachment(api.db, id)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -91,7 +91,7 @@ func (api *attachments) getAttachment(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(toAttachmentResponse([]*models.Attachment{attachment})[0])
+	return c.Status(fiber.StatusOK).JSON(attachmentResponseHelper([]*models.Attachment{attachment})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -99,7 +99,7 @@ func (api *attachments) getAttachment(c *fiber.Ctx) error {
 func (api *attachments) serveAttachment(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	attachment, err := models.GetAttachmentById(c.UserContext(), api.db, nil, id)
+	attachment, err := models.GetAttachment(api.db, id)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -127,7 +127,7 @@ func (api *attachments) serveAttachment(c *fiber.Ctx) error {
 // HELPER
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func toAttachmentResponse(attachments []*models.Attachment) []*attachmentResponse {
+func attachmentResponseHelper(attachments []*models.Attachment) []*attachmentResponse {
 	responses := []*attachmentResponse{}
 	for _, attachment := range attachments {
 		responses = append(responses, &attachmentResponse{

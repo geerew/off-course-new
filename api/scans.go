@@ -7,7 +7,6 @@ import (
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/jobs"
-	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
@@ -29,9 +28,6 @@ type scanResponse struct {
 	Status    types.ScanStatus `json:"status"`
 	CreatedAt types.DateTime   `json:"createdAt"`
 	UpdatedAt types.DateTime   `json:"updatedAt"`
-
-	// Association
-	Course *models.Course `json:"course,omitempty"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -41,44 +37,8 @@ func bindScansApi(router fiber.Router, appFs *appFs.AppFs, db database.Database,
 
 	subGroup := router.Group("/scans")
 
-	subGroup.Get("", api.getScans)
 	subGroup.Get("/:id", api.getScan)
-	subGroup.Get("/course/:id", api.getScanByCourseId)
 	subGroup.Post("", api.createScan)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func (api *scans) getScans(c *fiber.Ctx) error {
-	orderBy := c.Query("orderBy", "created_at desc")
-
-	dbParams := &database.DatabaseParams{
-		OrderBy:    []string{orderBy},
-		Pagination: pagination.New(c),
-	}
-
-	// Include relations
-	if c.QueryBool("expand", false) {
-		dbParams.Relation = []database.Relation{{Struct: "Course"}}
-	}
-
-	scans, err := models.GetScans(c.UserContext(), api.db, dbParams)
-	if err != nil {
-		log.Err(err).Msg("error looking up scans")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up scans - " + err.Error(),
-		})
-	}
-
-	pResult, err := dbParams.Pagination.BuildResult(toScanResponse(scans))
-	if err != nil {
-		log.Err(err).Msg("error building pagination result")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error building pagination result - " + err.Error(),
-		})
-	}
-
-	return c.Status(fiber.StatusOK).JSON(pResult)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -86,14 +46,7 @@ func (api *scans) getScans(c *fiber.Ctx) error {
 func (api *scans) getScan(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	dbParams := &database.DatabaseParams{}
-
-	// Include relations
-	if c.QueryBool("expand", false) {
-		dbParams.Relation = []database.Relation{{Struct: "Course"}}
-	}
-
-	scan, err := models.GetScanById(c.UserContext(), api.db, dbParams, id)
+	scan, err := models.GetScan(api.db, id)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -101,34 +54,7 @@ func (api *scans) getScan(c *fiber.Ctx) error {
 		}
 
 		log.Err(err).Msg("error looking up scan")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up scan - " + err.Error(),
-		})
-	}
 
-	return c.Status(fiber.StatusOK).JSON(toScanResponse([]*models.Scan{scan})[0])
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func (api *scans) getScanByCourseId(c *fiber.Ctx) error {
-	id := c.Params("id")
-
-	dbParams := &database.DatabaseParams{}
-
-	// Include relations
-	if c.QueryBool("expand", false) {
-		dbParams.Relation = []database.Relation{{Struct: "Course"}}
-	}
-
-	scan, err := models.GetScanByCourseId(c.UserContext(), api.db, dbParams, id)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
-		}
-
-		log.Err(err).Msg("error looking up scan")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "error looking up scan - " + err.Error(),
 		})
@@ -154,7 +80,6 @@ func (api *scans) createScan(c *fiber.Ctx) error {
 		})
 	}
 
-	// Start a scan job
 	scan, err := api.courseScanner.Add(scan.CourseID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -184,7 +109,6 @@ func toScanResponse(scans []*models.Scan) []*scanResponse {
 			ID:        scan.ID,
 			CourseID:  scan.CourseID,
 			Status:    scan.Status,
-			Course:    scan.Course,
 			CreatedAt: scan.CreatedAt,
 			UpdatedAt: scan.UpdatedAt,
 		})
