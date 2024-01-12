@@ -29,20 +29,22 @@ type assets struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type assetResponse struct {
-	ID          string         `json:"id"`
-	CourseID    string         `json:"courseId"`
-	Title       string         `json:"title"`
-	Prefix      int            `json:"prefix"`
-	Chapter     string         `json:"chapter"`
-	Path        string         `json:"path"`
-	Type        types.Asset    `json:"assetType"`
-	Progress    int            `json:"progress"`
+	ID        string         `json:"id"`
+	CourseID  string         `json:"courseId"`
+	Title     string         `json:"title"`
+	Prefix    int            `json:"prefix"`
+	Chapter   string         `json:"chapter"`
+	Path      string         `json:"path"`
+	Type      types.Asset    `json:"assetType"`
+	CreatedAt types.DateTime `json:"createdAt"`
+	UpdatedAt types.DateTime `json:"updatedAt"`
+
+	// Progress
+	VideoPos    int            `json:"videoPos"`
 	Completed   bool           `json:"completed"`
 	CompletedAt types.DateTime `json:"completedAt"`
-	CreatedAt   types.DateTime `json:"createdAt"`
-	UpdatedAt   types.DateTime `json:"updatedAt"`
 
-	// Association
+	// Attachments
 	Attachments []*attachmentResponse `json:"attachments,omitempty"`
 }
 
@@ -70,16 +72,10 @@ func bindAssetsApi(router fiber.Router, appFs *appFs.AppFs, db database.Database
 func (api *assets) getAssets(c *fiber.Ctx) error {
 	dbParams := &database.DatabaseParams{
 		OrderBy:    []string{c.Query("orderBy", []string{"created_at desc"}...)},
-		Pagination: pagination.New(c),
+		Pagination: pagination.NewFromApi(c),
 	}
 
-	if c.QueryBool("expand", false) {
-		dbParams.Relation = []database.Relation{
-			{Struct: "Attachments", OrderBy: []string{"title asc"}},
-		}
-	}
-
-	assets, err := models.GetAssets(c.UserContext(), api.db, dbParams)
+	assets, err := models.GetAssets(api.db, dbParams)
 	if err != nil {
 		log.Err(err).Msg("error looking up assets")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -87,7 +83,7 @@ func (api *assets) getAssets(c *fiber.Ctx) error {
 		})
 	}
 
-	pResult, err := dbParams.Pagination.BuildResult(toAssetResponse(assets))
+	pResult, err := dbParams.Pagination.BuildResult(assetResponseHelper(assets))
 	if err != nil {
 		log.Err(err).Msg("error building pagination result")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -103,15 +99,7 @@ func (api *assets) getAssets(c *fiber.Ctx) error {
 func (api *assets) getAsset(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	// Include relations
-	dbParams := &database.DatabaseParams{}
-	if c.QueryBool("expand", false) {
-		dbParams.Relation = []database.Relation{
-			{Struct: "Attachments", OrderBy: []string{"title asc"}},
-		}
-	}
-
-	asset, err := models.GetAssetById(c.UserContext(), api.db, dbParams, id)
+	asset, err := models.GetAsset(api.db, id)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -124,7 +112,7 @@ func (api *assets) getAsset(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(toAssetResponse([]*models.Asset{asset})[0])
+	return c.Status(fiber.StatusOK).JSON(assetResponseHelper([]*models.Asset{asset})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -140,12 +128,9 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 		})
 	}
 
-	var updatedAsset *models.Asset
-	var err error
-
-	// Update progress
-	if _, err = models.UpdateAssetProgress(c.UserContext(), api.db, id, reqAsset.Progress); err != nil {
-		if err == sql.ErrNoRows {
+	// Video position
+	if _, err := models.UpdateAssetProgressVideoPos(api.db, id, reqAsset.VideoPos); err != nil {
+		if err == sql.ErrNoRows || strings.HasPrefix(err.Error(), "constraint failed: FOREIGN KEY constraint failed") {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
 		}
 
@@ -155,9 +140,9 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 		})
 	}
 
-	// Update completed
-	if updatedAsset, err = models.UpdateAssetCompleted(c.UserContext(), api.db, id, reqAsset.Completed); err != nil {
-		if err == sql.ErrNoRows {
+	// Completed
+	if _, err := models.UpdateAssetProgressCompleted(api.db, id, reqAsset.Completed); err != nil {
+		if err == sql.ErrNoRows || strings.HasPrefix(err.Error(), "constraint failed: FOREIGN KEY constraint failed") {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
 		}
 
@@ -167,7 +152,20 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(toAssetResponse([]*models.Asset{updatedAsset})[0])
+	// Get the updated asset
+	updatedAsset, err := models.GetAsset(api.db, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).SendString("Not found")
+		}
+
+		log.Err(err).Msg("error looking up asset")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error looking up asset - " + err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(assetResponseHelper([]*models.Asset{updatedAsset})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -175,7 +173,7 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 func (api *assets) serveAsset(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	asset, err := models.GetAssetById(c.UserContext(), api.db, nil, id)
+	asset, err := models.GetAsset(api.db, id)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -199,7 +197,7 @@ func (api *assets) serveAsset(c *fiber.Ctx) error {
 		return handleVideo(c, api.appFs, asset)
 	}
 
-	// Handle pdf
+	// TODO: Handle pdf and HTML
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "done",
 	})
@@ -209,25 +207,27 @@ func (api *assets) serveAsset(c *fiber.Ctx) error {
 // HELPER
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func toAssetResponse(assets []*models.Asset) []*assetResponse {
+func assetResponseHelper(assets []*models.Asset) []*assetResponse {
 	responses := []*assetResponse{}
 	for _, asset := range assets {
 		responses = append(responses, &assetResponse{
-			ID:          asset.ID,
-			CourseID:    asset.CourseID,
-			Title:       asset.Title,
-			Prefix:      asset.Prefix,
-			Chapter:     asset.Chapter,
-			Path:        asset.Path,
-			Type:        asset.Type,
-			Progress:    asset.Progress,
+			ID:        asset.ID,
+			CourseID:  asset.CourseID,
+			Title:     asset.Title,
+			Prefix:    int(asset.Prefix.Int16),
+			Chapter:   asset.Chapter,
+			Path:      asset.Path,
+			Type:      asset.Type,
+			CreatedAt: asset.CreatedAt,
+			UpdatedAt: asset.UpdatedAt,
+
+			// Progress
+			VideoPos:    asset.VideoPos,
 			Completed:   asset.Completed,
 			CompletedAt: asset.CompletedAt,
-			CreatedAt:   asset.CreatedAt,
-			UpdatedAt:   asset.UpdatedAt,
 
 			// Association
-			Attachments: toAttachmentResponse(asset.Attachments),
+			Attachments: attachmentResponseHelper(asset.Attachments),
 		})
 
 	}

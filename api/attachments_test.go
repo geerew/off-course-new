@@ -31,11 +31,9 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 0, int(respData.TotalItems))
-		assert.Len(t, respData.Items, 0)
+		paginationResp, _ := attachmentsUnmarshalHelper(t, body)
+		assert.Zero(t, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 0)
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
@@ -51,7 +49,8 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
-		_, attachmentsResp := attachmentsUnmarshalHelper(t, body)
+		paginationResp, attachmentsResp := attachmentsUnmarshalHelper(t, body)
+		require.Equal(t, 8, int(paginationResp.TotalItems))
 		require.Len(t, attachmentsResp, 8)
 		assert.Equal(t, attachments[7].ID, attachmentsResp[0].ID)
 		assert.Equal(t, attachments[7].Title, attachmentsResp[0].Title)
@@ -72,7 +71,8 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
-		_, attachmentsResp := attachmentsUnmarshalHelper(t, body)
+		paginationResp, attachmentsResp := attachmentsUnmarshalHelper(t, body)
+		require.Equal(t, 8, int(paginationResp.TotalItems))
 		require.Len(t, attachmentsResp, 8)
 		assert.Equal(t, attachments[0].ID, attachmentsResp[0].ID)
 		assert.Equal(t, attachments[0].Title, attachmentsResp[0].Title)
@@ -97,9 +97,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 			pagination.PerPageQueryParam: {"10"},
 		}
 
-		req := httptest.NewRequest(http.MethodGet, "/api/attachments/?"+params.Encode(), nil)
-
-		status, body, err := attachmentsRequestHelper(t, appFs, db, req)
+		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/?"+params.Encode(), nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -121,9 +119,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 			pagination.PerPageQueryParam: {"10"},
 		}
 
-		req = httptest.NewRequest(http.MethodGet, "/api/attachments/?"+params.Encode(), nil)
-
-		status, body, err = attachmentsRequestHelper(t, appFs, db, req)
+		status, body, err = attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/?"+params.Encode(), nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -167,12 +163,12 @@ func TestAttachments_GetAttachment(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
-		var respData attachmentResponse
-		err = json.Unmarshal(body, &respData)
+		var attachmentResp attachmentResponse
+		err = json.Unmarshal(body, &attachmentResp)
 		require.Nil(t, err)
-		assert.Equal(t, attachments[6].ID, respData.ID)
-		assert.Equal(t, attachments[6].Title, respData.Title)
-		assert.Equal(t, attachments[6].Path, respData.Path)
+		assert.Equal(t, attachments[6].ID, attachmentResp.ID)
+		assert.Equal(t, attachments[6].Title, attachmentResp.Title)
+		assert.Equal(t, attachments[6].Path, attachmentResp.Path)
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
