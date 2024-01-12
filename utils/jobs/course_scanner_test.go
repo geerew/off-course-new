@@ -24,25 +24,25 @@ func Test_Add(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
+		workingData := models.NewTestData(t, scanner.db, 1, false, 0, 0)
 
-		scan, err := scanner.Add(course.ID)
+		scan, err := scanner.Add(workingData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, scan.CourseID, course.ID)
+		assert.Equal(t, workingData[0].ID, scan.CourseID)
 	})
 
 	t.Run("duplicate", func(t *testing.T) {
 		scanner, lh, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
+		workingData := models.NewTestData(t, scanner.db, 1, false, 0, 0)
 
-		scan, err := scanner.Add(course.ID)
+		scan, err := scanner.Add(workingData[0].ID)
 		assert.Nil(t, err)
-		assert.Equal(t, scan.CourseID, course.ID)
+		assert.Equal(t, workingData[0].ID, scan.CourseID)
 
 		// Add the same course again
-		scan, err = scanner.Add(course.ID)
+		scan, err = scanner.Add(workingData[0].ID)
 		require.Nil(t, err)
 		require.NotNil(t, lh.LastEntry())
 		require.Nil(t, scan)
@@ -63,27 +63,27 @@ func Test_Add(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		courses := models.NewTestCourses(t, scanner.db, 2)
+		workingData := models.NewTestData(t, scanner.db, 2, false, 0, 0)
 
-		scan1, err := scanner.Add(courses[0].ID)
+		scan1, err := scanner.Add(workingData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, scan1.CourseID, courses[0].ID)
+		assert.Equal(t, workingData[0].ID, scan1.CourseID)
 
-		scan2, err := scanner.Add(courses[1].ID)
+		scan2, err := scanner.Add(workingData[1].ID)
 		require.Nil(t, err)
-		assert.Equal(t, scan2.CourseID, courses[1].ID)
+		assert.Equal(t, workingData[1].ID, scan2.CourseID)
 	})
 
 	t.Run("db error", func(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
+		workingData := models.NewTestData(t, scanner.db, 1, false, 0, 0)
 
 		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableScans())
 		require.Nil(t, err)
 
-		scan, err := scanner.Add(course.ID)
+		scan, err := scanner.Add(workingData[0].ID)
 		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", models.TableScans()))
 		assert.Nil(t, scan)
 	})
@@ -96,7 +96,7 @@ func Test_Worker(t *testing.T) {
 		scanner, lh, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
+		workingData := models.NewTestData(t, scanner.db, 1, false, 0, 0)
 
 		// Start the worker
 		go scanner.Worker(func(*CourseScanner, *models.Scan) error {
@@ -104,22 +104,22 @@ func Test_Worker(t *testing.T) {
 		})
 
 		// Add the job
-		scan, err := scanner.Add(course.ID)
+		scan, err := scanner.Add(workingData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, scan.CourseID, course.ID)
+		assert.Equal(t, scan.CourseID, workingData[0].ID)
 
 		// Give time for the worker to finish
 		time.Sleep(time.Millisecond * 3)
 
 		// Assert the scan job was deleted from the DB
-		s, err := models.GetScan(scanner.db, course.ID)
+		s, err := models.GetScan(scanner.db, workingData[0].ID)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, s)
 
 		// Validate the logs
 		require.NotNil(t, lh.LastEntry())
 		lh.Entries().Get()[lh.Len()-2].ExpMsg("finished processing scan job")
-		lh.Entries().Get()[lh.Len()-2].ExpStr("path", course.Path)
+		lh.Entries().Get()[lh.Len()-2].ExpStr("path", workingData[0].Path)
 		lh.LastEntry().ExpLevel(zerolog.InfoLevel)
 		lh.LastEntry().ExpMsg("finished processing all scan jobs")
 	})
@@ -128,9 +128,9 @@ func Test_Worker(t *testing.T) {
 		scanner, lh, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		courses := models.NewTestCourses(t, scanner.db, 3)
+		workingData := models.NewTestData(t, scanner.db, 3, false, 0, 0)
 
-		for _, course := range courses {
+		for _, course := range workingData {
 			_, err := scanner.Add(course.ID)
 			require.Nil(t, err)
 		}
@@ -144,16 +144,16 @@ func Test_Worker(t *testing.T) {
 		time.Sleep(time.Millisecond * 5)
 
 		// Assert the scan job was deleted from the DB
-		for _, course := range courses {
+		for _, course := range workingData {
 			s, err := models.GetScan(scanner.db, course.ID)
 			require.ErrorIs(t, err, sql.ErrNoRows)
 			assert.Nil(t, s)
 		}
 
-		// Validate the logs.
+		// Validate the logs
 		require.NotNil(t, lh.LastEntry())
 		lh.Entries().Get()[lh.Len()-2].ExpMsg("finished processing scan job")
-		lh.Entries().Get()[lh.Len()-2].ExpStr("path", courses[2].Path)
+		lh.Entries().Get()[lh.Len()-2].ExpStr("path", workingData[2].Path)
 		lh.LastEntry().ExpLevel(zerolog.InfoLevel)
 		lh.LastEntry().ExpMsg("finished processing all scan jobs")
 	})
@@ -162,16 +162,16 @@ func Test_Worker(t *testing.T) {
 		scanner, lh, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
+		workingData := models.NewTestData(t, scanner.db, 1, false, 0, 0)
 
 		// Start the worker
 		go scanner.Worker(func(*CourseScanner, *models.Scan) error {
 			return errors.New("processing error")
 		})
 
-		scan, err := scanner.Add(course.ID)
+		scan, err := scanner.Add(workingData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, scan.CourseID, course.ID)
+		assert.Equal(t, scan.CourseID, workingData[0].ID)
 
 		// Give time for the worker to finish
 		time.Sleep(time.Millisecond * 3)
@@ -189,12 +189,12 @@ func Test_Worker(t *testing.T) {
 		scanner, lh, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
+		workingData := models.NewTestData(t, scanner.db, 1, false, 0, 0)
 
 		// Add the job
-		scan, err := scanner.Add(course.ID)
+		scan, err := scanner.Add(workingData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, scan.CourseID, course.ID)
+		assert.Equal(t, scan.CourseID, workingData[0].ID)
 
 		// Drop the DB
 		_, err = scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableScans())
@@ -230,14 +230,13 @@ func Test_CourseProcessor(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
+		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
 
 		// Drop the table
 		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableCourses())
 		require.Nil(t, err)
 
-		err = CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", models.TableCourses()))
 	})
 
@@ -245,10 +244,9 @@ func Test_CourseProcessor(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
+		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
 
-		err := CourseProcessor(scanner, scan)
+		err := CourseProcessor(scanner, workingData[0].Scan)
 		require.EqualError(t, err, "unable to open path")
 	})
 
@@ -259,73 +257,69 @@ func Test_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Found card
 		// ----------------------------
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
-		require.Empty(t, course.CardPath)
+		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		require.Empty(t, workingData[0].CardPath)
 
-		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", course.Path))
+		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", workingData[0].Path))
 
-		err := CourseProcessor(scanner, scan)
+		err := CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		c, err := models.GetCourse(scanner.db, course.ID)
+		c, err := models.GetCourse(scanner.db, workingData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, fmt.Sprintf("%s/card.jpg", course.Path), c.CardPath)
+		assert.Equal(t, fmt.Sprintf("%s/card.jpg", workingData[0].Path), c.CardPath)
 
 		// ----------------------------
 		// Ignore card in chapter
 		// ----------------------------
-		course = models.NewTestCourses(t, scanner.db, 1)[0]
-		scan = models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
-		require.Empty(t, course.CardPath)
+		workingData = models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		require.Empty(t, workingData[0].CardPath)
 
-		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/chapter 1/card.jpg", course.Path))
+		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/chapter 1/card.jpg", workingData[0].Path))
 
-		err = CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		c, err = models.GetCourse(scanner.db, course.ID)
+		c, err = models.GetCourse(scanner.db, workingData[0].ID)
 		require.Nil(t, err)
 		assert.Empty(t, c.CardPath)
-		assert.Empty(t, course.CardPath)
+		assert.Empty(t, workingData[0].CardPath)
 
 		// ----------------------------
 		// Multiple cards types
 		// ----------------------------
-		course = models.NewTestCourses(t, scanner.db, 1)[0]
-		scan = models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
-		require.Empty(t, course.CardPath)
+		workingData = models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		require.Empty(t, workingData[0].CardPath)
 
-		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.png", course.Path))
+		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.png", workingData[0].Path))
 
-		err = CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		c, err = models.GetCourse(scanner.db, course.ID)
+		c, err = models.GetCourse(scanner.db, workingData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, fmt.Sprintf("%s/card.jpg", course.Path), c.CardPath)
+		assert.Equal(t, fmt.Sprintf("%s/card.jpg", workingData[0].Path), c.CardPath)
 	})
 
 	t.Run("card error", func(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
-		require.Empty(t, course.CardPath)
+		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		require.Empty(t, workingData[0].CardPath)
 
-		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", course.Path))
+		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", workingData[0].Path))
 
 		// Rename the card_path column
 		_, err := scanner.db.Exec(fmt.Sprintf("ALTER TABLE %s RENAME COLUMN card_path TO ignore_card_path", models.TableCourses()))
 		require.Nil(t, err)
 
-		err = CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.ErrorContains(t, err, "no such column: card_path")
 	})
 
@@ -333,26 +327,25 @@ func Test_CourseProcessor(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
+		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
 
-		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file 1", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file.file", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file.avi", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/ - file.avi", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/- - file.avi", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/.avi", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/-1 - file.avi", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/a - file.avi", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/1.1 - file.avi", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/2.3-file.avi", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/1file.avi", course.Path))
+		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file 1", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file.file", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file.avi", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/ - file.avi", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/- - file.avi", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/.avi", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/-1 - file.avi", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/a - file.avi", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/1.1 - file.avi", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/2.3-file.avi", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/1file.avi", workingData[0].Path))
 
-		err := CourseProcessor(scanner, scan)
+		err := CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		assets, err := models.GetAssets(scanner.db, &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": course.ID}})
+		assets, err := models.GetAssets(scanner.db, &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": workingData[0].ID}})
 		require.Nil(t, err)
 		require.Len(t, assets, 0)
 	})
@@ -361,23 +354,22 @@ func Test_CourseProcessor(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
+		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
 
 		dbParams := &database.DatabaseParams{
 			OrderBy: []string{"chapter asc", "prefix asc"},
-			Where:   sq.Eq{models.TableAssets() + ".course_id": course.ID},
+			Where:   sq.Eq{models.TableAssets() + ".course_id": workingData[0].ID},
 		}
 
 		// ----------------------------
 		// Add 2 assets
 		// ----------------------------
-		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 file 1.mkv", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/02 file 2.html", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/should ignore", course.Path))
+		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 file 1.mkv", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/02 file 2.html", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/should ignore", workingData[0].Path))
 
-		err := CourseProcessor(scanner, scan)
+		err := CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err := models.GetAssets(scanner.db, dbParams)
@@ -385,13 +377,13 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Len(t, assets, 2)
 
 		assert.Equal(t, "file 1", assets[0].Title)
-		assert.Equal(t, course.ID, assets[0].CourseID)
+		assert.Equal(t, workingData[0].ID, assets[0].CourseID)
 		assert.Equal(t, 1, int(assets[0].Prefix.Int16))
 		assert.Empty(t, assets[0].Chapter)
 		assert.True(t, assets[0].Type.IsVideo())
 
 		assert.Equal(t, "file 2", assets[1].Title)
-		assert.Equal(t, course.ID, assets[1].CourseID)
+		assert.Equal(t, workingData[0].ID, assets[1].CourseID)
 		assert.Equal(t, 2, int(assets[1].Prefix.Int16))
 		assert.Empty(t, assets[1].Chapter)
 		assert.True(t, assets[1].Type.IsHTML())
@@ -399,9 +391,9 @@ func Test_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Delete asset
 		// ----------------------------
-		scanner.appFs.Fs.Remove(fmt.Sprintf("%s/01 file 1.mkv", course.Path))
+		scanner.appFs.Fs.Remove(fmt.Sprintf("%s/01 file 1.mkv", workingData[0].Path))
 
-		err = CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err = models.GetAssets(scanner.db, dbParams)
@@ -409,7 +401,7 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Len(t, assets, 1)
 
 		assert.Equal(t, "file 2", assets[0].Title)
-		assert.Equal(t, course.ID, assets[0].CourseID)
+		assert.Equal(t, workingData[0].ID, assets[0].CourseID)
 		assert.Equal(t, 2, int(assets[0].Prefix.Int16))
 		assert.Empty(t, assets[0].Chapter)
 		assert.True(t, assets[0].Type.IsHTML())
@@ -417,9 +409,9 @@ func Test_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Add chapter asset
 		// ----------------------------
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 Chapter 1/03 file 3.pdf", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 Chapter 1/03 file 3.pdf", workingData[0].Path))
 
-		err = CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err = models.GetAssets(scanner.db, dbParams)
@@ -427,13 +419,13 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Len(t, assets, 2)
 
 		assert.Equal(t, "file 2", assets[0].Title)
-		assert.Equal(t, course.ID, assets[0].CourseID)
+		assert.Equal(t, workingData[0].ID, assets[0].CourseID)
 		assert.Equal(t, 2, int(assets[0].Prefix.Int16))
 		assert.Empty(t, assets[0].Chapter)
 		assert.True(t, assets[0].Type.IsHTML())
 
 		assert.Equal(t, "file 3", assets[1].Title)
-		assert.Equal(t, course.ID, assets[1].CourseID)
+		assert.Equal(t, workingData[0].ID, assets[1].CourseID)
 		assert.Equal(t, 3, int(assets[1].Prefix.Int16))
 		assert.Equal(t, "01 Chapter 1", assets[1].Chapter)
 		assert.True(t, assets[1].Type.IsPDF())
@@ -443,16 +435,15 @@ func Test_CourseProcessor(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
+		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
 
-		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mkv", course.Path))
+		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mkv", workingData[0].Path))
 
 		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableAssets())
 		require.Nil(t, err)
 
-		err = CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.ErrorContains(t, err, "no such table: "+models.TableAssets())
 	})
 
@@ -460,47 +451,46 @@ func Test_CourseProcessor(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
+		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
 
-		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
+		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
 
-		assetDbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": course.ID}}
+		assetDbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": workingData[0].ID}}
 		attachmentDbParams := &database.DatabaseParams{
 			OrderBy: []string{"created_at asc"},
-			Where:   sq.Eq{models.TableAttachments() + ".course_id": course.ID},
+			Where:   sq.Eq{models.TableAttachments() + ".course_id": workingData[0].ID},
 		}
 
 		// ----------------------------
 		// Add 1 asset with 1 attachment
 		// ----------------------------
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mp4", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 info.txt", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mp4", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 info.txt", workingData[0].Path))
 
-		err := CourseProcessor(scanner, scan)
+		err := CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err := models.GetAssets(scanner.db, assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, "video", assets[0].Title)
-		assert.Equal(t, course.ID, assets[0].CourseID)
+		assert.Equal(t, workingData[0].ID, assets[0].CourseID)
 		assert.Equal(t, 1, int(assets[0].Prefix.Int16))
-		assert.Equal(t, fmt.Sprintf("%s/01 video.mp4", course.Path), assets[0].Path)
+		assert.Equal(t, fmt.Sprintf("%s/01 video.mp4", workingData[0].Path), assets[0].Path)
 		assert.True(t, assets[0].Type.IsVideo())
 
 		attachments, err := models.GetAttachments(scanner.db, attachmentDbParams)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
 		assert.Equal(t, "info.txt", attachments[0].Title)
-		assert.Equal(t, fmt.Sprintf("%s/01 info.txt", course.Path), attachments[0].Path)
+		assert.Equal(t, fmt.Sprintf("%s/01 info.txt", workingData[0].Path), attachments[0].Path)
 
 		// ----------------------------
 		// Add another attachment
 		// ----------------------------
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 code.zip", course.Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 code.zip", workingData[0].Path))
 
-		err = CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
 		// Assert the asset
@@ -513,16 +503,16 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, attachments, 2)
 		assert.Equal(t, "info.txt", attachments[0].Title)
-		assert.Equal(t, fmt.Sprintf("%s/01 info.txt", course.Path), attachments[0].Path)
+		assert.Equal(t, fmt.Sprintf("%s/01 info.txt", workingData[0].Path), attachments[0].Path)
 		assert.Equal(t, "code.zip", attachments[1].Title)
-		assert.Equal(t, fmt.Sprintf("%s/01 code.zip", course.Path), attachments[1].Path)
+		assert.Equal(t, fmt.Sprintf("%s/01 code.zip", workingData[0].Path), attachments[1].Path)
 
 		// ----------------------------
 		// Delete first attachment
 		// ----------------------------
-		scanner.appFs.Fs.Remove(fmt.Sprintf("%s/01 info.txt", course.Path))
+		scanner.appFs.Fs.Remove(fmt.Sprintf("%s/01 info.txt", workingData[0].Path))
 
-		err = CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
 		// Assert the asset
@@ -536,25 +526,24 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
 		assert.Equal(t, "code.zip", attachments[0].Title)
-		assert.Equal(t, fmt.Sprintf("%s/01 code.zip", course.Path), attachments[0].Path)
+		assert.Equal(t, fmt.Sprintf("%s/01 code.zip", workingData[0].Path), attachments[0].Path)
 	})
 
 	t.Run("attachments error", func(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
+		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
 
-		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mkv", course.Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 info", course.Path))
+		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mkv", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 info", workingData[0].Path))
 
 		// Drop the attachments table
 		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableAttachments())
 		require.Nil(t, err)
 
-		err = CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.ErrorContains(t, err, "no such table: "+models.TableAttachments())
 	})
 
@@ -566,24 +555,23 @@ func Test_CourseProcessor(t *testing.T) {
 		// Priority is VIDEO -> HTML -> PDF
 		// ----------------------------
 
-		course := models.NewTestCourses(t, scanner.db, 1)[0]
-		scan := models.NewTestScans(t, scanner.db, []*models.Course{course})[0]
+		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
 
-		scanner.appFs.Fs.Mkdir(course.Path, os.ModePerm)
+		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
 
-		assetDbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": course.ID}}
+		assetDbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": workingData[0].ID}}
 		attachmentDbParams := &database.DatabaseParams{
 			OrderBy: []string{"created_at asc"},
-			Where:   sq.Eq{models.TableAttachments() + ".course_id": course.ID},
+			Where:   sq.Eq{models.TableAttachments() + ".course_id": workingData[0].ID},
 		}
 
 		// ----------------------------
 		// Add PDF (asset)
 		// ----------------------------
-		pdfFile := fmt.Sprintf("%s/01 doc 1.pdf", course.Path)
+		pdfFile := fmt.Sprintf("%s/01 doc 1.pdf", workingData[0].Path)
 		scanner.appFs.Fs.Create(pdfFile)
 
-		err := CourseProcessor(scanner, scan)
+		err := CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err := models.GetAssets(scanner.db, assetDbParams)
@@ -596,10 +584,10 @@ func Test_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Add HTML (asset)
 		// ----------------------------
-		htmlFile := fmt.Sprintf("%s/01 example.html", course.Path)
+		htmlFile := fmt.Sprintf("%s/01 example.html", workingData[0].Path)
 		scanner.appFs.Fs.Create(htmlFile)
 
-		err = CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err = models.GetAssets(scanner.db, assetDbParams)
@@ -617,10 +605,10 @@ func Test_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Add VIDEO (asset)
 		// ----------------------------
-		videoFile := fmt.Sprintf("%s/01 video.mp4", course.Path)
+		videoFile := fmt.Sprintf("%s/01 video.mp4", workingData[0].Path)
 		scanner.appFs.Fs.Create(videoFile)
 
-		err = CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err = models.GetAssets(scanner.db, assetDbParams)
@@ -639,10 +627,10 @@ func Test_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Add PDF file (attachment)
 		// ----------------------------
-		pdfFile2 := fmt.Sprintf("%s/01 - e.pdf", course.Path)
+		pdfFile2 := fmt.Sprintf("%s/01 - e.pdf", workingData[0].Path)
 		scanner.appFs.Fs.Create(pdfFile2)
 
-		err = CourseProcessor(scanner, scan)
+		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err = models.GetAssets(scanner.db, assetDbParams)
@@ -664,17 +652,16 @@ func Test_CourseProcessor(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		origCourse := models.NewTestCourses(t, scanner.db, 1)[0]
-		scan := models.NewTestScans(t, scanner.db, []*models.Course{origCourse})[0]
+		workingData := models.NewTestData(t, scanner.db, 1, true, 1, 10)
 
-		scanner.appFs.Fs.Mkdir(origCourse.Path, os.ModePerm)
+		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
 
-		err := CourseProcessor(scanner, scan)
+		err := CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		updatedCourse, err := models.GetCourse(scanner.db, origCourse.ID)
+		updatedCourse, err := models.GetCourse(scanner.db, workingData[0].ID)
 		require.Nil(t, err)
-		assert.NotEqual(t, origCourse.UpdatedAt, updatedCourse.UpdatedAt)
+		assert.NotEqual(t, workingData[0].UpdatedAt, updatedCourse.UpdatedAt)
 	})
 }
 
@@ -798,13 +785,12 @@ func Test_UpdateAssets(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		courses := models.NewTestCourses(t, scanner.db, 1)
-		assets := models.NewTestAssets(t, scanner.db, courses, 10)
+		workingData := models.NewTestData(t, scanner.db, 1, true, 10, 0)
 
-		err := updateAssets(scanner.db, courses[0].ID, assets)
+		err := updateAssets(scanner.db, workingData[0].ID, workingData[0].Assets)
 		require.Nil(t, err)
 
-		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": courses[0].ID}}
+		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": workingData[0].ID}}
 		count, err := models.CountAssets(scanner.db, dbParams)
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
@@ -814,15 +800,19 @@ func Test_UpdateAssets(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		courses := models.NewTestCourses(t, scanner.db, 1)
-		assets := models.NewTestAssets(t, nil, courses, 10)
+		workingData := models.NewTestData(t, scanner.db, 1, true, 12, 0)
 
-		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": courses[0].ID}}
+		// Delete the assets (so we can add them again)
+		for _, a := range workingData[0].Assets {
+			require.Nil(t, models.DeleteAsset(scanner.db, a.ID))
+		}
+
+		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": workingData[0].ID}}
 
 		// ----------------------------
 		// Add 10 assets
 		// ----------------------------
-		err := updateAssets(scanner.db, courses[0].ID, assets)
+		err := updateAssets(scanner.db, workingData[0].ID, workingData[0].Assets[:10])
 		require.Nil(t, err)
 
 		count, err := models.CountAssets(scanner.db, dbParams)
@@ -832,12 +822,10 @@ func Test_UpdateAssets(t *testing.T) {
 		// ----------------------------
 		// Add another 2 assets
 		// ----------------------------
-		additionalAssets := models.NewTestAssets(t, nil, courses, 2)
-		additionalAssets[0].ID = ""
-		additionalAssets[1].ID = ""
-		assets = append(assets, additionalAssets...)
+		workingData[0].Assets[10].ID = ""
+		workingData[0].Assets[11].ID = ""
 
-		err = updateAssets(scanner.db, courses[0].ID, assets)
+		err = updateAssets(scanner.db, workingData[0].ID, workingData[0].Assets)
 		require.Nil(t, err)
 
 		count, err = models.CountAssets(scanner.db, dbParams)
@@ -845,7 +833,7 @@ func Test_UpdateAssets(t *testing.T) {
 		require.Equal(t, 12, count)
 
 		// Ensure all assets have an ID
-		for _, a := range assets {
+		for _, a := range workingData[0].Assets {
 			assert.NotEmpty(t, a.ID)
 		}
 	})
@@ -854,17 +842,16 @@ func Test_UpdateAssets(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		courses := models.NewTestCourses(t, scanner.db, 1)
-		assets := models.NewTestAssets(t, scanner.db, courses, 12)
+		workingData := models.NewTestData(t, scanner.db, 1, true, 12, 0)
 
-		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": courses[0].ID}}
+		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": workingData[0].ID}}
 
 		// ----------------------------
 		// Remove 2 assets
 		// ----------------------------
-		assets = assets[2:]
+		workingData[0].Assets = workingData[0].Assets[2:]
 
-		err := updateAssets(scanner.db, courses[0].ID, assets)
+		err := updateAssets(scanner.db, workingData[0].ID, workingData[0].Assets)
 		require.Nil(t, err)
 
 		count, err := models.CountAssets(scanner.db, dbParams)
@@ -874,9 +861,9 @@ func Test_UpdateAssets(t *testing.T) {
 		// ----------------------------
 		// Remove another 2 assets
 		// ----------------------------
-		assets = assets[2:]
+		workingData[0].Assets = workingData[0].Assets[2:]
 
-		err = updateAssets(scanner.db, courses[0].ID, assets)
+		err = updateAssets(scanner.db, workingData[0].ID, workingData[0].Assets)
 		require.Nil(t, err)
 
 		count, err = models.CountAssets(scanner.db, dbParams)
@@ -904,14 +891,12 @@ func Test_UpdateAttachments(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		courses := models.NewTestCourses(t, scanner.db, 1)
-		assets := models.NewTestAssets(t, scanner.db, courses, 1)
-		attachments := models.NewTestAttachments(t, scanner.db, assets, 10)
+		workingData := models.NewTestData(t, scanner.db, 1, true, 1, 10)
 
-		err := updateAttachments(scanner.db, courses[0].ID, attachments)
+		err := updateAttachments(scanner.db, workingData[0].ID, workingData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
-		count, err := models.CountAttachments(scanner.db, &database.DatabaseParams{Where: sq.Eq{models.TableAttachments() + ".course_id": courses[0].ID}})
+		count, err := models.CountAttachments(scanner.db, &database.DatabaseParams{Where: sq.Eq{models.TableAttachments() + ".course_id": workingData[0].ID}})
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 	})
@@ -920,16 +905,19 @@ func Test_UpdateAttachments(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		courses := models.NewTestCourses(t, scanner.db, 1)
-		assets := models.NewTestAssets(t, scanner.db, courses, 1)
-		attachments := models.NewTestAttachments(t, nil, assets, 10)
+		workingData := models.NewTestData(t, scanner.db, 1, true, 1, 12)
 
-		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAttachments() + ".course_id": courses[0].ID}}
+		// Delete the attachments (so we can add them again)
+		for _, a := range workingData[0].Assets[0].Attachments {
+			require.Nil(t, models.DeleteAttachment(scanner.db, a.ID))
+		}
+
+		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAttachments() + ".course_id": workingData[0].ID}}
 
 		// ----------------------------
 		// Add 10 attachments
 		// ----------------------------
-		err := updateAttachments(scanner.db, courses[0].ID, attachments)
+		err := updateAttachments(scanner.db, workingData[0].ID, workingData[0].Assets[0].Attachments[:10])
 		require.Nil(t, err)
 
 		count, err := models.CountAttachments(scanner.db, dbParams)
@@ -939,10 +927,7 @@ func Test_UpdateAttachments(t *testing.T) {
 		// ----------------------------
 		// Add another 2 attachments
 		// ----------------------------
-		additionalAttachments := models.NewTestAttachments(t, nil, assets, 2)
-		attachments = append(attachments, additionalAttachments...)
-
-		err = updateAttachments(scanner.db, courses[0].ID, attachments)
+		err = updateAttachments(scanner.db, workingData[0].ID, workingData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
 		count, err = models.CountAttachments(scanner.db, dbParams)
@@ -954,18 +939,16 @@ func Test_UpdateAttachments(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
-		courses := models.NewTestCourses(t, scanner.db, 1)
-		assets := models.NewTestAssets(t, scanner.db, courses, 1)
-		attachments := models.NewTestAttachments(t, scanner.db, assets, 12)
+		workingData := models.NewTestData(t, scanner.db, 1, true, 1, 12)
 
-		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAttachments() + ".course_id": courses[0].ID}}
+		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAttachments() + ".course_id": workingData[0].ID}}
 
 		// ----------------------------
 		// Remove 2 attachments
 		// ----------------------------
-		attachments = attachments[2:]
+		workingData[0].Assets[0].Attachments = workingData[0].Assets[0].Attachments[2:]
 
-		err := updateAttachments(scanner.db, courses[0].ID, attachments)
+		err := updateAttachments(scanner.db, workingData[0].ID, workingData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
 		count, err := models.CountAttachments(scanner.db, dbParams)
@@ -975,9 +958,9 @@ func Test_UpdateAttachments(t *testing.T) {
 		// ----------------------------
 		// Remove another 2 attachments
 		// ----------------------------
-		attachments = attachments[2:]
+		workingData[0].Assets[0].Attachments = workingData[0].Assets[0].Attachments[2:]
 
-		err = updateAttachments(scanner.db, courses[0].ID, attachments)
+		err = updateAttachments(scanner.db, workingData[0].ID, workingData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
 		count, err = models.CountAttachments(scanner.db, dbParams)
