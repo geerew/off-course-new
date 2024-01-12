@@ -41,10 +41,8 @@ func TestAssets_GetAssets(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 2 courses, 5 assets, 2 attachments (10 assets and 20 attachments total)
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 5)
-		models.NewTestAttachments(t, db, assets, 2)
+		// Create 10 assets
+		models.NewTestData(t, db, 2, false, 5, 0)
 
 		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
 		require.NoError(t, err)
@@ -53,19 +51,18 @@ func TestAssets_GetAssets(t *testing.T) {
 		paginationResp, assetsResp := assetsUnmarshalHelper(t, body)
 		require.Equal(t, 10, int(paginationResp.TotalItems))
 		require.Len(t, assetsResp, 10)
-		assert.Equal(t, assets[9].ID, assetsResp[0].ID)
-		assert.Equal(t, assets[9].Title, assetsResp[0].Title)
-		assert.Equal(t, assets[9].Path, assetsResp[0].Path)
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 2 courses, 5 assets (10 assets total)
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 5)
+		// Create 10 assets
+		workingData := models.NewTestData(t, db, 2, false, 5, 0)
 
+		// ----------------------------
+		// CREATED_AT ASC
+		// ----------------------------
 		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/?orderBy=created_at%20asc", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -73,22 +70,35 @@ func TestAssets_GetAssets(t *testing.T) {
 		paginationResp, assetsResp := assetsUnmarshalHelper(t, body)
 		require.Equal(t, 10, int(paginationResp.TotalItems))
 		require.Len(t, assetsResp, 10)
-		assert.Equal(t, assets[0].ID, assetsResp[0].ID)
-		assert.Equal(t, assets[0].Title, assetsResp[0].Title)
-		assert.Equal(t, assets[0].Path, assetsResp[0].Path)
+		assert.Equal(t, workingData[0].Assets[0].ID, assetsResp[0].ID)
+		assert.Equal(t, workingData[0].Assets[0].Title, assetsResp[0].Title)
+		assert.Equal(t, workingData[0].Assets[0].Path, assetsResp[0].Path)
+
+		// ----------------------------
+		// CREATED_AT DESC
+		// ----------------------------
+		status, body, err = assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/?orderBy=created_at%20desc", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, assetsResp = assetsUnmarshalHelper(t, body)
+		require.Equal(t, 10, int(paginationResp.TotalItems))
+		require.Len(t, assetsResp, 10)
+		assert.Equal(t, workingData[1].Assets[4].ID, assetsResp[0].ID)
+		assert.Equal(t, workingData[1].Assets[4].Title, assetsResp[0].Title)
+		assert.Equal(t, workingData[1].Assets[4].Path, assetsResp[0].Path)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 3 courses, 6 assets (18 assets total)
-		courses := models.NewTestCourses(t, db, 3)
-		assets := models.NewTestAssets(t, db, courses, 6)
+		// 18 assets
+		workingData := models.NewTestData(t, db, 3, false, 6, 0)
 
-		// ------------------------
+		// ----------------------------
 		// Get the first page (10 assets)
-		// ------------------------
+		// ----------------------------
 		params := url.Values{
 			"orderBy":                    {"created_at asc"},
 			pagination.PageQueryParam:    {"1"},
@@ -104,13 +114,11 @@ func TestAssets_GetAssets(t *testing.T) {
 		assert.Len(t, paginationResp.Items, 10)
 
 		// Check the last asset in the paginated response
-		assert.Equal(t, assets[9].ID, assetsResp[9].ID)
-		assert.Equal(t, assets[9].Title, assetsResp[9].Title)
-		assert.Equal(t, assets[9].Path, assetsResp[9].Path)
+		assert.Equal(t, workingData[1].Assets[3].ID, assetsResp[9].ID)
 
-		// ------------------------
+		// ----------------------------
 		// Get the second page (8 assets)
-		// ------------------------
+		// ----------------------------
 		params = url.Values{
 			"orderBy":                    {"created_at asc"},
 			pagination.PageQueryParam:    {"2"},
@@ -126,9 +134,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		assert.Len(t, paginationResp.Items, 8)
 
 		// Check the last asset in the paginated response
-		assert.Equal(t, assets[17].ID, assetsResp[7].ID)
-		assert.Equal(t, assets[17].Title, assetsResp[7].Title)
-		assert.Equal(t, assets[17].Path, assetsResp[7].Path)
+		assert.Equal(t, workingData[2].Assets[5].ID, assetsResp[7].ID)
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
@@ -152,22 +158,19 @@ func TestAssets_GetAsset(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 2 courses, 5 assets, 2 attachments
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 5)
-		models.NewTestAttachments(t, db, assets, 2)
+		workingData := models.NewTestData(t, db, 2, false, 5, 2)
 
-		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+assets[6].ID, nil))
+		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+workingData[1].Assets[3].ID, nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
 		var assetResp assetResponse
 		err = json.Unmarshal(body, &assetResp)
 		require.Nil(t, err)
-		assert.Equal(t, assets[6].ID, assetResp.ID)
-		assert.Equal(t, assets[6].Title, assetResp.Title)
-		assert.Equal(t, assets[6].Path, assetResp.Path)
-		assert.Equal(t, assets[6].CourseID, assetResp.CourseID)
+		assert.Equal(t, workingData[1].Assets[3].ID, assetResp.ID)
+		assert.Equal(t, workingData[1].Assets[3].Title, assetResp.Title)
+		assert.Equal(t, workingData[1].Assets[3].Path, assetResp.Path)
+		assert.Equal(t, workingData[1].Assets[3].CourseID, assetResp.CourseID)
 		assert.Len(t, assetResp.Attachments, 2)
 	})
 
@@ -204,20 +207,18 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		f := fiber.New()
 		bindAssetsApi(f.Group("/api"), appFs, db)
 
-		// Create 1 courses, 1 asset
-		course := models.NewTestCourses(t, db, 1)[0]
-		asset := models.NewTestAssets(t, db, []*models.Course{course}, 1)[0]
+		workingData := models.NewTestData(t, db, 1, false, 1, 0)
 
-		// ------------------------
+		// ----------------------------
 		// Update the video position
-		// ------------------------
-		asset.VideoPos = 45
+		// ----------------------------
+		workingData[0].Assets[0].VideoPos = 45
 
 		// Marshal the asset for the request
-		data, err := json.Marshal(assetResponseHelper([]*models.Asset{asset})[0])
+		data, err := json.Marshal(assetResponseHelper([]*models.Asset{workingData[0].Assets[0]})[0])
 		require.Nil(t, err)
 
-		req := httptest.NewRequest(http.MethodPut, "/api/assets/"+asset.ID, strings.NewReader(string(data)))
+		req := httptest.NewRequest(http.MethodPut, "/api/assets/"+workingData[0].Assets[0].ID, strings.NewReader(string(data)))
 		req.Header.Set("Content-Type", "application/json")
 
 		status, body, err := assetsRequestHelper(t, appFs, db, req)
@@ -227,21 +228,21 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		var assetResp1 assetResponse
 		err = json.Unmarshal(body, &assetResp1)
 		require.Nil(t, err)
-		assert.Equal(t, asset.ID, assetResp1.ID)
+		assert.Equal(t, workingData[0].Assets[0].ID, assetResp1.ID)
 		assert.Equal(t, 45, assetResp1.VideoPos)
 		assert.False(t, assetResp1.Completed)
 		assert.True(t, assetResp1.CompletedAt.IsZero())
 
-		// ------------------------
+		// ----------------------------
 		// Set completed to true
-		// ------------------------
+		// ----------------------------
 		assetResp1.Completed = true
 
 		// Marshal the asset for the request
 		data, err = json.Marshal(assetResp1)
 		require.Nil(t, err)
 
-		req = httptest.NewRequest(http.MethodPut, "/api/assets/"+asset.ID, strings.NewReader(string(data)))
+		req = httptest.NewRequest(http.MethodPut, "/api/assets/"+workingData[0].Assets[0].ID, strings.NewReader(string(data)))
 		req.Header.Set("Content-Type", "application/json")
 
 		status, body, err = assetsRequestHelper(t, appFs, db, req)
@@ -251,14 +252,14 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		var assetResp2 assetResponse
 		err = json.Unmarshal(body, &assetResp2)
 		require.Nil(t, err)
-		assert.Equal(t, asset.ID, assetResp2.ID)
+		assert.Equal(t, workingData[0].Assets[0].ID, assetResp2.ID)
 		assert.Equal(t, 45, assetResp2.VideoPos)
 		assert.True(t, assetResp2.Completed)
 		assert.False(t, assetResp2.CompletedAt.IsZero())
 
-		// ------------------------
+		// ----------------------------
 		// Set video position to 10 completed to false
-		// ------------------------
+		// ----------------------------
 		assetResp2.VideoPos = 10
 		assetResp2.Completed = false
 
@@ -266,7 +267,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		data, err = json.Marshal(assetResp2)
 		require.Nil(t, err)
 
-		req = httptest.NewRequest(http.MethodPut, "/api/assets/"+asset.ID, strings.NewReader(string(data)))
+		req = httptest.NewRequest(http.MethodPut, "/api/assets/"+workingData[0].Assets[0].ID, strings.NewReader(string(data)))
 		req.Header.Set("Content-Type", "application/json")
 
 		status, body, err = assetsRequestHelper(t, appFs, db, req)
@@ -276,7 +277,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		var assetResp3 assetResponse
 		err = json.Unmarshal(body, &assetResp3)
 		require.Nil(t, err)
-		assert.Equal(t, asset.ID, assetResp3.ID)
+		assert.Equal(t, workingData[0].Assets[0].ID, assetResp3.ID)
 		assert.Equal(t, 10, assetResp3.VideoPos)
 		assert.False(t, assetResp3.Completed)
 		assert.True(t, assetResp3.CompletedAt.IsZero())
@@ -333,15 +334,13 @@ func TestAssets_ServeAsset(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 1 course and 2 assets (2 assets total)
-		courses := models.NewTestCourses(t, db, 1)
-		assets := models.NewTestAssets(t, db, courses, 2)
+		workingData := models.NewTestData(t, db, 1, false, 2, 0)
 
 		// Create asset
-		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(assets[1].Path), os.ModePerm))
-		require.Nil(t, afero.WriteFile(appFs.Fs, assets[1].Path, []byte("video"), os.ModePerm))
+		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(workingData[0].Assets[1].Path), os.ModePerm))
+		require.Nil(t, afero.WriteFile(appFs.Fs, workingData[0].Assets[1].Path, []byte("video"), os.ModePerm))
 
-		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+assets[1].ID+"/serve", nil))
+		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+workingData[0].Assets[1].ID+"/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 		assert.Equal(t, "video", string(body))
@@ -351,15 +350,13 @@ func TestAssets_ServeAsset(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 1 course and 2 assets (2 assets total)
-		courses := models.NewTestCourses(t, db, 1)
-		assets := models.NewTestAssets(t, db, courses, 2)
+		workingData := models.NewTestData(t, db, 1, false, 2, 0)
 
 		// Create asset
-		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(assets[1].Path), os.ModePerm))
-		require.Nil(t, afero.WriteFile(appFs.Fs, assets[1].Path, []byte("video"), os.ModePerm))
+		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(workingData[0].Assets[1].Path), os.ModePerm))
+		require.Nil(t, afero.WriteFile(appFs.Fs, workingData[0].Assets[1].Path, []byte("video"), os.ModePerm))
 
-		req := httptest.NewRequest(http.MethodGet, "/api/assets/"+assets[1].ID+"/serve", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/assets/"+workingData[0].Assets[1].ID+"/serve", nil)
 		req.Header.Add("Range", "bytes=0-")
 
 		status, body, err := assetsRequestHelper(t, appFs, db, req)
@@ -372,11 +369,9 @@ func TestAssets_ServeAsset(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 1 course and 2 assets (2 assets total)
-		courses := models.NewTestCourses(t, db, 1)
-		assets := models.NewTestAssets(t, db, courses, 2)
+		workingData := models.NewTestData(t, db, 1, false, 2, 0)
 
-		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+assets[1].ID+"/serve", nil))
+		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+workingData[0].Assets[1].ID+"/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		assert.Contains(t, string(body), "asset does not exist")
@@ -386,15 +381,13 @@ func TestAssets_ServeAsset(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 1 course and 2 assets (2 assets total)
-		courses := models.NewTestCourses(t, db, 1)
-		assets := models.NewTestAssets(t, db, courses, 2)
+		workingData := models.NewTestData(t, db, 1, false, 2, 0)
 
 		// Create asset
-		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(assets[1].Path), os.ModePerm))
-		require.Nil(t, afero.WriteFile(appFs.Fs, assets[1].Path, []byte("video"), os.ModePerm))
+		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(workingData[0].Assets[1].Path), os.ModePerm))
+		require.Nil(t, afero.WriteFile(appFs.Fs, workingData[0].Assets[1].Path, []byte("video"), os.ModePerm))
 
-		req := httptest.NewRequest(http.MethodGet, "/api/assets/"+assets[1].ID+"/serve", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/assets/"+workingData[0].Assets[1].ID+"/serve", nil)
 		req.Header.Add("Range", "bytes=10-1")
 
 		status, body, err := assetsRequestHelper(t, appFs, db, req)

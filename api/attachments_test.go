@@ -40,10 +40,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 2 courses, 2 assets, and 2 attachments (8 attachments total)
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 2)
-		attachments := models.NewTestAttachments(t, db, assets, 2)
+		models.NewTestData(t, db, 2, false, 2, 2)
 
 		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
 		require.NoError(t, err)
@@ -52,45 +49,54 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		paginationResp, attachmentsResp := attachmentsUnmarshalHelper(t, body)
 		require.Equal(t, 8, int(paginationResp.TotalItems))
 		require.Len(t, attachmentsResp, 8)
-		assert.Equal(t, attachments[7].ID, attachmentsResp[0].ID)
-		assert.Equal(t, attachments[7].Title, attachmentsResp[0].Title)
-		assert.Equal(t, attachments[7].Path, attachmentsResp[0].Path)
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 2 courses, 2 assets, and 2 attachments (8 attachments total)
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 2)
-		attachments := models.NewTestAttachments(t, db, assets, 2)
+		workingData := models.NewTestData(t, db, 2, false, 2, 4)
 
+		// ----------------------------
+		// CREATED_AT ASC
+		// ----------------------------
 		req := httptest.NewRequest(http.MethodGet, "/api/attachments/?orderBy=created_at%20asc", nil)
 		status, body, err := attachmentsRequestHelper(t, appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, attachmentsResp := attachmentsUnmarshalHelper(t, body)
-		require.Equal(t, 8, int(paginationResp.TotalItems))
-		require.Len(t, attachmentsResp, 8)
-		assert.Equal(t, attachments[0].ID, attachmentsResp[0].ID)
-		assert.Equal(t, attachments[0].Title, attachmentsResp[0].Title)
-		assert.Equal(t, attachments[0].Path, attachmentsResp[0].Path)
+		require.Equal(t, 16, int(paginationResp.TotalItems))
+		require.Len(t, attachmentsResp, 16)
+		assert.Equal(t, workingData[0].Assets[0].Attachments[0].ID, attachmentsResp[0].ID)
+		assert.Equal(t, workingData[0].Assets[0].Attachments[0].Title, attachmentsResp[0].Title)
+		assert.Equal(t, workingData[0].Assets[0].Attachments[0].Path, attachmentsResp[0].Path)
+
+		// ----------------------------
+		// CREATED_AT DESC
+		// ----------------------------
+		req = httptest.NewRequest(http.MethodGet, "/api/attachments/?orderBy=created_at%20desc", nil)
+		status, body, err = attachmentsRequestHelper(t, appFs, db, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, attachmentsResp = attachmentsUnmarshalHelper(t, body)
+		require.Equal(t, 16, int(paginationResp.TotalItems))
+		require.Len(t, attachmentsResp, 16)
+		assert.Equal(t, workingData[1].Assets[1].Attachments[3].ID, attachmentsResp[0].ID)
+		assert.Equal(t, workingData[1].Assets[1].Attachments[3].Title, attachmentsResp[0].Title)
+		assert.Equal(t, workingData[1].Assets[1].Attachments[3].Path, attachmentsResp[0].Path)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 1 course, 2 assets, and 8 attachments (16 attachments total)
-		courses := models.NewTestCourses(t, db, 1)
-		assets := models.NewTestAssets(t, db, courses, 2)
-		attachments := models.NewTestAttachments(t, db, assets, 8)
+		workingData := models.NewTestData(t, db, 2, false, 2, 4)
 
-		// ------------------------
+		// ----------------------------
 		// Get the first page (10 attachments)
-		// ------------------------
+		// ----------------------------
 		params := url.Values{
 			"orderBy":                    {"created_at asc"},
 			pagination.PageQueryParam:    {"1"},
@@ -106,13 +112,11 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		assert.Len(t, paginationResp.Items, 10)
 
 		// Check the last attachment in the paginated response
-		assert.Equal(t, attachments[9].ID, attachmentsResp[9].ID)
-		assert.Equal(t, attachments[9].Title, attachmentsResp[9].Title)
-		assert.Equal(t, attachments[9].Path, attachmentsResp[9].Path)
+		assert.Equal(t, workingData[1].Assets[0].Attachments[1].ID, attachmentsResp[9].ID)
 
-		// ------------------------
+		// ----------------------------
 		// Get the next page (6 attachments)
-		// ------------------------
+		// ----------------------------
 		params = url.Values{
 			"orderBy":                    {"created_at asc"},
 			pagination.PageQueryParam:    {"2"},
@@ -128,9 +132,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		assert.Len(t, paginationResp.Items, 6)
 
 		// Check the last attachment in the paginated response
-		assert.Equal(t, attachments[15].ID, attachmentsResp[5].ID)
-		assert.Equal(t, attachments[15].Title, attachmentsResp[5].Title)
-		assert.Equal(t, attachments[15].Path, attachmentsResp[5].Path)
+		assert.Equal(t, workingData[1].Assets[1].Attachments[3].ID, attachmentsResp[5].ID)
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
@@ -154,21 +156,19 @@ func TestAttachments_GetAttachment(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 2 courses, 2 assets, and 2 attachments (8 attachments total)
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 2)
-		attachments := models.NewTestAttachments(t, db, assets, 2)
+		workingData := models.NewTestData(t, db, 2, false, 2, 2)
 
-		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/"+attachments[6].ID, nil))
+		req := httptest.NewRequest(http.MethodGet, "/api/attachments/"+workingData[1].Assets[1].Attachments[0].ID, nil)
+		status, body, err := attachmentsRequestHelper(t, appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
 		var attachmentResp attachmentResponse
 		err = json.Unmarshal(body, &attachmentResp)
 		require.Nil(t, err)
-		assert.Equal(t, attachments[6].ID, attachmentResp.ID)
-		assert.Equal(t, attachments[6].Title, attachmentResp.Title)
-		assert.Equal(t, attachments[6].Path, attachmentResp.Path)
+		assert.Equal(t, workingData[1].Assets[1].Attachments[0].ID, attachmentResp.ID)
+		assert.Equal(t, workingData[1].Assets[1].Attachments[0].Title, attachmentResp.Title)
+		assert.Equal(t, workingData[1].Assets[1].Attachments[0].Path, attachmentResp.Path)
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
@@ -201,16 +201,13 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 2 courses, 2 assets, and 2 attachments (8 attachments total)
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 2)
-		attachments := models.NewTestAttachments(t, db, assets, 2)
+		workingData := models.NewTestData(t, db, 2, false, 2, 2)
 
 		// Create attachment file
-		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(attachments[2].Path), os.ModePerm))
-		require.Nil(t, afero.WriteFile(appFs.Fs, attachments[2].Path, []byte("hello"), os.ModePerm))
+		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(workingData[1].Assets[0].Attachments[0].Path), os.ModePerm))
+		require.Nil(t, afero.WriteFile(appFs.Fs, workingData[1].Assets[0].Attachments[0].Path, []byte("hello"), os.ModePerm))
 
-		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/"+attachments[2].ID+"/serve", nil))
+		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/"+workingData[1].Assets[0].Attachments[0].ID+"/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 		assert.Equal(t, "hello", string(body))
@@ -220,12 +217,9 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 		appFs, db, _, _, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 2 courses, 2 assets, and 2 attachments (8 attachments total)
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 2)
-		attachments := models.NewTestAttachments(t, db, assets, 2)
+		workingData := models.NewTestData(t, db, 2, false, 2, 2)
 
-		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/"+attachments[2].ID+"/serve", nil))
+		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/"+workingData[1].Assets[0].Attachments[0].ID+"/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		assert.Contains(t, string(body), "attachment does not exist")

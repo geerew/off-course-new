@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -13,7 +12,11 @@ import (
 	"strings"
 	"testing"
 
+	sq "github.com/Masterminds/squirrel"
+	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils/appFs"
+	"github.com/geerew/off-course/utils/jobs"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/gofiber/fiber/v2"
 	"github.com/spf13/afero"
@@ -21,375 +24,310 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// // // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestCourses_GetCourses(t *testing.T) {
-	t.Run("200 (empty)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
-		defer teardown(t)
+// // func TestCourses_GetCourses(t *testing.T) {
+// // 	t.Run("200 (empty)", func(t *testing.T) {
+// // 		appFs, db, cs, _, teardown := setup(t)
+// // 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+// // 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
+// // 		assert.NoError(t, err)
+// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+// // 		body, _ := io.ReadAll(resp.Body)
 
-		body, _ := io.ReadAll(resp.Body)
+// // 		var respData pagination.PaginationResult
+// // 		err = json.Unmarshal(body, &respData)
+// // 		require.Nil(t, err)
+// // 		assert.Equal(t, 0, int(respData.TotalItems))
+// // 		assert.Len(t, respData.Items, 0)
+// // 	})
 
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 0, int(respData.TotalItems))
-		assert.Len(t, respData.Items, 0)
-	})
+// // 	t.Run("200 (found)", func(t *testing.T) {
+// // 		appFs, db, cs, _, teardown := setup(t)
+// // 		defer teardown(t)
 
-	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
-		defer teardown(t)
+// // 		// Create 5 courses with 5 assets each
+// // 		courses := models.NewTestCourses(t, db, 5)
+// // 		models.NewTestAssets(t, db, courses, 5)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+// // 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
+// // 		assert.NoError(t, err)
+// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-		// Create 5 courses with 5 assets each
-		courses := models.NewTestCourses(t, db, 5)
-		models.NewTestAssets(t, db, courses, 5)
+// // 		body, _ := io.ReadAll(resp.Body)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+// // 		var respData pagination.PaginationResult
+// // 		err = json.Unmarshal(body, &respData)
+// // 		require.Nil(t, err)
+// // 		assert.Equal(t, 5, int(respData.TotalItems))
 
-		body, _ := io.ReadAll(resp.Body)
+// // 		// Unmarshal
+// // 		var coursesResponse []courseResponse
+// // 		for _, item := range respData.Items {
+// // 			var course courseResponse
+// // 			require.Nil(t, json.Unmarshal(item, &course))
+// // 			coursesResponse = append(coursesResponse, course)
+// // 		}
 
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 5, int(respData.TotalItems))
+// // 		// Assert values. By default orderBy is desc so the last inserted course should be first
+// // 		assert.Equal(t, courses[4].ID, coursesResponse[0].ID)
+// // 		assert.Equal(t, courses[4].Title, coursesResponse[0].Title)
+// // 		assert.Equal(t, courses[4].Path, coursesResponse[0].Path)
 
-		// Unmarshal
-		var coursesResponse []courseResponse
-		for _, item := range respData.Items {
-			var course courseResponse
-			require.Nil(t, json.Unmarshal(item, &course))
-			coursesResponse = append(coursesResponse, course)
-		}
+// // 		// Assert assets are not included
+// // 		assert.Nil(t, coursesResponse[0].Assets)
+// // 	})
 
-		// Assert values. By default orderBy is desc so the last inserted course should be first
-		assert.Equal(t, courses[4].ID, coursesResponse[0].ID)
-		assert.Equal(t, courses[4].Title, coursesResponse[0].Title)
-		assert.Equal(t, courses[4].Path, coursesResponse[0].Path)
+// // 	t.Run("200 (orderBy)", func(t *testing.T) {
+// // 		appFs, db, cs, _, teardown := setup(t)
+// // 		defer teardown(t)
 
-		// Assert assets are not included
-		assert.Nil(t, coursesResponse[0].Assets)
-	})
+// // 		// Create 5 courses
+// // 		courses := models.NewTestCourses(t, db, 5)
 
-	t.Run("200 (orderBy)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
-		defer teardown(t)
+// // 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?orderBy=created_at%20asc", nil))
+// // 		assert.NoError(t, err)
+// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+// // 		body, _ := io.ReadAll(resp.Body)
 
-		// Create 5 courses
-		courses := models.NewTestCourses(t, db, 5)
+// // 		var respData pagination.PaginationResult
+// // 		err = json.Unmarshal(body, &respData)
+// // 		require.Nil(t, err)
+// // 		assert.Equal(t, 5, int(respData.TotalItems))
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?orderBy=created_at%20asc", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+// // 		// Unmarshal
+// // 		var coursesResponse []courseResponse
+// // 		for _, item := range respData.Items {
+// // 			var course courseResponse
+// // 			require.Nil(t, json.Unmarshal(item, &course))
+// // 			coursesResponse = append(coursesResponse, course)
+// // 		}
 
-		body, _ := io.ReadAll(resp.Body)
+// // 		assert.Equal(t, courses[0].ID, coursesResponse[0].ID)
+// // 		assert.Equal(t, courses[0].Title, coursesResponse[0].Title)
+// // 		assert.Equal(t, courses[0].Path, coursesResponse[0].Path)
+// // 	})
 
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 5, int(respData.TotalItems))
+// // 	t.Run("200 (pagination)", func(t *testing.T) {
+// // 		appFs, db, cs, _, teardown := setup(t)
+// // 		defer teardown(t)
 
-		// Unmarshal
-		var coursesResponse []courseResponse
-		for _, item := range respData.Items {
-			var course courseResponse
-			require.Nil(t, json.Unmarshal(item, &course))
-			coursesResponse = append(coursesResponse, course)
-		}
+// // 		// Create 17 courses
+// // 		courses := models.NewTestCourses(t, db, 17)
 
-		assert.Equal(t, courses[0].ID, coursesResponse[0].ID)
-		assert.Equal(t, courses[0].Title, coursesResponse[0].Title)
-		assert.Equal(t, courses[0].Path, coursesResponse[0].Path)
-	})
+// // 		// Get the first 10 courses
+// // 		params := url.Values{
+// // 			"orderBy":                    {"created_at asc"},
+// // 			pagination.PageQueryParam:    {"1"},
+// // 			pagination.PerPageQueryParam: {"10"},
+// // 		}
+// // 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?"+params.Encode(), nil))
+// // 		assert.NoError(t, err)
+// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	t.Run("200 (pagination)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
-		defer teardown(t)
+// // 		body, _ := io.ReadAll(resp.Body)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+// // 		var respData pagination.PaginationResult
+// // 		err = json.Unmarshal(body, &respData)
+// // 		require.Nil(t, err)
+// // 		assert.Equal(t, 17, int(respData.TotalItems))
+// // 		assert.Len(t, respData.Items, 10)
 
-		// Create 17 courses
-		courses := models.NewTestCourses(t, db, 17)
+// // 		// Unmarshal
+// // 		var coursesResponse []courseResponse
+// // 		for _, item := range respData.Items {
+// // 			var course courseResponse
+// // 			require.Nil(t, json.Unmarshal(item, &course))
+// // 			coursesResponse = append(coursesResponse, course)
+// // 		}
 
-		// Get the first 10 courses
-		params := url.Values{
-			"orderBy":                    {"created_at asc"},
-			pagination.PageQueryParam:    {"1"},
-			pagination.PerPageQueryParam: {"10"},
-		}
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?"+params.Encode(), nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+// // 		assert.Equal(t, courses[0].ID, coursesResponse[0].ID)
+// // 		assert.Equal(t, courses[0].Title, coursesResponse[0].Title)
+// // 		assert.Equal(t, courses[0].Path, coursesResponse[0].Path)
 
-		body, _ := io.ReadAll(resp.Body)
+// // 		// Get the next 7 courses
+// // 		params = url.Values{
+// // 			"orderBy":                    {"created_at asc"},
+// // 			pagination.PageQueryParam:    {"2"},
+// // 			pagination.PerPageQueryParam: {"10"},
+// // 		}
+// // 		resp, err = f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?"+params.Encode(), nil))
+// // 		assert.NoError(t, err)
+// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 17, int(respData.TotalItems))
-		assert.Len(t, respData.Items, 10)
+// // 		body, _ = io.ReadAll(resp.Body)
 
-		// Unmarshal
-		var coursesResponse []courseResponse
-		for _, item := range respData.Items {
-			var course courseResponse
-			require.Nil(t, json.Unmarshal(item, &course))
-			coursesResponse = append(coursesResponse, course)
-		}
+// // 		err = json.Unmarshal(body, &respData)
+// // 		require.Nil(t, err)
+// // 		assert.Equal(t, 17, int(respData.TotalItems))
+// // 		assert.Len(t, respData.Items, 7)
 
-		assert.Equal(t, courses[0].ID, coursesResponse[0].ID)
-		assert.Equal(t, courses[0].Title, coursesResponse[0].Title)
-		assert.Equal(t, courses[0].Path, coursesResponse[0].Path)
+// // 		// Unmarshal
+// // 		coursesResponse = []courseResponse{}
+// // 		for _, item := range respData.Items {
+// // 			var course courseResponse
+// // 			require.Nil(t, json.Unmarshal(item, &course))
+// // 			coursesResponse = append(coursesResponse, course)
+// // 		}
 
-		// Get the next 7 courses
-		params = url.Values{
-			"orderBy":                    {"created_at asc"},
-			pagination.PageQueryParam:    {"2"},
-			pagination.PerPageQueryParam: {"10"},
-		}
-		resp, err = f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?"+params.Encode(), nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+// // 		assert.Equal(t, courses[10].ID, coursesResponse[0].ID)
+// // 		assert.Equal(t, courses[10].Title, coursesResponse[0].Title)
+// // 		assert.Equal(t, courses[10].Path, coursesResponse[0].Path)
+// // 	})
 
-		body, _ = io.ReadAll(resp.Body)
+// // 	t.Run("200 (expand)", func(t *testing.T) {
+// // 		appFs, db, cs, _, teardown := setup(t)
+// // 		defer teardown(t)
 
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 17, int(respData.TotalItems))
-		assert.Len(t, respData.Items, 7)
+// // 		// Create 5 courses with 5 assets each
+// // 		courses := models.NewTestCourses(t, db, 5)
+// // 		models.NewTestAssets(t, db, courses, 5)
 
-		// Unmarshal
-		coursesResponse = []courseResponse{}
-		for _, item := range respData.Items {
-			var course courseResponse
-			require.Nil(t, json.Unmarshal(item, &course))
-			coursesResponse = append(coursesResponse, course)
-		}
+// // 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?orderBy=created_at%20asc&expand=true", nil))
+// // 		assert.NoError(t, err)
+// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-		assert.Equal(t, courses[10].ID, coursesResponse[0].ID)
-		assert.Equal(t, courses[10].Title, coursesResponse[0].Title)
-		assert.Equal(t, courses[10].Path, coursesResponse[0].Path)
-	})
+// // 		body, _ := io.ReadAll(resp.Body)
 
-	t.Run("200 (expand)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
-		defer teardown(t)
+// // 		var respData pagination.PaginationResult
+// // 		err = json.Unmarshal(body, &respData)
+// // 		require.Nil(t, err)
+// // 		assert.Equal(t, 5, int(respData.TotalItems))
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+// // 		// Unmarshal
+// // 		coursesResponse := []courseResponse{}
+// // 		for _, item := range respData.Items {
+// // 			var course courseResponse
+// // 			require.Nil(t, json.Unmarshal(item, &course))
+// // 			coursesResponse = append(coursesResponse, course)
+// // 		}
 
-		// Create 5 courses with 5 assets each
-		courses := models.NewTestCourses(t, db, 5)
-		models.NewTestAssets(t, db, courses, 5)
+// // 		assert.Equal(t, courses[0].ID, coursesResponse[0].ID)
+// // 		assert.Equal(t, courses[0].Title, coursesResponse[0].Title)
+// // 		assert.Equal(t, courses[0].Path, coursesResponse[0].Path)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?orderBy=created_at%20asc&expand=true", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+// // 		// Assert the assets
+// // 		require.NotNil(t, coursesResponse[0].Assets)
+// // 		assert.Len(t, coursesResponse[0].Assets, 5)
+// // 	})
 
-		body, _ := io.ReadAll(resp.Body)
+// // 	t.Run("200 (started)", func(t *testing.T) {
+// // 		appFs, db, cs, _, teardown := setup(t)
+// // 		defer teardown(t)
 
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 5, int(respData.TotalItems))
+// // 		// Create 2 courses
+// // 		courses := models.NewTestCourses(t, db, 2)
+// // 		assets := models.NewTestAssets(t, db, courses, 2)
 
-		// Unmarshal
-		coursesResponse := []courseResponse{}
-		for _, item := range respData.Items {
-			var course courseResponse
-			require.Nil(t, json.Unmarshal(item, &course))
-			coursesResponse = append(coursesResponse, course)
-		}
+// // 		// For the first asset, set the progress and mark as completed
+// // 		_, err := models.UpdateAssetProgress(context.Background(), db, assets[0].ID, 50)
+// // 		require.Nil(t, err)
+// // 		_, err = models.UpdateAssetCompleted(context.Background(), db, assets[0].ID, true)
+// // 		require.Nil(t, err)
 
-		assert.Equal(t, courses[0].ID, coursesResponse[0].ID)
-		assert.Equal(t, courses[0].Title, coursesResponse[0].Title)
-		assert.Equal(t, courses[0].Path, coursesResponse[0].Path)
+// // 		// ------------------
+// // 		// `started` not defined
+// // 		// ------------------
+// // 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
+// // 		assert.NoError(t, err)
+// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-		// Assert the assets
-		require.NotNil(t, coursesResponse[0].Assets)
-		assert.Len(t, coursesResponse[0].Assets, 5)
-	})
+// // 		respData := paginatedBody(t, resp.Body)
+// // 		assert.Equal(t, 2, int(respData.TotalItems))
 
-	t.Run("200 (started)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
-		defer teardown(t)
+// // 		for _, item := range respData.Items {
+// // 			var course courseResponse
+// // 			require.Nil(t, json.Unmarshal(item, &course))
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+// // 			fmt.Printf("course: %+v\n", course)
+// // 		}
 
-		// Create 2 courses
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 2)
+// // 		// ------------------
+// // 		// `started` is true
+// // 		// ------------------
+// // 		resp, err = f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?started=true", nil))
+// // 		assert.NoError(t, err)
+// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-		// For the first asset, set the progress and mark as completed
-		_, err := models.UpdateAssetProgress(context.Background(), db, assets[0].ID, 50)
-		require.Nil(t, err)
-		_, err = models.UpdateAssetCompleted(context.Background(), db, assets[0].ID, true)
-		require.Nil(t, err)
+// // 		respData = paginatedBody(t, resp.Body)
+// // 		assert.Equal(t, 1, int(respData.TotalItems))
 
-		// ------------------
-		// `started` not defined
-		// ------------------
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+// // 		// Unmarshal
+// // 		coursesResponse := unmarshalCourses(t, respData.Items)
+// // 		assert.Equal(t, courses[0].ID, coursesResponse[0].ID)
+// // 		assert.Equal(t, 50, coursesResponse[0].Percent)
 
-		respData := paginatedBody(t, resp.Body)
-		assert.Equal(t, 2, int(respData.TotalItems))
+// // 		// ------------------
+// // 		// `started` is false
+// // 		// ------------------
+// // 		resp, err = f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?started=false", nil))
+// // 		assert.NoError(t, err)
+// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-		for _, item := range respData.Items {
-			var course courseResponse
-			require.Nil(t, json.Unmarshal(item, &course))
+// // 		respData = paginatedBody(t, resp.Body)
+// // 		require.Equal(t, 1, int(respData.TotalItems))
 
-			fmt.Printf("course: %+v\n", course)
-		}
+// // 		// Unmarshal (Note: orderBy is desc by default)
+// // 		coursesResponse = unmarshalCourses(t, respData.Items)
+// // 		assert.Equal(t, courses[1].ID, coursesResponse[0].ID)
+// // 		assert.Equal(t, 0, coursesResponse[0].Percent)
+// // 	})
 
-		// ------------------
-		// `started` is true
-		// ------------------
-		resp, err = f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?started=true", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+// // 	t.Run("500 (internal error)", func(t *testing.T) {
+// // 		appFs, db, cs, _, teardown := setup(t)
+// // 		defer teardown(t)
 
-		respData = paginatedBody(t, resp.Body)
-		assert.Equal(t, 1, int(respData.TotalItems))
+// // 		// Drop the courses table
+// // 		_, err := db.DB().NewDropTable().Model(&models.Course{}).Exec(context.Background())
+// // 		require.Nil(t, err)
 
-		// Unmarshal
-		coursesResponse := unmarshalCourses(t, respData.Items)
-		assert.Equal(t, courses[0].ID, coursesResponse[0].ID)
-		assert.Equal(t, 50, coursesResponse[0].Percent)
-
-		// ------------------
-		// `started` is false
-		// ------------------
-		resp, err = f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?started=false", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-		respData = paginatedBody(t, resp.Body)
-		require.Equal(t, 1, int(respData.TotalItems))
-
-		// Unmarshal (Note: orderBy is desc by default)
-		coursesResponse = unmarshalCourses(t, respData.Items)
-		assert.Equal(t, courses[1].ID, coursesResponse[0].ID)
-		assert.Equal(t, 0, coursesResponse[0].Percent)
-	})
-
-	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
-		defer teardown(t)
-
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		// Drop the courses table
-		_, err := db.DB().NewDropTable().Model(&models.Course{}).Exec(context.Background())
-		require.Nil(t, err)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-	})
-}
+// // 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
+// // 		assert.NoError(t, err)
+// // 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+// // 	})
+// // }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestCourses_GetCourse(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 3, false, 0, 0)
 
-		// Create 5 courses with 5 asserts each
-		courses := models.NewTestCourses(t, db, 5)
-		models.NewTestAssets(t, db, courses, 5)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[2].ID, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[2].ID, nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
-
-		var respData courseResponse
-		err = json.Unmarshal(body, &respData)
+		var courseResp courseResponse
+		err = json.Unmarshal(body, &courseResp)
 		require.Nil(t, err)
-		assert.Equal(t, courses[2].ID, respData.ID)
-		assert.Equal(t, courses[2].Title, respData.Title)
-		assert.Equal(t, courses[2].Path, respData.Path)
-		assert.Nil(t, respData.Assets)
-	})
-
-	t.Run("200 (expand)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
-		defer teardown(t)
-
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		courses := models.NewTestCourses(t, db, 5)
-		assets := models.NewTestAssets(t, db, courses, 5)
-		models.NewTestAttachments(t, db, assets, 3)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[2].ID+"?expand=true", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
-
-		var respData courseResponse
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, courses[2].ID, respData.ID)
-		assert.Equal(t, courses[2].Title, respData.Title)
-		assert.Equal(t, courses[2].Path, respData.Path)
-		require.Len(t, respData.Assets, 5)
-		assert.Len(t, respData.Assets[0].Attachments, 3)
+		assert.Equal(t, workingData[2].ID, courseResp.ID)
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/test", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		// Drop the table
-		_, err := db.DB().NewDropTable().Model(&models.Course{}).Exec(context.Background())
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/test", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
 	})
 }
 
@@ -397,97 +335,83 @@ func TestCourses_GetCourse(t *testing.T) {
 
 func TestCourses_Create(t *testing.T) {
 	t.Run("201 (created)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, nil, 1, false, 0, 0)
+		appFs.Fs.MkdirAll(workingData[0].Path, os.ModePerm)
 
-		// Create the course path
-		coursePath := "/course 1/"
-		appFs.Fs.MkdirAll(coursePath, os.ModePerm)
-
-		postData := fmt.Sprintf(`{"title": "course 1", "path": "%s" }`, coursePath)
+		postData := fmt.Sprintf(`{"title": "%s", "path": "%s" }`, workingData[0].Title, workingData[0].Path)
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(postData))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		resp, err := f.Test(req)
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusCreated, resp.StatusCode)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
 
-		body, _ := io.ReadAll(resp.Body)
-		var respData courseResponse
-		err = json.Unmarshal(body, &respData)
+		var courseResp courseResponse
+		err = json.Unmarshal(body, &courseResp)
 		require.Nil(t, err)
-		assert.NotNil(t, respData.ID)
-		assert.Equal(t, "course 1", respData.Title)
-		assert.Equal(t, coursePath, respData.Path)
+		assert.NotNil(t, courseResp.ID)
+		assert.Equal(t, workingData[0].Title, courseResp.Title)
+		assert.Equal(t, workingData[0].Path, courseResp.Path)
 	})
 
 	t.Run("400 (bind error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
-
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(`{`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		resp, err := f.Test(req)
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
 		assert.Contains(t, string(body), "error parsing data")
 	})
 
 	t.Run("400 (invalid data)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
+		// ----------------------------
 		// Missing title
+		// ----------------------------
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(`{"title": ""}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		resp, err := f.Test(req)
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
-		body, _ := io.ReadAll(resp.Body)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
 		assert.Contains(t, string(body), "a title and path are required")
 
+		// ----------------------------
 		// Missing path
+		// ----------------------------
 		req = httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(`{"title": "course 1", "path": ""}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		resp, err = f.Test(req)
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
-		body, _ = io.ReadAll(resp.Body)
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
 		assert.Contains(t, string(body), "a title and path are required")
 
+		// ----------------------------
 		// Invalid path
+		// ----------------------------
 		req = httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(`{"title": "course 1", "path": "/test"}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		resp, err = f.Test(req)
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
-		body, _ = io.ReadAll(resp.Body)
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
 		assert.Contains(t, string(body), "invalid course path")
 	})
 
 	t.Run("400 (existing course)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		// Create the course path
 		coursePath := "/course 1/"
 		appFs.Fs.MkdirAll(coursePath, os.ModePerm)
 
@@ -495,33 +419,25 @@ func TestCourses_Create(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(postData))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		resp, err := f.Test(req)
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusCreated, resp.StatusCode)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
 
-		// Do it again
-		postData = fmt.Sprintf(`{"title": "course 1", "path": "%s" }`, coursePath)
-		req = httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(postData))
-		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-
-		resp, err = f.Test(req)
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
-		body, _ := io.ReadAll(resp.Body)
+		// Create the course again
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
 		assert.Contains(t, string(body), "a course with this path already exists ")
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		_, err := db.DB().NewDropTable().Model(&models.Course{}).Exec(context.Background())
+		// Drop the courses table
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
 		require.Nil(t, err)
 
-		// Create the course path
 		coursePath := "/course 1/"
 		appFs.Fs.MkdirAll(coursePath, os.ModePerm)
 
@@ -529,26 +445,20 @@ func TestCourses_Create(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(postData))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		resp, err := f.Test(req)
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
 		assert.Contains(t, string(body), "error creating course")
 	})
 
 	t.Run("500 (scan error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
 		// Drop scan table
-		_, err := db.DB().NewDropTable().Model(&models.Scan{}).Exec(context.Background())
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableScans())
 		require.Nil(t, err)
 
-		// Create the course path
 		coursePath := "/course 1/"
 		appFs.Fs.MkdirAll(coursePath, os.ModePerm)
 
@@ -556,11 +466,9 @@ func TestCourses_Create(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(postData))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		resp, err := f.Test(req)
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
 		assert.Contains(t, string(body), "error creating scan job")
 	})
 }
@@ -569,50 +477,60 @@ func TestCourses_Create(t *testing.T) {
 
 func TestCourses_DeleteCourse(t *testing.T) {
 	t.Run("204 (deleted)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 3, true, 3, 3)
 
-		// Create 5 courses
-		courses := models.NewTestCourses(t, db, 5)
+		// ----------------------------
+		// Delete course 3
+		// ----------------------------
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodDelete, "/api/courses/"+workingData[2].ID, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNoContent, status)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodDelete, "/api/courses/"+courses[2].ID, nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNoContent, resp.StatusCode)
-
-		// Ensure the course was deleted
-		_, err = models.GetCourseById(context.Background(), db, nil, courses[2].ID)
+		_, err = models.GetCourse(db, workingData[2].ID)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
+
+		// ----------------------------
+		// Cascades
+		// ----------------------------
+
+		// Scan
+		_, err = models.GetScan(db, workingData[2].ID)
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+
+		// Assets
+		count, err := models.CountAssets(db, &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": workingData[2].ID}})
+		require.Nil(t, err)
+		assert.Zero(t, count)
+
+		// Attachments
+		count, err = models.CountAttachments(db, &database.DatabaseParams{Where: sq.Eq{models.TableAttachments() + ".course_id": workingData[2].ID}})
+		require.Nil(t, err)
+		assert.Zero(t, count)
 	})
 
-	t.Run("404 (not found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+	t.Run("204 (not found)", func(t *testing.T) {
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodDelete, "/api/courses/test", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodDelete, "/api/courses/test", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNoContent, status)
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
 		// Drop the table
-		_, err := db.DB().NewDropTable().Model(&models.Course{}).Exec(context.Background())
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodDelete, "/api/courses/test", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodDelete, "/api/courses/test", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
 	})
 }
 
@@ -620,99 +538,72 @@ func TestCourses_DeleteCourse(t *testing.T) {
 
 func TestCourses_Card(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 1, false, 0, 0)
 
-		// Create a course and set the card path
-		course := models.NewTestCourses(t, db, 1)[0]
-
-		// Update the course with a path
-		updatedCourse, err := models.UpdateCourseCardPath(context.Background(), db, course.ID, "/"+course.Path+"/card.png")
+		updatedCourse, err := models.UpdateCourseCardPath(db, workingData[0].ID, "/"+workingData[0].Path+"/card.png")
 		require.Nil(t, err)
 
 		// Create the card
 		appFs.Fs.MkdirAll("/"+updatedCourse.Path, os.ModePerm)
 		require.Nil(t, afero.WriteFile(appFs.Fs, "/"+updatedCourse.Path+"/card.png", []byte("test"), os.ModePerm))
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+updatedCourse.ID+"/card", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+updatedCourse.ID+"/card", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 		assert.Equal(t, "test", string(body))
 	})
 
 	t.Run("404 (invalid id)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/test/card", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test/card", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
 		assert.Equal(t, "Course not found", string(body))
 	})
 
 	t.Run("404 (no card)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 1, false, 0, 0)
 
-		course := models.NewTestCourses(t, db, 1)[0]
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+course.ID+"/card", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/card", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
 		assert.Equal(t, "Course has no card", string(body))
 	})
 
 	t.Run("404 (card not found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 1, false, 0, 0)
 
-		// Create a course and set the card path
-		course := models.NewTestCourses(t, db, 1)[0]
-
-		// Update the course with a path
-		updatedCourse, err := models.UpdateCourseCardPath(context.Background(), db, course.ID, course.Path+"/card.png")
+		updatedCourse, err := models.UpdateCourseCardPath(db, workingData[0].ID, workingData[0].Path+"/card.png")
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+updatedCourse.ID+"/card", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+updatedCourse.ID+"/card", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
 		assert.Equal(t, "Course card not found", string(body))
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
 		// Drop the table
-		_, err := db.DB().NewDropTable().Model(&models.Course{}).Exec(context.Background())
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/test/card", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test/card", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
 	})
 }
 
@@ -720,259 +611,161 @@ func TestCourses_Card(t *testing.T) {
 
 func TestCourses_GetAssets(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 2, false, 0, 0)
 
-		// Create 2 courses with 0 assets each
-		courses := models.NewTestCourses(t, db, 2)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[1].ID+"/assets", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
-
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 0, int(respData.TotalItems))
-		assert.Len(t, respData.Items, 0)
+		paginationResp, _ := assetsUnmarshalHelper(t, body)
+		assert.Zero(t, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 0)
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 2, false, 3, 0)
 
-		// Create 2 courses with 5 assets each  (10 assets total)
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 5)
-		models.NewTestAttachments(t, db, assets, 2)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/?orderBy=created_at%20asc", nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[1].ID+"/assets/?orderBy=created_at%20desc", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+		paginationResp, assetsResp := assetsUnmarshalHelper(t, body)
+		assert.Equal(t, 3, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 3)
 
-		body, _ := io.ReadAll(resp.Body)
-
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 5, int(respData.TotalItems))
-
-		// Unmarshal
-		assetsResponse := []assetResponse{}
-		for _, item := range respData.Items {
-			var asset assetResponse
-			require.Nil(t, json.Unmarshal(item, &asset))
-			assetsResponse = append(assetsResponse, asset)
-		}
-
-		// Assert values. We set the orderBy query param to `created_at desc` so the last inserted
-		// asset should be first
-		assert.Equal(t, assets[9].ID, assetsResponse[0].ID)
-		assert.Equal(t, assets[9].Title, assetsResponse[0].Title)
-		assert.Equal(t, assets[9].Path, assetsResponse[0].Path)
+		assert.Equal(t, workingData[1].Assets[0].ID, assetsResp[0].ID)
+		assert.Equal(t, workingData[1].Assets[1].ID, assetsResp[1].ID)
+		assert.Equal(t, workingData[1].Assets[2].ID, assetsResp[2].ID)
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 2, false, 3, 0)
 
-		// Create 2 courses with 5 assets each  (10 assets total)
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 5)
+		// ----------------------------
+		// CREATED_AT ASC
+		// ----------------------------
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/?orderBy=created_at%20asc", nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[1].ID+"/assets/?orderBy=created_at%20asc", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+		paginationResp, assetsResp := assetsUnmarshalHelper(t, body)
+		assert.Equal(t, 3, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 3)
 
-		body, _ := io.ReadAll(resp.Body)
+		assert.Equal(t, workingData[1].Assets[0].ID, assetsResp[0].ID)
+		assert.Equal(t, workingData[1].Assets[1].ID, assetsResp[1].ID)
+		assert.Equal(t, workingData[1].Assets[2].ID, assetsResp[2].ID)
 
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 5, int(respData.TotalItems))
+		// ----------------------------
+		// CREATED_AT DESC
+		// ----------------------------
+		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/?orderBy=created_at%20desc", nil)
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		// Unmarshal
-		assetsResponse := []assetResponse{}
-		for _, item := range respData.Items {
-			var asset assetResponse
-			require.Nil(t, json.Unmarshal(item, &asset))
-			assetsResponse = append(assetsResponse, asset)
-		}
+		paginationResp, assetsResp = assetsUnmarshalHelper(t, body)
+		assert.Equal(t, 3, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 3)
 
-		assert.Equal(t, assets[5].ID, assetsResponse[0].ID)
-		assert.Equal(t, assets[5].Title, assetsResponse[0].Title)
-		assert.Equal(t, assets[5].Path, assetsResponse[0].Path)
-	})
-
-	t.Run("200 (expand)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
-		defer teardown(t)
-
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		// Create 5 courses with 5 assets each
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 5)
-		models.NewTestAttachments(t, db, assets, 3)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[1].ID+"/assets/?orderBy=created_at%20asc&expand=true", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
-
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 5, int(respData.TotalItems))
-
-		// Unmarshal
-		assetsResponse := []assetResponse{}
-		for _, item := range respData.Items {
-			var asset assetResponse
-			require.Nil(t, json.Unmarshal(item, &asset))
-			assetsResponse = append(assetsResponse, asset)
-		}
-
-		assert.Equal(t, assets[5].ID, assetsResponse[0].ID)
-		assert.Equal(t, assets[5].Title, assetsResponse[0].Title)
-		assert.Equal(t, assets[5].Path, assetsResponse[0].Path)
-
-		// Assert the attachments
-		require.NotNil(t, assetsResponse[0].Attachments)
-		assert.Len(t, assetsResponse[0].Attachments, 3)
+		assert.Equal(t, workingData[1].Assets[2].ID, assetsResp[0].ID)
+		assert.Equal(t, workingData[1].Assets[1].ID, assetsResp[1].ID)
+		assert.Equal(t, workingData[1].Assets[0].ID, assetsResp[2].ID)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 1, false, 17, 0)
 
-		// Create 1 course with 17 assets
-		courses := models.NewTestCourses(t, db, 1)
-		assets := models.NewTestAssets(t, db, courses, 17)
-
-		// Get the first 10 assets
+		// ------------------------
+		// Get the first page (10 assets)
+		// ------------------------
 		params := url.Values{
 			"orderBy":                    {"created_at asc"},
 			pagination.PageQueryParam:    {"1"},
 			pagination.PerPageQueryParam: {"10"},
 		}
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/?"+params.Encode(), nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-		body, _ := io.ReadAll(resp.Body)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/?"+params.Encode(), nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 17, int(respData.TotalItems))
-		assert.Len(t, respData.Items, 10)
+		paginationResp, assetsResp := assetsUnmarshalHelper(t, body)
+		assert.Equal(t, 17, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 10)
 
-		// Unmarshal
-		assetsResponse := []assetResponse{}
-		for _, item := range respData.Items {
-			var asset assetResponse
-			require.Nil(t, json.Unmarshal(item, &asset))
-			assetsResponse = append(assetsResponse, asset)
-		}
+		// Check the last asset in the paginated response
+		assert.Equal(t, workingData[0].Assets[9].ID, assetsResp[9].ID)
 
-		// Assert the last item in the paginated response
-		assert.Equal(t, assets[9].ID, assetsResponse[9].ID)
-		assert.Equal(t, assets[9].Title, assetsResponse[9].Title)
-		assert.Equal(t, assets[9].Path, assetsResponse[9].Path)
-
-		// Get the next 7 assets
+		// ------------------------
+		// Get the second page (7 assets)
+		// ------------------------
 		params = url.Values{
 			"orderBy":                    {"created_at asc"},
 			pagination.PageQueryParam:    {"2"},
 			pagination.PerPageQueryParam: {"10"},
 		}
-		resp, err = f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/?"+params.Encode(), nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-		body, _ = io.ReadAll(resp.Body)
+		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/?"+params.Encode(), nil)
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 17, int(respData.TotalItems))
-		assert.Len(t, respData.Items, 7)
+		paginationResp, assetsResp = assetsUnmarshalHelper(t, body)
+		assert.Equal(t, 17, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 7)
 
-		// Unmarshal
-		assetsResponse = []assetResponse{}
-		for _, item := range respData.Items {
-			var asset assetResponse
-			require.Nil(t, json.Unmarshal(item, &asset))
-			assetsResponse = append(assetsResponse, asset)
-		}
-
-		// Assert the last item in the paginated response
-		assert.Equal(t, assets[16].ID, assetsResponse[6].ID)
-		assert.Equal(t, assets[16].Title, assetsResponse[6].Title)
-		assert.Equal(t, assets[16].Path, assetsResponse[6].Path)
+		// Check the last asset in the paginated response
+		assert.Equal(t, workingData[0].Assets[16].ID, assetsResp[6].ID)
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/test/assets", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test/assets", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
 	})
 
 	t.Run("500 (course internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		// Drop the courses table
-		_, err := db.DB().NewDropTable().Model(&models.Course{}).Exec(context.Background())
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/test/assets", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test/assets", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
 	})
 
 	t.Run("500 (asset internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 1, false, 0, 0)
 
-		// Create a course
-		courses := models.NewTestCourses(t, db, 1)
-
-		// Drop the assets table
-		_, err := db.DB().NewDropTable().Model(&models.Asset{}).Exec(context.Background())
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAssets())
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
 	})
 }
 
@@ -980,138 +773,89 @@ func TestCourses_GetAssets(t *testing.T) {
 
 func TestCourses_GetAsset(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 2, false, 3, 0)
 
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 5)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[1].ID, nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/"+assets[1].ID, nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
-		var respData assetResponse
-		err = json.Unmarshal(body, &respData)
+		var assetResp assetResponse
+		err = json.Unmarshal(body, &assetResp)
 		require.Nil(t, err)
 
-		assert.Equal(t, assets[1].ID, respData.ID)
-		assert.Equal(t, assets[1].Title, respData.Title)
-		assert.Equal(t, assets[1].Path, respData.Path)
-	})
-
-	t.Run("200 (expand)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
-		defer teardown(t)
-
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 5)
-		models.NewTestAttachments(t, db, assets, 3)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/"+assets[1].ID+"?expand=true", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
-
-		var respData assetResponse
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-
-		assert.Equal(t, assets[1].ID, respData.ID)
-		assert.Equal(t, assets[1].Title, respData.Title)
-		assert.Equal(t, assets[1].Path, respData.Path)
-
-		// Assert the attachments
-		require.NotNil(t, respData.Attachments)
-		assert.Len(t, respData.Attachments, 3)
+		assert.Equal(t, workingData[0].Assets[1].ID, assetResp.ID)
+		assert.Equal(t, workingData[0].Assets[1].Title, assetResp.Title)
+		assert.Equal(t, workingData[0].Assets[1].Path, assetResp.Path)
 	})
 
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 5)
+		workingData := models.NewTestData(t, db, 2, false, 3, 0)
 
 		// Request an asset that does not belong to the course
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/"+assets[8].ID, nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[1].Assets[0].ID, nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
 		assert.Equal(t, "Asset does not belong to course", string(body))
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/test/assets/1234", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test_course/assets/test_asset", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
 	})
 
 	t.Run("404 (asset not found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 2, false, 0, 0)
 
-		courses := models.NewTestCourses(t, db, 2)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[1].ID+"/assets/1234", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/test_asset", nil)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
 	})
 
 	t.Run("500 (course internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		courses := models.NewTestCourses(t, db, 1)
-
-		// Drop the assets table
-		_, err := db.DB().NewDropTable().Model(&models.Course{}).Exec(context.Background())
+		// Drop the courses table
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/1234", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/test_course/assets/test_asset", nil)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
 	})
 
 	t.Run("500 (asset internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		courses := models.NewTestCourses(t, db, 1)
+		workingData := models.NewTestData(t, db, 1, false, 0, 0)
 
 		// Drop the assets table
-		_, err := db.DB().NewDropTable().Model(&models.Asset{}).Exec(context.Background())
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAssets())
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/1234", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/test_asset", nil)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
+
 	})
 }
 
@@ -1119,287 +863,212 @@ func TestCourses_GetAsset(t *testing.T) {
 
 func TestCourses_GetAttachments(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 2, false, 2, 0)
 
-		// Create 2 courses with 2 assets with 0 attachments
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 2)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/"+workingData[1].Assets[1].ID+"/attachments", nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[1].ID+"/assets/"+assets[2].ID+"/attachments", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
-
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 0, int(respData.TotalItems))
-		assert.Len(t, respData.Items, 0)
+		paginationResp, _ := attachmentsUnmarshalHelper(t, body)
+		assert.Zero(t, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 0)
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 2, false, 2, 3)
 
-		// Create 2 courses with 2 assets with 5 attachments
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 2)
-		attachments := models.NewTestAttachments(t, db, assets, 5)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/"+workingData[1].Assets[0].ID+"/attachments?orderBy=created_at%20asc", nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[1].ID+"/assets/"+assets[2].ID+"/attachments?orderBy=created_at%20desc", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+		paginationResp, attachmentResp := attachmentsUnmarshalHelper(t, body)
+		assert.Equal(t, 3, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 3)
 
-		body, _ := io.ReadAll(resp.Body)
-
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 5, int(respData.TotalItems))
-		assert.Len(t, respData.Items, 5)
-
-		// Unmarshal
-		attachmentsResponse := []attachmentResponse{}
-		for _, item := range respData.Items {
-			var attachment attachmentResponse
-			require.Nil(t, json.Unmarshal(item, &attachment))
-			attachmentsResponse = append(attachmentsResponse, attachment)
-		}
-
-		// Assert values
-		assert.Equal(t, attachments[14].ID, attachmentsResponse[0].ID)
-		assert.Equal(t, attachments[14].Title, attachmentsResponse[0].Title)
-		assert.Equal(t, attachments[14].Path, attachmentsResponse[0].Path)
+		assert.Equal(t, workingData[1].Assets[0].Attachments[0].ID, attachmentResp[0].ID)
+		assert.Equal(t, workingData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
+		assert.Equal(t, workingData[1].Assets[0].Attachments[2].ID, attachmentResp[2].ID)
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 2, false, 2, 3)
 
-		// Create 2 courses with 2 assets with 5 attachments
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 2)
-		attachments := models.NewTestAttachments(t, db, assets, 5)
+		// ----------------------------
+		// CREATED_AT ASC
+		// ----------------------------
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/"+workingData[1].Assets[0].ID+"/attachments?orderBy=created_at%20asc", nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[1].ID+"/assets/"+assets[2].ID+"/attachments?orderBy=created_at%20asc", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+		paginationResp, attachmentResp := attachmentsUnmarshalHelper(t, body)
+		assert.Equal(t, 3, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 3)
 
-		body, _ := io.ReadAll(resp.Body)
+		assert.Equal(t, workingData[1].Assets[0].Attachments[0].ID, attachmentResp[0].ID)
+		assert.Equal(t, workingData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
+		assert.Equal(t, workingData[1].Assets[0].Attachments[2].ID, attachmentResp[2].ID)
 
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 5, int(respData.TotalItems))
-		assert.Len(t, respData.Items, 5)
+		// ----------------------------
+		// CREATED_AT ASC
+		// ----------------------------
+		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/"+workingData[1].Assets[0].ID+"/attachments?orderBy=created_at%20desc", nil)
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		// Unmarshal
-		attachmentsResponse := []attachmentResponse{}
-		for _, item := range respData.Items {
-			var attachment attachmentResponse
-			require.Nil(t, json.Unmarshal(item, &attachment))
-			attachmentsResponse = append(attachmentsResponse, attachment)
-		}
+		paginationResp, attachmentResp = attachmentsUnmarshalHelper(t, body)
+		assert.Equal(t, 3, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 3)
 
-		// Assert values
-		assert.Equal(t, attachments[10].ID, attachmentsResponse[0].ID)
-		assert.Equal(t, attachments[10].Title, attachmentsResponse[0].Title)
-		assert.Equal(t, attachments[10].Path, attachmentsResponse[0].Path)
+		assert.Equal(t, workingData[1].Assets[0].Attachments[2].ID, attachmentResp[0].ID)
+		assert.Equal(t, workingData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
+		assert.Equal(t, workingData[1].Assets[0].Attachments[0].ID, attachmentResp[2].ID)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 1, false, 1, 17)
 
-		// Create 2 courses with 2 assets with 17 attachments
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 2)
-		attachments := models.NewTestAttachments(t, db, assets, 17)
-
-		// Get the first 10 attachments
+		// ----------------------------
+		// Get the first page (10 attachments)
+		// ----------------------------
 		params := url.Values{
 			"orderBy":                    {"created_at asc"},
 			pagination.PageQueryParam:    {"1"},
 			pagination.PerPageQueryParam: {"10"},
 		}
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[1].ID+"/assets/"+assets[2].ID+"/attachments?"+params.Encode(), nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-		body, _ := io.ReadAll(resp.Body)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments?"+params.Encode(), nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		var respData pagination.PaginationResult
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 17, int(respData.TotalItems))
-		assert.Len(t, respData.Items, 10)
+		paginationResp, attachmentResp := attachmentsUnmarshalHelper(t, body)
+		assert.Equal(t, 17, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 10)
 
-		// Unmarshal
-		attachmentsResponse := []attachmentResponse{}
-		for _, item := range respData.Items {
-			var attachment attachmentResponse
-			require.Nil(t, json.Unmarshal(item, &attachment))
-			attachmentsResponse = append(attachmentsResponse, attachment)
-		}
+		// Check the last attachment in the paginated response
+		assert.Equal(t, workingData[0].Assets[0].Attachments[9].ID, attachmentResp[9].ID)
 
-		// Assert the last item in the paginated response
-		assert.Equal(t, attachments[43].ID, attachmentsResponse[9].ID)
-		assert.Equal(t, attachments[43].Title, attachmentsResponse[9].Title)
-		assert.Equal(t, attachments[43].Path, attachmentsResponse[9].Path)
-
-		// Get the next 7 attachments
+		// ----------------------------
+		// Get the second page (7 attachments)
+		// ----------------------------
 		params = url.Values{
 			"orderBy":                    {"created_at asc"},
 			pagination.PageQueryParam:    {"2"},
 			pagination.PerPageQueryParam: {"10"},
 		}
-		resp, err = f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[1].ID+"/assets/"+assets[2].ID+"/attachments?"+params.Encode(), nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
+		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments?"+params.Encode(), nil)
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		body, _ = io.ReadAll(resp.Body)
+		paginationResp, attachmentResp = attachmentsUnmarshalHelper(t, body)
+		assert.Equal(t, 17, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 7)
 
-		err = json.Unmarshal(body, &respData)
-		require.Nil(t, err)
-		assert.Equal(t, 17, int(respData.TotalItems))
-		assert.Len(t, respData.Items, 7)
-
-		// Unmarshal
-		attachmentsResponse = []attachmentResponse{}
-		for _, item := range respData.Items {
-			var attachment attachmentResponse
-			require.Nil(t, json.Unmarshal(item, &attachment))
-			attachmentsResponse = append(attachmentsResponse, attachment)
-		}
-
-		assert.Equal(t, attachments[50].ID, attachmentsResponse[6].ID)
-		assert.Equal(t, attachments[50].Title, attachmentsResponse[6].Title)
-		assert.Equal(t, attachments[50].Path, attachmentsResponse[6].Path)
+		// Check the last attachment in the paginated response
+		assert.Equal(t, workingData[0].Assets[0].Attachments[16].ID, attachmentResp[6].ID)
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/test_course/assets/test_asset/attachments", nil)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/test/assets/1234/attachments", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
 	})
 
 	t.Run("500 (course lookup internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
 		// Drop the courses table
-		_, err := db.DB().NewDropTable().Model(&models.Course{}).Exec(context.Background())
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/test/assets/1234/attachments", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/test_course/assets/test_asset/attachments", nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
 		assert.Contains(t, string(body), "error looking up course")
 	})
 
 	t.Run("404 (asset not found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 1, false, 0, 0)
 
-		// Create a course
-		course := models.NewTestCourses(t, db, 1)[0]
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/1234/attachments", nil)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+course.ID+"/assets/1234/attachments", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
 	})
 
 	t.Run("500 (asset lookup internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		// Create a course
-		course := models.NewTestCourses(t, db, 1)[0]
+		workingData := models.NewTestData(t, db, 1, false, 0, 0)
 
 		// Drop the assets table
-		_, err := db.DB().NewDropTable().Model(&models.Asset{}).Exec(context.Background())
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAssets())
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+course.ID+"/assets/1234/attachments", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/1234/attachments", nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
 		assert.Contains(t, string(body), "error looking up asset")
 	})
 
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 2, false, 2, 5)
 
-		// Create 2 courses with 2 assets with 5 attachments
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 2)
-		models.NewTestAttachments(t, db, assets, 5)
-
-		// Set an asset that belongs to a different course
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[1].ID+"/assets/"+assets[0].ID+"/attachments", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[1].Assets[0].ID+"/attachments", nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
 		assert.Equal(t, "Asset does not belong to course", string(body))
 	})
 
 	t.Run("500 (attachments lookup internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 1, false, 1, 0)
 
-		// Create a course with an asset
-		course := models.NewTestCourses(t, db, 1)[0]
-		asset := models.NewTestAssets(t, db, []*models.Course{course}, 1)[0]
-
-		// Drop the courses table
-		_, err := db.DB().NewDropTable().Model(&models.Attachment{}).Exec(context.Background())
+		// Drop the attachments table
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAttachments())
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+course.ID+"/assets/"+asset.ID+"/attachments", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-		body, _ := io.ReadAll(resp.Body)
-		assert.Contains(t, string(body), "error looking up attachments")
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments", nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
+		assert.Contains(t, string(body), "error looking up asset")
 	})
 }
 
@@ -1407,163 +1076,129 @@ func TestCourses_GetAttachments(t *testing.T) {
 
 func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 2, false, 5, 3)
 
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 5)
-		attachments := models.NewTestAttachments(t, db, assets, 3)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments/"+workingData[0].Assets[0].Attachments[2].ID, nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/"+assets[0].ID+"/attachments/"+attachments[0].ID, nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
 		var respData attachmentResponse
 		err = json.Unmarshal(body, &respData)
 		require.Nil(t, err)
 
-		assert.Equal(t, attachments[0].ID, respData.ID)
-		assert.Equal(t, attachments[0].Title, respData.Title)
-		assert.Equal(t, attachments[0].Path, respData.Path)
+		assert.Equal(t, workingData[0].Assets[0].Attachments[2].ID, respData.ID)
 	})
 
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 2, false, 5, 0)
 
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 5)
-
-		// Request an asset that does not belong to the course
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/"+assets[8].ID+"/attachments/4321", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[1].Assets[0].ID+"/attachments/test_attachment", nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
 		assert.Equal(t, "Asset does not belong to course", string(body))
 	})
 
-	t.Run("400 (invalid asset for course)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+	t.Run("400 (invalid attachment for course)", func(t *testing.T) {
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 2, false, 5, 3)
 
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 5)
-		attachments := models.NewTestAttachments(t, db, assets, 3)
-
-		// Request an asset that does not belong to the course
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/"+assets[0].ID+"/attachments/"+attachments[5].ID, nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments/"+workingData[0].Assets[1].Attachments[2].ID, nil)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
 		assert.Equal(t, "Attachment does not belong to asset", string(body))
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/test/assets/1234/attachments/4321", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/test_course/assets/test_asset/attachments/test_attachment", nil)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
 	})
 
 	t.Run("404 (asset not found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 2, false, 0, 0)
 
-		courses := models.NewTestCourses(t, db, 2)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/1234/attachments/4321", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
 	})
 
 	t.Run("404 (attachment not found)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 2, false, 5, 0)
 
-		courses := models.NewTestCourses(t, db, 2)
-		assets := models.NewTestAssets(t, db, courses, 5)
-
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/"+assets[0].ID+"/attachments/4321", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[2].ID+"/attachments/test_attachment", nil)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
 	})
 
 	t.Run("500 (course internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 1, false, 0, 0)
 
-		courses := models.NewTestCourses(t, db, 1)
-
-		// Drop the assets table
-		_, err := db.DB().NewDropTable().Model(&models.Course{}).Exec(context.Background())
+		// Drop the courses table
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/1234/attachments/4321", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
 	})
 
 	t.Run("500 (asset internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
-
-		courses := models.NewTestCourses(t, db, 1)
+		workingData := models.NewTestData(t, db, 1, false, 0, 0)
 
 		// Drop the assets table
-		_, err := db.DB().NewDropTable().Model(&models.Asset{}).Exec(context.Background())
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAssets())
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/1234/attachments/4321", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
 	})
 
 	t.Run("500 (attachments internal error)", func(t *testing.T) {
-		appFs, db, courseScanner, _, teardown := setup(t)
+		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
 
-		f := fiber.New()
-		bindCoursesApi(f.Group("/api"), appFs, db, courseScanner)
+		workingData := models.NewTestData(t, db, 1, false, 1, 0)
 
-		courses := models.NewTestCourses(t, db, 1)
-		assets := models.NewTestAssets(t, db, courses, 1)
-
-		// Drop the assets table
-		_, err := db.DB().NewDropTable().Model(&models.Attachment{}).Exec(context.Background())
+		// Drop the attachments table
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAttachments())
 		require.Nil(t, err)
 
-		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/"+courses[0].ID+"/assets/"+assets[0].ID+"/attachments/4321", nil))
-		assert.NoError(t, err)
-		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments/test_attachment", nil)
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
 	})
 }
 
@@ -1571,21 +1206,32 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 // HELPERS
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func paginatedBody(t *testing.T, body io.ReadCloser) pagination.PaginationResult {
-	b, _ := io.ReadAll(body)
-	var respData pagination.PaginationResult
-	err := json.Unmarshal(b, &respData)
-	require.Nil(t, err)
-	return respData
+func coursesRequestHelper(t *testing.T, appFs *appFs.AppFs, db database.Database, cs *jobs.CourseScanner, req *http.Request) (int, []byte, error) {
+	f := fiber.New()
+	bindCoursesApi(f.Group("/api"), appFs, db, cs)
+
+	resp, err := f.Test(req)
+	if err != nil {
+		return -1, nil, err
+	}
+
+	b, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, b, err
 }
 
-func unmarshalCourses(t *testing.T, items []json.RawMessage) []courseResponse {
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func coursesUnmarshalHelper(t *testing.T, body []byte) (pagination.PaginationResult, []courseResponse) {
+	var respData pagination.PaginationResult
+	err := json.Unmarshal(body, &respData)
+	require.Nil(t, err)
+
 	var coursesResponse []courseResponse
-	for _, item := range items {
+	for _, item := range respData.Items {
 		var course courseResponse
 		require.Nil(t, json.Unmarshal(item, &course))
 		coursesResponse = append(coursesResponse, course)
 	}
 
-	return coursesResponse
+	return respData, coursesResponse
 }

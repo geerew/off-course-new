@@ -60,7 +60,7 @@ func (api *scans) getScan(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(toScanResponse([]*models.Scan{scan})[0])
+	return c.Status(fiber.StatusOK).JSON(scanReponseHelper([]*models.Scan{scan})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -95,14 +95,14 @@ func (api *scans) createScan(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(toScanResponse([]*models.Scan{scan})[0])
+	return c.Status(fiber.StatusCreated).JSON(scanReponseHelper([]*models.Scan{scan})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // HELPER
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func toScanResponse(scans []*models.Scan) []*scanResponse {
+func scanReponseHelper(scans []*models.Scan) []*scanResponse {
 	responses := []*scanResponse{}
 	for _, scan := range scans {
 		responses = append(responses, &scanResponse{
