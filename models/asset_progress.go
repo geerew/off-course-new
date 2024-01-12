@@ -7,13 +7,10 @@ package models
 import (
 	"database/sql"
 	"errors"
-	"testing"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/utils/types"
-	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -326,39 +323,30 @@ func UpdateAssetProgressCompleted(db database.Database, assetId string, complete
 	ap.CompletedAt = completedAt
 	ap.UpdatedAt = updatedAt
 
+	//
+	// TODO
+	//
+	// Update the course percent by first calculating the percentage of completed assets and then
+	// updating the course
+	// var percent float64
+
+	// // Calculate the percentage of completed assets. IF this fails just log the error and return
+	// if err = db.DB().NewSelect().
+	// 	Table("assets").
+	// 	ColumnExpr("CAST(COUNT(CASE WHEN completed THEN 1 END) * 100 AS FLOAT) / COUNT(*) as completion_percentage").
+	// 	Where("course_id = ?", asset.CourseID).
+	// 	Scan(ctx, &percent); err != nil {
+	// 	log.Err(err).Msg("failed to calculate the percentage of completed assets")
+	// 	return asset, nil
+	// }
+
+	// // Update the course percent. If this fails just log the error and return
+	// if _, err = UpdateCoursePercent(ctx, db, asset.CourseID, int(percent)); err != nil {
+	// 	log.Err(err).Msg("failed to update the course `percent`")
+	// 	return asset, nil
+	// }
+
 	return ap, nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// NewTestAssetsProgress creates an asset progress for each asset in the slice. If a db is
-// provided, a DB insert will be performed
-//
-// THIS IS FOR TESTING PURPOSES
-func NewTestAssetsProgress(t *testing.T, db database.Database, assets []*Asset) []*AssetProgress {
-	aps := []*AssetProgress{}
-
-	for i := 0; i < len(assets); i++ {
-		ap := &AssetProgress{}
-
-		ap.RefreshId()
-		ap.RefreshCreatedAt()
-		ap.RefreshUpdatedAt()
-
-		ap.AssetID = assets[i].ID
-
-		if db != nil {
-			err := CreateAssetProgress(db, ap)
-			require.Nil(t, err)
-
-			// This allows the created/updated times to be different when inserting multiple rows
-			time.Sleep(time.Millisecond * 1)
-		}
-
-		aps = append(aps, ap)
-	}
-
-	return aps
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

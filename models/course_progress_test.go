@@ -28,8 +28,10 @@ func Test_CountCoursesProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 5)
-		NewTestCoursesProgress(t, db, courses)
+		workingData := NewTestData(t, db, 5, false, 0, 0)
+		for _, tc := range workingData {
+			newTestCoursesProgress(t, db, tc.Course.ID)
+		}
 
 		count, err := CountCoursesProgress(db, nil)
 		require.Nil(t, err)
@@ -40,8 +42,12 @@ func Test_CountCoursesProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
-		cps := NewTestCoursesProgress(t, db, courses)
+		workingData := NewTestData(t, db, 3, false, 0, 0)
+
+		cps := []*CourseProgress{}
+		for _, tc := range workingData {
+			cps = append(cps, newTestCoursesProgress(t, db, tc.Course.ID))
+		}
 
 		// ----------------------------
 		// EQUALS ID
@@ -93,8 +99,10 @@ func Test_GetCoursesProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 5)
-		NewTestCoursesProgress(t, db, courses)
+		workingData := NewTestData(t, db, 5, false, 0, 0)
+		for _, tc := range workingData {
+			newTestCoursesProgress(t, db, tc.Course.ID)
+		}
 
 		result, err := GetCoursesProgress(db, nil)
 		require.Nil(t, err)
@@ -105,8 +113,12 @@ func Test_GetCoursesProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
-		cps := NewTestCoursesProgress(t, db, courses)
+		workingData := NewTestData(t, db, 3, false, 0, 0)
+
+		cps := []*CourseProgress{}
+		for _, tc := range workingData {
+			cps = append(cps, newTestCoursesProgress(t, db, tc.Course.ID))
+		}
 
 		// ----------------------------
 		// Descending
@@ -138,8 +150,12 @@ func Test_GetCoursesProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
-		cps := NewTestCoursesProgress(t, db, courses)
+		workingData := NewTestData(t, db, 3, false, 0, 0)
+
+		cps := []*CourseProgress{}
+		for _, tc := range workingData {
+			cps = append(cps, newTestCoursesProgress(t, db, tc.Course.ID))
+		}
 
 		// ----------------------------
 		// EQUALS ID
@@ -174,8 +190,12 @@ func Test_GetCoursesProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 17)
-		cps := NewTestCoursesProgress(t, db, courses)
+		workingData := NewTestData(t, db, 17, false, 0, 0)
+
+		cps := []*CourseProgress{}
+		for _, tc := range workingData {
+			cps = append(cps, newTestCoursesProgress(t, db, tc.Course.ID))
+		}
 
 		// ----------------------------
 		// Page 1 with 10 items
@@ -230,12 +250,14 @@ func Test_GetCourseProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 2)
-		NewTestCoursesProgress(t, db, courses)
+		workingData := NewTestData(t, db, 2, false, 0, 0)
+		for _, tc := range workingData {
+			newTestCoursesProgress(t, db, tc.Course.ID)
+		}
 
-		result, err := GetCourseProgress(db, courses[1].ID)
+		result, err := GetCourseProgress(db, workingData[1].ID)
 		require.Nil(t, err)
-		assert.Equal(t, courses[1].ID, result.CourseID)
+		assert.Equal(t, workingData[1].ID, result.CourseID)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
@@ -266,13 +288,13 @@ func Test_CreateCourseProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		cp := NewTestCoursesProgress(t, nil, courses)[0]
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		cp := newTestCoursesProgress(t, nil, workingData[0].ID)
 
 		err := CreateCourseProgress(db, cp)
 		require.Nil(t, err)
 		require.NotEmpty(t, cp.ID)
-		assert.Equal(t, courses[0].ID, cp.CourseID)
+		assert.Equal(t, workingData[0].ID, cp.CourseID)
 		assert.False(t, cp.Started)
 		assert.True(t, cp.StartedAt.IsZero())
 		assert.Zero(t, cp.Percent)
@@ -285,8 +307,8 @@ func Test_CreateCourseProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
-		cp := NewTestCoursesProgress(t, nil, []*Course{course})[0]
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		cp := newTestCoursesProgress(t, nil, workingData[0].ID)
 
 		err := CreateCourseProgress(db, cp)
 		require.Nil(t, err)
@@ -299,7 +321,7 @@ func Test_CreateCourseProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
+		workingData := NewTestData(t, db, 1, false, 0, 0)
 
 		// Course ID
 		cp := &CourseProgress{}
@@ -310,7 +332,7 @@ func Test_CreateCourseProgress(t *testing.T) {
 
 		// Invalid Course ID
 		require.ErrorContains(t, CreateCourseProgress(db, cp), "FOREIGN KEY constraint failed")
-		cp.CourseID = course.ID
+		cp.CourseID = workingData[0].ID
 
 		// Success
 		require.Nil(t, CreateCourseProgress(db, cp))
@@ -324,8 +346,8 @@ func Test_UpdateCourseProgressStarted(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		origCp := NewTestCoursesProgress(t, db, courses)[0]
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		origCp := newTestCoursesProgress(t, db, workingData[0].ID)
 		require.False(t, origCp.Started)
 		assert.True(t, origCp.StartedAt.IsZero())
 
@@ -352,12 +374,12 @@ func Test_UpdateCourseProgressStarted(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 2)
+		workingData := NewTestData(t, db, 1, false, 0, 0)
 
 		// ----------------------------
 		// Set to true
 		// ----------------------------
-		cp1, err := UpdateCourseProgressStarted(db, courses[0].ID, true)
+		cp1, err := UpdateCourseProgressStarted(db, workingData[0].ID, true)
 		require.Nil(t, err)
 		assert.True(t, cp1.Started)
 		assert.False(t, cp1.StartedAt.IsZero())
@@ -365,7 +387,7 @@ func Test_UpdateCourseProgressStarted(t *testing.T) {
 		// ----------------------------
 		// Set to false
 		// ----------------------------
-		cp2, err := UpdateCourseProgressStarted(db, courses[0].ID, false)
+		cp2, err := UpdateCourseProgressStarted(db, workingData[0].ID, false)
 		require.Nil(t, err)
 		assert.False(t, cp2.Started)
 		assert.True(t, cp2.StartedAt.IsZero())
@@ -384,8 +406,8 @@ func Test_UpdateCourseProgressStarted(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		origCp := NewTestCoursesProgress(t, db, courses)[0]
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		origCp := newTestCoursesProgress(t, db, workingData[0].ID)
 		require.False(t, origCp.Started)
 		assert.True(t, origCp.StartedAt.IsZero())
 
@@ -424,24 +446,23 @@ func Test_UpdateCourseProgressPercent(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		origCp := NewTestCoursesProgress(t, db, courses)[0]
-		require.Zero(t, origCp.Percent)
-		require.True(t, origCp.CompletedAt.IsZero())
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		require.Zero(t, workingData[0].Percent)
+		require.True(t, workingData[0].CompletedAt.IsZero())
 
 		// ----------------------------
 		// Set to 33
 		// ----------------------------
-		updatedCp1, err := UpdateCourseProgressPercent(db, origCp.CourseID, 33)
+		updatedCp1, err := UpdateCourseProgressPercent(db, workingData[0].ID, 33)
 		require.Nil(t, err)
 		assert.Equal(t, 33, updatedCp1.Percent)
 		assert.True(t, updatedCp1.CompletedAt.IsZero())
-		assert.NotEqual(t, origCp.UpdatedAt, updatedCp1.UpdatedAt)
+		assert.NotEqual(t, workingData[0].UpdatedAt, updatedCp1.UpdatedAt)
 
 		// ----------------------------
 		// Set to 100
 		// ----------------------------
-		updatedCp2, err := UpdateCourseProgressPercent(db, origCp.CourseID, 100)
+		updatedCp2, err := UpdateCourseProgressPercent(db, workingData[0].ID, 100)
 		require.Nil(t, err)
 		assert.Equal(t, 100, updatedCp2.Percent)
 		assert.False(t, updatedCp2.CompletedAt.IsZero())
@@ -450,7 +471,7 @@ func Test_UpdateCourseProgressPercent(t *testing.T) {
 		// ----------------------------
 		// Set to 50
 		// ----------------------------
-		updatedCp3, err := UpdateCourseProgressPercent(db, origCp.CourseID, 50)
+		updatedCp3, err := UpdateCourseProgressPercent(db, workingData[0].ID, 50)
 		require.Nil(t, err)
 		require.Equal(t, 50, updatedCp3.Percent)
 		assert.True(t, updatedCp3.CompletedAt.IsZero())
@@ -461,12 +482,17 @@ func Test_UpdateCourseProgressPercent(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
+		workingData := NewTestData(t, db, 3, false, 0, 0)
+
+		for i := range workingData {
+			require.Zero(t, workingData[i].Percent)
+			require.True(t, workingData[i].CompletedAt.IsZero())
+		}
 
 		// ----------------------------
 		// Set to 10
 		// ----------------------------
-		cp1, err := UpdateCourseProgressPercent(db, courses[0].ID, 10)
+		cp1, err := UpdateCourseProgressPercent(db, workingData[0].ID, 10)
 		require.Nil(t, err)
 		assert.Equal(t, 10, cp1.Percent)
 		assert.True(t, cp1.CompletedAt.IsZero())
@@ -474,7 +500,7 @@ func Test_UpdateCourseProgressPercent(t *testing.T) {
 		// ----------------------------
 		// Set to 100
 		// ----------------------------
-		cp2, err := UpdateCourseProgressPercent(db, courses[1].ID, 100)
+		cp2, err := UpdateCourseProgressPercent(db, workingData[1].ID, 100)
 		require.Nil(t, err)
 		assert.Equal(t, 100, cp2.Percent)
 		assert.False(t, cp2.CompletedAt.IsZero())
@@ -482,7 +508,7 @@ func Test_UpdateCourseProgressPercent(t *testing.T) {
 		// ----------------------------
 		// Set to 0
 		// ----------------------------
-		cp3, err := UpdateCourseProgressPercent(db, courses[2].ID, 0)
+		cp3, err := UpdateCourseProgressPercent(db, workingData[2].ID, 0)
 		require.Nil(t, err)
 		assert.Zero(t, cp3.Percent)
 		assert.True(t, cp3.CompletedAt.IsZero())
@@ -492,8 +518,8 @@ func Test_UpdateCourseProgressPercent(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		origCp := NewTestCoursesProgress(t, db, courses)[0]
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		origCp := newTestCoursesProgress(t, db, workingData[0].ID)
 		require.Zero(t, origCp.Percent)
 		require.True(t, origCp.CompletedAt.IsZero())
 
@@ -529,8 +555,8 @@ func Test_UpdateCourseProgressPercent(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		origCp := NewTestCoursesProgress(t, db, courses)[0]
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		origCp := newTestCoursesProgress(t, db, workingData[0].ID)
 		require.Zero(t, origCp.Percent)
 		require.True(t, origCp.CompletedAt.IsZero())
 

@@ -28,9 +28,7 @@ func Test_CountAttachments(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 5)
-		assets := NewTestAssets(t, db, courses, 1)
-		NewTestAttachments(t, db, assets, 1)
+		NewTestData(t, db, 5, false, 1, 1)
 
 		count, err := CountAttachments(db, nil)
 		require.Nil(t, err)
@@ -41,28 +39,26 @@ func Test_CountAttachments(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
-		assets := NewTestAssets(t, db, courses, 1)
-		attachments := NewTestAttachments(t, db, assets, 2)
+		workingData := NewTestData(t, db, 3, false, 1, 2)
 
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		count, err := CountAttachments(db, &database.DatabaseParams{Where: sq.Eq{TableAttachments() + ".id": attachments[2].ID}})
+		count, err := CountAttachments(db, &database.DatabaseParams{Where: sq.Eq{TableAttachments() + ".id": workingData[1].Assets[0].Attachments[1].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 
 		// ----------------------------
 		// NOT EQUALS ID
 		// ----------------------------
-		count, err = CountAttachments(db, &database.DatabaseParams{Where: sq.NotEq{TableAttachments() + ".id": attachments[2].ID}})
+		count, err = CountAttachments(db, &database.DatabaseParams{Where: sq.NotEq{TableAttachments() + ".id": workingData[1].Assets[0].Attachments[1].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 5, count)
 
 		// ----------------------------
 		// EQUALS ASSET_ID
 		// ----------------------------
-		count, err = CountAttachments(db, &database.DatabaseParams{Where: sq.Eq{TableAttachments() + ".asset_id": assets[1].ID}})
+		count, err = CountAttachments(db, &database.DatabaseParams{Where: sq.Eq{TableAttachments() + ".asset_id": workingData[1].Assets[0].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 2, count)
 
@@ -102,9 +98,7 @@ func Test_GetAttachments(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 5)
-		assets := NewTestAssets(t, db, courses, 1)
-		NewTestAttachments(t, db, assets, 1)
+		NewTestData(t, db, 5, false, 1, 1)
 
 		result, err := GetAttachments(db, nil)
 		require.Nil(t, err)
@@ -115,9 +109,7 @@ func Test_GetAttachments(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
-		assets := NewTestAssets(t, db, courses, 1)
-		attachments := NewTestAttachments(t, db, assets, 1)
+		workingData := NewTestData(t, db, 3, false, 1, 1)
 
 		// ----------------------------
 		// Descending
@@ -126,7 +118,7 @@ func Test_GetAttachments(t *testing.T) {
 		result, err := GetAttachments(db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
-		assert.Equal(t, attachments[2].ID, result[0].ID)
+		assert.Equal(t, workingData[2].Assets[0].Attachments[0].ID, result[0].ID)
 
 		// ----------------------------
 		// Ascending
@@ -134,7 +126,7 @@ func Test_GetAttachments(t *testing.T) {
 		result, err = GetAttachments(db, &database.DatabaseParams{OrderBy: []string{"created_at asc"}})
 		require.Nil(t, err)
 		require.Len(t, result, 3)
-		assert.Equal(t, attachments[0].ID, result[0].ID)
+		assert.Equal(t, workingData[0].Assets[0].Attachments[0].ID, result[0].ID)
 
 		// ----------------------------
 		// Error
@@ -149,44 +141,45 @@ func Test_GetAttachments(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 3 courses, 2 assets per course, 2 attachments per asset (12 attachments total)
-		courses := NewTestCourses(t, db, 3)
-		assets := NewTestAssets(t, db, courses, 2)
-		attachments := NewTestAttachments(t, db, assets, 2)
+		workingData := NewTestData(t, db, 3, false, 2, 2)
 
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		result, err := GetAttachments(db, &database.DatabaseParams{Where: sq.Eq{TableAttachments() + ".id": attachments[1].ID}})
+		result, err := GetAttachments(db, &database.DatabaseParams{Where: sq.Eq{TableAttachments() + ".id": workingData[1].Assets[1].Attachments[0].ID}})
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, attachments[1].ID, result[0].ID)
+		assert.Equal(t, workingData[1].Assets[1].Attachments[0].ID, result[0].ID)
 
 		// ----------------------------
 		// EQUALS ID OR ID
 		// ----------------------------
 		dbParams := &database.DatabaseParams{
-			Where:   sq.Or{sq.Eq{TableAttachments() + ".id": attachments[1].ID}, sq.Eq{TableAttachments() + ".id": attachments[2].ID}},
+			Where: sq.Or{
+				sq.Eq{TableAttachments() + ".id": workingData[1].Assets[1].Attachments[0].ID},
+				sq.Eq{TableAttachments() + ".id": workingData[2].Assets[0].Attachments[1].ID},
+			},
 			OrderBy: []string{"created_at asc"},
 		}
+
 		result, err = GetAttachments(db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 2)
-		assert.Equal(t, attachments[1].ID, result[0].ID)
-		assert.Equal(t, attachments[2].ID, result[1].ID)
+		assert.Equal(t, workingData[1].Assets[1].Attachments[0].ID, result[0].ID)
+		assert.Equal(t, workingData[2].Assets[0].Attachments[1].ID, result[1].ID)
 
 		// ----------------------------
 		// EQUALS ASSET_ID
 		// ----------------------------
 		dbParams = &database.DatabaseParams{
-			Where:   sq.Eq{TableAttachments() + ".asset_id": assets[1].ID},
+			Where:   sq.Eq{TableAttachments() + ".asset_id": workingData[1].Assets[1].ID},
 			OrderBy: []string{"created_at asc"},
 		}
 		result, err = GetAttachments(db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 2)
-		assert.Equal(t, attachments[2].ID, result[0].ID)
-		assert.Equal(t, attachments[3].ID, result[1].ID)
+		assert.Equal(t, workingData[1].Assets[1].Attachments[0].ID, result[0].ID)
+		assert.Equal(t, workingData[1].Assets[1].Attachments[1].ID, result[1].ID)
 
 		// ----------------------------
 		// ERROR
@@ -200,9 +193,7 @@ func Test_GetAttachments(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		assets := NewTestAssets(t, db, courses, 1)
-		attachments := NewTestAttachments(t, db, assets, 17)
+		workingData := NewTestData(t, db, 1, false, 1, 17)
 
 		// ----------------------------
 		// Page 1 with 10 items
@@ -213,8 +204,8 @@ func Test_GetAttachments(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, 17, p.TotalItems())
-		assert.Equal(t, attachments[0].ID, result[0].ID)
-		assert.Equal(t, attachments[9].ID, result[9].ID)
+		assert.Equal(t, workingData[0].Assets[0].Attachments[0].ID, result[0].ID)
+		assert.Equal(t, workingData[0].Assets[0].Attachments[9].ID, result[9].ID)
 
 		// ----------------------------
 		// Page 2 with 7 items
@@ -225,8 +216,8 @@ func Test_GetAttachments(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 7)
 		require.Equal(t, 17, p.TotalItems())
-		assert.Equal(t, attachments[10].ID, result[0].ID)
-		assert.Equal(t, attachments[16].ID, result[6].ID)
+		assert.Equal(t, workingData[0].Assets[0].Attachments[10].ID, result[0].ID)
+		assert.Equal(t, workingData[0].Assets[0].Attachments[16].ID, result[6].ID)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -257,13 +248,11 @@ func Test_GetAttachment(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 2)
-		assets := NewTestAssets(t, db, courses, 1)
-		attachments := NewTestAttachments(t, db, assets, 1)
+		workingData := NewTestData(t, db, 2, false, 1, 1)
 
-		a, err := GetAttachment(db, attachments[1].ID)
+		a, err := GetAttachment(db, workingData[1].Assets[0].Attachments[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, attachments[1].ID, a.ID)
+		assert.Equal(t, workingData[1].Assets[0].Attachments[0].ID, a.ID)
 
 	})
 
@@ -295,9 +284,8 @@ func Test_CreateAttachment(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		assets := NewTestAssets(t, db, courses, 1)
-		attachment := NewTestAttachments(t, nil, assets, 1)[0]
+		workingData := NewTestData(t, db, 1, false, 1, 0)
+		attachment := newTestAttachments(t, nil, workingData[0].Assets[0], 1)[0]
 
 		err := CreateAttachment(db, attachment)
 		require.Nil(t, err)
@@ -317,9 +305,8 @@ func Test_CreateAttachment(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		assets := NewTestAssets(t, db, courses, 1)
-		attachment := NewTestAttachments(t, nil, assets, 1)[0]
+		workingData := NewTestData(t, db, 1, false, 1, 0)
+		attachment := newTestAttachments(t, nil, workingData[0].Assets[0], 1)[0]
 
 		err := CreateAttachment(db, attachment)
 		require.Nil(t, err)
@@ -332,8 +319,7 @@ func Test_CreateAttachment(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		asset := NewTestAssets(t, db, courses, 1)[0]
+		workingData := NewTestData(t, db, 1, false, 1, 0)
 
 		// No course ID
 		attachment := &Attachment{}
@@ -362,11 +348,11 @@ func Test_CreateAttachment(t *testing.T) {
 
 		// Invalid course ID
 		assert.ErrorContains(t, CreateAttachment(db, attachment), "FOREIGN KEY constraint failed")
-		attachment.CourseID = asset.CourseID
+		attachment.CourseID = workingData[0].ID
 
 		// Invalid asset ID
 		assert.ErrorContains(t, CreateAttachment(db, attachment), "FOREIGN KEY constraint failed")
-		attachment.AssetID = asset.ID
+		attachment.AssetID = workingData[0].Assets[0].ID
 
 		// Success
 		assert.Nil(t, CreateAttachment(db, attachment))
@@ -380,11 +366,9 @@ func Test_DeleteAttachment(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		assets := NewTestAssets(t, db, courses, 1)
-		attachments := NewTestAttachments(t, db, assets, 1)
+		workingData := NewTestData(t, db, 1, false, 1, 1)
 
-		err := DeleteAttachment(db, attachments[0].ID)
+		err := DeleteAttachment(db, workingData[0].Assets[0].Attachments[0].ID)
 		require.Nil(t, err)
 	})
 
@@ -423,35 +407,29 @@ func Test_DeleteAttachmentCascade(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 2 courses, 2 assets per course, 2 attachments per asset (8 attachments total)
-		courses := NewTestCourses(t, db, 2)
-		assets := NewTestAssets(t, db, courses, 2)
-		attachments := NewTestAttachments(t, db, assets, 2)
+		workingData := NewTestData(t, db, 2, false, 2, 2)
 
-		err := DeleteCourse(db, courses[0].ID)
+		err := DeleteCourse(db, workingData[0].ID)
 		require.Nil(t, err)
 
-		for _, a := range attachments[:4] {
-			_, err := GetAttachment(db, a.ID)
-			assert.ErrorIs(t, err, sql.ErrNoRows)
-		}
+		count, err := CountAttachments(db, nil)
+		require.Nil(t, err)
+		assert.Equal(t, 4, count)
+
 	})
 
 	t.Run("delete asset", func(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 2 courses, 2 assets per course, 2 attachments per asset (8 attachments total)
-		courses := NewTestCourses(t, db, 2)
-		assets := NewTestAssets(t, db, courses, 2)
-		attachments := NewTestAttachments(t, db, assets, 2)
+		workingData := NewTestData(t, db, 2, false, 2, 2)
 
-		err := DeleteAsset(db, assets[0].ID)
+		err := DeleteAsset(db, workingData[0].Assets[0].ID)
 		require.Nil(t, err)
 
-		_, err = GetAttachment(db, attachments[0].ID)
+		_, err = GetAttachment(db, workingData[0].Assets[0].Attachments[0].ID)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
-		_, err = GetAttachment(db, attachments[1].ID)
+		_, err = GetAttachment(db, workingData[0].Assets[0].Attachments[1].ID)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 	})
 }

@@ -8,15 +8,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"math/rand"
-	"testing"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
-	"github.com/geerew/off-course/utils/security"
 	"github.com/geerew/off-course/utils/types"
-	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -279,45 +274,6 @@ func DeleteAsset(db database.Database, id string) error {
 
 	_, err = db.Exec(query, args...)
 	return err
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// NewTestAssets creates n number of assets for each course in the slice. If a db is provided, a DB
-// insert will be performed
-//
-// THIS IS FOR TESTING PURPOSES
-func NewTestAssets(t *testing.T, db database.Database, courses []*Course, assetsPerCourse int) []*Asset {
-	assets := []*Asset{}
-
-	for i := 0; i < len(courses); i++ {
-		for j := 0; j < assetsPerCourse; j++ {
-			a := &Asset{}
-
-			a.RefreshId()
-			a.RefreshCreatedAt()
-			a.RefreshUpdatedAt()
-
-			a.CourseID = courses[i].ID
-			a.Title = security.PseudorandomString(6)
-			a.Prefix = sql.NullInt16{Int16: int16(rand.Intn(100-1) + 1), Valid: true}
-			a.Chapter = fmt.Sprintf("%d chapter %s", j+1, security.PseudorandomString(2))
-			a.Type = *types.NewAsset("mp4")
-			a.Path = fmt.Sprintf("%s/%s/%d %s.mp4", courses[i].Path, a.Chapter, a.Prefix.Int16, a.Title)
-
-			if db != nil {
-				err := CreateAsset(db, a)
-				require.Nil(t, err)
-
-				// This allows the created/updated times to be different when inserting multiple rows
-				time.Sleep(time.Millisecond * 1)
-			}
-
-			assets = append(assets, a)
-		}
-	}
-
-	return assets
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

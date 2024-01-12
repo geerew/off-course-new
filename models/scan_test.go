@@ -26,13 +26,12 @@ func Test_GetScan(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		scan := NewTestScans(t, db, courses)[0]
+		workingData := NewTestData(t, db, 1, true, 0, 0)
 
-		s, err := GetScan(db, scan.CourseID)
+		s, err := GetScan(db, workingData[0].Course.ID)
 		require.Nil(t, err)
-		assert.Equal(t, scan.ID, s.ID)
-		assert.Equal(t, courses[0].Path, s.CoursePath)
+		assert.Equal(t, workingData[0].Scan.ID, s.ID)
+		assert.Equal(t, workingData[0].Course.Path, s.CoursePath)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
@@ -63,8 +62,8 @@ func Test_CreateScan(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		s := NewTestScans(t, nil, courses)[0]
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		s := newTestScan(t, nil, workingData[0].Course.ID)
 
 		err := CreateScan(db, s)
 		require.Nil(t, err)
@@ -81,8 +80,8 @@ func Test_CreateScan(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		s := NewTestScans(t, nil, courses)[0]
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		s := newTestScan(t, nil, workingData[0].Course.ID)
 		s.Status = types.ScanStatus{}
 
 		err := CreateScan(db, s)
@@ -94,8 +93,8 @@ func Test_CreateScan(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		s := NewTestScans(t, nil, courses)[0]
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		s := newTestScan(t, nil, workingData[0].Course.ID)
 
 		err := CreateScan(db, s)
 		require.Nil(t, err)
@@ -108,7 +107,7 @@ func Test_CreateScan(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
+		course := NewTestData(t, db, 1, false, 0, 0)[0]
 
 		// Missing course
 		s := &Scan{}
@@ -133,22 +132,21 @@ func Test_UpdateScanStatus(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		origScan := NewTestScans(t, db, courses)[0]
-		require.True(t, origScan.Status.IsWaiting())
+		workingData := NewTestData(t, db, 1, true, 0, 0)
+		require.True(t, workingData[0].Scan.Status.IsWaiting())
 
 		// ----------------------------
 		// Set to Processing
 		// ----------------------------
-		updatedScan1, err := UpdateScanStatus(db, origScan.CourseID, types.ScanStatusProcessing)
+		updatedScan1, err := UpdateScanStatus(db, workingData[0].ID, types.ScanStatusProcessing)
 		require.Nil(t, err)
 		require.False(t, updatedScan1.Status.IsWaiting())
-		assert.NotEqual(t, origScan.UpdatedAt, updatedScan1.UpdatedAt)
+		assert.NotEqual(t, workingData[0].Scan.UpdatedAt, updatedScan1.UpdatedAt)
 
 		// ----------------------------
 		// Set to waiting
 		// ----------------------------
-		updatedScan2, err := UpdateScanStatus(db, origScan.CourseID, types.ScanStatusWaiting)
+		updatedScan2, err := UpdateScanStatus(db, workingData[0].ID, types.ScanStatusWaiting)
 		require.Nil(t, err)
 		require.True(t, updatedScan2.Status.IsWaiting())
 		assert.NotEqual(t, updatedScan1.UpdatedAt, updatedScan2.UpdatedAt)
@@ -167,14 +165,13 @@ func Test_UpdateScanStatus(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		origScan := NewTestScans(t, db, courses)[0]
-		require.True(t, origScan.Status.IsWaiting())
+		workingData := NewTestData(t, db, 1, true, 0, 0)
+		require.True(t, workingData[0].Scan.Status.IsWaiting())
 
-		updatedScan, err := UpdateScanStatus(db, origScan.CourseID, types.ScanStatusWaiting)
+		updatedScan, err := UpdateScanStatus(db, workingData[0].ID, types.ScanStatusWaiting)
 		require.Nil(t, err)
 		assert.True(t, updatedScan.Status.IsWaiting())
-		assert.Equal(t, origScan.UpdatedAt.String(), updatedScan.UpdatedAt.String())
+		assert.Equal(t, workingData[0].Scan.UpdatedAt.String(), updatedScan.UpdatedAt.String())
 	})
 
 	t.Run("no course with id", func(t *testing.T) {
@@ -205,10 +202,8 @@ func Test_DeleteScan(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		scan := NewTestScans(t, db, courses)[0]
-
-		err := DeleteScan(db, scan.CourseID)
+		workingData := NewTestData(t, db, 1, true, 0, 0)
+		err := DeleteScan(db, workingData[0].ID)
 		require.Nil(t, err)
 	})
 
@@ -246,13 +241,12 @@ func Test_DeleteScanCascade(t *testing.T) {
 	_, db, teardown := setup(t)
 	defer teardown(t)
 
-	courses := NewTestCourses(t, db, 1)
-	scan := NewTestScans(t, db, courses)[0]
+	workingData := NewTestData(t, db, 1, true, 0, 0)
 
-	err := DeleteCourse(db, scan.CourseID)
+	err := DeleteCourse(db, workingData[0].ID)
 	require.Nil(t, err)
 
-	s, err := GetScan(db, scan.CourseID)
+	s, err := GetScan(db, workingData[0].ID)
 	require.ErrorIs(t, err, sql.ErrNoRows)
 	assert.Nil(t, s)
 }
@@ -264,13 +258,12 @@ func Test_NextScan(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		scans := NewTestScans(t, db, courses)
+		workingData := NewTestData(t, db, 1, true, 0, 0)
 
 		s, err := NextScan(db)
 		require.Nil(t, err)
-		assert.Equal(t, scans[0].ID, s.ID)
-		assert.Equal(t, courses[0].Path, s.CoursePath)
+		assert.Equal(t, workingData[0].Scan.ID, s.ID)
+		assert.Equal(t, workingData[0].Path, s.CoursePath)
 
 	})
 
@@ -278,19 +271,17 @@ func Test_NextScan(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		// Create 3 scans
-		courses := NewTestCourses(t, db, 3)
-		scans := NewTestScans(t, db, courses)
+		workingData := NewTestData(t, db, 3, true, 0, 0)
 
 		// Update the the first scan to processing
-		_, err := UpdateScanStatus(db, scans[0].CourseID, types.ScanStatusProcessing)
+		_, err := UpdateScanStatus(db, workingData[0].ID, types.ScanStatusProcessing)
 		require.Nil(t, err)
 
 		// Get the next scan
 		s, err := NextScan(db)
 		require.Nil(t, err)
-		assert.Equal(t, scans[1].ID, s.ID)
-		assert.Equal(t, courses[1].Path, s.CoursePath)
+		assert.Equal(t, workingData[1].Scan.ID, s.ID)
+		assert.Equal(t, workingData[1].Path, s.CoursePath)
 
 	})
 

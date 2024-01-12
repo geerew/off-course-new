@@ -29,8 +29,7 @@ func Test_CountAssets(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 5)
-		NewTestAssets(t, db, courses, 1)
+		NewTestData(t, db, 5, false, 1, 0)
 
 		count, err := CountAssets(db, nil)
 		require.Nil(t, err)
@@ -41,27 +40,26 @@ func Test_CountAssets(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
-		assets := NewTestAssets(t, db, courses, 2)
+		workingData := NewTestData(t, db, 3, false, 2, 0)
 
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		count, err := CountAssets(db, &database.DatabaseParams{Where: sq.Eq{TableAssets() + ".id": assets[2].ID}})
+		count, err := CountAssets(db, &database.DatabaseParams{Where: sq.Eq{TableAssets() + ".id": workingData[0].Assets[1].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 
 		// ----------------------------
 		// NOT EQUALS ID
 		// ----------------------------
-		count, err = CountAssets(db, &database.DatabaseParams{Where: sq.NotEq{TableAssets() + ".id": assets[2].ID}})
+		count, err = CountAssets(db, &database.DatabaseParams{Where: sq.NotEq{TableAssets() + ".id": workingData[0].Assets[1].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 5, count)
 
 		// ----------------------------
 		// EQUALS COURSE_ID
 		// ----------------------------
-		count, err = CountAssets(db, &database.DatabaseParams{Where: sq.Eq{TableAssets() + ".course_id": courses[1].ID}})
+		count, err = CountAssets(db, &database.DatabaseParams{Where: sq.Eq{TableAssets() + ".course_id": workingData[1].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 2, count)
 
@@ -101,8 +99,7 @@ func Test_GetAssets(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 5)
-		assets := NewTestAssets(t, db, courses, 1)
+		workingData := NewTestData(t, db, 5, false, 1, 3)
 
 		result, err := GetAssets(db, nil)
 		require.Nil(t, err)
@@ -117,10 +114,10 @@ func Test_GetAssets(t *testing.T) {
 			require.True(t, a.CompletedAt.IsZero())
 		}
 
-		// Set asset 1 video pos and asset 3 as completed
-		_, err = UpdateAssetProgressVideoPos(db, assets[0].ID, 50)
+		// Update 1 video position and 1 completed
+		_, err = UpdateAssetProgressVideoPos(db, workingData[0].Assets[0].ID, 50)
 		require.Nil(t, err)
-		_, err = UpdateAssetProgressCompleted(db, assets[2].ID, true)
+		_, err = UpdateAssetProgressCompleted(db, workingData[1].Assets[0].ID, true)
 		require.Nil(t, err)
 
 		// Find all started videos
@@ -130,29 +127,19 @@ func Test_GetAssets(t *testing.T) {
 		result, err = GetAssets(db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, assets[0].ID, result[0].ID)
+		assert.Equal(t, workingData[0].Assets[0].ID, result[0].ID)
 
 		// Find completed assets
 		result, err = GetAssets(db, &database.DatabaseParams{Where: sq.Eq{TableAssetsProgress() + ".completed": true}})
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, assets[2].ID, result[0].ID)
+		assert.Equal(t, workingData[1].Assets[0].ID, result[0].ID)
 
 		// ----------------------------
 		// Attachments
 		// ----------------------------
 		for _, a := range result {
-			require.Zero(t, a.Attachments)
-		}
-
-		// Create attachments
-		NewTestAttachments(t, db, assets, 5)
-
-		result, err = GetAssets(db, nil)
-		require.Nil(t, err)
-
-		for _, a := range result {
-			require.Len(t, a.Attachments, 5)
+			require.Len(t, a.Attachments, 3)
 		}
 	})
 
@@ -160,8 +147,7 @@ func Test_GetAssets(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
-		assets := NewTestAssets(t, db, courses, 1)
+		workingData := NewTestData(t, db, 3, false, 1, 0)
 
 		// ----------------------------
 		// Descending
@@ -170,7 +156,7 @@ func Test_GetAssets(t *testing.T) {
 		result, err := GetAssets(db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
-		assert.Equal(t, assets[2].ID, result[0].ID)
+		assert.Equal(t, workingData[2].Assets[0].ID, result[0].ID)
 
 		// ----------------------------
 		// Ascending
@@ -178,7 +164,7 @@ func Test_GetAssets(t *testing.T) {
 		result, err = GetAssets(db, &database.DatabaseParams{OrderBy: []string{"created_at asc"}})
 		require.Nil(t, err)
 		require.Len(t, result, 3)
-		assert.Equal(t, assets[0].ID, result[0].ID)
+		assert.Equal(t, workingData[0].Assets[0].ID, result[0].ID)
 
 		// ----------------------------
 		// Error
@@ -193,42 +179,41 @@ func Test_GetAssets(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
-		assets := NewTestAssets(t, db, courses, 2)
+		workingData := NewTestData(t, db, 3, false, 2, 0)
 
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		result, err := GetAssets(db, &database.DatabaseParams{Where: sq.Eq{TableAssets() + ".id": assets[1].ID}})
+		result, err := GetAssets(db, &database.DatabaseParams{Where: sq.Eq{TableAssets() + ".id": workingData[0].Assets[1].ID}})
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, assets[1].ID, result[0].ID)
+		assert.Equal(t, workingData[0].Assets[1].ID, result[0].ID)
 
 		// ----------------------------
 		// EQUALS ID OR ID
 		// ----------------------------
 		dbParams := &database.DatabaseParams{
-			Where:   sq.Or{sq.Eq{TableAssets() + ".id": assets[1].ID}, sq.Eq{TableAssets() + ".id": assets[2].ID}},
+			Where:   sq.Or{sq.Eq{TableAssets() + ".id": workingData[0].Assets[1].ID}, sq.Eq{TableAssets() + ".id": workingData[1].Assets[1].ID}},
 			OrderBy: []string{"created_at asc"},
 		}
 		result, err = GetAssets(db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 2)
-		assert.Equal(t, assets[1].ID, result[0].ID)
-		assert.Equal(t, assets[2].ID, result[1].ID)
+		assert.Equal(t, workingData[0].Assets[1].ID, result[0].ID)
+		assert.Equal(t, workingData[1].Assets[1].ID, result[1].ID)
 
 		// ----------------------------
 		// EQUALS COURSE_ID
 		// ----------------------------
 		dbParams = &database.DatabaseParams{
-			Where:   sq.Eq{TableAssets() + ".course_id": courses[1].ID},
+			Where:   sq.Eq{TableAssets() + ".course_id": workingData[1].ID},
 			OrderBy: []string{"created_at asc"},
 		}
 		result, err = GetAssets(db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 2)
-		assert.Equal(t, assets[2].ID, result[0].ID)
-		assert.Equal(t, assets[3].ID, result[1].ID)
+		assert.Equal(t, workingData[1].Assets[0].ID, result[0].ID)
+		assert.Equal(t, workingData[1].Assets[1].ID, result[1].ID)
 
 		// ----------------------------
 		// ERROR
@@ -242,8 +227,7 @@ func Test_GetAssets(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		assets := NewTestAssets(t, db, courses, 17)
+		workingData := NewTestData(t, db, 1, false, 17, 0)
 
 		// ----------------------------
 		// Page 1 with 10 items
@@ -254,8 +238,8 @@ func Test_GetAssets(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, 17, p.TotalItems())
-		assert.Equal(t, assets[0].ID, result[0].ID)
-		assert.Equal(t, assets[9].ID, result[9].ID)
+		assert.Equal(t, workingData[0].Assets[0].ID, result[0].ID)
+		assert.Equal(t, workingData[0].Assets[9].ID, result[9].ID)
 
 		// ----------------------------
 		// Page 2 with 7 items
@@ -266,8 +250,8 @@ func Test_GetAssets(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 7)
 		require.Equal(t, 17, p.TotalItems())
-		assert.Equal(t, assets[10].ID, result[0].ID)
-		assert.Equal(t, assets[16].ID, result[6].ID)
+		assert.Equal(t, workingData[0].Assets[10].ID, result[0].ID)
+		assert.Equal(t, workingData[0].Assets[16].ID, result[6].ID)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -298,12 +282,11 @@ func Test_GetAsset(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 2)
-		assets := NewTestAssets(t, db, courses, 1)
+		workingData := NewTestData(t, db, 2, false, 1, 2)
 
-		a, err := GetAsset(db, assets[1].ID)
+		a, err := GetAsset(db, workingData[0].Assets[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, assets[1].ID, a.ID)
+		assert.Equal(t, workingData[0].Assets[0].ID, a.ID)
 
 		// ----------------------------
 		// Progress
@@ -335,14 +318,9 @@ func Test_GetAsset(t *testing.T) {
 		// ----------------------------
 		// Attachments
 		// ----------------------------
-		require.Zero(t, a.Attachments)
-
-		// Create attachments
-		NewTestAttachments(t, db, []*Asset{a}, 2)
-
-		a, err = GetAsset(db, a.ID)
-		require.Nil(t, err)
 		require.Len(t, a.Attachments, 2)
+		assert.Equal(t, workingData[0].Assets[0].Attachments[0].ID, a.Attachments[0].ID)
+		assert.Equal(t, workingData[0].Assets[0].Attachments[1].ID, a.Attachments[1].ID)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
@@ -373,8 +351,8 @@ func Test_CreateAsset(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		c := NewTestCourses(t, db, 1)[0]
-		a := NewTestAssets(t, nil, []*Course{c}, 1)[0]
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		a := newTestAssets(t, nil, workingData[0].Course, 1, 0)[0]
 
 		err := CreateAsset(db, a)
 		require.Nil(t, err)
@@ -396,13 +374,13 @@ func Test_CreateAsset(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		asset := NewTestAssets(t, nil, courses, 1)[0]
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		a := newTestAssets(t, nil, workingData[0].Course, 1, 0)[0]
 
-		err := CreateAsset(db, asset)
+		err := CreateAsset(db, a)
 		require.Nil(t, err)
 
-		err = CreateAsset(db, asset)
+		err = CreateAsset(db, a)
 		assert.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.path", TableAssets()))
 	})
 
@@ -410,7 +388,7 @@ func Test_CreateAsset(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
+		workingData := NewTestData(t, db, 1, false, 0, 0)
 
 		// No course ID
 		asset := &Asset{}
@@ -447,7 +425,7 @@ func Test_CreateAsset(t *testing.T) {
 		assert.ErrorContains(t, CreateAsset(db, asset), "FOREIGN KEY constraint failed")
 
 		// Success
-		asset.CourseID = course.ID
+		asset.CourseID = workingData[0].ID
 		assert.Nil(t, CreateAsset(db, asset))
 	})
 }
@@ -459,10 +437,9 @@ func Test_DeleteAsset(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		assets := NewTestAssets(t, db, courses, 1)
+		workingData := NewTestData(t, db, 1, false, 2, 0)
 
-		err := DeleteAsset(db, assets[0].ID)
+		err := DeleteAsset(db, workingData[0].Assets[1].ID)
 		require.Nil(t, err)
 	})
 
@@ -500,13 +477,12 @@ func Test_DeleteAssetCascade(t *testing.T) {
 	_, db, teardown := setup(t)
 	defer teardown(t)
 
-	courses := NewTestCourses(t, db, 1)
-	assets := NewTestAssets(t, db, courses, 1)
+	workingData := NewTestData(t, db, 1, false, 1, 0)
 
-	err := DeleteCourse(db, assets[0].CourseID)
+	err := DeleteCourse(db, workingData[0].ID)
 	require.Nil(t, err)
 
-	s, err := GetAsset(db, assets[0].ID)
+	s, err := GetAsset(db, workingData[0].Assets[0].ID)
 	require.ErrorIs(t, err, sql.ErrNoRows)
 	assert.Nil(t, s)
 }

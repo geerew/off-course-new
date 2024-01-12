@@ -7,13 +7,10 @@ package models
 import (
 	"database/sql"
 	"errors"
-	"testing"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/utils/types"
-	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -214,39 +211,6 @@ func NextScan(db database.Database) (*Scan, error) {
 	}
 
 	return s, nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// NewTestScans creates a scan for each course in the slice. If a db is provided, a DB insert will
-// be performed
-//
-// THIS IS FOR TESTING PURPOSES
-func NewTestScans(t *testing.T, db database.Database, courses []*Course) []*Scan {
-	scans := []*Scan{}
-
-	for i := 0; i < len(courses); i++ {
-		s := &Scan{}
-
-		s.RefreshId()
-		s.RefreshCreatedAt()
-		s.RefreshUpdatedAt()
-
-		s.CourseID = courses[i].ID
-		s.Status = types.NewScanStatus(types.ScanStatusWaiting)
-
-		if db != nil {
-			err := CreateScan(db, s)
-			require.Nil(t, err)
-
-			// This allows the created/updated times to be different when inserting multiple rows
-			time.Sleep(time.Millisecond * 1)
-		}
-
-		scans = append(scans, s)
-	}
-
-	return scans
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

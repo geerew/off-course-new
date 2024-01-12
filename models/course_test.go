@@ -29,7 +29,7 @@ func Test_CountCourses(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		NewTestCourses(t, db, 5)
+		NewTestData(t, db, 5, false, 0, 0)
 
 		count, err := CountCourses(db, nil)
 		require.Nil(t, err)
@@ -40,19 +40,19 @@ func Test_CountCourses(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
+		workingData := NewTestData(t, db, 3, false, 0, 0)
 
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		count, err := CountCourses(db, &database.DatabaseParams{Where: sq.Eq{TableCourses() + ".id": courses[2].ID}})
+		count, err := CountCourses(db, &database.DatabaseParams{Where: sq.Eq{TableCourses() + ".id": workingData[2].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 
 		// ----------------------------
 		// NOT EQUALS ID
 		// ----------------------------
-		count, err = CountCourses(db, &database.DatabaseParams{Where: sq.NotEq{TableCourses() + ".id": courses[2].ID}})
+		count, err = CountCourses(db, &database.DatabaseParams{Where: sq.NotEq{TableCourses() + ".id": workingData[2].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 2, count)
 
@@ -92,7 +92,7 @@ func Test_GetCourses(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 5)
+		workingData := NewTestData(t, db, 5, false, 0, 0)
 
 		result, err := GetCourses(db, nil)
 		require.Nil(t, err)
@@ -102,11 +102,12 @@ func Test_GetCourses(t *testing.T) {
 		// Scan
 		// ----------------------------
 		assert.Empty(t, result[1].ScanStatus)
-		NewTestScans(t, db, []*Course{courses[1]})
+
+		newTestScan(t, db, workingData[1].ID)
 
 		result, err = GetCourses(db, nil)
 		require.Nil(t, err)
-		assert.Equal(t, courses[1].ID, result[1].ID)
+		assert.Equal(t, workingData[1].ID, result[1].ID)
 		assert.Equal(t, string(types.ScanStatusWaiting), result[1].ScanStatus)
 
 		// ----------------------------
@@ -120,11 +121,11 @@ func Test_GetCourses(t *testing.T) {
 		}
 
 		// Set course 1 as started and course 3 as completed
-		_, err = UpdateCourseProgressStarted(db, courses[0].ID, true)
+		_, err = UpdateCourseProgressStarted(db, workingData[0].ID, true)
 		require.Nil(t, err)
-		_, err = UpdateCourseProgressStarted(db, courses[2].ID, true)
+		_, err = UpdateCourseProgressStarted(db, workingData[2].ID, true)
 		require.Nil(t, err)
-		_, err = UpdateCourseProgressPercent(db, courses[2].ID, 100)
+		_, err = UpdateCourseProgressPercent(db, workingData[2].ID, 100)
 		require.Nil(t, err)
 
 		// Find started courses (not completed)
@@ -134,20 +135,20 @@ func Test_GetCourses(t *testing.T) {
 		result, err = GetCourses(db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, courses[0].ID, result[0].ID)
+		assert.Equal(t, workingData[0].ID, result[0].ID)
 
 		// Find completed courses
 		result, err = GetCourses(db, &database.DatabaseParams{Where: sq.Eq{TableCoursesProgress() + ".percent": 100}})
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, courses[2].ID, result[0].ID)
+		assert.Equal(t, workingData[2].ID, result[0].ID)
 	})
 
 	t.Run("orderby", func(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
+		workingData := NewTestData(t, db, 3, false, 0, 0)
 
 		// ----------------------------
 		// Descending
@@ -156,7 +157,7 @@ func Test_GetCourses(t *testing.T) {
 		result, err := GetCourses(db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
-		assert.Equal(t, courses[2].ID, result[0].ID)
+		assert.Equal(t, workingData[2].ID, result[0].ID)
 
 		// ----------------------------
 		// Ascending
@@ -164,7 +165,7 @@ func Test_GetCourses(t *testing.T) {
 		result, err = GetCourses(db, &database.DatabaseParams{OrderBy: []string{"created_at asc"}})
 		require.Nil(t, err)
 		require.Len(t, result, 3)
-		assert.Equal(t, courses[0].ID, result[0].ID)
+		assert.Equal(t, workingData[0].ID, result[0].ID)
 
 		// ----------------------------
 		// Error
@@ -179,28 +180,28 @@ func Test_GetCourses(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
+		workingData := NewTestData(t, db, 3, false, 0, 0)
 
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		result, err := GetCourses(db, &database.DatabaseParams{Where: sq.Eq{TableCourses() + ".id": courses[2].ID}})
+		result, err := GetCourses(db, &database.DatabaseParams{Where: sq.Eq{TableCourses() + ".id": workingData[2].ID}})
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, courses[2].ID, result[0].ID)
+		assert.Equal(t, workingData[2].ID, result[0].ID)
 
 		// ----------------------------
 		// EQUALS ID OR ID
 		// ----------------------------
 		dbParams := &database.DatabaseParams{
-			Where:   sq.Or{sq.Eq{TableCourses() + ".id": courses[1].ID}, sq.Eq{TableCourses() + ".id": courses[2].ID}},
+			Where:   sq.Or{sq.Eq{TableCourses() + ".id": workingData[1].ID}, sq.Eq{TableCourses() + ".id": workingData[2].ID}},
 			OrderBy: []string{"created_at asc"},
 		}
 		result, err = GetCourses(db, dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 2)
-		assert.Equal(t, courses[1].ID, result[0].ID)
-		assert.Equal(t, courses[2].ID, result[1].ID)
+		assert.Equal(t, workingData[1].ID, result[0].ID)
+		assert.Equal(t, workingData[2].ID, result[1].ID)
 
 		// ----------------------------
 		// ERROR
@@ -214,7 +215,7 @@ func Test_GetCourses(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 17)
+		workingData := NewTestData(t, db, 17, false, 0, 0)
 
 		// ----------------------------
 		// Page 1 with 10 items
@@ -225,8 +226,8 @@ func Test_GetCourses(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, 17, p.TotalItems())
-		assert.Equal(t, courses[0].ID, result[0].ID)
-		assert.Equal(t, courses[9].ID, result[9].ID)
+		assert.Equal(t, workingData[0].ID, result[0].ID)
+		assert.Equal(t, workingData[9].ID, result[9].ID)
 
 		// ----------------------------
 		// Page 2 with 7 items
@@ -237,8 +238,8 @@ func Test_GetCourses(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 7)
 		require.Equal(t, 17, p.TotalItems())
-		assert.Equal(t, courses[10].ID, result[0].ID)
-		assert.Equal(t, courses[16].ID, result[6].ID)
+		assert.Equal(t, workingData[10].ID, result[0].ID)
+		assert.Equal(t, workingData[16].ID, result[6].ID)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -269,19 +270,19 @@ func Test_GetCourse(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 2)
+		workingData := NewTestData(t, db, 2, false, 0, 0)
 
-		c, err := GetCourse(db, courses[1].ID)
+		c, err := GetCourse(db, workingData[1].ID)
 		require.Nil(t, err)
-		assert.Equal(t, courses[1].ID, c.ID)
-		assert.Empty(t, courses[1].ScanStatus)
+		assert.Equal(t, workingData[1].ID, c.ID)
+		assert.Empty(t, workingData[1].ScanStatus)
 
 		// ----------------------------
 		// scan
 		// ----------------------------
-		NewTestScans(t, db, []*Course{courses[1]})
+		newTestScan(t, db, workingData[1].ID)
 
-		c, err = GetCourse(db, courses[1].ID)
+		c, err = GetCourse(db, workingData[1].ID)
 		require.Nil(t, err)
 		assert.Equal(t, string(types.ScanStatusWaiting), c.ScanStatus)
 
@@ -294,10 +295,10 @@ func Test_GetCourse(t *testing.T) {
 		require.True(t, c.CompletedAt.IsZero())
 
 		// Set to started
-		_, err = UpdateCourseProgressStarted(db, courses[1].ID, true)
+		_, err = UpdateCourseProgressStarted(db, workingData[1].ID, true)
 		require.Nil(t, err)
 
-		c, err = GetCourse(db, courses[1].ID)
+		c, err = GetCourse(db, workingData[1].ID)
 		require.Nil(t, err)
 		require.True(t, c.Started)
 		require.False(t, c.StartedAt.IsZero())
@@ -305,10 +306,10 @@ func Test_GetCourse(t *testing.T) {
 		require.True(t, c.CompletedAt.IsZero())
 
 		// Set to completed
-		_, err = UpdateCourseProgressPercent(db, courses[1].ID, 100)
+		_, err = UpdateCourseProgressPercent(db, workingData[1].ID, 100)
 		require.Nil(t, err)
 
-		c, err = GetCourse(db, courses[1].ID)
+		c, err = GetCourse(db, workingData[1].ID)
 		require.Nil(t, err)
 		require.True(t, c.Started)
 		require.False(t, c.StartedAt.IsZero())
@@ -344,16 +345,16 @@ func Test_CreateCourse(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		c := NewTestCourses(t, nil, 1)[0]
+		workingData := NewTestData(t, nil, 1, false, 0, 0)
 
-		err := CreateCourse(db, c)
+		err := CreateCourse(db, workingData[0].Course)
 		require.Nil(t, err)
 
-		newC, err := GetCourse(db, c.ID)
+		newC, err := GetCourse(db, workingData[0].ID)
 		require.Nil(t, err)
 		assert.NotEmpty(t, newC.ID)
-		assert.Equal(t, c.Title, newC.Title)
-		assert.Equal(t, c.Path, newC.Path)
+		assert.Equal(t, workingData[0].Title, newC.Title)
+		assert.Equal(t, workingData[0].Path, newC.Path)
 		assert.Empty(t, newC.CardPath)
 		assert.False(t, newC.CreatedAt.IsZero())
 		assert.False(t, newC.UpdatedAt.IsZero())
@@ -370,12 +371,12 @@ func Test_CreateCourse(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		c := NewTestCourses(t, nil, 1)[0]
+		workingData := NewTestData(t, nil, 1, false, 0, 0)
 
-		err := CreateCourse(db, c)
+		err := CreateCourse(db, workingData[0].Course)
 		require.Nil(t, err)
 
-		err = CreateCourse(db, c)
+		err = CreateCourse(db, workingData[0].Course)
 		assert.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.path", TableCourses()))
 	})
 
@@ -408,13 +409,13 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		origCourse := NewTestCourses(t, db, 1)[0]
-		require.Empty(t, origCourse.CardPath)
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		require.Empty(t, workingData[0].CardPath)
 
-		updatedCourse, err := UpdateCourseCardPath(db, origCourse.ID, "/path/to/card.jpg")
+		updatedCourse, err := UpdateCourseCardPath(db, workingData[0].ID, "/path/to/card.jpg")
 		require.Nil(t, err)
 		require.Equal(t, "/path/to/card.jpg", updatedCourse.CardPath)
-		assert.NotEqual(t, origCourse.UpdatedAt, updatedCourse.UpdatedAt)
+		assert.NotEqual(t, workingData[0].UpdatedAt, updatedCourse.UpdatedAt)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
@@ -430,13 +431,13 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		origCourse := NewTestCourses(t, db, 1)[0]
-		require.Empty(t, origCourse.CardPath)
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		require.Empty(t, workingData[0].CardPath)
 
-		updatedCourse, err := UpdateCourseCardPath(db, origCourse.ID, "")
+		updatedCourse, err := UpdateCourseCardPath(db, workingData[0].ID, "")
 		require.Nil(t, err)
 		assert.Empty(t, updatedCourse.CardPath)
-		assert.Equal(t, origCourse.UpdatedAt.String(), updatedCourse.UpdatedAt.String())
+		assert.Equal(t, workingData[0].UpdatedAt.String(), updatedCourse.UpdatedAt.String())
 	})
 
 	t.Run("no course with id", func(t *testing.T) {
@@ -467,11 +468,11 @@ func Test_UpdateCourseUpdatedAt(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		origCourse := NewTestCourses(t, db, 1)[0]
+		workingData := NewTestData(t, db, 1, false, 0, 0)
 
-		updatedCourse, err := UpdateCourseUpdatedAt(db, origCourse.ID)
+		updatedCourse, err := UpdateCourseUpdatedAt(db, workingData[0].ID)
 		require.Nil(t, err)
-		assert.NotEqual(t, origCourse.UpdatedAt, updatedCourse.UpdatedAt)
+		assert.NotEqual(t, workingData[0].UpdatedAt, updatedCourse.UpdatedAt)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
@@ -511,9 +512,8 @@ func Test_DeleteCourse(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		course := NewTestCourses(t, db, 1)[0]
-
-		err := DeleteCourse(db, course.ID)
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		err := DeleteCourse(db, workingData[0].ID)
 		require.Nil(t, err)
 	})
 

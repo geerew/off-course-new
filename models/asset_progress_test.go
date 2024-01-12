@@ -28,9 +28,10 @@ func Test_CountAssetsProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 5)
-		assets := NewTestAssets(t, db, courses, 1)
-		NewTestAssetsProgress(t, db, assets)
+		workingData := NewTestData(t, db, 5, false, 1, 0)
+		for _, tc := range workingData {
+			newTestAssetsProgress(t, db, tc.Assets[0].ID)
+		}
 
 		count, err := CountAssetsProgress(db, nil)
 		require.Nil(t, err)
@@ -41,9 +42,11 @@ func Test_CountAssetsProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
-		assets := NewTestAssets(t, db, courses, 1)
-		aps := NewTestAssetsProgress(t, db, assets)
+		workingData := NewTestData(t, db, 3, false, 1, 0)
+		aps := []*AssetProgress{}
+		for _, tc := range workingData {
+			aps = append(aps, newTestAssetsProgress(t, db, tc.Assets[0].ID))
+		}
 
 		// ----------------------------
 		// EQUALS ID
@@ -95,9 +98,10 @@ func Test_GetAssetsProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 5)
-		assets := NewTestAssets(t, db, courses, 1)
-		NewTestAssetsProgress(t, db, assets)
+		workingData := NewTestData(t, db, 5, false, 1, 0)
+		for _, tc := range workingData {
+			newTestAssetsProgress(t, db, tc.Assets[0].ID)
+		}
 
 		result, err := GetAssetsProgress(db, nil)
 		require.Nil(t, err)
@@ -108,9 +112,11 @@ func Test_GetAssetsProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
-		assets := NewTestAssets(t, db, courses, 1)
-		aps := NewTestAssetsProgress(t, db, assets)
+		workingData := NewTestData(t, db, 3, false, 1, 0)
+		aps := []*AssetProgress{}
+		for _, tc := range workingData {
+			aps = append(aps, newTestAssetsProgress(t, db, tc.Assets[0].ID))
+		}
 
 		// ----------------------------
 		// Descending
@@ -142,9 +148,11 @@ func Test_GetAssetsProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 3)
-		assets := NewTestAssets(t, db, courses, 1)
-		aps := NewTestAssetsProgress(t, db, assets)
+		workingData := NewTestData(t, db, 3, false, 1, 0)
+		aps := []*AssetProgress{}
+		for _, tc := range workingData {
+			aps = append(aps, newTestAssetsProgress(t, db, tc.Assets[0].ID))
+		}
 
 		// ----------------------------
 		// EQUALS ID
@@ -179,9 +187,11 @@ func Test_GetAssetsProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 17)
-		assets := NewTestAssets(t, db, courses, 1)
-		aps := NewTestAssetsProgress(t, db, assets)
+		workingData := NewTestData(t, db, 17, false, 1, 0)
+		aps := []*AssetProgress{}
+		for _, tc := range workingData {
+			aps = append(aps, newTestAssetsProgress(t, db, tc.Assets[0].ID))
+		}
 
 		// ----------------------------
 		// Page 1 with 10 items
@@ -236,13 +246,14 @@ func Test_GetAssetProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 2)
-		assets := NewTestAssets(t, db, courses, 1)
-		NewTestAssetsProgress(t, db, assets)
+		workingData := NewTestData(t, db, 3, false, 1, 0)
+		for _, tc := range workingData {
+			newTestAssetsProgress(t, db, tc.Assets[0].ID)
+		}
 
-		result, err := GetAssetProgress(db, assets[1].ID)
+		result, err := GetAssetProgress(db, workingData[1].Assets[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, assets[1].ID, result.AssetID)
+		assert.Equal(t, workingData[1].Assets[0].ID, result.AssetID)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
@@ -273,14 +284,13 @@ func Test_CreateAssetProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		assets := NewTestAssets(t, db, courses, 1)
-		ap := NewTestAssetsProgress(t, nil, assets)[0]
+		workingData := NewTestData(t, db, 1, false, 1, 0)
+		ap := newTestAssetsProgress(t, nil, workingData[0].Assets[0].ID)
 
 		err := CreateAssetProgress(db, ap)
 		require.Nil(t, err)
 		assert.NotEmpty(t, ap.ID)
-		assert.Equal(t, assets[0].ID, ap.AssetID)
+		assert.Equal(t, workingData[0].Assets[0].ID, ap.AssetID)
 		assert.Zero(t, ap.VideoPos)
 		assert.False(t, ap.Completed)
 		assert.True(t, ap.CompletedAt.IsZero())
@@ -292,9 +302,8 @@ func Test_CreateAssetProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		assets := NewTestAssets(t, db, courses, 1)
-		ap := NewTestAssetsProgress(t, nil, assets)[0]
+		workingData := NewTestData(t, db, 1, false, 1, 0)
+		ap := newTestAssetsProgress(t, nil, workingData[0].Assets[0].ID)
 
 		err := CreateAssetProgress(db, ap)
 		require.Nil(t, err)
@@ -307,8 +316,7 @@ func Test_CreateAssetProgress(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		asset := NewTestAssets(t, db, courses, 1)[0]
+		workingData := NewTestData(t, db, 1, false, 1, 0)
 
 		// Asset ID
 		ap := &AssetProgress{}
@@ -319,7 +327,7 @@ func Test_CreateAssetProgress(t *testing.T) {
 
 		// Invalid Course ID
 		require.ErrorContains(t, CreateAssetProgress(db, ap), "FOREIGN KEY constraint failed")
-		ap.AssetID = asset.ID
+		ap.AssetID = workingData[0].Assets[0].ID
 
 		// Success
 		require.Nil(t, CreateAssetProgress(db, ap))
@@ -333,9 +341,8 @@ func Test_UpdateAssetProgressVideoPos(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		assets := NewTestAssets(t, db, courses, 1)
-		origAp := NewTestAssetsProgress(t, db, assets)[0]
+		workingData := NewTestData(t, db, 1, false, 1, 0)
+		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID)
 		require.Zero(t, origAp.VideoPos)
 
 		// Set to 50
@@ -349,10 +356,9 @@ func Test_UpdateAssetProgressVideoPos(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 2)
-		assets := NewTestAssets(t, db, courses, 1)
+		workingData := NewTestData(t, db, 1, false, 1, 0)
 
-		ap1, err := UpdateAssetProgressVideoPos(db, assets[0].ID, 50)
+		ap1, err := UpdateAssetProgressVideoPos(db, workingData[0].Assets[0].ID, 50)
 		require.Nil(t, err)
 		assert.Equal(t, 50, ap1.VideoPos)
 	})
@@ -361,9 +367,8 @@ func Test_UpdateAssetProgressVideoPos(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		assets := NewTestAssets(t, db, courses, 1)
-		origAp := NewTestAssetsProgress(t, db, assets)[0]
+		workingData := NewTestData(t, db, 1, false, 1, 0)
+		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID)
 		require.Zero(t, origAp.VideoPos)
 
 		// Set to -1
@@ -386,9 +391,8 @@ func Test_UpdateAssetProgressVideoPos(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		assets := NewTestAssets(t, db, courses, 1)
-		origAp := NewTestAssetsProgress(t, db, assets)[0]
+		workingData := NewTestData(t, db, 1, false, 1, 0)
+		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID)
 		require.Zero(t, origAp.VideoPos)
 
 		updatedAp, err := UpdateAssetProgressVideoPos(db, origAp.AssetID, 0)
@@ -425,9 +429,8 @@ func Test_UpdateAssetProgressCompleted(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		assets := NewTestAssets(t, db, courses, 1)
-		origAp := NewTestAssetsProgress(t, db, assets)[0]
+		workingData := NewTestData(t, db, 1, false, 1, 0)
+		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID)
 		require.False(t, origAp.Completed)
 		require.True(t, origAp.CompletedAt.IsZero())
 
@@ -454,13 +457,12 @@ func Test_UpdateAssetProgressCompleted(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 2)
-		assets := NewTestAssets(t, db, courses, 1)
+		workingData := NewTestData(t, db, 1, false, 1, 0)
 
 		// ----------------------------
 		// Set to true
 		// ----------------------------
-		ap1, err := UpdateAssetProgressCompleted(db, assets[0].ID, true)
+		ap1, err := UpdateAssetProgressCompleted(db, workingData[0].Assets[0].ID, true)
 		require.Nil(t, err)
 		assert.True(t, ap1.Completed)
 		assert.False(t, ap1.CompletedAt.IsZero())
@@ -468,7 +470,7 @@ func Test_UpdateAssetProgressCompleted(t *testing.T) {
 		// ----------------------------
 		// Set to false
 		// ----------------------------
-		ap2, err := UpdateAssetProgressCompleted(db, assets[1].ID, false)
+		ap2, err := UpdateAssetProgressCompleted(db, workingData[0].Assets[0].ID, false)
 		require.Nil(t, err)
 		assert.False(t, ap2.Completed)
 		assert.True(t, ap2.CompletedAt.IsZero())
@@ -487,9 +489,8 @@ func Test_UpdateAssetProgressCompleted(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		courses := NewTestCourses(t, db, 1)
-		assets := NewTestAssets(t, db, courses, 1)
-		origAp := NewTestAssetsProgress(t, db, assets)[0]
+		workingData := NewTestData(t, db, 1, false, 1, 0)
+		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID)
 		require.False(t, origAp.Completed)
 		require.True(t, origAp.CompletedAt.IsZero())
 

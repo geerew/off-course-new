@@ -7,15 +7,10 @@ package models
 import (
 	"database/sql"
 	"errors"
-	"fmt"
-	"testing"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
-	"github.com/geerew/off-course/utils/security"
 	"github.com/geerew/off-course/utils/types"
-	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -321,39 +316,6 @@ func DeleteCourse(db database.Database, id string) error {
 
 	_, err = db.Exec(query, args...)
 	return err
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// NewTestCourses creates n number of courses. If a db if provided, the courses will be inserted
-// into the db
-//
-// THIS IS FOR TESTING PURPOSES
-func NewTestCourses(t *testing.T, db database.Database, count int) []*Course {
-	courses := []*Course{}
-
-	for i := 0; i < count; i++ {
-		c := &Course{}
-
-		c.RefreshId()
-		c.RefreshCreatedAt()
-		c.RefreshUpdatedAt()
-
-		c.Title = fmt.Sprintf("Course %s", security.PseudorandomString(5))
-		c.Path = fmt.Sprintf("/%s/%s", security.PseudorandomString(5), c.Title)
-
-		if db != nil {
-			err := CreateCourse(db, c)
-			require.Nil(t, err)
-
-			// This allows the created/updated times to be different when inserting multiple rows
-			time.Sleep(time.Millisecond * 1)
-		}
-
-		courses = append(courses, c)
-	}
-
-	return courses
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

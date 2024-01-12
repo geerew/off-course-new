@@ -7,13 +7,10 @@ package models
 import (
 	"database/sql"
 	"errors"
-	"testing"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/utils/types"
-	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -345,38 +342,6 @@ func UpdateCourseProgressPercent(db database.Database, courseId string, percent 
 	cp.UpdatedAt = updatedAt
 
 	return cp, nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// NewTestCourseProgress creates a course progress for each course in the slice. If a db is
-// provided, a DB insert will be performed
-//
-// THIS IS FOR TESTING PURPOSES
-func NewTestCoursesProgress(t *testing.T, db database.Database, courses []*Course) []*CourseProgress {
-	cps := []*CourseProgress{}
-
-	for i := 0; i < len(courses); i++ {
-		cp := &CourseProgress{}
-
-		cp.RefreshId()
-		cp.RefreshCreatedAt()
-		cp.RefreshUpdatedAt()
-
-		cp.CourseID = courses[i].ID
-
-		if db != nil {
-			err := CreateCourseProgress(db, cp)
-			require.Nil(t, err)
-
-			// This allows the created/updated times to be different when inserting multiple rows
-			time.Sleep(time.Millisecond * 1)
-		}
-
-		cps = append(cps, cp)
-	}
-
-	return cps
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

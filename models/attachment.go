@@ -6,15 +6,9 @@ package models
 
 import (
 	"errors"
-	"fmt"
-	"path/filepath"
-	"testing"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
-	"github.com/geerew/off-course/utils/security"
-	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -199,43 +193,6 @@ func DeleteAttachment(db database.Database, id string) error {
 
 	_, err = db.Exec(query, args...)
 	return err
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// NewTestAttachments creates n number of attachments for each asset in the slice. If a db is
-// provided, a DB insert will be performed
-//
-// THIS IS FOR TESTING PURPOSES
-func NewTestAttachments(t *testing.T, db database.Database, assets []*Asset, attachmentsPerAsset int) []*Attachment {
-	attachments := []*Attachment{}
-
-	for i := 0; i < len(assets); i++ {
-		for j := 0; j < attachmentsPerAsset; j++ {
-			a := &Attachment{}
-
-			a.RefreshId()
-			a.RefreshCreatedAt()
-			a.RefreshUpdatedAt()
-
-			a.CourseID = assets[i].CourseID
-			a.AssetID = assets[i].ID
-			a.Title = security.PseudorandomString(6)
-			a.Path = fmt.Sprintf("%s/%d %s", filepath.Dir(assets[i].Path), assets[i].Prefix.Int16, a.Title)
-
-			if db != nil {
-				err := CreateAttachment(db, a)
-				require.Nil(t, err)
-
-				// This allows the created/updated times to be different when inserting multiple rows
-				time.Sleep(time.Millisecond * 1)
-			}
-
-			attachments = append(attachments, a)
-		}
-	}
-
-	return attachments
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
