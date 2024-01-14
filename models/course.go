@@ -49,10 +49,7 @@ func TableCourses() string {
 
 // CountCourses counts the number of courses
 func CountCourses(db database.Database, params *database.DatabaseParams) (int, error) {
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select("COUNT(*)").
-		From(TableCourses())
+	builder := coursesBaseSelect().Columns("COUNT(DISTINCT " + TableCourses() + ".id)")
 
 	// Add where clauses if necessary
 	if params != nil && params.Where != "" {
@@ -94,12 +91,7 @@ func GetCourses(db database.Database, params *database.DatabaseParams) ([]*Cours
 		TableCoursesProgress() + ".completed_at",
 	}
 
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select(cols...).
-		From(TableCourses()).
-		LeftJoin(TableScans() + " ON " + TableCourses() + ".id = " + TableScans() + ".course_id").
-		LeftJoin(TableCoursesProgress() + " ON " + TableCourses() + ".id = " + TableCoursesProgress() + ".course_id")
+	builder := coursesBaseSelect().Columns(cols...)
 
 	if params != nil {
 		// ORDER BY
@@ -169,12 +161,8 @@ func GetCourse(db database.Database, id string) (*Course, error) {
 		TableCoursesProgress() + ".completed_at",
 	}
 
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select(cols...).
-		From(TableCourses()).
-		LeftJoin(TableScans() + " ON " + TableCourses() + ".id = " + TableScans() + ".course_id").
-		LeftJoin(TableCoursesProgress() + " ON " + TableCourses() + ".id = " + TableCoursesProgress() + ".course_id").
+	builder := coursesBaseSelect().
+		Columns(cols...).
 		Where(sq.Eq{TableCourses() + ".id": id})
 
 	query, args, err := builder.ToSql()
@@ -316,6 +304,20 @@ func DeleteCourse(db database.Database, id string) error {
 
 	_, err = db.Exec(query, args...)
 	return err
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// coursesBaseSelect returns a select builder for the courses table. It does not include any columns
+// by default and as such, you must specify the columns with `.Columns(...)`
+func coursesBaseSelect() sq.SelectBuilder {
+	return sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select("").
+		From(TableCourses()).
+		LeftJoin(TableScans() + " ON " + TableCourses() + ".id = " + TableScans() + ".course_id").
+		LeftJoin(TableCoursesProgress() + " ON " + TableCourses() + ".id = " + TableCoursesProgress() + ".course_id").
+		RemoveColumns()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

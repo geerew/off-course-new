@@ -50,12 +50,7 @@ func GetScan(db database.Database, courseId string) (*Scan, error) {
 		TableCourses() + ".path AS course_path",
 	}
 
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select(cols...).
-		From(TableScans()).
-		Where(sq.Eq{TableScans() + ".course_id": courseId}).
-		LeftJoin(TableCourses() + " ON " + TableScans() + ".course_id = " + TableCourses() + ".id")
+	builder := scansBaseSelect().Columns(cols...).Where(sq.Eq{TableScans() + ".course_id": courseId})
 
 	query, args, err := builder.ToSql()
 	if err != nil {
@@ -211,6 +206,19 @@ func NextScan(db database.Database) (*Scan, error) {
 	}
 
 	return s, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// scansBaseSelect returns a select builder for the scans table. It does not include any columns
+// by default and as such, you must specify the columns with `.Columns(...)`
+func scansBaseSelect() sq.SelectBuilder {
+	return sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select("").
+		From(TableScans()).
+		LeftJoin(TableCourses() + " ON " + TableScans() + ".course_id = " + TableCourses() + ".id").
+		RemoveColumns()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

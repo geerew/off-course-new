@@ -38,10 +38,7 @@ func TableAssetsProgress() string {
 
 // CountAssetsProgress counts the number of assets progress
 func CountAssetsProgress(db database.Database, params *database.DatabaseParams) (int, error) {
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select("COUNT(*)").
-		From(TableAssetsProgress())
+	builder := assetsProgressBaseSelect().Columns("COUNT(DISTINCT " + TableAssetsProgress() + ".id)")
 
 	if params != nil && params.Where != "" {
 		builder = builder.Where(params.Where)
@@ -70,10 +67,7 @@ func GetAssetsProgress(db database.Database, params *database.DatabaseParams) ([
 	var aps []*AssetProgress
 
 	// Start building the query
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select(TableAssetsProgress() + ".*").
-		From(TableAssetsProgress())
+	builder := assetsProgressBaseSelect().Columns(TableAssetsProgress() + ".*")
 
 	// Add additional clauses
 	if params != nil {
@@ -131,10 +125,8 @@ func GetAssetProgress(db database.Database, assetId string) (*AssetProgress, err
 		return nil, errors.New("id cannot be empty")
 	}
 
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select(TableAssetsProgress() + ".*").
-		From(TableAssetsProgress()).
+	builder := assetsProgressBaseSelect().
+		Columns(TableAssetsProgress() + ".*").
 		Where(sq.Eq{TableAssetsProgress() + ".asset_id": assetId})
 
 	query, args, err := builder.ToSql()
@@ -347,6 +339,18 @@ func UpdateAssetProgressCompleted(db database.Database, assetId string, complete
 	// }
 
 	return ap, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// assetsProgressBaseSelect returns a select builder for the assets_progress table. It does not
+// include any columns by default and as such, you must specify the columns with `.Columns(...)`
+func assetsProgressBaseSelect() sq.SelectBuilder {
+	return sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select("").
+		From(TableAssetsProgress()).
+		RemoveColumns()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

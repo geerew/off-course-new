@@ -39,10 +39,7 @@ func TableCoursesProgress() string {
 
 // CountCoursesProgress counts the number of courses progress
 func CountCoursesProgress(db database.Database, params *database.DatabaseParams) (int, error) {
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select("COUNT(*)").
-		From(TableCoursesProgress())
+	builder := coursesProgressBaseSelect().Columns("COUNT(DISTINCT " + TableCoursesProgress() + ".id)")
 
 	if params != nil && params.Where != "" {
 		builder = builder.Where(params.Where)
@@ -71,10 +68,7 @@ func GetCoursesProgress(db database.Database, params *database.DatabaseParams) (
 	var cps []*CourseProgress
 
 	// Start building the query
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select(TableCoursesProgress() + ".*").
-		From(TableCoursesProgress())
+	builder := coursesProgressBaseSelect().Columns(TableCoursesProgress() + ".*")
 
 	// Add additional clauses
 	if params != nil {
@@ -132,10 +126,8 @@ func GetCourseProgress(db database.Database, courseId string) (*CourseProgress, 
 		return nil, errors.New("id cannot be empty")
 	}
 
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select(TableCoursesProgress() + ".*").
-		From(TableCoursesProgress()).
+	builder := coursesProgressBaseSelect().
+		Columns(TableCoursesProgress() + ".*").
 		Where(sq.Eq{TableCoursesProgress() + ".course_id": courseId})
 
 	query, args, err := builder.ToSql()
@@ -342,6 +334,18 @@ func UpdateCourseProgressPercent(db database.Database, courseId string, percent 
 	cp.UpdatedAt = updatedAt
 
 	return cp, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// coursesProgressBaseSelect returns a select builder for the courses_progress table. It does not
+// include any columns by default and as such, you must specify the columns with `.Columns(...)`
+func coursesProgressBaseSelect() sq.SelectBuilder {
+	return sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select("").
+		From(TableCoursesProgress()).
+		RemoveColumns()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -53,10 +53,7 @@ func TableAssets() string {
 
 // CountAssets counts the number of assets
 func CountAssets(db database.Database, params *database.DatabaseParams) (int, error) {
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select("COUNT(*)").
-		From(TableAssets())
+	builder := assetsBaseSelect().Columns("COUNT(DISTINCT " + TableAssets() + ".id)")
 
 	// Add where clauses if necessary
 	if params != nil && params.Where != "" {
@@ -97,11 +94,7 @@ func GetAssets(db database.Database, params *database.DatabaseParams) ([]*Asset,
 		TableAssetsProgress() + ".completed_at",
 	}
 
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select(cols...).
-		From(TableAssets()).
-		LeftJoin(TableAssetsProgress() + " ON " + TableAssets() + ".id = " + TableAssetsProgress() + ".asset_id")
+	builder := assetsBaseSelect().Columns(cols...)
 
 	if params != nil {
 		// ORDER BY
@@ -195,11 +188,8 @@ func GetAsset(db database.Database, id string) (*Asset, error) {
 		TableAssetsProgress() + ".completed_at",
 	}
 
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select(cols...).
-		From(TableAssets()).
-		LeftJoin(TableAssetsProgress() + " ON " + TableAssets() + ".id = " + TableAssetsProgress() + ".asset_id").
+	builder := assetsBaseSelect().
+		Columns(cols...).
 		Where(sq.Eq{TableAssets() + ".id": id})
 
 	query, args, err := builder.ToSql()
@@ -274,6 +264,19 @@ func DeleteAsset(db database.Database, id string) error {
 
 	_, err = db.Exec(query, args...)
 	return err
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// assetsBaseSelect returns a select builder for the assets table. It does not include any columns
+// by default and as such, you must specify the columns with `.Columns(...)`
+func assetsBaseSelect() sq.SelectBuilder {
+	return sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select("").
+		From(TableAssets()).
+		LeftJoin(TableAssetsProgress() + " ON " + TableAssets() + ".id = " + TableAssetsProgress() + ".asset_id").
+		RemoveColumns()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

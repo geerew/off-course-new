@@ -36,10 +36,7 @@ func TableAttachments() string {
 
 // CountAttachments counts the number of attachments
 func CountAttachments(db database.Database, params *database.DatabaseParams) (int, error) {
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select("COUNT(*)").
-		From(TableAttachments())
+	builder := attachmentsBaseSelect().Columns("COUNT(DISTINCT " + TableAttachments() + ".id)")
 
 	// Add where clauses if necessary
 	if params != nil && params.Where != "" {
@@ -68,10 +65,7 @@ func CountAttachments(db database.Database, params *database.DatabaseParams) (in
 func GetAttachments(db database.Database, params *database.DatabaseParams) ([]*Attachment, error) {
 	var attachments []*Attachment
 
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select(TableAttachments() + ".*").
-		From(TableAttachments())
+	builder := attachmentsBaseSelect().Columns(TableAttachments() + ".*")
 
 	if params != nil {
 		// ORDER BY
@@ -127,10 +121,8 @@ func GetAttachment(db database.Database, id string) (*Attachment, error) {
 	if id == "" {
 		return nil, errors.New("id cannot be empty")
 	}
-	builder := sq.StatementBuilder.
-		PlaceholderFormat(sq.Question).
-		Select(TableAttachments() + ".*").
-		From(TableAttachments()).
+	builder := attachmentsBaseSelect().
+		Columns(TableAttachments() + ".*").
 		Where(sq.Eq{TableAttachments() + ".id": id})
 
 	query, args, err := builder.ToSql()
@@ -193,6 +185,18 @@ func DeleteAttachment(db database.Database, id string) error {
 
 	_, err = db.Exec(query, args...)
 	return err
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// attachmentsBaseSelect returns a select builder for the attachments table. It does not include
+// any columns by default and as such, you must specify the columns with `.Columns(...)`
+func attachmentsBaseSelect() sq.SelectBuilder {
+	return sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select("").
+		From(TableAttachments()).
+		RemoveColumns()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
