@@ -197,7 +197,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
-		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
+		paginationResp, _ := coursesUnmarshalHelper(t, body)
 		assert.Equal(t, 2, int(paginationResp.TotalItems))
 		assert.Len(t, paginationResp.Items, 2)
 
@@ -208,7 +208,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
-		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
+		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
 		require.Equal(t, 1, int(paginationResp.TotalItems))
 		require.Len(t, paginationResp.Items, 1)
 		assert.Equal(t, workingData[0].ID, coursesResp[0].ID)
