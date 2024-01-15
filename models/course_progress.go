@@ -6,6 +6,7 @@ package models
 
 import (
 	"errors"
+	"math"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
@@ -222,29 +223,29 @@ func UpdateCourseProgressStarted(db database.Database, courseId string, started 
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UpdateCourseProgressPercent updates `percent` and `completed_at`. The percent should be based
-// off of the number of completed assets for this course. When an asset is completed, the percent
-// should be updated. If `percent` is 100, `completed at` is set to the current time. If `percent`
-// is less than 100, `completed_at` is set to null
-func UpdateCourseProgressPercent(db database.Database, courseId string, percent int) (*CourseProgress, error) {
+// UpdateCourseProgressPercent updates `percent` and `completed_at`. If `percent` is 100,
+// `completed at` is set to the current time. If `percent` is less than 100, `completed_at` is
+// set to null. This can be called at any time but mainly when an asset is marked as completed/not
+// completed
+func UpdateCourseProgressPercent(db database.Database, courseId string) (*CourseProgress, error) {
 	if courseId == "" {
 		return nil, errors.New("id cannot be empty")
 	}
 
+	// Get the current course progress
 	cp, err := GetCourseProgress(db, courseId)
 	if err != nil {
 		return nil, err
 	}
 
-	// Keep the percent between 0 and 100
-	if percent < 0 {
-		percent = 0
-	} else if percent > 100 {
-		percent = 100
+	// Calculate the percent
+	percent, err := coursesProgressPercent(db, courseId)
+	if err != nil {
+		return nil, err
 	}
 
-	// Nothing to do
 	if cp.Percent == percent {
+		// Nothing to do
 		return cp, nil
 	}
 
@@ -263,6 +264,11 @@ func UpdateCourseProgressPercent(db database.Database, courseId string, percent 
 		Set("updated_at", updatedAt).
 		Where("id = ?", cp.ID)
 
+	// Ensure started when percent is greater than 0
+	if percent > 0 && !cp.Started {
+		builder = builder.Set("started", true).Set("started_at", updatedAt)
+	}
+
 	query, args, err := builder.ToSql()
 	if err != nil {
 		return nil, err
@@ -277,6 +283,11 @@ func UpdateCourseProgressPercent(db database.Database, courseId string, percent 
 	cp.CompletedAt = completedAt
 	cp.UpdatedAt = updatedAt
 
+	if percent > 0 && !cp.Started {
+		cp.Started = true
+		cp.StartedAt = updatedAt
+	}
+
 	return cp, nil
 }
 
@@ -290,6 +301,46 @@ func coursesProgressBaseSelect() sq.SelectBuilder {
 		Select("").
 		From(TableCoursesProgress()).
 		RemoveColumns()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// coursesProgressPercent calculates the completed percent of a course based upon how many assets
+// have been completed
+func coursesProgressPercent(db database.Database, id string) (int, error) {
+	// Count the number of assets for this course
+	assetCount, err := CountAssets(db, &database.DatabaseParams{Where: sq.Eq{TableAssets() + ".course_id": id}})
+	if err != nil {
+		return -1, err
+	}
+
+	// When there are no assets, the percent is 0
+	if assetCount == 0 {
+		return 0, nil
+	}
+
+	// Count the number of assets that have been completed
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Select("COUNT(DISTINCT " + TableAssetsProgress() + ".id)").
+		From(TableAssetsProgress()).
+		Where(sq.And{
+			sq.Eq{TableAssetsProgress() + ".course_id": id},
+			sq.Eq{TableAssetsProgress() + ".completed": true},
+		})
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return -1, err
+	}
+
+	var completedCount int
+	err = db.QueryRow(query, args...).Scan(&completedCount)
+	if err != nil {
+		return -1, err
+	}
+
+	return int(math.Abs((float64(completedCount) * float64(100)) / float64(assetCount))), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

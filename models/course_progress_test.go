@@ -423,136 +423,90 @@ func Test_UpdateCourseProgressPercent(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		workingData := NewTestData(t, db, 1, false, 0, 0)
+		workingData := NewTestData(t, db, 1, false, 2, 0)
+		require.False(t, workingData[0].Started)
+		require.True(t, workingData[0].StartedAt.IsZero())
 		require.Zero(t, workingData[0].Percent)
 		require.True(t, workingData[0].CompletedAt.IsZero())
 
 		// ----------------------------
-		// Set to 33
+		// Asset 1 completed
 		// ----------------------------
-		updatedCp1, err := UpdateCourseProgressPercent(db, workingData[0].ID, 33)
+		ap1, err := UpdateAssetProgressCompleted(db, workingData[0].Assets[0].ID, true)
 		require.Nil(t, err)
-		assert.Equal(t, 33, updatedCp1.Percent)
-		assert.True(t, updatedCp1.CompletedAt.IsZero())
-		assert.NotEqual(t, workingData[0].UpdatedAt, updatedCp1.UpdatedAt)
+		require.True(t, ap1.Completed)
+		require.False(t, ap1.CompletedAt.IsZero())
+
+		cp1, err := GetCourse(db, workingData[0].ID)
+		require.Nil(t, err)
+		require.True(t, cp1.Started)
+		require.False(t, cp1.StartedAt.IsZero())
+		require.Equal(t, 50, cp1.Percent)
+		require.True(t, cp1.CompletedAt.IsZero())
 
 		// ----------------------------
-		// Set to 100
+		// Asset 2 completed
 		// ----------------------------
-		updatedCp2, err := UpdateCourseProgressPercent(db, workingData[0].ID, 100)
+		ap2, err := UpdateAssetProgressCompleted(db, workingData[0].Assets[1].ID, true)
 		require.Nil(t, err)
-		assert.Equal(t, 100, updatedCp2.Percent)
-		assert.False(t, updatedCp2.CompletedAt.IsZero())
-		assert.NotEqual(t, updatedCp1.UpdatedAt, updatedCp2.UpdatedAt)
+		require.True(t, ap2.Completed)
+		require.False(t, ap2.CompletedAt.IsZero())
+
+		cp2, err := GetCourse(db, workingData[0].ID)
+		require.Nil(t, err)
+		require.True(t, cp2.Started)
+		require.Equal(t, cp1.StartedAt.String(), cp2.StartedAt.String())
+		require.Equal(t, 100, cp2.Percent)
+		require.False(t, cp2.CompletedAt.IsZero())
 
 		// ----------------------------
-		// Set to 50
+		// Asset 1 not completed
 		// ----------------------------
-		updatedCp3, err := UpdateCourseProgressPercent(db, workingData[0].ID, 50)
+		ap3, err := UpdateAssetProgressCompleted(db, workingData[0].Assets[0].ID, false)
 		require.Nil(t, err)
-		require.Equal(t, 50, updatedCp3.Percent)
-		assert.True(t, updatedCp3.CompletedAt.IsZero())
-		assert.NotEqual(t, updatedCp2.UpdatedAt, updatedCp3.UpdatedAt)
+		require.False(t, ap3.Completed)
+		require.True(t, ap3.CompletedAt.IsZero())
+
+		cp3, err := GetCourse(db, workingData[0].ID)
+		require.Nil(t, err)
+		require.True(t, cp3.Started)
+		require.Equal(t, cp1.StartedAt.String(), cp2.StartedAt.String())
+		require.Equal(t, 50, cp3.Percent)
+		require.True(t, cp3.CompletedAt.IsZero())
 	})
 
-	t.Run("create new", func(t *testing.T) {
-		_, db, teardown := setup(t)
-		defer teardown(t)
-
-		workingData := NewTestData(t, db, 3, false, 0, 0)
-
-		for i := range workingData {
-			require.Zero(t, workingData[i].Percent)
-			require.True(t, workingData[i].CompletedAt.IsZero())
-		}
-
-		// ----------------------------
-		// Set to 10
-		// ----------------------------
-		cp1, err := UpdateCourseProgressPercent(db, workingData[0].ID, 10)
-		require.Nil(t, err)
-		assert.Equal(t, 10, cp1.Percent)
-		assert.True(t, cp1.CompletedAt.IsZero())
-
-		// ----------------------------
-		// Set to 100
-		// ----------------------------
-		cp2, err := UpdateCourseProgressPercent(db, workingData[1].ID, 100)
-		require.Nil(t, err)
-		assert.Equal(t, 100, cp2.Percent)
-		assert.False(t, cp2.CompletedAt.IsZero())
-
-		// ----------------------------
-		// Set to 0
-		// ----------------------------
-		cp3, err := UpdateCourseProgressPercent(db, workingData[2].ID, 0)
-		require.Nil(t, err)
-		assert.Zero(t, cp3.Percent)
-		assert.True(t, cp3.CompletedAt.IsZero())
-	})
-
-	t.Run("normalize percent", func(t *testing.T) {
+	t.Run("no assets", func(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
 		workingData := NewTestData(t, db, 1, false, 0, 0)
+		require.False(t, workingData[0].Started)
+		require.True(t, workingData[0].StartedAt.IsZero())
+		require.Zero(t, workingData[0].Percent)
+		require.True(t, workingData[0].CompletedAt.IsZero())
 
-		origCp, err := GetCourseProgress(db, workingData[0].ID)
+		cp, err := UpdateCourseProgressPercent(db, workingData[0].ID)
 		require.Nil(t, err)
-		require.Zero(t, origCp.Percent)
-		require.True(t, origCp.CompletedAt.IsZero())
-
-		// ----------------------------
-		// Set to 101
-		// ----------------------------
-		updatedCp1, err := UpdateCourseProgressPercent(db, origCp.CourseID, 101)
-		require.Nil(t, err)
-		assert.Equal(t, 100, updatedCp1.Percent)
-		assert.False(t, updatedCp1.CompletedAt.IsZero())
-		assert.NotEqual(t, origCp.UpdatedAt, updatedCp1.UpdatedAt)
-
-		// ----------------------------
-		// Set to -1
-		// ----------------------------
-		updatedCp2, err := UpdateCourseProgressPercent(db, origCp.CourseID, -1)
-		require.Nil(t, err)
-		assert.Zero(t, updatedCp2.Percent)
-		assert.True(t, updatedCp2.CompletedAt.IsZero())
-		assert.NotEqual(t, updatedCp1.UpdatedAt, updatedCp2.UpdatedAt)
+		require.False(t, cp.Started)
+		require.True(t, cp.StartedAt.IsZero())
+		assert.Zero(t, cp.Percent)
+		assert.True(t, cp.CompletedAt.IsZero())
 	})
 
 	t.Run("empty id", func(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		cp, err := UpdateCourseProgressPercent(db, "", 33)
+		cp, err := UpdateCourseProgressPercent(db, "")
 		require.EqualError(t, err, "id cannot be empty")
 		assert.Nil(t, cp)
-	})
-
-	t.Run("no change", func(t *testing.T) {
-		_, db, teardown := setup(t)
-		defer teardown(t)
-
-		workingData := NewTestData(t, db, 1, false, 0, 0)
-
-		origCp, err := GetCourseProgress(db, workingData[0].ID)
-		require.Nil(t, err)
-		require.Zero(t, origCp.Percent)
-		require.True(t, origCp.CompletedAt.IsZero())
-
-		updatedCp, err := UpdateCourseProgressPercent(db, origCp.CourseID, 0)
-		require.Nil(t, err)
-		assert.Zero(t, updatedCp.Percent)
-		assert.True(t, origCp.CompletedAt.IsZero())
-		assert.Equal(t, origCp.UpdatedAt.String(), updatedCp.UpdatedAt.String())
 	})
 
 	t.Run("invalid course id", func(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		cp, err := UpdateCourseProgressPercent(db, "1234", 33)
+		cp, err := UpdateCourseProgressPercent(db, "1234")
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, cp)
 	})
@@ -564,7 +518,7 @@ func Test_UpdateCourseProgressPercent(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + TableCoursesProgress())
 		require.Nil(t, err)
 
-		_, err = UpdateCourseProgressPercent(db, "1234", 33)
+		_, err = UpdateCourseProgressPercent(db, "1234")
 		require.ErrorContains(t, err, "no such table: "+TableCoursesProgress())
 	})
 }

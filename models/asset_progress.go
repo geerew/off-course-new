@@ -22,6 +22,7 @@ type AssetProgress struct {
 	BaseModel
 
 	AssetID     string
+	CourseID    string
 	VideoPos    int
 	Completed   bool
 	CompletedAt types.DateTime
@@ -157,8 +158,8 @@ func CreateAssetProgress(db database.Database, ap *AssetProgress) error {
 
 	builder := sq.StatementBuilder.
 		Insert(TableAssetsProgress()).
-		Columns("id", "asset_id", "video_pos", "completed", "completed_at", "created_at", "updated_at").
-		Values(ap.ID, NilStr(ap.AssetID), ap.VideoPos, ap.Completed, ap.CompletedAt, ap.CreatedAt, ap.UpdatedAt)
+		Columns("id", "asset_id", "course_id", "video_pos", "completed", "completed_at", "created_at", "updated_at").
+		Values(ap.ID, NilStr(ap.AssetID), NilStr(ap.CourseID), ap.VideoPos, ap.Completed, ap.CompletedAt, ap.CreatedAt, ap.UpdatedAt)
 
 	query, args, err := builder.ToSql()
 	if err != nil {
@@ -192,8 +193,16 @@ func UpdateAssetProgressVideoPos(db database.Database, assetId string, position 
 	// Create if it does not exist
 	// --------------------------------
 	if err == sql.ErrNoRows {
+		// This will only happen once for each asset. Subsequent calls will update the existing
+		// row
+		asset, err := GetAsset(db, assetId)
+		if err != nil {
+			return nil, err
+		}
+
 		ap = &AssetProgress{
 			AssetID:  assetId,
+			CourseID: asset.CourseID,
 			VideoPos: position,
 		}
 
@@ -260,8 +269,16 @@ func UpdateAssetProgressCompleted(db database.Database, assetId string, complete
 	// Create if it does not exist
 	// --------------------------------
 	if err == sql.ErrNoRows {
+		// This will only happen once for each asset as subsequent calls will update the existing
+		// row
+		asset, err := GetAsset(db, assetId)
+		if err != nil {
+			return nil, err
+		}
+
 		ap = &AssetProgress{
 			AssetID:   assetId,
+			CourseID:  asset.CourseID,
 			Completed: completed,
 		}
 
@@ -274,14 +291,15 @@ func UpdateAssetProgressCompleted(db database.Database, assetId string, complete
 			return nil, err
 		}
 
+		// When this asset is completed, update the course progress percent
+		if completed {
+			_, err = UpdateCourseProgressPercent(db, ap.CourseID)
+			return ap, err
+		}
+
 		return ap, nil
 	}
 
-	// --------------------------------
-	// Update existing
-	// --------------------------------
-
-	// Nothing to do
 	if ap.Completed == completed {
 		return ap, nil
 	}
@@ -315,30 +333,9 @@ func UpdateAssetProgressCompleted(db database.Database, assetId string, complete
 	ap.CompletedAt = completedAt
 	ap.UpdatedAt = updatedAt
 
-	//
-	// TODO
-	//
-	// Update the course percent by first calculating the percentage of completed assets and then
-	// updating the course
-	// var percent float64
-
-	// // Calculate the percentage of completed assets. IF this fails just log the error and return
-	// if err = db.DB().NewSelect().
-	// 	Table("assets").
-	// 	ColumnExpr("CAST(COUNT(CASE WHEN completed THEN 1 END) * 100 AS FLOAT) / COUNT(*) as completion_percentage").
-	// 	Where("course_id = ?", asset.CourseID).
-	// 	Scan(ctx, &percent); err != nil {
-	// 	log.Err(err).Msg("failed to calculate the percentage of completed assets")
-	// 	return asset, nil
-	// }
-
-	// // Update the course percent. If this fails just log the error and return
-	// if _, err = UpdateCoursePercent(ctx, db, asset.CourseID, int(percent)); err != nil {
-	// 	log.Err(err).Msg("failed to update the course `percent`")
-	// 	return asset, nil
-	// }
-
-	return ap, nil
+	// Update the course progress percent for this course
+	_, err = UpdateCourseProgressPercent(db, ap.CourseID)
+	return ap, err
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -362,6 +359,7 @@ func scanAssetProgressRow(scannable Scannable) (*AssetProgress, error) {
 	err := scannable.Scan(
 		&ap.ID,
 		&ap.AssetID,
+		&ap.CourseID,
 		&ap.VideoPos,
 		&ap.Completed,
 		&ap.CompletedAt,

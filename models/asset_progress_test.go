@@ -30,7 +30,7 @@ func Test_CountAssetsProgress(t *testing.T) {
 
 		workingData := NewTestData(t, db, 5, false, 1, 0)
 		for _, tc := range workingData {
-			newTestAssetsProgress(t, db, tc.Assets[0].ID)
+			newTestAssetsProgress(t, db, tc.Assets[0].ID, tc.ID)
 		}
 
 		count, err := CountAssetsProgress(db, nil)
@@ -45,7 +45,7 @@ func Test_CountAssetsProgress(t *testing.T) {
 		workingData := NewTestData(t, db, 3, false, 1, 0)
 		aps := []*AssetProgress{}
 		for _, tc := range workingData {
-			aps = append(aps, newTestAssetsProgress(t, db, tc.Assets[0].ID))
+			aps = append(aps, newTestAssetsProgress(t, db, tc.Assets[0].ID, tc.ID))
 		}
 
 		// ----------------------------
@@ -100,7 +100,7 @@ func Test_GetAssetsProgress(t *testing.T) {
 
 		workingData := NewTestData(t, db, 5, false, 1, 0)
 		for _, tc := range workingData {
-			newTestAssetsProgress(t, db, tc.Assets[0].ID)
+			newTestAssetsProgress(t, db, tc.Assets[0].ID, tc.ID)
 		}
 
 		result, err := GetAssetsProgress(db, nil)
@@ -115,7 +115,7 @@ func Test_GetAssetsProgress(t *testing.T) {
 		workingData := NewTestData(t, db, 3, false, 1, 0)
 		aps := []*AssetProgress{}
 		for _, tc := range workingData {
-			aps = append(aps, newTestAssetsProgress(t, db, tc.Assets[0].ID))
+			aps = append(aps, newTestAssetsProgress(t, db, tc.Assets[0].ID, tc.ID))
 		}
 
 		// ----------------------------
@@ -151,7 +151,7 @@ func Test_GetAssetsProgress(t *testing.T) {
 		workingData := NewTestData(t, db, 3, false, 1, 0)
 		aps := []*AssetProgress{}
 		for _, tc := range workingData {
-			aps = append(aps, newTestAssetsProgress(t, db, tc.Assets[0].ID))
+			aps = append(aps, newTestAssetsProgress(t, db, tc.Assets[0].ID, tc.ID))
 		}
 
 		// ----------------------------
@@ -190,7 +190,7 @@ func Test_GetAssetsProgress(t *testing.T) {
 		workingData := NewTestData(t, db, 17, false, 1, 0)
 		aps := []*AssetProgress{}
 		for _, tc := range workingData {
-			aps = append(aps, newTestAssetsProgress(t, db, tc.Assets[0].ID))
+			aps = append(aps, newTestAssetsProgress(t, db, tc.Assets[0].ID, tc.ID))
 		}
 
 		// ----------------------------
@@ -248,7 +248,7 @@ func Test_GetAssetProgress(t *testing.T) {
 
 		workingData := NewTestData(t, db, 3, false, 1, 0)
 		for _, tc := range workingData {
-			newTestAssetsProgress(t, db, tc.Assets[0].ID)
+			newTestAssetsProgress(t, db, tc.Assets[0].ID, tc.ID)
 		}
 
 		result, err := GetAssetProgress(db, workingData[1].Assets[0].ID)
@@ -285,7 +285,7 @@ func Test_CreateAssetProgress(t *testing.T) {
 		defer teardown(t)
 
 		workingData := NewTestData(t, db, 1, false, 1, 0)
-		ap := newTestAssetsProgress(t, nil, workingData[0].Assets[0].ID)
+		ap := newTestAssetsProgress(t, nil, workingData[0].Assets[0].ID, workingData[0].ID)
 
 		err := CreateAssetProgress(db, ap)
 		require.Nil(t, err)
@@ -303,7 +303,7 @@ func Test_CreateAssetProgress(t *testing.T) {
 		defer teardown(t)
 
 		workingData := NewTestData(t, db, 1, false, 1, 0)
-		ap := newTestAssetsProgress(t, nil, workingData[0].Assets[0].ID)
+		ap := newTestAssetsProgress(t, nil, workingData[0].Assets[0].ID, workingData[0].ID)
 
 		err := CreateAssetProgress(db, ap)
 		require.Nil(t, err)
@@ -325,9 +325,19 @@ func Test_CreateAssetProgress(t *testing.T) {
 		require.ErrorContains(t, CreateAssetProgress(db, ap), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", TableAssetsProgress()))
 		ap.AssetID = "1234"
 
-		// Invalid Course ID
+		// Asset ID
+		require.ErrorContains(t, CreateAssetProgress(db, ap), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", TableAssetsProgress()))
+		ap.CourseID = ""
+		require.ErrorContains(t, CreateAssetProgress(db, ap), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", TableAssetsProgress()))
+		ap.CourseID = "1234"
+
+		// Invalid asset ID
 		require.ErrorContains(t, CreateAssetProgress(db, ap), "FOREIGN KEY constraint failed")
 		ap.AssetID = workingData[0].Assets[0].ID
+
+		// Invalid course ID
+		require.ErrorContains(t, CreateAssetProgress(db, ap), "FOREIGN KEY constraint failed")
+		ap.CourseID = workingData[0].ID
 
 		// Success
 		require.Nil(t, CreateAssetProgress(db, ap))
@@ -342,7 +352,7 @@ func Test_UpdateAssetProgressVideoPos(t *testing.T) {
 		defer teardown(t)
 
 		workingData := NewTestData(t, db, 1, false, 1, 0)
-		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID)
+		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
 		require.Zero(t, origAp.VideoPos)
 
 		// Set to 50
@@ -368,7 +378,7 @@ func Test_UpdateAssetProgressVideoPos(t *testing.T) {
 		defer teardown(t)
 
 		workingData := NewTestData(t, db, 1, false, 1, 0)
-		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID)
+		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
 		require.Zero(t, origAp.VideoPos)
 
 		// Set to -1
@@ -392,7 +402,7 @@ func Test_UpdateAssetProgressVideoPos(t *testing.T) {
 		defer teardown(t)
 
 		workingData := NewTestData(t, db, 1, false, 1, 0)
-		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID)
+		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
 		require.Zero(t, origAp.VideoPos)
 
 		updatedAp, err := UpdateAssetProgressVideoPos(db, origAp.AssetID, 0)
@@ -401,12 +411,12 @@ func Test_UpdateAssetProgressVideoPos(t *testing.T) {
 		assert.Equal(t, origAp.UpdatedAt.String(), updatedAp.UpdatedAt.String())
 	})
 
-	t.Run("invalid course id", func(t *testing.T) {
+	t.Run("invalid asset id", func(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
 		ap, err := UpdateAssetProgressVideoPos(db, "1234", 50)
-		assert.EqualError(t, err, "constraint failed: FOREIGN KEY constraint failed (787)")
+		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, ap)
 	})
 
@@ -430,7 +440,7 @@ func Test_UpdateAssetProgressCompleted(t *testing.T) {
 		defer teardown(t)
 
 		workingData := NewTestData(t, db, 1, false, 1, 0)
-		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID)
+		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
 		require.False(t, origAp.Completed)
 		require.True(t, origAp.CompletedAt.IsZero())
 
@@ -476,6 +486,41 @@ func Test_UpdateAssetProgressCompleted(t *testing.T) {
 		assert.True(t, ap2.CompletedAt.IsZero())
 	})
 
+	t.Run("course percent", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		workingData := NewTestData(t, db, 1, false, 2, 0)
+		require.Zero(t, workingData[0].Percent)
+		assert.True(t, workingData[0].CompletedAt.IsZero())
+
+		// ----------------------------
+		// Set first asset as completed
+		// ----------------------------
+		ap1, err := UpdateAssetProgressCompleted(db, workingData[0].Assets[0].ID, true)
+		require.Nil(t, err)
+		assert.True(t, ap1.Completed)
+		assert.False(t, ap1.CompletedAt.IsZero())
+
+		course, err := GetCourse(db, workingData[0].ID)
+		require.Nil(t, err)
+		assert.Equal(t, 50, course.Percent)
+		assert.True(t, course.CompletedAt.IsZero())
+
+		// ----------------------------
+		// Set second asset as completed
+		// ----------------------------
+		ap2, err := UpdateAssetProgressCompleted(db, workingData[0].Assets[1].ID, true)
+		require.Nil(t, err)
+		assert.True(t, ap2.Completed)
+		assert.False(t, ap2.CompletedAt.IsZero())
+
+		course, err = GetCourse(db, workingData[0].ID)
+		require.Nil(t, err)
+		assert.Equal(t, 100, course.Percent)
+		assert.False(t, course.CompletedAt.IsZero())
+	})
+
 	t.Run("empty id", func(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
@@ -490,7 +535,7 @@ func Test_UpdateAssetProgressCompleted(t *testing.T) {
 		defer teardown(t)
 
 		workingData := NewTestData(t, db, 1, false, 1, 0)
-		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID)
+		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
 		require.False(t, origAp.Completed)
 		require.True(t, origAp.CompletedAt.IsZero())
 
@@ -501,12 +546,12 @@ func Test_UpdateAssetProgressCompleted(t *testing.T) {
 		assert.Equal(t, origAp.UpdatedAt.String(), updatedAp.UpdatedAt.String())
 	})
 
-	t.Run("invalid course id", func(t *testing.T) {
+	t.Run("invalid asset id", func(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
 		ap, err := UpdateAssetProgressCompleted(db, "1234", true)
-		require.EqualError(t, err, "constraint failed: FOREIGN KEY constraint failed (787)")
+		require.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, ap)
 	})
 

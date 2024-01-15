@@ -43,13 +43,16 @@ CREATE TABLE assets (
 CREATE TABLE assets_progress (
 	id           TEXT PRIMARY KEY NOT NULL,
 	asset_id     TEXT NOT NULL UNIQUE,
+	course_id     TEXT NOT NULL,
 	video_pos    INTEGER NOT NULL DEFAULT 0,
 	completed	 BOOLEAN NOT NULL DEFAULT FALSE,
 	completed_at TEXT,
 	created_at   TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
 	updated_at   TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
 	---
+	FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
 	FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE
+
 );
 
 --- Attachments information

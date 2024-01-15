@@ -92,7 +92,7 @@ func Test_GetCourses(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		workingData := NewTestData(t, db, 5, false, 0, 0)
+		workingData := NewTestData(t, db, 5, false, 2, 0)
 
 		result, err := GetCourses(db, nil)
 		require.Nil(t, err)
@@ -120,12 +120,14 @@ func Test_GetCourses(t *testing.T) {
 			require.True(t, c.CompletedAt.IsZero())
 		}
 
-		// Set course 1 as started and course 3 as completed
+		// Set course 1 as started (not completed)
 		_, err = UpdateCourseProgressStarted(db, workingData[0].ID, true)
 		require.Nil(t, err)
-		_, err = UpdateCourseProgressStarted(db, workingData[2].ID, true)
+
+		// Set course 3 as completed by marking both assets as completed
+		_, err = UpdateAssetProgressCompleted(db, workingData[2].Assets[0].ID, true)
 		require.Nil(t, err)
-		_, err = UpdateCourseProgressPercent(db, workingData[2].ID, 100)
+		_, err = UpdateAssetProgressCompleted(db, workingData[2].Assets[1].ID, true)
 		require.Nil(t, err)
 
 		// Find started courses (not completed)
@@ -270,7 +272,7 @@ func Test_GetCourse(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		workingData := NewTestData(t, db, 2, false, 0, 0)
+		workingData := NewTestData(t, db, 2, false, 1, 0)
 
 		c, err := GetCourse(db, workingData[1].ID)
 		require.Nil(t, err)
@@ -305,8 +307,8 @@ func Test_GetCourse(t *testing.T) {
 		require.Zero(t, c.Percent)
 		require.True(t, c.CompletedAt.IsZero())
 
-		// Set to completed
-		_, err = UpdateCourseProgressPercent(db, workingData[1].ID, 100)
+		// Mark asset as completed (only 1 asset so the course will be 100%)
+		_, err = UpdateAssetProgressCompleted(db, workingData[1].Assets[0].ID, true)
 		require.Nil(t, err)
 
 		c, err = GetCourse(db, workingData[1].ID)

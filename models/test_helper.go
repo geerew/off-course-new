@@ -189,7 +189,7 @@ func newTestCoursesProgress(t *testing.T, db database.Database, courseId string)
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func newTestAssetsProgress(t *testing.T, db database.Database, assetId string) *AssetProgress {
+func newTestAssetsProgress(t *testing.T, db database.Database, assetId string, courseId string) *AssetProgress {
 	ap := &AssetProgress{}
 
 	ap.RefreshId()
@@ -197,6 +197,7 @@ func newTestAssetsProgress(t *testing.T, db database.Database, assetId string) *
 	ap.RefreshUpdatedAt()
 
 	ap.AssetID = assetId
+	ap.CourseID = courseId
 
 	if db != nil {
 		err := CreateAssetProgress(db, ap)
