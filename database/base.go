@@ -151,7 +151,7 @@ func (s *SqliteDb) DB() *sql.DB {
 // LogQuery logs the SQL command if debug mode is enabled
 func (s *SqliteDb) LogQuery(query string, args ...interface{}) {
 	if s.isDebug {
-		log.Debug().Msgf("SQL Query: %s; Arguments: %v\n", query, args)
+		log.Debug().Msgf("SQL Query: %s; Arguments: %v", query, args)
 	}
 }
 

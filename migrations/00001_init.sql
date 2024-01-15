@@ -79,13 +79,3 @@ CREATE TABLE scans (
 	---
 	FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE
 );
-
---- Triggers
-
---- CREATE TRIGGER update_course_started
---- 	AFTER UPDATE OF progress ON assets
---- 	WHEN NEW.progress > 0 AND OLD.progress <= 0
---- 	BEGIN
---- 	    UPDATE courses SET started = TRUE WHERE id = NEW.course_id;
---- END;
-
