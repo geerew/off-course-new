@@ -24,271 +24,221 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// // // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// // func TestCourses_GetCourses(t *testing.T) {
-// // 	t.Run("200 (empty)", func(t *testing.T) {
-// // 		appFs, db, cs, _, teardown := setup(t)
-// // 		defer teardown(t)
+func TestCourses_GetCourses(t *testing.T) {
+	t.Run("200 (empty)", func(t *testing.T) {
+		appFs, db, cs, _, teardown := setup(t)
+		defer teardown(t)
 
-// // 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
-// // 		assert.NoError(t, err)
-// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-// // 		body, _ := io.ReadAll(resp.Body)
+		paginationResp, _ := coursesUnmarshalHelper(t, body)
+		assert.Zero(t, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 0)
+	})
 
-// // 		var respData pagination.PaginationResult
-// // 		err = json.Unmarshal(body, &respData)
-// // 		require.Nil(t, err)
-// // 		assert.Equal(t, 0, int(respData.TotalItems))
-// // 		assert.Len(t, respData.Items, 0)
-// // 	})
+	t.Run("200 (found)", func(t *testing.T) {
+		appFs, db, cs, _, teardown := setup(t)
+		defer teardown(t)
 
-// // 	t.Run("200 (found)", func(t *testing.T) {
-// // 		appFs, db, cs, _, teardown := setup(t)
-// // 		defer teardown(t)
+		models.NewTestData(t, db, 5, false, 0, 0)
 
-// // 		// Create 5 courses with 5 assets each
-// // 		courses := models.NewTestCourses(t, db, 5)
-// // 		models.NewTestAssets(t, db, courses, 5)
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-// // 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
-// // 		assert.NoError(t, err)
-// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
+		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
+		assert.Equal(t, 5, int(paginationResp.TotalItems))
+		require.Len(t, coursesResp, 5)
+	})
 
-// // 		body, _ := io.ReadAll(resp.Body)
+	t.Run("200 (orderBy)", func(t *testing.T) {
+		appFs, db, cs, _, teardown := setup(t)
+		defer teardown(t)
 
-// // 		var respData pagination.PaginationResult
-// // 		err = json.Unmarshal(body, &respData)
-// // 		require.Nil(t, err)
-// // 		assert.Equal(t, 5, int(respData.TotalItems))
+		workingData := models.NewTestData(t, db, 5, false, 0, 0)
 
-// // 		// Unmarshal
-// // 		var coursesResponse []courseResponse
-// // 		for _, item := range respData.Items {
-// // 			var course courseResponse
-// // 			require.Nil(t, json.Unmarshal(item, &course))
-// // 			coursesResponse = append(coursesResponse, course)
-// // 		}
+		// ----------------------------
+		// CREATED_AT ASC
+		// ----------------------------
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?orderBy=created_at%20asc", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-// // 		// Assert values. By default orderBy is desc so the last inserted course should be first
-// // 		assert.Equal(t, courses[4].ID, coursesResponse[0].ID)
-// // 		assert.Equal(t, courses[4].Title, coursesResponse[0].Title)
-// // 		assert.Equal(t, courses[4].Path, coursesResponse[0].Path)
+		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
+		require.Equal(t, 5, int(paginationResp.TotalItems))
+		require.Len(t, coursesResp, 5)
+		assert.Equal(t, workingData[0].ID, coursesResp[0].ID)
 
-// // 		// Assert assets are not included
-// // 		assert.Nil(t, coursesResponse[0].Assets)
-// // 	})
+		// ----------------------------
+		// CREATED_AT DESC
+		// ----------------------------
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?orderBy=created_at%20desc", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-// // 	t.Run("200 (orderBy)", func(t *testing.T) {
-// // 		appFs, db, cs, _, teardown := setup(t)
-// // 		defer teardown(t)
+		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
+		require.Equal(t, 5, int(paginationResp.TotalItems))
+		require.Len(t, coursesResp, 5)
+		assert.Equal(t, workingData[4].ID, coursesResp[0].ID)
+	})
 
-// // 		// Create 5 courses
-// // 		courses := models.NewTestCourses(t, db, 5)
+	t.Run("200 (pagination)", func(t *testing.T) {
+		appFs, db, cs, _, teardown := setup(t)
+		defer teardown(t)
 
-// // 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?orderBy=created_at%20asc", nil))
-// // 		assert.NoError(t, err)
-// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
+		workingData := models.NewTestData(t, db, 17, false, 0, 0)
 
-// // 		body, _ := io.ReadAll(resp.Body)
+		// ----------------------------
+		// Get the first page (10 courses)
+		// ----------------------------
+		params := url.Values{
+			"orderBy":                    {"created_at asc"},
+			pagination.PageQueryParam:    {"1"},
+			pagination.PerPageQueryParam: {"10"},
+		}
 
-// // 		var respData pagination.PaginationResult
-// // 		err = json.Unmarshal(body, &respData)
-// // 		require.Nil(t, err)
-// // 		assert.Equal(t, 5, int(respData.TotalItems))
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?"+params.Encode(), nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-// // 		// Unmarshal
-// // 		var coursesResponse []courseResponse
-// // 		for _, item := range respData.Items {
-// // 			var course courseResponse
-// // 			require.Nil(t, json.Unmarshal(item, &course))
-// // 			coursesResponse = append(coursesResponse, course)
-// // 		}
+		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
+		assert.Equal(t, 17, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 10)
 
-// // 		assert.Equal(t, courses[0].ID, coursesResponse[0].ID)
-// // 		assert.Equal(t, courses[0].Title, coursesResponse[0].Title)
-// // 		assert.Equal(t, courses[0].Path, coursesResponse[0].Path)
-// // 	})
+		// Check the last asset in the paginated response
+		assert.Equal(t, workingData[9].ID, coursesResp[9].ID)
 
-// // 	t.Run("200 (pagination)", func(t *testing.T) {
-// // 		appFs, db, cs, _, teardown := setup(t)
-// // 		defer teardown(t)
+		// ----------------------------
+		// Get the second page (7 courses)
+		// ----------------------------
+		params = url.Values{
+			"orderBy":                    {"created_at asc"},
+			pagination.PageQueryParam:    {"2"},
+			pagination.PerPageQueryParam: {"10"},
+		}
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?"+params.Encode(), nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-// // 		// Create 17 courses
-// // 		courses := models.NewTestCourses(t, db, 17)
+		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
+		assert.Equal(t, 17, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 7)
 
-// // 		// Get the first 10 courses
-// // 		params := url.Values{
-// // 			"orderBy":                    {"created_at asc"},
-// // 			pagination.PageQueryParam:    {"1"},
-// // 			pagination.PerPageQueryParam: {"10"},
-// // 		}
-// // 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?"+params.Encode(), nil))
-// // 		assert.NoError(t, err)
-// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
+		// Check the last asset in the paginated response
+		assert.Equal(t, workingData[16].ID, coursesResp[6].ID)
+	})
 
-// // 		body, _ := io.ReadAll(resp.Body)
+	t.Run("200 (started)", func(t *testing.T) {
+		appFs, db, cs, _, teardown := setup(t)
+		defer teardown(t)
 
-// // 		var respData pagination.PaginationResult
-// // 		err = json.Unmarshal(body, &respData)
-// // 		require.Nil(t, err)
-// // 		assert.Equal(t, 17, int(respData.TotalItems))
-// // 		assert.Len(t, respData.Items, 10)
+		workingData := models.NewTestData(t, db, 2, false, 2, 0)
 
-// // 		// Unmarshal
-// // 		var coursesResponse []courseResponse
-// // 		for _, item := range respData.Items {
-// // 			var course courseResponse
-// // 			require.Nil(t, json.Unmarshal(item, &course))
-// // 			coursesResponse = append(coursesResponse, course)
-// // 		}
+		// Set the first course as started
+		_, err := models.UpdateCourseProgressStarted(db, workingData[0].ID, true)
+		require.Nil(t, err)
 
-// // 		assert.Equal(t, courses[0].ID, coursesResponse[0].ID)
-// // 		assert.Equal(t, courses[0].Title, coursesResponse[0].Title)
-// // 		assert.Equal(t, courses[0].Path, coursesResponse[0].Path)
+		// ------------------
+		// `started` not defined
+		// ------------------
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-// // 		// Get the next 7 courses
-// // 		params = url.Values{
-// // 			"orderBy":                    {"created_at asc"},
-// // 			pagination.PageQueryParam:    {"2"},
-// // 			pagination.PerPageQueryParam: {"10"},
-// // 		}
-// // 		resp, err = f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?"+params.Encode(), nil))
-// // 		assert.NoError(t, err)
-// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
+		paginationResp, _ := coursesUnmarshalHelper(t, body)
+		assert.Equal(t, 2, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 2)
 
-// // 		body, _ = io.ReadAll(resp.Body)
+		// ------------------
+		// `started` is true
+		// ------------------
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?started=true", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-// // 		err = json.Unmarshal(body, &respData)
-// // 		require.Nil(t, err)
-// // 		assert.Equal(t, 17, int(respData.TotalItems))
-// // 		assert.Len(t, respData.Items, 7)
+		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
+		require.Equal(t, 1, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 1)
+		assert.Equal(t, workingData[0].ID, coursesResp[0].ID)
 
-// // 		// Unmarshal
-// // 		coursesResponse = []courseResponse{}
-// // 		for _, item := range respData.Items {
-// // 			var course courseResponse
-// // 			require.Nil(t, json.Unmarshal(item, &course))
-// // 			coursesResponse = append(coursesResponse, course)
-// // 		}
+		// ------------------
+		// `started` is false
+		// ------------------
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?started=false", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-// // 		assert.Equal(t, courses[10].ID, coursesResponse[0].ID)
-// // 		assert.Equal(t, courses[10].Title, coursesResponse[0].Title)
-// // 		assert.Equal(t, courses[10].Path, coursesResponse[0].Path)
-// // 	})
+		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
+		require.Equal(t, 1, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 1)
+		assert.Equal(t, workingData[1].ID, coursesResp[0].ID)
+	})
 
-// // 	t.Run("200 (expand)", func(t *testing.T) {
-// // 		appFs, db, cs, _, teardown := setup(t)
-// // 		defer teardown(t)
+	t.Run("200 (completed)", func(t *testing.T) {
+		appFs, db, cs, _, teardown := setup(t)
+		defer teardown(t)
 
-// // 		// Create 5 courses with 5 assets each
-// // 		courses := models.NewTestCourses(t, db, 5)
-// // 		models.NewTestAssets(t, db, courses, 5)
+		workingData := models.NewTestData(t, db, 2, false, 2, 0)
 
-// // 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?orderBy=created_at%20asc&expand=true", nil))
-// // 		assert.NoError(t, err)
-// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
+		// Set the first course as completed by marking the assets as completed
+		for _, a := range workingData[0].Assets {
+			_, err := models.UpdateAssetProgressCompleted(db, a.ID, true)
+			require.Nil(t, err)
+		}
 
-// // 		body, _ := io.ReadAll(resp.Body)
+		// ------------------
+		// `completed` not defined
+		// ------------------
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-// // 		var respData pagination.PaginationResult
-// // 		err = json.Unmarshal(body, &respData)
-// // 		require.Nil(t, err)
-// // 		assert.Equal(t, 5, int(respData.TotalItems))
+		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
+		assert.Equal(t, 2, int(paginationResp.TotalItems))
+		assert.Len(t, paginationResp.Items, 2)
 
-// // 		// Unmarshal
-// // 		coursesResponse := []courseResponse{}
-// // 		for _, item := range respData.Items {
-// // 			var course courseResponse
-// // 			require.Nil(t, json.Unmarshal(item, &course))
-// // 			coursesResponse = append(coursesResponse, course)
-// // 		}
+		// ------------------
+		// `completed` is true
+		// ------------------
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?completed=true", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-// // 		assert.Equal(t, courses[0].ID, coursesResponse[0].ID)
-// // 		assert.Equal(t, courses[0].Title, coursesResponse[0].Title)
-// // 		assert.Equal(t, courses[0].Path, coursesResponse[0].Path)
+		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
+		require.Equal(t, 1, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 1)
+		assert.Equal(t, workingData[0].ID, coursesResp[0].ID)
 
-// // 		// Assert the assets
-// // 		require.NotNil(t, coursesResponse[0].Assets)
-// // 		assert.Len(t, coursesResponse[0].Assets, 5)
-// // 	})
+		// ------------------
+		// `completed` is false
+		// ------------------
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?completed=false", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-// // 	t.Run("200 (started)", func(t *testing.T) {
-// // 		appFs, db, cs, _, teardown := setup(t)
-// // 		defer teardown(t)
+		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
+		require.Equal(t, 1, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 1)
+		assert.Equal(t, workingData[1].ID, coursesResp[0].ID)
+	})
 
-// // 		// Create 2 courses
-// // 		courses := models.NewTestCourses(t, db, 2)
-// // 		assets := models.NewTestAssets(t, db, courses, 2)
+	t.Run("500 (internal error)", func(t *testing.T) {
+		appFs, db, cs, _, teardown := setup(t)
+		defer teardown(t)
 
-// // 		// For the first asset, set the progress and mark as completed
-// // 		_, err := models.UpdateAssetProgress(context.Background(), db, assets[0].ID, 50)
-// // 		require.Nil(t, err)
-// // 		_, err = models.UpdateAssetCompleted(context.Background(), db, assets[0].ID, true)
-// // 		require.Nil(t, err)
+		// Drop the courses table
+		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
+		require.Nil(t, err)
 
-// // 		// ------------------
-// // 		// `started` not defined
-// // 		// ------------------
-// // 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
-// // 		assert.NoError(t, err)
-// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-// // 		respData := paginatedBody(t, resp.Body)
-// // 		assert.Equal(t, 2, int(respData.TotalItems))
-
-// // 		for _, item := range respData.Items {
-// // 			var course courseResponse
-// // 			require.Nil(t, json.Unmarshal(item, &course))
-
-// // 			fmt.Printf("course: %+v\n", course)
-// // 		}
-
-// // 		// ------------------
-// // 		// `started` is true
-// // 		// ------------------
-// // 		resp, err = f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?started=true", nil))
-// // 		assert.NoError(t, err)
-// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-// // 		respData = paginatedBody(t, resp.Body)
-// // 		assert.Equal(t, 1, int(respData.TotalItems))
-
-// // 		// Unmarshal
-// // 		coursesResponse := unmarshalCourses(t, respData.Items)
-// // 		assert.Equal(t, courses[0].ID, coursesResponse[0].ID)
-// // 		assert.Equal(t, 50, coursesResponse[0].Percent)
-
-// // 		// ------------------
-// // 		// `started` is false
-// // 		// ------------------
-// // 		resp, err = f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/?started=false", nil))
-// // 		assert.NoError(t, err)
-// // 		require.Equal(t, http.StatusOK, resp.StatusCode)
-
-// // 		respData = paginatedBody(t, resp.Body)
-// // 		require.Equal(t, 1, int(respData.TotalItems))
-
-// // 		// Unmarshal (Note: orderBy is desc by default)
-// // 		coursesResponse = unmarshalCourses(t, respData.Items)
-// // 		assert.Equal(t, courses[1].ID, coursesResponse[0].ID)
-// // 		assert.Equal(t, 0, coursesResponse[0].Percent)
-// // 	})
-
-// // 	t.Run("500 (internal error)", func(t *testing.T) {
-// // 		appFs, db, cs, _, teardown := setup(t)
-// // 		defer teardown(t)
-
-// // 		// Drop the courses table
-// // 		_, err := db.DB().NewDropTable().Model(&models.Course{}).Exec(context.Background())
-// // 		require.Nil(t, err)
-
-// // 		resp, err := f.Test(httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
-// // 		assert.NoError(t, err)
-// // 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-// // 	})
-// // }
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
+	})
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

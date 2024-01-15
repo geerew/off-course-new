@@ -53,7 +53,7 @@ func bindCoursesApi(router fiber.Router, appFs *appFs.AppFs, db database.Databas
 	subGroup := router.Group("/courses")
 
 	// Courses
-	// subGroup.Get("", api.getCourses)
+	subGroup.Get("", api.getCourses)
 	subGroup.Get("/:id", api.getCourse)
 	subGroup.Post("", api.createCourse)
 	subGroup.Delete("/:id", api.deleteCourse)
@@ -73,70 +73,53 @@ func bindCoursesApi(router fiber.Router, appFs *appFs.AppFs, db database.Databas
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// func (api *courses) getCourses(c *fiber.Ctx) error {
-// 	started := c.Query("started", "undefined")
-// 	completed := c.Query("completed", "undefined")
+func (api *courses) getCourses(c *fiber.Ctx) error {
+	started := c.Query("started", "undefined")
+	completed := c.Query("completed", "undefined")
 
-// 	dbParams := &database.DatabaseParams{
-// 		OrderBy:    []string{c.Query("orderBy", []string{"created_at desc"}...)},
-// 		Pagination: pagination.New(c),
-// 	}
+	dbParams := &database.DatabaseParams{
+		OrderBy:    []string{c.Query("orderBy", []string{"created_at desc"}...)},
+		Pagination: pagination.NewFromApi(c),
+	}
 
-// 	// Include relations
-// 	if c.QueryBool("expand", false) {
-// 		dbParams.Relation = []database.Relation{
-// 			{Struct: "Assets", OrderBy: []string{"chapter asc", "prefix asc"}},
-// 			{Struct: "Assets.Attachments", OrderBy: []string{"title asc"}},
-// 		}
-// 	}
+	// Filter on started (if defined)
+	if started != "undefined" {
+		if started == "true" {
+			dbParams.Where = sq.And{sq.Eq{models.TableCoursesProgress() + ".started": true}, sq.NotEq{models.TableCoursesProgress() + ".percent": 100}}
+		} else {
+			dbParams.Where = sq.NotEq{models.TableCoursesProgress() + ".started": true}
+		}
+	}
 
-// 	// Filter on started when it was defined
-// 	if started != "undefined" {
-// 		if started == "true" {
-// 			// Do not include completed courses
-// 			dbParams.Where = []database.Where{
-// 				{Column: "started", Value: true},
-// 				{Query: "? < ?", Column: "percent", Value: 100},
-// 			}
-// 		} else {
-// 			dbParams.Where = []database.Where{
-// 				{Column: "started", Value: false},
-// 			}
-// 		}
-// 	}
+	// Filter on completed (if defined)
+	if completed != "undefined" {
+		if completed == "true" {
+			dbParams.Where = sq.Eq{models.TableCoursesProgress() + ".percent": 100}
 
-// 	// Filter on completed when it was defined
-// 	if completed != "undefined" {
-// 		if completed == "true" {
-// 			dbParams.Where = []database.Where{
-// 				{Column: "percent", Value: 100},
-// 			}
-// 		} else {
-// 			dbParams.Where = []database.Where{
-// 				{Query: "? < ?", Column: "percent", Value: 100},
-// 			}
-// 		}
-// 	}
+		} else {
+			dbParams.Where = sq.Lt{models.TableCoursesProgress() + ".percent": 100}
+		}
+	}
 
-// 	courses, err := models.GetCourses(c.UserContext(), api.db, dbParams)
+	courses, err := models.GetCourses(api.db, dbParams)
 
-// 	if err != nil {
-// 		log.Err(err).Msg("error looking up courses")
-// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// 			"message": "error looking up courses - " + err.Error(),
-// 		})
-// 	}
+	if err != nil {
+		log.Err(err).Msg("error looking up courses")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error looking up courses - " + err.Error(),
+		})
+	}
 
-// 	pResult, err := dbParams.Pagination.BuildResult(courseResponseHelper(courses))
-// 	if err != nil {
-// 		log.Err(err).Msg("error building pagination result")
-// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// 			"message": "error building pagination result - " + err.Error(),
-// 		})
-// 	}
+	pResult, err := dbParams.Pagination.BuildResult(courseResponseHelper(courses))
+	if err != nil {
+		log.Err(err).Msg("error building pagination result")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error building pagination result - " + err.Error(),
+		})
+	}
 
-// 	return c.Status(fiber.StatusOK).JSON(pResult)
-// }
+	return c.Status(fiber.StatusOK).JSON(pResult)
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

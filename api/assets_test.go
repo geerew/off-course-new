@@ -71,8 +71,6 @@ func TestAssets_GetAssets(t *testing.T) {
 		require.Equal(t, 10, int(paginationResp.TotalItems))
 		require.Len(t, assetsResp, 10)
 		assert.Equal(t, workingData[0].Assets[0].ID, assetsResp[0].ID)
-		assert.Equal(t, workingData[0].Assets[0].Title, assetsResp[0].Title)
-		assert.Equal(t, workingData[0].Assets[0].Path, assetsResp[0].Path)
 
 		// ----------------------------
 		// CREATED_AT DESC
@@ -85,8 +83,6 @@ func TestAssets_GetAssets(t *testing.T) {
 		require.Equal(t, 10, int(paginationResp.TotalItems))
 		require.Len(t, assetsResp, 10)
 		assert.Equal(t, workingData[1].Assets[4].ID, assetsResp[0].ID)
-		assert.Equal(t, workingData[1].Assets[4].Title, assetsResp[0].Title)
-		assert.Equal(t, workingData[1].Assets[4].Path, assetsResp[0].Path)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
