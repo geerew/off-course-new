@@ -5,7 +5,6 @@ package models
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import (
-	"database/sql"
 	"errors"
 
 	sq "github.com/Masterminds/squirrel"
@@ -172,45 +171,17 @@ func CreateCourseProgress(db database.Database, cp *CourseProgress) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UpdateCourseProgressStarted updates `started` and `started_at`. When a course progress entry
-// does not exist, it will be created. When an entry does exist, it will be updated.
-//
-// If `started` is true, `started_at` is set to the current time. If `started` is false,
-// `started_at` is set to null
+// UpdateCourseProgressStarted updates `started` and `started_at`. If `started` is true,
+// `started_at` is set to the current time. If `started` is false `started_at` is set to null
 func UpdateCourseProgressStarted(db database.Database, courseId string, started bool) (*CourseProgress, error) {
 	if courseId == "" {
 		return nil, errors.New("id cannot be empty")
 	}
 
 	cp, err := GetCourseProgress(db, courseId)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		return nil, err
 	}
-
-	// --------------------------------
-	// Create if it does not exist
-	// --------------------------------
-	if err == sql.ErrNoRows {
-		cp = &CourseProgress{
-			CourseID: courseId,
-			Started:  started,
-		}
-
-		if started {
-			cp.StartedAt = types.NowDateTime()
-		}
-
-		err = CreateCourseProgress(db, cp)
-		if err != nil {
-			return nil, err
-		}
-
-		return cp, nil
-	}
-
-	// --------------------------------
-	// Update existing
-	// --------------------------------
 
 	// Nothing to do
 	if cp.Started == started {
@@ -251,19 +222,17 @@ func UpdateCourseProgressStarted(db database.Database, courseId string, started 
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UpdateCourseProgressPercent updates `percent` and `completed_at`. When a course progress entry
-// does not exist, it will be created. When an entry does exist, it will be updated.
-//
-// The percent should be based off of the number of completed assets for this course. When an asset
-// is completed, the percent should be updated. If `percent` is 100, `completed at` is set to
-// the current time. If `percent` is less than 100, `completed_at` is set to null
+// UpdateCourseProgressPercent updates `percent` and `completed_at`. The percent should be based
+// off of the number of completed assets for this course. When an asset is completed, the percent
+// should be updated. If `percent` is 100, `completed at` is set to the current time. If `percent`
+// is less than 100, `completed_at` is set to null
 func UpdateCourseProgressPercent(db database.Database, courseId string, percent int) (*CourseProgress, error) {
 	if courseId == "" {
 		return nil, errors.New("id cannot be empty")
 	}
 
 	cp, err := GetCourseProgress(db, courseId)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		return nil, err
 	}
 
@@ -273,31 +242,6 @@ func UpdateCourseProgressPercent(db database.Database, courseId string, percent 
 	} else if percent > 100 {
 		percent = 100
 	}
-
-	// --------------------------------
-	// Create if it does not exist
-	// --------------------------------
-	if err == sql.ErrNoRows {
-		cp = &CourseProgress{
-			CourseID: courseId,
-			Percent:  percent,
-		}
-
-		if percent == 100 {
-			cp.CompletedAt = types.NowDateTime()
-		}
-
-		err = CreateCourseProgress(db, cp)
-		if err != nil {
-			return nil, err
-		}
-
-		return cp, nil
-	}
-
-	// --------------------------------
-	// Update existing
-	// --------------------------------
 
 	// Nothing to do
 	if cp.Percent == percent {

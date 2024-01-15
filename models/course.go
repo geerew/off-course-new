@@ -185,7 +185,10 @@ func GetCourse(db database.Database, id string) (*Course, error) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// CreateCourse inserts a new course
+// CreateCourse inserts a new course. It also inserts a courses_progress row for the course
+//
+// NOTE: There is currently no support for users, but when there is, the default courses_progress
+// should be inserted for the admin user
 func CreateCourse(db database.Database, c *Course) error {
 	c.RefreshId()
 	c.RefreshCreatedAt()
@@ -202,7 +205,18 @@ func CreateCourse(db database.Database, c *Course) error {
 	}
 
 	_, err = db.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+
+	// Insert a courses_progress row for this course
+	cp := &CourseProgress{
+		CourseID: c.ID,
+	}
+	err = CreateCourseProgress(db, cp)
+
 	return err
+
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
