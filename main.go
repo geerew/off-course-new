@@ -93,9 +93,8 @@ func main() {
 	wg.Wait()
 
 	// TMP -> Delete all scans
-	_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableScans())
+	_, err := db.Exec("DELETE FROM " + models.TableScans())
 	if err != nil {
 		log.Error().Err(err).Msg("")
 	}
-
 }
