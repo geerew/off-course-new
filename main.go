@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"os"
 	"os/signal"
@@ -11,7 +10,7 @@ import (
 
 	"github.com/geerew/off-course/api"
 	"github.com/geerew/off-course/database"
-	"github.com/geerew/off-course/migrations"
+	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/jobs"
 	"github.com/rs/zerolog"
@@ -54,16 +53,10 @@ func main() {
 		log.Fatal().Err(err).Msg("")
 	}
 
-	// Run migrations
-	if err := migrations.Up(db); err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
 	// Course scanner
 	courseScanner := jobs.NewCourseScanner(&jobs.CourseScannerConfig{
 		Db:    db,
 		AppFs: appFs,
-		Ctx:   context.Background(),
 	})
 
 	// Start the worker (pass in the func that will process the job)
@@ -100,5 +93,9 @@ func main() {
 	wg.Wait()
 
 	// TMP -> Delete all scans
-	db.DB().NewDelete().Table("scans").Where("1 = 1").Exec(context.Background())
+	_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableScans())
+	if err != nil {
+		log.Error().Err(err).Msg("")
+	}
+
 }
