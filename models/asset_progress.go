@@ -211,6 +211,13 @@ func UpdateAssetProgressVideoPos(db database.Database, assetId string, position 
 			return nil, err
 		}
 
+		// Mark the course as started when the video progress is > 0. When the course is already
+		// started, this will do nothing
+		if position > 0 {
+			_, err := UpdateCourseProgressStarted(db, asset.CourseID, true)
+			return ap, err
+		}
+
 		return ap, nil
 	}
 
@@ -244,6 +251,13 @@ func UpdateAssetProgressVideoPos(db database.Database, assetId string, position 
 
 	ap.VideoPos = position
 	ap.UpdatedAt = updatedAt
+
+	// Mark the course as started when the video progress is > 0. When the course is already
+	// started, this will do nothing
+	if position > 0 {
+		_, err := UpdateCourseProgressStarted(db, ap.CourseID, true)
+		return ap, err
+	}
 
 	return ap, nil
 }

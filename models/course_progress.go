@@ -174,6 +174,9 @@ func CreateCourseProgress(db database.Database, cp *CourseProgress) error {
 
 // UpdateCourseProgressStarted updates `started` and `started_at`. If `started` is true,
 // `started_at` is set to the current time. If `started` is false `started_at` is set to null
+//
+// A course will be set to started when an assert is marked as completed. It is also called when
+// a video assets position is updated
 func UpdateCourseProgressStarted(db database.Database, courseId string, started bool) (*CourseProgress, error) {
 	if courseId == "" {
 		return nil, errors.New("id cannot be empty")
@@ -225,8 +228,13 @@ func UpdateCourseProgressStarted(db database.Database, courseId string, started 
 
 // UpdateCourseProgressPercent updates `percent` and `completed_at`. If `percent` is 100,
 // `completed at` is set to the current time. If `percent` is less than 100, `completed_at` is
-// set to null. This can be called at any time but mainly when an asset is marked as completed/not
-// completed
+// set to null
+//
+// It will also set `started` to true and `started_at` when the percent is greater than 0 and it
+// was not previously set
+//
+// This can be called at any time but is primarily called when an asset is marked as completed or
+// not completed
 func UpdateCourseProgressPercent(db database.Database, courseId string) (*CourseProgress, error) {
 	if courseId == "" {
 		return nil, errors.New("id cannot be empty")

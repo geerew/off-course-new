@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"testing"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
@@ -355,22 +356,69 @@ func Test_UpdateAssetProgressVideoPos(t *testing.T) {
 		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
 		require.Zero(t, origAp.VideoPos)
 
+		// ----------------------------
 		// Set to 50
-		updatedAp, err := UpdateAssetProgressVideoPos(db, origAp.AssetID, 50)
+		// ----------------------------
+		updatedAp1, err := UpdateAssetProgressVideoPos(db, origAp.AssetID, 50)
 		require.Nil(t, err)
-		assert.Equal(t, 50, updatedAp.VideoPos)
-		assert.NotEqual(t, origAp.UpdatedAt.String(), updatedAp.UpdatedAt.String())
+		assert.Equal(t, 50, updatedAp1.VideoPos)
+		assert.NotEqual(t, origAp.UpdatedAt.String(), updatedAp1.UpdatedAt.String())
+
+		// Ensure the course was set to started
+		cp1, err := GetCourseProgress(db, workingData[0].ID)
+		require.Nil(t, err)
+		assert.True(t, cp1.Started)
+		assert.False(t, cp1.StartedAt.IsZero())
+
+		// Give time for the updated_at to change
+		time.Sleep(1 * time.Millisecond)
+
+		// ----------------------------
+		// Set to 0
+		// ----------------------------
+		updatedAp2, err := UpdateAssetProgressVideoPos(db, origAp.AssetID, 0)
+		require.Nil(t, err)
+		assert.Zero(t, updatedAp2.VideoPos)
+		assert.NotEqual(t, updatedAp1.UpdatedAt.String(), updatedAp2.UpdatedAt.String())
+
+		// Ensure the course is still set to started
+		cp2, err := GetCourseProgress(db, workingData[0].ID)
+		require.Nil(t, err)
+		assert.True(t, cp2.Started)
+		assert.False(t, cp2.StartedAt.IsZero())
 	})
 
 	t.Run("create new", func(t *testing.T) {
 		_, db, teardown := setup(t)
 		defer teardown(t)
 
-		workingData := NewTestData(t, db, 1, false, 1, 0)
+		workingData := NewTestData(t, db, 2, false, 1, 0)
 
-		ap1, err := UpdateAssetProgressVideoPos(db, workingData[0].Assets[0].ID, 50)
+		// ----------------------------
+		// Set to 0
+		// ----------------------------
+		ap1, err := UpdateAssetProgressVideoPos(db, workingData[0].Assets[0].ID, 0)
 		require.Nil(t, err)
-		assert.Equal(t, 50, ap1.VideoPos)
+		assert.Zero(t, ap1.VideoPos)
+
+		// Ensure the course was NOT set to started
+		cp1, err := GetCourseProgress(db, workingData[0].ID)
+		require.Nil(t, err)
+		assert.False(t, cp1.Started)
+		assert.True(t, cp1.StartedAt.IsZero())
+
+		// ----------------------------
+		// Set to 50
+		// ----------------------------
+		ap2, err := UpdateAssetProgressVideoPos(db, workingData[1].Assets[0].ID, 50)
+		require.Nil(t, err)
+		assert.Equal(t, 50, ap2.VideoPos)
+
+		// Ensure the course was set to started
+		cp2, err := GetCourseProgress(db, workingData[1].ID)
+		require.Nil(t, err)
+		assert.True(t, cp2.Started)
+		assert.False(t, cp2.StartedAt.IsZero())
 	})
 
 	t.Run("normalize position", func(t *testing.T) {
