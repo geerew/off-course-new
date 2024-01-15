@@ -59,16 +59,26 @@ export const AssetSchema = merge([
 		chapter: string(),
 		path: string(),
 		assetType: AssetTypeSchema,
-		progress: number(),
+
+		// Progress
+		videoPos: number(),
 		completed: boolean(),
 		completedAt: string(),
 
-		// Relations
+		// Attachments
 		attachments: optional(array(AttachmentSchema))
 	})
 ]);
 
 export type Asset = Output<typeof AssetSchema>;
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+export type AssetsGetParams = {
+	orderBy?: string;
+	page?: number;
+	perPage?: number;
+};
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Course
@@ -80,13 +90,15 @@ export const CourseSchema = merge([
 		title: string(),
 		path: string(),
 		hasCard: boolean(),
-		started: boolean(),
-		percent: number(),
-		completedAt: string(),
+
+		// Scan status
 		scanStatus: ScanStatusSchema,
 
-		// Relations
-		assets: optional(array(AssetSchema))
+		// Progress
+		started: boolean(),
+		startedAt: string(),
+		percent: number(),
+		completedAt: string()
 	})
 ]);
 
@@ -96,16 +108,9 @@ export type Course = Output<typeof CourseSchema>;
 
 export type CoursesGetParams = {
 	orderBy?: string;
-	expand?: boolean;
 	started?: boolean;
 	page?: number;
 	perPage?: number;
-};
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-export type CourseGetParams = {
-	expand?: boolean;
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

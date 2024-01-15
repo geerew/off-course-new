@@ -67,7 +67,7 @@
 
 		if (currentSecond !== lastLoggedSecond) {
 			// Update the current progress
-			progressDispatch('progress', currentSecond);
+			if (currentSecond % 5 === 0) progressDispatch('progress', currentSecond);
 
 			// When the currentSecond is greater than 0 and the currentSecond is greater than the
 			// duration - 5, dispatch the finished event. This will mark the video as finished

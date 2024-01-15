@@ -5,8 +5,8 @@ import {
 	CourseSchema,
 	ScanSchema,
 	type Asset,
+	type AssetsGetParams,
 	type Course,
-	type CourseGetParams,
 	type CoursePostParams,
 	type CoursesGetParams,
 	type Scan,
@@ -90,6 +90,8 @@ export const GetCourses = async (params?: CoursesGetParams): Promise<Pagination>
 	return resp;
 };
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // GET all courses. This calls GetCourses(...) until all courses are returned
 export const GetAllCourses = async (params?: CoursesGetParams): Promise<Course[]> => {
 	let resp: Course[] = [];
@@ -104,7 +106,7 @@ export const GetAllCourses = async (params?: CoursesGetParams): Promise<Course[]
 					const result = safeParse(PaginationSchema, data);
 					if (!result.success) throw new Error('Invalid response');
 
-					resp ? (resp = [...resp, ...result.output.items]) : (resp = result.output.items);
+					resp = resp.concat(result.output.items as Course[]);
 
 					if (data.page !== data.totalPages) {
 						page++;
@@ -123,12 +125,14 @@ export const GetAllCourses = async (params?: CoursesGetParams): Promise<Course[]
 	return resp;
 };
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // GET a course by ID
-export const GetCourse = async (id: string, params?: CourseGetParams): Promise<Course> => {
+export const GetCourse = async (id: string): Promise<Course> => {
 	let course: Course | undefined = undefined;
 
 	await axios
-		.get(`${COURSE_API}/${id}`, { params })
+		.get(`${COURSE_API}/${id}`)
 		.then((response: AxiosResponse) => {
 			const result = safeParse(CourseSchema, response.data);
 			if (!result.success) throw new Error('Invalid response from server');
@@ -142,6 +146,8 @@ export const GetCourse = async (id: string, params?: CourseGetParams): Promise<C
 
 	return course;
 };
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // POST a course. The data object needs to contain a `title` and `path`
 export const AddCourse = async (data: CoursePostParams): Promise<Course> => {
@@ -167,6 +173,8 @@ export const AddCourse = async (data: CoursePostParams): Promise<Course> => {
 	return course;
 };
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // PUT an course to update it
 export const UpdateCourse = async (course: Course): Promise<boolean> => {
 	const res = await axios
@@ -187,6 +195,8 @@ export const UpdateCourse = async (course: Course): Promise<boolean> => {
 	return res;
 };
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // DELETE a course
 export const DeleteCourse = async (id: string): Promise<boolean> => {
 	await axios.delete(`${COURSE_API}/${id}`).catch((error: Error) => {
@@ -198,6 +208,69 @@ export const DeleteCourse = async (id: string): Promise<boolean> => {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Assets
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GET a paginated list of assets. Use `GetAllCourseAssets()` to get all assets
+export const GetCourseAssets = async (
+	courseId: string,
+	params?: AssetsGetParams
+): Promise<Pagination> => {
+	let resp: Pagination | undefined = undefined;
+
+	await axios
+		.get(`${COURSE_API}/${courseId}/assets`, { params })
+		.then((response: AxiosResponse) => {
+			const result = safeParse(PaginationSchema, response.data);
+			if (!result.success) throw new Error('Invalid response from server');
+			resp = result.output;
+		})
+		.catch((error: Error) => {
+			throw error;
+		});
+
+	if (!resp) throw new Error('Assets were not found');
+
+	return resp;
+};
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GET all assets. This calls GetAssets(...) until all assets are returned
+export const GetAllCourseAssets = async (
+	courseId: string,
+	params?: AssetsGetParams
+): Promise<Asset[]> => {
+	let resp: Asset[] = [];
+
+	let page = 1;
+	let getMore = true;
+
+	while (getMore) {
+		await GetCourseAssets(courseId, { ...params, page: page, perPage: 100 })
+			.then((data) => {
+				if (data && data.totalItems > 0) {
+					const result = safeParse(PaginationSchema, data);
+					if (!result.success) throw new Error('Invalid response');
+
+					resp = resp.concat(result.output.items as Asset[]);
+
+					if (data.page !== data.totalPages) {
+						page++;
+					} else {
+						getMore = false;
+					}
+				} else {
+					getMore = false;
+				}
+			})
+			.catch((error) => {
+				throw error;
+			});
+	}
+
+	return resp;
+};
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // PUT an asset to update it
@@ -243,6 +316,8 @@ export const GetScanByCourseId = async (id: string): Promise<Scan> => {
 
 	return scan;
 };
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // POST a scan. The data object needs to contain an `courseId`
 export const AddScan = async (data: ScanPostParams): Promise<Scan> => {

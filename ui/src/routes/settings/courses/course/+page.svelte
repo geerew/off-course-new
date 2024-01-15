@@ -7,8 +7,14 @@
 	import CourseAssetRow from '$components/settings/CourseAssetRow.svelte';
 	import TableDate from '$components/table/TableDate.svelte';
 	import { addToast } from '$lib/stores/addToast';
-	import type { Course, CourseChapters } from '$lib/types/models';
-	import { AddScan, ErrorMessage, GetCourse, GetScanByCourseId } from '$lib/utils/api';
+	import type { Asset, Course, CourseChapters } from '$lib/types/models';
+	import {
+		AddScan,
+		ErrorMessage,
+		GetAllCourseAssets,
+		GetCourse,
+		GetScanByCourseId
+	} from '$lib/utils/api';
 	import { buildChapterStructure, cn, isBrowser } from '$lib/utils/general';
 	import { createAccordion, createDialog } from '@melt-ui/svelte';
 	import type { AxiosError } from 'axios';
@@ -27,6 +33,9 @@
 
 	// Holds the information about the course being viewed
 	let course: Course;
+
+	// Holds the assets + attachments for this course
+	let assets: Asset[];
 
 	// Holds the course assets in a chapter structure. Populated when getCourse is called in
 	// onMount
@@ -65,16 +74,10 @@
 		const id = params && params.get('id');
 		if (!id) return false;
 
-		return await GetCourse(id, { expand: true })
+		return await GetCourse(id)
 			.then(async (resp) => {
 				if (!resp) return false;
 				course = { ...resp };
-
-				// build the assets chapter structure
-				if (course.assets) {
-					chapters = buildChapterStructure(course.assets);
-				}
-
 				return true;
 			})
 			.catch((err) => {
@@ -89,6 +92,36 @@
 				return false;
 			});
 	};
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	// Gets the assets + attachments for the given course. It will then build a chapter structure
+	// for the assets and selected the first asset that is not completed. If the course itself is
+	// completed, the first asset will be selected
+	const getAssets = async (courseId: string) => {
+		if (!isBrowser) return false;
+
+		return await GetAllCourseAssets(courseId)
+			.then(async (resp) => {
+				if (!resp) return false;
+				chapters = buildChapterStructure(resp);
+				return true;
+			})
+			.catch((err) => {
+				const errMsg = ErrorMessage(err);
+				console.error(errMsg);
+				$addToast({
+					data: {
+						message: errMsg,
+						status: 'error'
+					}
+				});
+
+				return false;
+			});
+	};
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// When the scan status is set to either waiting or processing, start polling for updates.
 	// When the scan finishes, clear the interval and set the status to an empty string.
@@ -142,6 +175,8 @@
 			invalidCourseId = true;
 			return;
 		}
+
+		await getAssets(course.id);
 
 		// Start polling if the scan status is either waiting or processing
 		if (course && course.scanStatus && scanPoll === -1) {

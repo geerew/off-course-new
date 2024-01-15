@@ -5,7 +5,7 @@
 	import AttachmentsPopover from '$components/settings/internal/AttachmentsPopover.svelte';
 	import { addToast } from '$lib/stores/addToast';
 	import type { Asset, Course, CourseChapters } from '$lib/types/models';
-	import { ErrorMessage, GetCourse, UpdateAsset } from '$lib/utils/api';
+	import { ErrorMessage, GetAllCourseAssets, GetCourse, UpdateAsset } from '$lib/utils/api';
 	import { NO_CHAPTER, buildChapterStructure, cn, isBrowser } from '$lib/utils/general';
 	import { createAccordion } from '@melt-ui/svelte';
 	import { onMount } from 'svelte';
@@ -23,6 +23,9 @@
 
 	// Holds the information about the course being viewed
 	let course: Course;
+
+	// Hold the assets + attachments for this course
+	let assets: Asset[];
 
 	// Holds the course assets in a chapter structure. Populated when getCourse is called in
 	// onMount
@@ -46,23 +49,52 @@
 	// Functions
 	// ----------------------
 
-	// Gets the course id from the search params and queries the api for the course + assets +
-	// attachments. It will then build a chapter structure and selected the first asset that is not
-	// marked as completed. If the course is completed, it will select the first asset in the course.
+	// Gets the course id from the search params and queries the api for the course
 	const getCourse = async () => {
 		if (!isBrowser) return false;
 
-		const params = isBrowser && $page.url.searchParams;
+		const params = $page.url.searchParams;
 		const courseId = params && params.get('id');
 		if (!courseId) return false;
 
-		return await GetCourse(courseId, { expand: true })
-			.then((resp) => {
+		return await GetCourse(courseId)
+			.then(async (resp) => {
 				if (!resp) return false;
 
-				// build the assets chapter structure
+				course = resp;
+				return true;
+			})
+			.catch((err) => {
+				const errMsg = ErrorMessage(err);
+				console.error(errMsg);
+				$addToast({
+					data: {
+						message: errMsg,
+						status: 'error'
+					}
+				});
+
+				return false;
+			});
+	};
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	// Gets the assets + attachments for the given course. It will then build a chapter structure
+	// for the assets and selected the first asset that is not completed. If the course itself is
+	// completed, the first asset will be selected
+	const getAssets = async (courseId: string) => {
+		if (!isBrowser) return false;
+
+		const params = $page.url.searchParams;
+
+		return await GetAllCourseAssets(courseId)
+			.then(async (resp) => {
+				if (!resp) return false;
+
+				// Build the assets chapter structure
 				let tmpChapters: CourseChapters = {};
-				if (resp.assets) tmpChapters = buildChapterStructure(resp.assets);
+				if (resp) tmpChapters = buildChapterStructure(resp);
 
 				// If an asset id is provided as a query param, lookup the asset and set it as
 				// the selected
@@ -70,7 +102,7 @@
 				if (assetId) selectedAsset = findAsset(assetId, tmpChapters);
 
 				// If there is still no selected asset, set it as the first unfinished asset
-				if (!selectedAsset) selectedAsset = findFirstUnfinishedAsset(resp, tmpChapters);
+				if (!selectedAsset) selectedAsset = findFirstUnfinishedAsset(course, tmpChapters);
 
 				// Set the chapter, update the query params for the selected asset and find the
 				// previous/next assets
@@ -90,7 +122,7 @@
 					nextAsset = next;
 				}
 
-				course = resp;
+				assets = resp;
 				chapters = tmpChapters;
 				return true;
 			})
@@ -108,7 +140,7 @@
 			});
 	};
 
-	// ----------------------
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Finds the first asset that is not finished, or if the course is completed, find the first
 	// asset
@@ -131,16 +163,16 @@
 		return null;
 	};
 
-	// ----------------------
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// It flips the current `completed` state. So if the asset is completed, it will be marked as
 	// not completed, and vice versa. It then determines if the course is completed or not and
 	// updates the course accordingly
-	const flipAssetFinishedState = async (assetId: string) => {
-		if (!course.assets) return;
+	const flipAssetCompleted = async (assetId: string) => {
+		if (!assets) return;
 
 		// Get the asset
-		const asset = course.assets.find((a) => a.id === assetId);
+		const asset = assets.find((a) => a.id === assetId);
 		if (!asset) return;
 
 		// Flip
@@ -164,19 +196,19 @@
 		chapters = { ...chapters };
 	};
 
-	// ----------------------
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// When the asset is a video, this will be called as the video is played and the time
 	// progresses. The data is stored in the backend and used when the asset is reloaded
-	const updateAssetProgress = async (assetId: string, progress: number) => {
-		if (!course.assets) return;
+	const updateAssetVideoPos = async (assetId: string, position: number) => {
+		if (!assets) return;
 
 		// Get the asset
-		const asset = course.assets.find((a) => a.id === assetId);
-		if (!asset) return;
+		const asset = assets.find((a) => a.id === assetId);
+		if (!asset || asset.assetType !== 'video') return;
 
 		// Set the progress
-		asset.progress = progress;
+		asset.videoPos = position;
 
 		// Update the asset
 		await UpdateAsset(asset).catch((err) => {
@@ -193,7 +225,7 @@
 		});
 	};
 
-	// ----------------------
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Find an asset by id
 	const findAsset = (id: string, chapters: CourseChapters): Asset | null => {
@@ -203,7 +235,7 @@
 		return allAssets[index];
 	};
 
-	// ----------------------
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Find the previous and next assets within chapters based upon a current asset. This is used
 	// when a video is finished to determine which asset to play next. It is also passed to the
@@ -223,6 +255,8 @@
 		return { prev: prevAsset, next: nextAsset };
 	};
 
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 	function updateQueryParam(assetId: string) {
 		if (typeof window === 'undefined') return;
 
@@ -241,6 +275,11 @@
 			return;
 		}
 
+		if (!(await getAssets(course.id))) {
+			loadingPage = false;
+			return;
+		}
+
 		loadingPage = false;
 	});
 </script>
@@ -252,7 +291,7 @@
 		>
 			<Loading class="border-primary" />
 		</div>
-	{:else if invalidCourseId}
+	{:else if invalidCourseId || assets.length === 0}
 		<Error />
 	{:else}
 		<div class="w-full border-b">
@@ -374,7 +413,7 @@
 												<button
 													class="flex"
 													on:click|stopPropagation={() => {
-														flipAssetFinishedState(asset.id);
+														flipAssetCompleted(asset.id);
 													}}
 												>
 													<input tabindex="0" type="checkbox" checked={asset.completed} />
@@ -425,25 +464,24 @@
 				{#if selectedAsset && selectedAsset.assetType === 'video'}
 					<Video
 						id={selectedAsset.id}
-						startTime={selectedAsset.progress}
+						startTime={selectedAsset.videoPos}
 						prevVideo={prevAsset}
 						nextVideo={nextAsset}
 						on:progress={(e) => {
-							// Update the asset progress
 							if (!selectedAsset) return;
 
-							// This will automatically happen in the backend (due to a DB trigger)
-							// so we don't need to worry about it. Just set it manually
+							// Set the course as started manually (This will automatically happen in the backend)
 							if (e.detail > 5 && !course.started) {
 								course.started = true;
 							}
 
-							updateAssetProgress(selectedAsset.id, e.detail);
+							updateAssetVideoPos(selectedAsset.id, e.detail);
 						}}
 						on:finished={() => {
-							// Video finished. Mark the asset as completed
+							// Video finished. Mark the asset as completed but only if it is not
+							// already completed
 							if (!selectedAsset || selectedAsset.completed) return;
-							flipAssetFinishedState(selectedAsset.id);
+							flipAssetCompleted(selectedAsset.id);
 						}}
 						on:previous={() => {
 							if (!prevAsset) return;
