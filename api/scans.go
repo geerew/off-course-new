@@ -37,16 +37,16 @@ func bindScansApi(router fiber.Router, appFs *appFs.AppFs, db database.Database,
 
 	subGroup := router.Group("/scans")
 
-	subGroup.Get("/:id", api.getScan)
+	subGroup.Get("/:courseId", api.getScan)
 	subGroup.Post("", api.createScan)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func (api *scans) getScan(c *fiber.Ctx) error {
-	id := c.Params("id")
+	courseId := c.Params("courseId")
 
-	scan, err := models.GetScan(api.db, id)
+	scan, err := models.GetScan(api.db, courseId)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -60,7 +60,7 @@ func (api *scans) getScan(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(scanReponseHelper([]*models.Scan{scan})[0])
+	return c.Status(fiber.StatusOK).JSON(scanResponseHelper([]*models.Scan{scan})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -95,14 +95,14 @@ func (api *scans) createScan(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(scanReponseHelper([]*models.Scan{scan})[0])
+	return c.Status(fiber.StatusCreated).JSON(scanResponseHelper([]*models.Scan{scan})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // HELPER
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func scanReponseHelper(scans []*models.Scan) []*scanResponse {
+func scanResponseHelper(scans []*models.Scan) []*scanResponse {
 	responses := []*scanResponse{}
 	for _, scan := range scans {
 		responses = append(responses, &scanResponse{
