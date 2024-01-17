@@ -20,7 +20,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestScans_GetScanByCourseId(t *testing.T) {
+func TestScans_GetScan(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
