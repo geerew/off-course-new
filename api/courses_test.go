@@ -55,6 +55,48 @@ func TestCourses_GetCourses(t *testing.T) {
 		require.Len(t, coursesResp, 5)
 	})
 
+	t.Run("200 (availability)", func(t *testing.T) {
+		appFs, db, cs, _, teardown := setup(t)
+		defer teardown(t)
+
+		workingData := models.NewTestData(t, db, 3, false, 0, 0)
+
+		// ----------------------------
+		// All unavailable
+		// ----------------------------
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?orderBy=created_at%20asc", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
+		require.Equal(t, 3, int(paginationResp.TotalItems))
+		require.Len(t, coursesResp, 3)
+
+		for _, c := range coursesResp {
+			assert.False(t, c.Available)
+		}
+
+		// ----------------------------
+		// Several available
+		// ----------------------------
+
+		// Create the path for the first and third course
+		appFs.Fs.MkdirAll(workingData[0].Path, os.ModePerm)
+		appFs.Fs.MkdirAll(workingData[2].Path, os.ModePerm)
+
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?orderBy=created_at%20asc", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
+		require.Equal(t, 3, int(paginationResp.TotalItems))
+		require.Len(t, coursesResp, 3)
+
+		assert.True(t, coursesResp[0].Available)
+		assert.False(t, coursesResp[1].Available)
+		assert.True(t, coursesResp[2].Available)
+	})
+
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		appFs, db, cs, _, teardown := setup(t)
 		defer teardown(t)
@@ -257,6 +299,41 @@ func TestCourses_GetCourse(t *testing.T) {
 		err = json.Unmarshal(body, &courseResp)
 		require.Nil(t, err)
 		assert.Equal(t, workingData[2].ID, courseResp.ID)
+	})
+
+	t.Run("200 (availability)", func(t *testing.T) {
+		appFs, db, cs, _, teardown := setup(t)
+		defer teardown(t)
+
+		workingData := models.NewTestData(t, db, 3, false, 0, 0)
+
+		// ----------------------------
+		// Unavailable
+		// ----------------------------
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[2].ID, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var courseResp courseResponse
+		err = json.Unmarshal(body, &courseResp)
+		require.Nil(t, err)
+		assert.Equal(t, workingData[2].ID, courseResp.ID)
+		assert.False(t, courseResp.Available)
+
+		// ----------------------------
+		// Available
+		// ----------------------------
+		appFs.Fs.MkdirAll(workingData[2].Path, os.ModePerm)
+
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[2].ID, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		err = json.Unmarshal(body, &courseResp)
+		require.Nil(t, err)
+		assert.Equal(t, workingData[2].ID, courseResp.ID)
+		assert.True(t, courseResp.Available)
+
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {

@@ -43,6 +43,9 @@ type courseResponse struct {
 	StartedAt   types.DateTime `json:"startedAt"`
 	Percent     int            `json:"percent"`
 	CompletedAt types.DateTime `json:"completedAt"`
+
+	// Available
+	Available bool `json:"available"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -110,7 +113,7 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 		})
 	}
 
-	pResult, err := dbParams.Pagination.BuildResult(courseResponseHelper(courses))
+	pResult, err := dbParams.Pagination.BuildResult(courseResponseHelper(api.appFs, courses))
 	if err != nil {
 		log.Err(err).Msg("error building pagination result")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -139,7 +142,7 @@ func (api *courses) getCourse(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(courseResponseHelper([]*models.Course{course})[0])
+	return c.Status(fiber.StatusOK).JSON(courseResponseHelper(api.appFs, []*models.Course{course})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -190,7 +193,7 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 		course.ScanStatus = scan.Status.String()
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(courseResponseHelper([]*models.Course{course})[0])
+	return c.Status(fiber.StatusCreated).JSON(courseResponseHelper(api.appFs, []*models.Course{course})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -446,9 +449,18 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 // HELPER
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func courseResponseHelper(courses []*models.Course) []*courseResponse {
+func courseResponseHelper(appFs *appFs.AppFs, courses []*models.Course) []*courseResponse {
 	responses := []*courseResponse{}
 	for _, course := range courses {
+
+		// Get availability of the course by checking if the course path exists. Any error at all
+		// means the course is not available
+		available := true
+		_, err := appFs.Fs.Stat(course.Path)
+		if err != nil {
+			available = false
+		}
+
 		responses = append(responses, &courseResponse{
 			ID:        course.ID,
 			Title:     course.Title,
@@ -465,6 +477,9 @@ func courseResponseHelper(courses []*models.Course) []*courseResponse {
 			StartedAt:   course.StartedAt,
 			Percent:     course.Percent,
 			CompletedAt: course.CompletedAt,
+
+			// Available
+			Available: available,
 		})
 	}
 
