@@ -90,6 +90,7 @@ export const CourseSchema = merge([
 		title: string(),
 		path: string(),
 		hasCard: boolean(),
+		available: boolean(),
 
 		// Scan status
 		scanStatus: ScanStatusSchema,
@@ -98,10 +99,7 @@ export const CourseSchema = merge([
 		started: boolean(),
 		startedAt: string(),
 		percent: number(),
-		completedAt: string(),
-
-		// Availability
-		available: boolean()
+		completedAt: string()
 	})
 ]);
 

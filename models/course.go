@@ -20,9 +20,10 @@ import (
 // As this changes, update `scanCourseRow()`
 type Course struct {
 	BaseModel
-	Title    string
-	Path     string
-	CardPath string
+	Title     string
+	Path      string
+	CardPath  string
+	Available bool
 
 	// --------------------------------
 	// Not in this table, but added via a join
@@ -196,8 +197,8 @@ func CreateCourse(db database.Database, c *Course) error {
 
 	builder := sq.StatementBuilder.
 		Insert(TableCourses()).
-		Columns("id", "title", "path", "card_path", "created_at", "updated_at").
-		Values(c.ID, NilStr(c.Title), NilStr(c.Path), NilStr(c.CardPath), c.CreatedAt, c.UpdatedAt)
+		Columns("id", "title", "path", "card_path", "available", "created_at", "updated_at").
+		Values(c.ID, NilStr(c.Title), NilStr(c.Path), NilStr(c.CardPath), c.Available, c.CreatedAt, c.UpdatedAt)
 
 	query, args, err := builder.ToSql()
 	if err != nil {
@@ -257,6 +258,49 @@ func UpdateCourseCardPath(db database.Database, id string, newCardPath string) (
 	}
 
 	c.CardPath = newCardPath
+	c.UpdatedAt = updatedAt
+
+	return c, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// UpdateCourseAvailability updates `available`
+func UpdateCourseAvailability(db database.Database, id string, available bool) (*Course, error) {
+	if id == "" {
+		return nil, errors.New("id cannot be empty")
+	}
+
+	c, err := GetCourse(db, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Nothing to do
+	if c.Available == available {
+		return c, nil
+	}
+
+	updatedAt := types.NowDateTime()
+
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Update(TableCourses()).
+		Set("available", available).
+		Set("updated_at", updatedAt).
+		Where("id = ?", c.ID)
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = db.Exec(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	c.Available = available
 	c.UpdatedAt = updatedAt
 
 	return c, nil
@@ -352,6 +396,7 @@ func scanCourseRow(scannable Scannable) (*Course, error) {
 		&c.Title,
 		&c.Path,
 		&cardPath,
+		&c.Available,
 		&c.CreatedAt,
 		&c.UpdatedAt,
 		// Scan

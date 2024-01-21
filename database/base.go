@@ -44,12 +44,12 @@ type DatabaseParams struct {
 	//
 	// Examples:
 	//
-	// EQ -> sq.Eq{"id": "123"}
-	// IN -> sq.Eq{"id": []string{"123", "456"}}
-	// OR -> sq.Expr("id = ?", "123"), sq.Expr("id = ?", "456")}
-	// AND -> sq.And{sq.Eq{"id": "123"}, sq.Eq{"title": "devops"}}
-	// LIKE -> sq.Like{"title": "%dev%"}
-	// NOT -> sq.NotEq{"id": "123"}
+	//   EQ -> sq.Eq{"id": "123"}
+	//   IN -> sq.Eq{"id": []string{"123", "456"}}
+	//   OR -> sq.Expr("id = ?", "123"), sq.Expr("id = ?", "456")}
+	//   AND -> sq.And{sq.Eq{"id": "123"}, sq.Eq{"title": "devops"}}
+	//   LIKE -> sq.Like{"title": "%dev%"}
+	//   NOT -> sq.NotEq{"id": "123"}
 	Where any
 
 	Expand []Expand

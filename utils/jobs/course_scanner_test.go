@@ -240,14 +240,18 @@ func Test_CourseProcessor(t *testing.T) {
 		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", models.TableCourses()))
 	})
 
-	t.Run("path error", func(t *testing.T) {
+	t.Run("course unavailable", func(t *testing.T) {
 		scanner, _, teardown := setupCourseScanner(t)
 		defer teardown(t)
 
 		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
 
-		err := CourseProcessor(scanner, workingData[0].Scan)
-		require.EqualError(t, err, "unable to open path")
+		// Mark the course as available
+		_, err := models.UpdateCourseAvailability(scanner.db, workingData[0].ID, true)
+		require.Nil(t, err)
+
+		err = CourseProcessor(scanner, workingData[0].Scan)
+		require.EqualError(t, err, "course unavailable")
 	})
 
 	t.Run("card", func(t *testing.T) {

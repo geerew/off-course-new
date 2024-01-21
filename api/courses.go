@@ -32,6 +32,7 @@ type courseResponse struct {
 	Title     string         `json:"title"`
 	Path      string         `json:"path"`
 	HasCard   bool           `json:"hasCard"`
+	Available bool           `json:"available"`
 	CreatedAt types.DateTime `json:"createdAt"`
 	UpdatedAt types.DateTime `json:"updatedAt"`
 
@@ -43,9 +44,6 @@ type courseResponse struct {
 	StartedAt   types.DateTime `json:"startedAt"`
 	Percent     int            `json:"percent"`
 	CompletedAt types.DateTime `json:"completedAt"`
-
-	// Available
-	Available bool `json:"available"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -169,6 +167,9 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 			"message": "invalid course path",
 		})
 	}
+
+	// Set the course to available
+	course.Available = true
 
 	if err := models.CreateCourse(api.db, course); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
@@ -452,20 +453,12 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 func courseResponseHelper(appFs *appFs.AppFs, courses []*models.Course) []*courseResponse {
 	responses := []*courseResponse{}
 	for _, course := range courses {
-
-		// Get availability of the course by checking if the course path exists. Any error at all
-		// means the course is not available
-		available := true
-		_, err := appFs.Fs.Stat(course.Path)
-		if err != nil {
-			available = false
-		}
-
 		responses = append(responses, &courseResponse{
 			ID:        course.ID,
 			Title:     course.Title,
 			Path:      course.Path,
 			HasCard:   course.CardPath != "",
+			Available: course.Available,
 			CreatedAt: course.CreatedAt,
 			UpdatedAt: course.UpdatedAt,
 
@@ -477,9 +470,6 @@ func courseResponseHelper(appFs *appFs.AppFs, courses []*models.Course) []*cours
 			StartedAt:   course.StartedAt,
 			Percent:     course.Percent,
 			CompletedAt: course.CompletedAt,
-
-			// Available
-			Available: available,
 		})
 	}
 

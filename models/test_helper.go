@@ -51,6 +51,7 @@ func NewTestData(t *testing.T, db database.Database, numberOfCourses int, scan b
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func newTestCourse(t *testing.T, db database.Database) *Course {
 	c := &Course{}
 

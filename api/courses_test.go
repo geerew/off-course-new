@@ -79,10 +79,10 @@ func TestCourses_GetCourses(t *testing.T) {
 		// ----------------------------
 		// Several available
 		// ----------------------------
-
-		// Create the path for the first and third course
-		appFs.Fs.MkdirAll(workingData[0].Path, os.ModePerm)
-		appFs.Fs.MkdirAll(workingData[2].Path, os.ModePerm)
+		_, err = models.UpdateCourseAvailability(db, workingData[0].ID, true)
+		require.Nil(t, err)
+		_, err = models.UpdateCourseAvailability(db, workingData[2].ID, true)
+		require.Nil(t, err)
 
 		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?orderBy=created_at%20asc", nil))
 		require.NoError(t, err)
@@ -323,7 +323,8 @@ func TestCourses_GetCourse(t *testing.T) {
 		// ----------------------------
 		// Available
 		// ----------------------------
-		appFs.Fs.MkdirAll(workingData[2].Path, os.ModePerm)
+		_, err = models.UpdateCourseAvailability(db, workingData[2].ID, true)
+		require.Nil(t, err)
 
 		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[2].ID, nil))
 		require.NoError(t, err)
@@ -382,6 +383,7 @@ func TestCourses_Create(t *testing.T) {
 		assert.NotNil(t, courseResp.ID)
 		assert.Equal(t, workingData[0].Title, courseResp.Title)
 		assert.Equal(t, workingData[0].Path, courseResp.Path)
+		assert.True(t, courseResp.Available)
 	})
 
 	t.Run("400 (bind error)", func(t *testing.T) {

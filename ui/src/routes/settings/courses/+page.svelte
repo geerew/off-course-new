@@ -259,12 +259,12 @@
 					columns={availableSortColumns}
 					sortedColumn={sortKeys}
 					on:changed={getCourses}
-					disabled={gotError}
+					disabled={gotError || $courses.length === 0}
 				/>
 				<Columns
 					columns={availableHiddenColumns}
 					columnStore={hiddenColumnIds}
-					disabled={gotError}
+					disabled={gotError || $courses.length === 0}
 				/>
 			</div>
 		</div>
@@ -316,22 +316,32 @@
 						{/each}
 					</thead>
 					<tbody {...$tableBodyAttrs}>
-						{#each $rows as row (row.id)}
-							<Subscribe rowAttrs={row.attrs()} let:rowAttrs>
-								<tr {...rowAttrs}>
-									{#each row.cells as cell (cell.id)}
-										<Subscribe attrs={cell.attrs()} let:attrs>
-											<td
-												{...attrs}
-												class={cell.id === 'title' ? 'min-w-96' : 'min-w-[1%] whitespace-nowrap'}
-											>
-												<Render of={cell.render()} />
-											</td>
-										</Subscribe>
-									{/each}
-								</tr>
-							</Subscribe>
-						{/each}
+						{#if $rows.length === 0}
+							<tr>
+								<td colspan={flatColumns.length}>
+									<div class="flex w-full flex-grow flex-col place-content-center items-center p-5">
+										<p class="text-muted-foreground text-center text-sm">No courses found.</p>
+									</div>
+								</td>
+							</tr>
+						{:else}
+							{#each $rows as row (row.id)}
+								<Subscribe rowAttrs={row.attrs()} let:rowAttrs>
+									<tr {...rowAttrs}>
+										{#each row.cells as cell (cell.id)}
+											<Subscribe attrs={cell.attrs()} let:attrs>
+												<td
+													{...attrs}
+													class={cell.id === 'title' ? 'min-w-96' : 'min-w-[1%] whitespace-nowrap'}
+												>
+													<Render of={cell.render()} />
+												</td>
+											</Subscribe>
+										{/each}
+									</tr>
+								</Subscribe>
+							{/each}
+						{/if}
 					</tbody>
 				</table>
 			</div>

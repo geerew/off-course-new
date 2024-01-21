@@ -3,6 +3,7 @@ package jobs
 import (
 	"database/sql"
 	"errors"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -135,6 +136,35 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 	if err != nil {
 		log.Debug().Str("course", scan.CourseID).Msg("ignoring scan job as the course no longer exists")
 		return err
+	}
+
+	// Check the availability of the course. When a course is unavailable, we do not want to scan
+	// it. This prevents assets and attachments from being deleted unintentionally
+	_, err = cs.appFs.Fs.Stat(course.Path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Debug().Str("path", course.Path).Msg("ignoring scan job as the course path does not exist")
+
+			if course.Available {
+				// Set the course as unavailable
+				_, err = models.UpdateCourseAvailability(cs.db, course.ID, false)
+				if err != nil {
+					return err
+				}
+			}
+
+			return errors.New("course unavailable")
+		}
+
+		return err
+	}
+
+	// If the course is currently marked as unavailable, set it as available
+	if !course.Available {
+		_, err = models.UpdateCourseAvailability(cs.db, course.ID, true)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Set the scan status to processing

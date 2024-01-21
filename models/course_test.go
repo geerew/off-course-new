@@ -111,6 +111,26 @@ func Test_GetCourses(t *testing.T) {
 		assert.Equal(t, string(types.ScanStatusWaiting), result[1].ScanStatus)
 
 		// ----------------------------
+		// Availability
+		// ----------------------------
+		for _, c := range result {
+			require.False(t, c.Available)
+		}
+
+		// Set course 1 as available
+		_, err = UpdateCourseAvailability(db, workingData[0].ID, true)
+		require.Nil(t, err)
+
+		// Find available courses
+		dbParams := &database.DatabaseParams{
+			Where: sq.And{sq.Eq{TableCourses() + ".available": true}},
+		}
+		result, err = GetCourses(db, dbParams)
+		require.Nil(t, err)
+		require.Len(t, result, 1)
+		assert.Equal(t, workingData[0].ID, result[0].ID)
+
+		// ----------------------------
 		// Progress
 		// ----------------------------
 		for _, c := range result {
@@ -131,7 +151,7 @@ func Test_GetCourses(t *testing.T) {
 		require.Nil(t, err)
 
 		// Find started courses (not completed)
-		dbParams := &database.DatabaseParams{
+		dbParams = &database.DatabaseParams{
 			Where: sq.And{sq.Eq{TableCoursesProgress() + ".started": true}, sq.NotEq{TableCoursesProgress() + ".percent": 100}},
 		}
 		result, err = GetCourses(db, dbParams)
@@ -289,6 +309,19 @@ func Test_GetCourse(t *testing.T) {
 		assert.Equal(t, string(types.ScanStatusWaiting), c.ScanStatus)
 
 		// ----------------------------
+		// Availability
+		// ----------------------------
+		require.False(t, c.Available)
+
+		// Set to started
+		_, err = UpdateCourseAvailability(db, workingData[1].ID, true)
+		require.Nil(t, err)
+
+		c, err = GetCourse(db, workingData[1].ID)
+		require.Nil(t, err)
+		require.True(t, c.Available)
+
+		// ----------------------------
 		// Progress
 		// ----------------------------
 		require.False(t, c.Started)
@@ -358,6 +391,7 @@ func Test_CreateCourse(t *testing.T) {
 		assert.Equal(t, workingData[0].Title, newC.Title)
 		assert.Equal(t, workingData[0].Path, newC.Path)
 		assert.Empty(t, newC.CardPath)
+		assert.False(t, newC.Available)
 		assert.False(t, newC.CreatedAt.IsZero())
 		assert.False(t, newC.UpdatedAt.IsZero())
 		//Scan status
@@ -459,6 +493,65 @@ func Test_UpdateCourseCardPath(t *testing.T) {
 		require.Nil(t, err)
 
 		_, err = UpdateCourseCardPath(db, "1234", "/path/to/card.jpg")
+		require.ErrorContains(t, err, "no such table: "+TableCourses())
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_UpdateCourseAvailability(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		require.Empty(t, workingData[0].CardPath)
+
+		updatedCourse, err := UpdateCourseAvailability(db, workingData[0].ID, true)
+		require.Nil(t, err)
+		require.True(t, updatedCourse.Available)
+		assert.NotEqual(t, workingData[0].UpdatedAt, updatedCourse.UpdatedAt)
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		updatedCourse, err := UpdateCourseAvailability(db, "", true)
+		assert.EqualError(t, err, "id cannot be empty")
+		assert.Nil(t, updatedCourse)
+	})
+
+	t.Run("no change", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+		require.Empty(t, workingData[0].CardPath)
+
+		updatedCourse, err := UpdateCourseAvailability(db, workingData[0].ID, false)
+		require.Nil(t, err)
+		assert.False(t, updatedCourse.Available)
+		assert.Equal(t, workingData[0].UpdatedAt.String(), updatedCourse.UpdatedAt.String())
+	})
+
+	t.Run("no course with id", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		updatedCourse, err := UpdateCourseAvailability(db, "1234", true)
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, updatedCourse)
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := db.Exec("DROP TABLE IF EXISTS " + TableCourses())
+		require.Nil(t, err)
+
+		_, err = UpdateCourseAvailability(db, "1234", true)
 		require.ErrorContains(t, err, "no such table: "+TableCourses())
 	})
 }
