@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Icons } from '$components/icons';
 	import type { ToastData } from '$lib/types/general';
-	import { cn } from '$lib/utils/general';
+	import { cn } from '$lib/utils';
 	import { createProgress, type Toast, type ToastsElements } from '@melt-ui/svelte';
+	import { AlertCircle, CheckCircle2, Info, X, XCircle } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { fly } from 'svelte/transition';
@@ -64,13 +64,13 @@
 	<div class="flex flex-row items-center justify-between">
 		<div class="py-1 pl-2">
 			{#if data.status === 'info'}
-				<Icons.infoCircle class="text-primary mr-2 h-6 w-6" />
+				<Info class="text-primary mr-2 h-6 w-6" />
 			{:else if data.status === 'success'}
-				<Icons.checkCircle class="text-success mr-2 h-6 w-6" />
+				<CheckCircle2 class="text-success mr-2 h-6 w-6" />
 			{:else if data.status === 'warning'}
-				<Icons.warningCircle class="mr-2 h-6 w-6 text-orange-500" />
+				<AlertCircle class="mr-2 h-6 w-6 text-orange-500" />
 			{:else if data.status === 'error'}
-				<Icons.errorCircle class="text-error mr-2 h-6 w-6" />
+				<XCircle class="text-error mr-2 h-6 w-6" />
 			{/if}
 		</div>
 
@@ -79,7 +79,7 @@
 			use:close
 			class="group z-50 rounded-md p-1 text-sm font-semibold duration-200"
 		>
-			<Icons.x class="group-hover:text-foreground text-foreground-muted h-4 w-4 duration-200" />
+			<X class="group-hover:text-foreground text-muted-foreground h-4 w-4 duration-200" />
 		</button>
 	</div>
 

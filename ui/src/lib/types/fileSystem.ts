@@ -2,19 +2,28 @@ import { array, boolean, number, object, optional, string, type Output } from 'v
 
 const FileInfoSchema = object({
 	title: string(),
-	path: string(),
-	isSelected: optional(boolean()),
-	isExistingCourse: optional(boolean()),
-	isParent: optional(boolean())
+	path: string()
 });
 
 export type FileInfo = Output<typeof FileInfoSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+const DirInfoSchema = object({
+	title: string(),
+	path: string(),
+	isSelected: optional(boolean()),
+	isExistingCourse: optional(boolean()),
+	isParent: optional(boolean())
+});
+
+export type DirInfo = Output<typeof DirInfoSchema>;
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 export const FileSystemSchema = object({
 	count: number(),
-	directories: array(FileInfoSchema),
+	directories: array(DirInfoSchema),
 	files: array(FileInfoSchema)
 });
 

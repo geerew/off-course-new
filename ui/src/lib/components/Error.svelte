@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { ClassName } from '$lib/types/general';
-	import { cn } from '$lib/utils/general';
-	import { Icons } from './icons';
+	import { cn } from '$lib/utils';
+	import { CircleOff } from 'lucide-svelte';
 
 	let className: ClassName = undefined;
 
@@ -18,6 +18,6 @@
 		className
 	)}
 >
-	<Icons.circleOff class={cn('text-error h-12 w-12', imgClass)} />
-	<span> Oops, an error occurred</span>
+	<CircleOff class={cn('text-destructive h-12 w-12', imgClass)} />
+	<span>Oh no! An error occurred</span>
 </div>

@@ -1,11 +1,11 @@
 <script lang="ts">
+	import { ASSET_API } from '$lib/api';
 	import type { Asset } from '$lib/types/models';
-	import { ASSET_API } from '$lib/utils/api';
+	import { ChevronLeft, ChevronRight, Play } from 'lucide-svelte';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import videojs from 'video.js';
 	import type Player from 'video.js/dist/types/player';
 	import 'video.js/dist/video-js.css';
-	import { Icons } from './icons';
 
 	// ----------------------
 	// Exports
@@ -181,7 +181,7 @@
 			on:mouseenter={handleMouseEnterPrevNextButton}
 			on:mouseleave={handleMouseLeavePrevNextButton}
 		>
-			<Icons.chevronLeft class="text-white" />
+			<ChevronLeft class="text-white" />
 		</button>
 	{/if}
 
@@ -197,7 +197,7 @@
 			on:mouseenter={handleMouseEnterPrevNextButton}
 			on:mouseleave={handleMouseLeavePrevNextButton}
 		>
-			<Icons.chevronRight class="text-white" />
+			<ChevronRight class="text-white" />
 		</button>
 	{/if}
 
@@ -246,7 +246,7 @@
 					</svg>
 
 					<div class="absolute left-1/2 top-1/2 ml-1 -translate-x-1/2 -translate-y-1/2 transform">
-						<Icons.play
+						<Play
 							class="group-hover:fill-primary group-hover:stroke-primary h-10 w-10 fill-white duration-200"
 						/>
 					</div>
@@ -324,10 +324,10 @@
 					@apply !-left-2 !mb-[25px] !w-14;
 
 					:global(.vjs-menu-content) {
-						@apply !bg-accent-1;
+						/* @apply !bg-accent-1; */
 
 						:global(.vjs-menu-item) {
-							@apply !bg-accent-1 hover:!bg-primary !text-sm focus-visible:bg-inherit focus-visible:!outline-none;
+							/* @apply !bg-accent-1 hover:!bg-primary !text-sm focus-visible:bg-inherit focus-visible:!outline-none; */
 						}
 
 						:global(.vjs-selected) {

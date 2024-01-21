@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { CourseCard, Error, Loading } from '$components';
+	import { ErrorMessage, GetAllCourses } from '$lib/api';
 	import { addToast } from '$lib/stores/addToast';
 	import type { Course } from '$lib/types/models';
-	import { ErrorMessage, GetAllCourses } from '$lib/utils/api';
-	import { isBrowser } from '$lib/utils/general';
+	import { isBrowser } from '$lib/utils';
 	import { onMount } from 'svelte';
 
 	// ----------------------
@@ -58,16 +58,16 @@
 </script>
 
 <div class="flex flex-col gap-3 lg:gap-5">
-	<h2 class="text-lg font-bold dark:text-white md:text-xl md:leading-tight">Ongoing Courses</h2>
+	<h2 class="text-lg font-bold md:text-xl md:leading-tight dark:text-white">Ongoing Courses</h2>
 	{#if loadingOngoingCourses}
 		<div class="flex min-h-[6rem] w-full flex-grow flex-col place-content-center items-center p-10">
-			<Loading class="border-primary" />
+			<Loading />
 		</div>
 	{:else if loadingOngoingCoursesError}
 		<Error class="text-muted min-h-[6rem] p-5 text-sm" imgClass="h-6 w-6" />
 	{:else if ongoingCourses.length === 0}
 		<div class="flex min-h-[6rem] w-full flex-grow flex-col place-content-center items-center p-10">
-			<span class="text-foreground-muted">No courses have been started.</span>
+			<span class="text-muted-foreground">No courses have been started.</span>
 		</div>
 	{:else}
 		<div class="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">

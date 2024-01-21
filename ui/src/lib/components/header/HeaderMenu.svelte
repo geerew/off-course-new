@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import Separator from '$components/Separator.svelte';
 	import Theme from '$components/Theme.svelte';
-	import { Icons } from '$components/icons';
+	import { Github } from '$components/icons';
+	import Button from '$components/ui/button/button.svelte';
+	import { Separator } from '$components/ui/separator';
 	import { header } from '$lib/config/navs';
 	import { site } from '$lib/config/site';
-	import { cn, isBrowser } from '$lib/utils/general';
+	import { cn, isBrowser } from '$lib/utils';
 	import { createCollapsible } from '@melt-ui/svelte';
 	import { useClickOutside } from '@melt-ui/svelte/internal/actions';
 	import { slide } from 'svelte/transition';
@@ -81,7 +82,7 @@
 						<div
 							class="hover:bg-accent-1 group rounded-md p-1.5 text-sm font-semibold duration-200"
 						>
-							<Icons.gitHub
+							<Github
 								class="fill-foreground-muted group-hover:fill-foreground h-7 w-7 stroke-none duration-200"
 							/>
 							<span class="sr-only">GitHub</span>
@@ -94,30 +95,27 @@
 </nav>
 
 <!-- Showing on md+ -->
-<nav class="hidden items-center gap-1.5 md:inline-flex">
+<nav class="hidden items-center gap-2.5 md:inline-flex">
 	{#each header as navItem}
-		<a
+		<Button
+			variant="link"
 			href={navItem.href}
 			class={cn(
-				'hover:text-primary px-3 py-2 text-sm font-semibold duration-200',
-				$page.url.pathname.startsWith(navItem.href) && 'text-primary'
+				'text-muted-foreground',
+				$page.url.pathname.startsWith(navItem.href) && 'text-foreground'
 			)}
 		>
 			{navItem.title}
-		</a>
+		</Button>
 	{/each}
 
-	<Separator orientation="vertical" class="" />
+	<Separator orientation="vertical" class="h-8" />
 
-	<div class="flex flex-row">
-		<a href={site.links.github} target="_blank" rel="noreferrer" class="flex items-center px-1">
-			<div class="hover:bg-accent-1 group rounded-md p-1.5 text-sm font-semibold duration-200">
-				<Icons.gitHub
-					class="fill-foreground-muted group-hover:fill-foreground h-5 w-5 stroke-none duration-200"
-				/>
-				<span class="sr-only">GitHub</span>
-			</div>
-		</a>
+	<div class="flex flex-row gap-2.5">
+		<Button variant="ghost" href={site.links.github} size="icon" class="fill-foreground">
+			<Github class="h-[1.2rem] w-[1.2rem]" />
+			<span class="sr-only">GitHub</span>
+		</Button>
 
 		<Theme />
 	</div>

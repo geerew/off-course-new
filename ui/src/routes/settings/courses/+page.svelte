@@ -1,20 +1,26 @@
 <script lang="ts">
 	import { Error, Loading } from '$components';
-	import { Icons } from '$components/icons';
-	import { Pagination, PerPage } from '$components/pagination';
-	import { AddCoursesDrawer, DeleteCourseDialog } from '$components/settings';
-	import { TableCourseAction, TableCourseTitle, TableDate } from '$components/table';
+	import { DeleteCourse } from '$components/dialogs';
+	import { AddCourses } from '$components/sheets';
+	import { Columns, Sort } from '$components/table/controllers';
+	import { Pagination } from '$components/table/pagination';
+	import {
+		CourseAction,
+		CourseAvailability,
+		CourseProgress,
+		NiceDate,
+		ScanStatus
+	} from '$components/table/renderers';
+	import { AddScan, ErrorMessage, GetCourses } from '$lib/api';
+	import { addToast } from '$lib/stores/addToast';
 	import type { Course } from '$lib/types/models';
 	import type { PaginationParams } from '$lib/types/pagination';
-	import { AddScan, GetCourses } from '$lib/utils/api';
-	import { cn, flattenOrderBy, isBrowser } from '$lib/utils/general';
-	import { createDialog } from '@melt-ui/svelte';
+	import { cn, flattenOrderBy } from '$lib/utils';
+	import { ChevronDown, ChevronUp } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { Render, Subscribe, createRender, createTable } from 'svelte-headless-table';
-	import type { SortKey } from 'svelte-headless-table/lib/plugins/addSortBy';
 	import { addHiddenColumns, addSortBy } from 'svelte-headless-table/plugins';
 	import { writable } from 'svelte/store';
-	import theme from 'tailwindcss/defaultTheme';
 
 	// ----------------------
 	// Variables
@@ -22,129 +28,129 @@
 
 	const courses = writable<Course[]>([]);
 
-	// True when loading the courses. It is used to render a loading icon
+	// True when loading the courses
 	let loadingCourses = true;
 
-	// When a course is selected for scan/delete/details, this is set to the course id
-	let selectedCourseId = '';
-
-	// True when the API call errors
+	// True when an error occurs
 	let gotError = false;
+
+	// Set when a course is selected for delete
+	let deleteCourseId = '';
+
+	let openDeleteDialog = false;
 
 	// Pagination
 	let pagination: PaginationParams = {
 		page: 1,
-		perPage: 25,
+		perPage: 10,
 		perPages: [10, 25, 100, 200],
 		totalItems: -1,
 		totalPages: -1
 	};
 
-	// Set the current sort column. This is updated
-	let currentSortColumn: SortKey = { id: 'createdAt', order: 'desc' };
-
-	// When the screen size moves to small or below, the table columns are hidden and this will be
-	// set to true. When the screen size moves to medium or above, the columns are shown again and
-	// this will be set to false
-	let columnsHidden = false;
-
 	// Create the table
 	const table = createTable(courses, {
 		sort: addSortBy({
-			initialSortKeys: [currentSortColumn],
-			toggleOrder: ['asc', 'desc'],
+			initialSortKeys: [{ id: 'createdAt', order: 'desc' }],
+			toggleOrder: ['desc', 'asc'],
 			serverSide: true
 		}),
-		hideCols: addHiddenColumns()
+		hide: addHiddenColumns({
+			initialHiddenColumnIds: ['updatedAt']
+		})
 	});
 
 	// Define the table columns
 	const columns = table.createColumns([
 		table.column({
-			accessor: (item) => item,
-			id: 'title',
-			header: 'course',
+			header: 'Course',
+			accessor: 'title'
+		}),
+		table.column({
+			header: 'Availability',
+			accessor: 'available',
 			cell: ({ value }) => {
-				return createRender(TableCourseTitle, { course: value })
-					.on('delete', () => {
-						selectedCourseId = value.id;
-						openDeleteDialog.set(true);
-					})
-					.on('scan', async () => {
-						await AddScan({ courseId: value.id })
-							.then(() => {
-								value.scanStatus = 'waiting';
-								updateCourseById(value);
-							})
-							.catch((err) => {
-								console.error(err);
-							});
-					})
-					.on('change', () => {
-						updateCourseById(value);
-					});
+				return createRender(CourseAvailability, { available: value });
 			}
 		}),
 		table.column({
+			header: 'Progress',
+			accessor: 'percent',
+			cell: ({ value }) => {
+				return createRender(CourseProgress, { percent: value });
+			}
+		}),
+		table.column({
+			header: 'Added',
 			accessor: 'createdAt',
-			header: 'added',
 			cell: ({ value }) => {
-				return createRender(TableDate, { date: value });
+				return createRender(NiceDate, { date: value });
 			}
 		}),
 		table.column({
+			header: 'Updated',
 			accessor: 'updatedAt',
-			header: 'updated',
 			cell: ({ value }) => {
-				return createRender(TableDate, { date: value });
+				return createRender(NiceDate, { date: value });
+			}
+		}),
+		table.column({
+			header: 'Scan Status',
+			accessor: 'scanStatus',
+			cell: ({ row, value }) => {
+				if (!row.isData()) return value;
+				return createRender(ScanStatus, { courseId: row.original.id, scanStatus: value }).on(
+					'change',
+					(ev) => {
+						// row.original.scanStatus = ev.detail;
+						updateCourseInCourses(ev.detail);
+					}
+				);
 			}
 		}),
 		table.column({
 			accessor: (item) => item,
 			header: '',
+			id: 'actions',
 			plugins: {
 				sort: {
 					disable: true
 				}
 			},
 			cell: ({ value }) => {
-				return createRender(TableCourseAction, { course: value })
+				return createRender(CourseAction, { course: value })
 					.on('delete', () => {
-						selectedCourseId = value.id;
-						openDeleteDialog.set(true);
+						deleteCourseId = value.id;
+						openDeleteDialog = true;
 					})
-					.on('scan', async () => {
-						await AddScan({ courseId: value.id })
-							.then(() => {
-								value.scanStatus = 'waiting';
-								updateCourseById(value);
-							})
-							.catch((err) => {
-								console.error(err);
-							});
-					})
-					.on('change', () => {
-						updateCourseById(value);
-					});
+					.on('scan', () => startScan(value));
 			}
 		})
 	]);
 
-	// Create the table view
-	const { flatColumns, headerRows, rows, tableAttrs, tableBodyAttrs, pluginStates } =
+	// Create the view, which is used when building the table
+	const { headerRows, rows, tableAttrs, tableBodyAttrs, pluginStates, flatColumns } =
 		table.createViewModel(columns);
 
-	// Get the sortKeys and hiddenColumnIds
+	// Writable plugin stores
 	const { sortKeys } = pluginStates.sort;
-	const { hiddenColumnIds } = pluginStates.hideCols;
+	const { hiddenColumnIds } = pluginStates.hide;
 
-	// Create a delete dialog
-	const deleteDialog = createDialog({
-		role: 'alertdialog'
-	});
+	// The columns that can be sorted
+	const availableSortIds = ['actions'];
+	const availableSortColumns: Array<{ id: string; label: string }> = flatColumns
+		.filter((col) => !availableSortIds.includes(col.id.toString()))
+		.map((col) => {
+			return { id: col.id.toString(), label: col.header.toString() };
+		});
 
-	// Get the open state of the delete dialog
-	const openDeleteDialog = deleteDialog.states.open;
+	// The columns that can be hidden
+	const availableExcludeIds = ['title', 'actions'];
+	const availableHiddenColumns: Array<{ id: string; label: string }> = flatColumns
+		.filter((col) => !availableExcludeIds.includes(col.id.toString()))
+		.map((col) => {
+			return { id: col.id.toString(), label: col.header.toString() };
+		});
 
 	// ----------------------
 	// Functions
@@ -156,7 +162,7 @@
 
 		const orderBy = flattenOrderBy($sortKeys);
 
-		await GetCourses({
+		return await GetCourses({
 			orderBy: orderBy,
 			page: pagination.page,
 			perPage: pagination.perPage
@@ -174,38 +180,31 @@
 						totalPages: resp.totalPages
 					};
 				}
+
+				loadingCourses = false;
+				return true;
 			})
 			.catch((err) => {
-				console.error(err);
+				const errMsg = ErrorMessage(err);
+				console.error(errMsg);
+				$addToast({
+					data: {
+						message: errMsg,
+						status: 'error'
+					}
+				});
+
 				loadingCourses = false;
 				gotError = true;
-				return;
+
+				return false;
 			});
-
-		loadingCourses = false;
 	};
 
-	// When the screen is resized to small or below, the table can be difficult to read. This
-	// function hides the columns that are not important on small screens and shows them again
-	// when the screen is resized to medium or above
-	//
-	// On small and below the component <TableCourseTitle /> will render this additional information
-	const handleResize = () => {
-		if (!isBrowser) return;
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		// Check if the screen is small or lower, based upon tailwinds breakpoints
-		const isSmall = window.innerWidth < +theme.screens.md.replace('px', '');
-
-		if (isSmall && !columnsHidden) {
-			$hiddenColumnIds = flatColumns.filter((c) => c.id !== 'title').map((c) => c.id);
-			columnsHidden = true;
-		} else if (!isSmall && columnsHidden) {
-			$hiddenColumnIds = [];
-			columnsHidden = false;
-		}
-	};
-
-	const updateCourseById = (updatedCourse: Course) => {
+	// Update a course in the courses array
+	const updateCourseInCourses = (updatedCourse: Course) => {
 		courses.update((currentCourses) => {
 			const index = currentCourses.findIndex((course) => course.id === updatedCourse.id);
 			if (index !== -1) {
@@ -215,37 +214,37 @@
 		});
 	};
 
-	// ----------------------
-	// Reactive
-	// ----------------------
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	// When the table sorting is changed update the currentSortColumn
-	$: (async () => {
-		if ($sortKeys.length >= 1 && $sortKeys[0] !== currentSortColumn) {
-			await getCourses();
-			currentSortColumn = $sortKeys[0];
-		}
-	})();
+	// Start a scan for a course
+	const startScan = async (course: Course) => {
+		await AddScan(course.id)
+			.then(() => {
+				// Manually update the course scan status to 'waiting' and then update the courses
+				// array
+				course.scanStatus = 'waiting';
+				updateCourseInCourses(course);
+			})
+			.catch((err) => {
+				console.error(err);
+			});
+	};
 
 	// ----------------------
 	// Lifecycle
 	// ----------------------
 	onMount(async () => {
-		handleResize();
-		await getCourses();
+		if (!(await getCourses())) return;
 	});
 </script>
 
-<svelte:window on:resize={handleResize} />
-
 <div class="bg-background flex w-full flex-col gap-4 pb-10">
 	<!-- Heading -->
-	<div class="bg-background/50 w-full border-b">
+	<div class="w-full border-b">
 		<div class="container flex items-center py-4 md:py-6">
 			<span class="grow text-lg font-semibold md:text-2xl">Courses</span>
-			<AddCoursesDrawer
+			<AddCourses
 				on:added={() => {
-					// Move back to page 1 and pull the courses
 					pagination.page = 1;
 					getCourses();
 				}}
@@ -253,141 +252,131 @@
 		</div>
 	</div>
 
-	<!-- Table -->
-	<div class="container">
+	<div class="container flex flex-col gap-4">
+		<div class="flex w-full flex-row">
+			<div class="flex w-full justify-end gap-2.5">
+				<Sort
+					columns={availableSortColumns}
+					sortedColumn={sortKeys}
+					on:changed={getCourses}
+					disabled={gotError}
+				/>
+				<Columns
+					columns={availableHiddenColumns}
+					columnStore={hiddenColumnIds}
+					disabled={gotError}
+				/>
+			</div>
+		</div>
+
 		{#if loadingCourses}
 			<div
-				class="flex min-h-[20rem] w-full flex-grow flex-col place-content-center items-center p-10"
+				class="flex min-h-[10rem] w-full flex-grow flex-col place-content-center items-center p-10"
 			>
 				<Loading />
 			</div>
 		{:else if gotError}
 			<Error />
-		{:else if pagination.totalItems === 0}
-			<!-- class="text-foreground-muted flex w-full justify-center py-5 font-semibold"> -->
-			<div
-				class="flex min-h-[20rem] w-full flex-grow flex-col place-content-center items-center gap-5 p-10"
-			>
-				<span class="text-xl font-bold">No courses</span>
-				<span class="text-foreground-muted text-sm">You could add one?</span>
-			</div>
 		{:else}
-			<div class="">
-				<div class="w-full overflow-auto">
-					<table {...$tableAttrs} class="w-full border-collapse indent-0 text-sm">
-						<thead>
-							{#each $headerRows as headerRow (headerRow.id)}
-								<Subscribe rowAttrs={headerRow.attrs()} let:rowAttrs>
-									<tr {...rowAttrs} class="border-b">
-										{#each headerRow.cells as cell (cell.id)}
-											{@const ascSort =
-												$sortKeys.length >= 1 &&
-												$sortKeys[0].order === 'asc' &&
-												$sortKeys[0].id === cell.id}
-											{@const descSort =
-												$sortKeys.length >= 1 &&
-												$sortKeys[0].order === 'desc' &&
-												$sortKeys[0].id === cell.id}
-
-											<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()} let:props>
-												<th
-													{...attrs}
-													data-column={cell.label}
-													class="text-foreground-muted h-12 px-4 text-left font-semibold tracking-wide"
-												>
-													{#if props.sort.disabled}
-														<Render of={cell.render()} />
-													{:else}
-														<button class="flex items-center gap-1.5" on:click={props.sort.toggle}>
-															<Render of={cell.render()} />
-															<Icons.arrowUpDown
-																class={cn(
-																	'stroke-foreground-muted h-4 w-4',
-																	ascSort ? '[&>:nth-child(n+3)]:stroke-secondary' : undefined,
-																	descSort ? '[&>:nth-child(-n+2)]:stroke-secondary' : undefined
-																)}
-															/>
-														</button>
-													{/if}
-												</th>
-											</Subscribe>
-										{/each}
-									</tr>
-								</Subscribe>
-							{/each}
-						</thead>
-						<tbody {...$tableBodyAttrs} class="">
-							{#each $rows as row (row.id)}
-								<Subscribe rowAttrs={row.attrs()} let:rowAttrs>
-									<tr {...rowAttrs} class="hover:bg-accent-1/50 h-16 border-b sm:h-12">
-										{#each row.cells as cell (cell.id)}
-											<Subscribe attrs={cell.attrs()} let:attrs>
-												<td
-													{...attrs}
+			<div class="flex w-full overflow-x-auto">
+				<table {...$tableAttrs}>
+					<thead>
+						{#each $headerRows as headerRow (headerRow.id)}
+							<Subscribe rowAttrs={headerRow.attrs()} let:rowAttrs>
+								<tr {...rowAttrs}>
+									{#each headerRow.cells as cell (cell.id)}
+										{@const ascSort =
+											$sortKeys.length >= 1 &&
+											$sortKeys[0].order === 'asc' &&
+											$sortKeys[0].id === cell.id}
+										{@const descSort =
+											$sortKeys.length >= 1 &&
+											$sortKeys[0].order === 'desc' &&
+											$sortKeys[0].id === cell.id}
+										<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()} let:props>
+											<th {...attrs}>
+												<div
 													class={cn(
-														'px-4 py-2',
-														cell.column.header === 'course'
-															? 'min-w-[15rem]'
-															: 'min-w-[1%] whitespace-nowrap'
+														'flex items-center gap-2.5',
+														cell.id !== 'title' && 'justify-center'
 													)}
-													data-row={cell.column.header}
 												>
 													<Render of={cell.render()} />
-												</td>
-											</Subscribe>
-										{/each}
-									</tr>
-								</Subscribe>
-							{/each}
-						</tbody>
-					</table>
-				</div>
+													{#if ascSort}
+														<ChevronUp class="text-muted-foreground h-4 w-4 stroke-[2]" />
+													{:else if descSort}
+														<ChevronDown class="text-muted-foreground  h-4 w-4 stroke-[2]" />
+													{/if}
+												</div>
+											</th>
+										</Subscribe>
+									{/each}
+								</tr>
+							</Subscribe>
+						{/each}
+					</thead>
+					<tbody {...$tableBodyAttrs}>
+						{#each $rows as row (row.id)}
+							<Subscribe rowAttrs={row.attrs()} let:rowAttrs>
+								<tr {...rowAttrs}>
+									{#each row.cells as cell (cell.id)}
+										<Subscribe attrs={cell.attrs()} let:attrs>
+											<td
+												{...attrs}
+												class={cell.id === 'title' ? 'min-w-96' : 'min-w-[1%] whitespace-nowrap'}
+											>
+												<Render of={cell.render()} />
+											</td>
+										</Subscribe>
+									{/each}
+								</tr>
+							</Subscribe>
+						{/each}
+					</tbody>
+				</table>
 			</div>
-		{/if}
 
-		{#if pagination.totalItems > 0}
-			<div class="grid grid-cols-2 gap-4 pt-5 md:grid-cols-5">
-				<PerPage
-					class="order-2 md:order-1"
-					perPages={pagination.perPages}
-					perPage={pagination.perPage}
-					on:change={(ev) => {
-						pagination = { ...pagination, page: 1, perPage: ev.detail };
-						getCourses();
-					}}
-				/>
-
-				<Pagination
-					class="col-span-2 flex flex-col items-center md:order-2 md:col-span-3"
-					bind:pagination
-					on:change={() => {
-						getCourses();
-					}}
-				/>
-
-				<div
-					class="text-foreground-muted order-3 flex items-center justify-end text-sm {pagination.totalPages ===
-					1
-						? 'md:col-span-4'
-						: undefined}"
-				>
-					{pagination.totalItems} course{pagination.totalItems > 1 ? 's' : ''}
-				</div>
-			</div>
+			<Pagination
+				{pagination}
+				on:pageChange={(ev) => {
+					pagination.page = ev.detail;
+					getCourses();
+				}}
+				on:perPageChange={(ev) => {
+					pagination.perPage = ev.detail;
+					pagination.page = 1;
+					getCourses();
+				}}
+			/>
 		{/if}
 	</div>
-
-	<!-- Delete Dialog -->
-	<DeleteCourseDialog
-		dialog={deleteDialog}
-		bind:id={selectedCourseId}
-		on:confirmed={() => {
-			// It is possible that the user deleted the last course for this page. When this is the
-			// case, set the page to the previous one
-			if (pagination.page > 1 && (pagination.totalItems - 1) % pagination.perPage === 0)
-				pagination.page = pagination.page - 1;
-
-			getCourses();
-		}}
-	/>
 </div>
+
+<!-- Delete dialog -->
+<DeleteCourse
+	courseId={deleteCourseId}
+	bind:open={openDeleteDialog}
+	on:courseDeleted={() => {
+		// It is possible that the user deleted the last course on this page,
+		// therefore we need to set the page to the previous one
+		if (pagination.page > 1 && (pagination.totalItems - 1) % pagination.perPage === 0)
+			pagination.page = pagination.page - 1;
+
+		getCourses();
+	}}
+/>
+
+<style lang="postcss">
+	table {
+		@apply w-full min-w-[50rem] border-collapse;
+
+		& > thead > tr > th {
+			@apply whitespace-nowrap border-y p-4 text-left text-sm font-semibold tracking-wide;
+			@apply text-muted-foreground;
+		}
+
+		& > tbody > tr > td {
+			@apply border-y px-4 py-2.5 text-left text-sm;
+		}
+	}
+</style>

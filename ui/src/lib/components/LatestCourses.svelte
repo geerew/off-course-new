@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { CourseCard, Error, Loading } from '$components';
+	import { ErrorMessage, GetCourses } from '$lib/api';
 	import { addToast } from '$lib/stores/addToast';
 	import type { Course } from '$lib/types/models';
-	import { ErrorMessage, GetCourses } from '$lib/utils/api';
-	import { isBrowser } from '$lib/utils/general';
+	import { isBrowser } from '$lib/utils';
 	import { onMount } from 'svelte';
-	import { TableDate } from './table';
 
 	// ----------------------
 	// Variables
@@ -32,16 +31,15 @@
 	async function getLatestCourses(page: number) {
 		if (!isBrowser) return false;
 
-		console.log('loading page ', page);
 		return await GetCourses({ page, perPage: 8 })
 			.then((resp) => {
 				if (!resp) return false;
 
 				// If the current page is 1, then we can just set the courses to the response, or
 				// else append the response to the current courses
-				latestCourses.length === 0
-					? (latestCourses = resp.items)
-					: (latestCourses = [...latestCourses, ...resp.items]);
+				// latestCourses.length === 0
+				// 	? (latestCourses = resp.items)
+				// 	: (latestCourses = [...latestCourses, ...resp.items]);
 
 				// Are there more courses to get?
 				moreToGet = latestCourses.length < resp.totalItems;
@@ -83,16 +81,16 @@
 </script>
 
 <div class="flex flex-col gap-3 lg:gap-5">
-	<h2 class="text-lg font-bold dark:text-white md:text-xl md:leading-tight">Latest Courses</h2>
+	<h2 class="text-lg font-bold md:text-xl md:leading-tight dark:text-white">Latest Courses</h2>
 	{#if loadingLatestCourses}
 		<div class="flex min-h-[6rem] w-full flex-grow flex-col place-content-center items-center p-10">
-			<Loading class="border-primary" />
+			<Loading />
 		</div>
 	{:else if loadingLatestCoursesError}
 		<Error class="text-muted min-h-[6rem] p-5 text-sm" imgClass="h-6 w-6" />
 	{:else if latestCourses.length === 0}
 		<div class="flex min-h-[6rem] w-full flex-grow flex-col place-content-center items-center p-10">
-			<span class="text-foreground-muted">No courses have been added.</span>
+			<span class="text-muted-foreground">No courses have been added.</span>
 		</div>
 	{:else}
 		<div class="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -115,7 +113,7 @@
 							{course.title}
 						</h3>
 
-						<TableDate date={course.createdAt} class="text-muted pt-3 text-xs" />
+						<!-- <TableDate date={course.createdAt} class="text-muted pt-3 text-xs" /> -->
 					</div>
 				</a>
 			{/each}

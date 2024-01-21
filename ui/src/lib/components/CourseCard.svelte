@@ -1,11 +1,11 @@
 <script lang="ts">
+	import { COURSE_API } from '$lib/api';
 	import type { ClassName } from '$lib/types/general';
 	import type { Course } from '$lib/types/models';
-	import { COURSE_API } from '$lib/utils/api';
-	import { cn } from '$lib/utils/general';
+	import { cn } from '$lib/utils';
 	import { createAvatar } from '@melt-ui/svelte';
+	import { Play } from 'lucide-svelte';
 	import { onMount } from 'svelte';
-	import { Icons } from './icons';
 
 	let className: ClassName = undefined;
 
@@ -73,7 +73,7 @@
 			)}
 			{...$fallback}
 		>
-			<Icons.play class="h-12 w-12 fill-gray-400 text-gray-400" />
+			<Play class="h-12 w-12 fill-gray-400 text-gray-400" />
 		</div>
 	</slot>
 </div>

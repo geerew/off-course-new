@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { Error, Loading, Video } from '$components';
-	import { Icons } from '$components/icons';
-	import AttachmentsPopover from '$components/settings/internal/AttachmentsPopover.svelte';
+	import { ErrorMessage, GetAllCourseAssets, GetCourse, UpdateAsset } from '$lib/api';
 	import { addToast } from '$lib/stores/addToast';
 	import type { Asset, Course, CourseChapters } from '$lib/types/models';
-	import { ErrorMessage, GetAllCourseAssets, GetCourse, UpdateAsset } from '$lib/utils/api';
-	import { NO_CHAPTER, buildChapterStructure, cn, isBrowser } from '$lib/utils/general';
+	import { NO_CHAPTER, buildChapterStructure, cn, isBrowser } from '$lib/utils';
 	import { createAccordion } from '@melt-ui/svelte';
+	import { ChevronRight, FileCode, FileText, FileVideo, Info } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { slide } from 'svelte/transition';
 
@@ -60,7 +59,6 @@
 		return await GetCourse(courseId)
 			.then(async (resp) => {
 				if (!resp) return false;
-
 				course = resp;
 				return true;
 			})
@@ -289,7 +287,7 @@
 		<div
 			class="flex min-h-[20rem] w-full flex-grow flex-col place-content-center items-center p-10"
 		>
-			<Loading class="border-primary" />
+			<Loading />
 		</div>
 	{:else if invalidCourseId || assets.length === 0}
 		<Error />
@@ -301,7 +299,7 @@
 					href="/settings/courses/course?id={course.id}"
 					class="hover:bg-accent-1 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm duration-200"
 				>
-					<Icons.infoCircle class="h-4 w-4" />
+					<Info class="h-4 w-4" />
 					<span>Details</span>
 				</a>
 			</div>
@@ -316,7 +314,7 @@
 			>
 				{#if Object.keys(chapters).length === 0}
 					<div class="flex flex-col items-center justify-center py-6">
-						<span class="text-foreground-muted">No assets found</span>
+						<span class="text-muted-foreground">No assets found</span>
 					</div>
 				{:else}
 					{#each Object.keys(chapters) as chapter, i}
@@ -338,7 +336,7 @@
 								<div class="flex w-full flex-row gap-1.5">
 									<span class="shink-0 text-start text-sm font-semibold">{prefix}</span>
 									<span class="grow text-start text-sm font-semibold">{title}</span>
-									<Icons.chevronRight
+									<ChevronRight
 										class={cn(
 											'mt-0.5 h-4 w-4 shrink-0 duration-200',
 											$isSelected(chapter) && 'rotate-90'
@@ -430,10 +428,10 @@
 															<!-- Asset type -->
 															<svelte:component
 																this={asset.assetType === 'video'
-																	? Icons.fileVideo
+																	? FileVideo
 																	: asset.assetType === 'html'
-																	? Icons.fileHtml
-																	: Icons.filePdf}
+																		? FileCode
+																		: FileText}
 																class="h-4 w-4"
 															/>
 															<span>{asset.assetType}</span>
@@ -441,11 +439,11 @@
 
 														<!-- Attachments -->
 														{#if asset.attachments && asset.attachments.length > 0}
-															<AttachmentsPopover
+															<!-- <AttachmentsPopover
 																attachments={asset.attachments}
 																showIcon={false}
 																showCount={false}
-															/>
+															/> -->
 														{/if}
 													</div>
 												</div>
@@ -533,7 +531,7 @@
 		@apply bg-background pointer-events-none cursor-pointer rounded border-2 p-2 duration-150;
 		@apply border-foreground/40;
 		@apply checked:bg-primary checked:hover:bg-primary checked:border-transparent;
-		@apply indeterminate:bg-foreground-muted/50 indeterminate:border-transparent;
+		@apply indeterminate:bg-muted/50 indeterminate:border-transparent;
 		@apply outline-none focus:ring-0 focus:ring-offset-0;
 	}
 </style>

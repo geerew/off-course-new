@@ -1,16 +1,21 @@
 <script lang="ts">
 	import { dev } from '$app/environment';
 
+	// Theme
+	import { ModeWatcher } from 'mode-watcher';
+
 	// Fonts
 	import '@fontsource-variable/inter';
 	import '@fontsource/ubuntu-mono';
 	// Css
-	import '../styles/app.postcss';
+	import '../app.pcss';
 
 	import { TailwindIndicator } from '$components';
 	import { Header } from '$components/header';
 	import { Toaster } from '$components/toaster';
 </script>
+
+<ModeWatcher />
 
 <Toaster />
 
