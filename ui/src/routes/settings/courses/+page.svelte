@@ -303,9 +303,13 @@
 												>
 													<Render of={cell.render()} />
 													{#if ascSort}
-														<ChevronUp class="text-muted-foreground h-4 w-4 stroke-[2]" />
+														<ChevronUp
+															class="text-secondary/80 absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 stroke-[2]"
+														/>
 													{:else if descSort}
-														<ChevronDown class="text-muted-foreground  h-4 w-4 stroke-[2]" />
+														<ChevronDown
+															class="text-secondary/80 absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 stroke-[2]"
+														/>
 													{/if}
 												</div>
 											</th>
@@ -381,7 +385,7 @@
 		@apply w-full min-w-[50rem] border-collapse;
 
 		& > thead > tr > th {
-			@apply whitespace-nowrap border-y p-4 text-left text-sm font-semibold tracking-wide;
+			@apply relative whitespace-nowrap border-y px-6 py-4 text-left text-sm font-semibold tracking-wide;
 			@apply text-muted-foreground;
 		}
 
