@@ -7,6 +7,7 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"strings"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
@@ -85,7 +86,7 @@ func GetCourses(db database.Database, params *database.DatabaseParams) ([]*Cours
 
 	cols := []string{
 		TableCourses() + ".*",
-		TableScans() + ".status",
+		TableScans() + ".status as scan_status",
 		TableCoursesProgress() + ".started",
 		TableCoursesProgress() + ".started_at",
 		TableCoursesProgress() + ".percent",
@@ -97,7 +98,7 @@ func GetCourses(db database.Database, params *database.DatabaseParams) ([]*Cours
 	if params != nil {
 		// ORDER BY
 		if params != nil && len(params.OrderBy) > 0 {
-			builder = builder.OrderBy(params.OrderBy...)
+			builder = coursesOrderBy(builder, params)
 		}
 
 		// WHERE
@@ -155,7 +156,7 @@ func GetCourse(db database.Database, id string) (*Course, error) {
 
 	cols := []string{
 		TableCourses() + ".*",
-		TableScans() + ".status",
+		TableScans() + ".status as scan_status",
 		TableCoursesProgress() + ".started",
 		TableCoursesProgress() + ".started_at",
 		TableCoursesProgress() + ".percent",
@@ -376,6 +377,44 @@ func coursesBaseSelect() sq.SelectBuilder {
 		LeftJoin(TableScans() + " ON " + TableCourses() + ".id = " + TableScans() + ".course_id").
 		LeftJoin(TableCoursesProgress() + " ON " + TableCourses() + ".id = " + TableCoursesProgress() + ".course_id").
 		RemoveColumns()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// coursesOrderBy adds the order by clauses to the select builder. It handles the special case of
+// ordering by `scan_status` by adding a case statement to the order by clause
+func coursesOrderBy(builder sq.SelectBuilder, dbParams *database.DatabaseParams) sq.SelectBuilder {
+	var newOrderBy []string
+
+	for _, orderBy := range dbParams.OrderBy {
+		// Split the order by string into column name and sort direction
+		parts := strings.Fields(orderBy)
+		columnName := parts[0]
+
+		if columnName == "scan_status" {
+			// Determine the sort direction, defaulting to ASC if not specified
+			sortDirection := "ASC"
+			if len(parts) > 1 {
+				sortDirection = strings.ToUpper(parts[1])
+			}
+
+			caseStmt := "CASE " +
+				"WHEN scan_status IS NULL THEN 1 " +
+				"WHEN scan_status = 'waiting' THEN 2 " +
+				"WHEN scan_status = 'processing' THEN 3 " +
+				"END " + sortDirection
+
+			newOrderBy = append(newOrderBy, caseStmt)
+		} else {
+			newOrderBy = append(newOrderBy, orderBy)
+		}
+	}
+
+	if len(newOrderBy) > 0 {
+		builder = builder.OrderBy(newOrderBy...)
+	}
+
+	return builder
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -173,7 +173,7 @@ func Test_GetCourses(t *testing.T) {
 		workingData := NewTestData(t, db, 3, false, 0, 0)
 
 		// ----------------------------
-		// Descending
+		// CREATED_AT DESC
 		// ----------------------------
 		dbParams := &database.DatabaseParams{OrderBy: []string{"created_at desc"}}
 		result, err := GetCourses(db, dbParams)
@@ -182,12 +182,43 @@ func Test_GetCourses(t *testing.T) {
 		assert.Equal(t, workingData[2].ID, result[0].ID)
 
 		// ----------------------------
-		// Ascending
+		// CREATED_AT ASC
 		// ----------------------------
 		result, err = GetCourses(db, &database.DatabaseParams{OrderBy: []string{"created_at asc"}})
 		require.Nil(t, err)
 		require.Len(t, result, 3)
 		assert.Equal(t, workingData[0].ID, result[0].ID)
+
+		// ----------------------------
+		// SCAN_STATUS DESC
+		// ----------------------------
+
+		// Create a scan for course 2 and 3
+		newTestScan(t, db, workingData[1].ID)
+		newTestScan(t, db, workingData[2].ID)
+
+		// Set course 3 to processing
+		_, err = UpdateScanStatus(db, workingData[2].ID, types.ScanStatusProcessing)
+		require.Nil(t, err)
+
+		result, err = GetCourses(db, &database.DatabaseParams{OrderBy: []string{"scan_status desc"}})
+		require.Nil(t, err)
+		require.Len(t, result, 3)
+
+		assert.Equal(t, workingData[0].ID, result[2].ID)
+		assert.Equal(t, workingData[1].ID, result[1].ID)
+		assert.Equal(t, workingData[2].ID, result[0].ID)
+
+		// ----------------------------
+		// SCAN_STATUS ASC
+		// ----------------------------
+		result, err = GetCourses(db, &database.DatabaseParams{OrderBy: []string{"scan_status asc"}})
+		require.Nil(t, err)
+		require.Len(t, result, 3)
+
+		assert.Equal(t, workingData[0].ID, result[0].ID)
+		assert.Equal(t, workingData[1].ID, result[1].ID)
+		assert.Equal(t, workingData[2].ID, result[2].ID)
 
 		// ----------------------------
 		// Error
