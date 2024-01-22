@@ -53,7 +53,7 @@ func setup(t *testing.T) (*appFs.AppFs, database.Database, *jobs.CourseScanner, 
 
 	db := database.NewSqliteDB(&database.SqliteDbConfig{
 		IsDebug: false,
-		DataDir: "./co_data",
+		DataDir: "./oc_data",
 		AppFs:   appFs,
 	})
 

@@ -89,9 +89,16 @@ func (p *Pagination) Offset() int {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Offset calculates and return an offset value
+// TotalItems returns the total number of items
 func (p *Pagination) TotalItems() int {
 	return p.totalItems
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TotalPages returns the total number of pages
+func (p *Pagination) TotalPages() int {
+	return p.totalPages
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

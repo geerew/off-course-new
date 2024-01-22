@@ -6,6 +6,7 @@ require (
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/gofiber/fiber/v2 v2.52.0
 	github.com/pressly/goose/v3 v3.17.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/zerolog v1.31.0
 	github.com/rzajac/zltest v0.12.0
 	github.com/shirou/gopsutil/v3 v3.23.9

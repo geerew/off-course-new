@@ -16,7 +16,7 @@ func Test_Bootstrap(t *testing.T) {
 
 		db := NewSqliteDB(&SqliteDbConfig{
 			IsDebug: false,
-			DataDir: "./co_data",
+			DataDir: "./oc_data",
 			AppFs:   appFs,
 		})
 
@@ -32,7 +32,7 @@ func Test_Bootstrap(t *testing.T) {
 
 		db := NewSqliteDB(&SqliteDbConfig{
 			IsDebug: false,
-			DataDir: "./co_data",
+			DataDir: "./oc_data",
 			AppFs:   appFs,
 		})
 

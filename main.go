@@ -13,6 +13,8 @@ import (
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/jobs"
+	"github.com/geerew/off-course/utils/pagination"
+	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero"
@@ -44,7 +46,7 @@ func main() {
 	// Create DB
 	db := database.NewSqliteDB(&database.SqliteDbConfig{
 		IsDebug: *isDebug,
-		DataDir: "./co_data",
+		DataDir: "./oc_data",
 		AppFs:   appFs,
 	})
 
@@ -70,6 +72,11 @@ func main() {
 		Port:          *port,
 		IsProduction:  isProduction,
 	})
+
+	// TODO: Handle this better...
+	c := cron.New()
+	c.AddFunc("@every 5m", func() { updateCourseAvailability(db) })
+	c.Start()
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -97,4 +104,50 @@ func main() {
 	if err != nil {
 		log.Error().Err(err).Msg("")
 	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func updateCourseAvailability(db database.Database) error {
+	log.Debug().Msg("Updating course availability...")
+	const perPage = 100
+	var page = 1
+
+	// This will be updated after the first fetch
+	var totalPages = 1
+
+	for page <= totalPages {
+		p := pagination.New(page, perPage)
+		paginationParams := &database.DatabaseParams{Pagination: p}
+
+		// Fetch a batch of courses
+		courses, err := models.GetCourses(db, paginationParams)
+		if err != nil {
+			return err
+		}
+
+		// Update total pages after the first fetch
+		if page == 1 {
+			totalPages = p.TotalPages()
+		}
+
+		// Process each course in the batch
+		for _, course := range courses {
+			available := false
+			_, err := os.Stat(course.Path)
+			if err == nil {
+				available = true
+			}
+
+			// Update the course's availability in the database
+			_, err = models.UpdateCourseAvailability(db, course.ID, available)
+			if err != nil {
+				log.Error().Err(err).Msgf("Failed to update availability for course %s", course.ID)
+			}
+		}
+
+		page++
+	}
+
+	return nil
 }

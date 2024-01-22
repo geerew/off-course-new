@@ -28,6 +28,7 @@ func Test_NewFromApi(t *testing.T) {
 		assert.Equal(t, 1, p.page)
 		assert.Equal(t, DefaultPerPage, p.perPage)
 		assert.Equal(t, 1, p.TotalItems())
+		assert.Equal(t, 1, p.TotalPages())
 	})
 
 	t.Run("values", func(t *testing.T) {
@@ -41,7 +42,7 @@ func Test_NewFromApi(t *testing.T) {
 
 		assert.Equal(t, 2, p.page)
 		assert.Equal(t, 24, p.TotalItems())
-		assert.Equal(t, 3, p.totalPages)
+		assert.Equal(t, 3, p.TotalPages())
 	})
 
 	t.Run("invalid values", func(t *testing.T) {
@@ -56,7 +57,7 @@ func Test_NewFromApi(t *testing.T) {
 		assert.Equal(t, 1, p.page)
 		assert.Equal(t, DefaultPerPage, p.perPage)
 		assert.Equal(t, 24, p.TotalItems())
-		assert.Equal(t, 1, p.totalPages)
+		assert.Equal(t, 1, p.TotalPages())
 	})
 }
 
@@ -78,7 +79,7 @@ func Test_New(t *testing.T) {
 
 		assert.Equal(t, 2, p.page)
 		assert.Equal(t, 24, p.TotalItems())
-		assert.Equal(t, 3, p.totalPages)
+		assert.Equal(t, 3, p.TotalPages())
 	})
 
 	t.Run("above max", func(t *testing.T) {
@@ -96,7 +97,7 @@ func Test_New(t *testing.T) {
 		assert.Equal(t, 1, p.page)
 		assert.Equal(t, DefaultPerPage, p.perPage)
 		assert.Equal(t, 24, p.TotalItems())
-		assert.Equal(t, 1, p.totalPages)
+		assert.Equal(t, 1, p.TotalPages())
 	})
 }
 

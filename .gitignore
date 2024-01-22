@@ -3,7 +3,7 @@
 .DS_Store
 
 # DB
-co_data/
+oc_data/
 
 # Test
 coverage-all.out

@@ -24,7 +24,7 @@ func setupCourseScanner(t *testing.T) (*CourseScanner, *zltest.Tester, func(t *t
 
 	db := database.NewSqliteDB(&database.SqliteDbConfig{
 		IsDebug: false,
-		DataDir: "./co_data",
+		DataDir: "./oc_data",
 		AppFs:   appFs,
 	})
 
