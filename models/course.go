@@ -34,10 +34,11 @@ type Course struct {
 	ScanStatus string
 
 	// Course Progress
-	Started     bool
-	StartedAt   types.DateTime
-	Percent     int
-	CompletedAt types.DateTime
+	Started           bool
+	StartedAt         types.DateTime
+	Percent           int
+	CompletedAt       types.DateTime
+	ProgressUpdatedAt types.DateTime
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -91,6 +92,7 @@ func GetCourses(db database.Database, params *database.DatabaseParams) ([]*Cours
 		TableCoursesProgress() + ".started_at",
 		TableCoursesProgress() + ".percent",
 		TableCoursesProgress() + ".completed_at",
+		TableCoursesProgress() + ".updated_at as progress_updated_at",
 	}
 
 	builder := coursesBaseSelect().Columns(cols...)
@@ -161,6 +163,7 @@ func GetCourse(db database.Database, id string) (*Course, error) {
 		TableCoursesProgress() + ".started_at",
 		TableCoursesProgress() + ".percent",
 		TableCoursesProgress() + ".completed_at",
+		TableCoursesProgress() + ".updated_at as progress_updated_at",
 	}
 
 	builder := coursesBaseSelect().
@@ -445,6 +448,7 @@ func scanCourseRow(scannable Scannable) (*Course, error) {
 		&c.StartedAt,
 		&percent,
 		&c.CompletedAt,
+		&c.ProgressUpdatedAt,
 	)
 
 	if err != nil {

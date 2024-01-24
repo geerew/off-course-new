@@ -72,7 +72,7 @@
 
 		if (variant === 'ongoing') {
 			params.started = true;
-			params.orderBy = 'updated_at asc';
+			params.orderBy = 'progress_updated_at desc';
 		}
 
 		return await GetCourses(params)
@@ -156,7 +156,7 @@
 		});
 
 		api.on('resize', () => {
-			// Calculate the scroll by value based upon the screen size
+			// Update the scroll by value based on the new screen size
 			setScrollBy();
 
 			canScrollPrev.set(api.canScrollPrev());
@@ -166,10 +166,6 @@
 		api.on('reInit', () => {
 			canScrollPrev.set(api.canScrollPrev());
 			canScrollNext.set(api.canScrollNext());
-		});
-
-		api.on('settle', () => {
-			console.log("I'm settled");
 		});
 	}
 
@@ -235,9 +231,7 @@
 						<Card.Root class="relative h-full">
 							{#if !course.available}
 								<span
-									class="border-background bg-destructive absolute -right-2 -top-2 z-10 flex h-1 w-1 items-center
-									
-									justify-center rounded-full border-4 p-3 text-center text-sm shadow-xl"
+									class="bg-destructive absolute right-0 top-0 z-10 flex h-1 w-1 items-center justify-center rounded-bl-lg rounded-tr-lg p-3 text-center text-sm"
 								>
 									!
 								</span>
@@ -253,9 +247,11 @@
 										</h3>
 
 										<div class="flex flex-row justify-between">
-											{#if variant === 'latest'}
-												<NiceDate date={course.createdAt} class="shrink-0 pt-3 text-xs" />
-											{/if}
+											<NiceDate
+												date={variant === 'latest' ? course.createdAt : course.progressUpdatedAt}
+												prefix={variant === 'latest' ? 'Added:' : 'Last Viewed:'}
+												class="shrink-0 pt-3 text-xs"
+											/>
 
 											<span class="flex w-full justify-end pt-3 text-xs">{course.percent}%</span>
 										</div>

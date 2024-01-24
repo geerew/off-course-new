@@ -99,7 +99,8 @@ export const CourseSchema = merge([
 		started: boolean(),
 		startedAt: string(),
 		percent: number(),
-		completedAt: string()
+		completedAt: string(),
+		progressUpdatedAt: string()
 	})
 ]);
 

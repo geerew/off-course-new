@@ -11,7 +11,7 @@
 	const { orientation } = getEmblaContext('<Carousel.Content/>');
 </script>
 
-<div class="">
+<div class="overflow-hidden">
 	<div
 		class={cn('flex', $orientation === 'horizontal' ? '-ml-4' : '-mt-4 flex-col', className)}
 		data-embla-container=""

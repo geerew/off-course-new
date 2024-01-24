@@ -40,10 +40,11 @@ type courseResponse struct {
 	ScanStatus string `json:"scanStatus"`
 
 	// Progress
-	Started     bool           `json:"started"`
-	StartedAt   types.DateTime `json:"startedAt"`
-	Percent     int            `json:"percent"`
-	CompletedAt types.DateTime `json:"completedAt"`
+	Started           bool           `json:"started"`
+	StartedAt         types.DateTime `json:"startedAt"`
+	Percent           int            `json:"percent"`
+	CompletedAt       types.DateTime `json:"completedAt"`
+	ProgressUpdatedAt types.DateTime `json:"progressUpdatedAt"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -466,10 +467,11 @@ func courseResponseHelper(appFs *appFs.AppFs, courses []*models.Course) []*cours
 			ScanStatus: course.ScanStatus,
 
 			// Progress
-			Started:     course.Started,
-			StartedAt:   course.StartedAt,
-			Percent:     course.Percent,
-			CompletedAt: course.CompletedAt,
+			Started:           course.Started,
+			StartedAt:         course.StartedAt,
+			Percent:           course.Percent,
+			CompletedAt:       course.CompletedAt,
+			ProgressUpdatedAt: course.ProgressUpdatedAt,
 		})
 	}
 

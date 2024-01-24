@@ -9,6 +9,7 @@
 	// Exports
 	// ----------------------
 	export let date: string;
+	export let prefix: string = '';
 	export { className as class };
 
 	// ----------------------
@@ -26,7 +27,7 @@
 </script>
 
 <div class={cn('text-muted-foreground', className)}>
-	<span title={formattedDate}>
+	<span title={prefix !== '' ? `${prefix} ${formattedDate}` : formattedDate}>
 		{ago(new Date(date))}
 	</span>
 </div>
