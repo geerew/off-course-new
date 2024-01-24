@@ -220,7 +220,9 @@
 		<Error class="text-muted min-h-[6rem] p-5 text-sm" imgClass="h-6 w-6" />
 	{:else if courses.length === 0}
 		<div class="flex min-h-[6rem] w-full flex-grow flex-col place-content-center items-center p-10">
-			<span class="text-muted-foreground">No courses have been added.</span>
+			<span class="text-muted-foreground">
+				{variant === 'latest' ? 'No courses have been added' : 'You have not started any courses'}
+			</span>
 		</div>
 	{:else}
 		<Carousel.Root bind:api opts={{ watchSlides: true, align: 'start' }}>
