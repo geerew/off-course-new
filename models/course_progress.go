@@ -175,8 +175,8 @@ func CreateCourseProgress(db database.Database, cp *CourseProgress) error {
 // UpdateCourseProgressStarted updates `started` and `started_at`. If `started` is true,
 // `started_at` is set to the current time. If `started` is false `started_at` is set to null
 //
-// A course will be set to started when an assert is marked as completed. It is also called when
-// a video assets position is updated
+// A course will be set to started when an assert is marked as completed or when a video asset
+// position is updated
 func UpdateCourseProgressStarted(db database.Database, courseId string, started bool) (*CourseProgress, error) {
 	if courseId == "" {
 		return nil, errors.New("id cannot be empty")
@@ -295,6 +295,42 @@ func UpdateCourseProgressPercent(db database.Database, courseId string) (*Course
 		cp.Started = true
 		cp.StartedAt = updatedAt
 	}
+
+	return cp, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// UpdateCourseProgressUpdatedAt updates `updated_at`
+func UpdateCourseProgressUpdatedAt(db database.Database, courseId string) (*CourseProgress, error) {
+	if courseId == "" {
+		return nil, errors.New("id cannot be empty")
+	}
+
+	updatedAt := types.NowDateTime()
+
+	cp, err := GetCourseProgress(db, courseId)
+	if err != nil {
+		return nil, err
+	}
+
+	builder := sq.StatementBuilder.
+		PlaceholderFormat(sq.Question).
+		Update(TableCoursesProgress()).
+		Set("updated_at", updatedAt).
+		Where("id = ?", cp.ID)
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = db.Exec(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	cp.UpdatedAt = updatedAt
 
 	return cp, nil
 }

@@ -522,3 +522,47 @@ func Test_UpdateCourseProgressPercent(t *testing.T) {
 		require.ErrorContains(t, err, "no such table: "+TableCoursesProgress())
 	})
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_UpdateCourseProgressUpdatedAt(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		workingData := NewTestData(t, db, 1, false, 0, 0)
+
+		updatedCp, err := UpdateCourseProgressUpdatedAt(db, workingData[0].ID)
+		require.Nil(t, err)
+		assert.NotEqual(t, workingData[0].UpdatedAt, updatedCp.UpdatedAt)
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		updatedCp, err := UpdateCourseProgressUpdatedAt(db, "")
+		assert.EqualError(t, err, "id cannot be empty")
+		assert.Nil(t, updatedCp)
+	})
+
+	t.Run("no course with id", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		updatedCp, err := UpdateCourseProgressUpdatedAt(db, "1234")
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, updatedCp)
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, db, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := db.Exec("DROP TABLE IF EXISTS " + TableCoursesProgress())
+		require.Nil(t, err)
+
+		_, err = UpdateCourseProgressUpdatedAt(db, "1234")
+		require.ErrorContains(t, err, "no such table: "+TableCoursesProgress())
+	})
+}

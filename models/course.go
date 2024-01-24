@@ -429,8 +429,6 @@ func scanCourseRow(scannable Scannable) (*Course, error) {
 	// Nullable fields
 	var cardPath sql.NullString
 	var scanStatus sql.NullString
-	var started sql.NullBool
-	var percent sql.NullInt16
 
 	err := scannable.Scan(
 		// Course
@@ -444,9 +442,9 @@ func scanCourseRow(scannable Scannable) (*Course, error) {
 		// Scan
 		&scanStatus,
 		// Course progress
-		&started,
+		&c.Started,
 		&c.StartedAt,
-		&percent,
+		&c.Percent,
 		&c.CompletedAt,
 		&c.ProgressUpdatedAt,
 	)
@@ -461,12 +459,6 @@ func scanCourseRow(scannable Scannable) (*Course, error) {
 
 	if scanStatus.Valid {
 		c.ScanStatus = scanStatus.String
-	}
-
-	c.Started = started.Bool
-
-	if percent.Valid {
-		c.Percent = int(percent.Int16)
 	}
 
 	return &c, nil

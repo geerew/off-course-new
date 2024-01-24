@@ -26,6 +26,9 @@ type AssetProgress struct {
 	VideoPos    int
 	Completed   bool
 	CompletedAt types.DateTime
+
+	// Course progress information for convenience
+	CourseStarted bool
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -67,10 +70,9 @@ func CountAssetsProgress(db database.Database, params *database.DatabaseParams) 
 func GetAssetsProgress(db database.Database, params *database.DatabaseParams) ([]*AssetProgress, error) {
 	var aps []*AssetProgress
 
-	// Start building the query
-	builder := assetsProgressBaseSelect().Columns(TableAssetsProgress() + ".*")
+	builder := assetsProgressBaseSelect().
+		Columns(TableAssetsProgress()+".*", TableCoursesProgress()+".started as course_started")
 
-	// Add additional clauses
 	if params != nil {
 		// ORDER BY
 		if params != nil && len(params.OrderBy) > 0 {
@@ -127,7 +129,7 @@ func GetAssetProgress(db database.Database, assetId string) (*AssetProgress, err
 	}
 
 	builder := assetsProgressBaseSelect().
-		Columns(TableAssetsProgress() + ".*").
+		Columns(TableAssetsProgress()+".*", TableCoursesProgress()+".started as course_started").
 		Where(sq.Eq{TableAssetsProgress() + ".asset_id": assetId})
 
 	query, args, err := builder.ToSql()
@@ -211,14 +213,14 @@ func UpdateAssetProgressVideoPos(db database.Database, assetId string, position 
 			return nil, err
 		}
 
-		// Mark the course as started when the video progress is > 0. When the course is already
-		// started, this will do nothing
-		if position > 0 {
-			_, err := UpdateCourseProgressStarted(db, asset.CourseID, true)
+		// Mark the course as started
+		if !ap.CourseStarted {
+			_, err := UpdateCourseProgressStarted(db, ap.CourseID, true)
 			return ap, err
 		}
 
-		return ap, nil
+		_, err = UpdateCourseProgressUpdatedAt(db, ap.CourseID)
+		return ap, err
 	}
 
 	// --------------------------------
@@ -252,14 +254,17 @@ func UpdateAssetProgressVideoPos(db database.Database, assetId string, position 
 	ap.VideoPos = position
 	ap.UpdatedAt = updatedAt
 
-	// Mark the course as started when the video progress is > 0. When the course is already
-	// started, this will do nothing
-	if position > 0 {
+	// Mark the course as started. This will also update the updated_at timestamp for the course
+	// progress
+	if !ap.CourseStarted {
 		_, err := UpdateCourseProgressStarted(db, ap.CourseID, true)
 		return ap, err
 	}
 
-	return ap, nil
+	// If the course is already started, just update the updated_at timestamp for the course
+	// progress
+	_, err = UpdateCourseProgressUpdatedAt(db, ap.CourseID)
+	return ap, err
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -361,6 +366,7 @@ func assetsProgressBaseSelect() sq.SelectBuilder {
 		PlaceholderFormat(sq.Question).
 		Select("").
 		From(TableAssetsProgress()).
+		LeftJoin(TableCoursesProgress() + " ON " + TableAssetsProgress() + ".course_id = " + TableCoursesProgress() + ".course_id").
 		RemoveColumns()
 }
 
@@ -379,6 +385,7 @@ func scanAssetProgressRow(scannable Scannable) (*AssetProgress, error) {
 		&ap.CompletedAt,
 		&ap.CreatedAt,
 		&ap.UpdatedAt,
+		&ap.CourseStarted,
 	)
 
 	if err != nil {
