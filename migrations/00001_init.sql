@@ -45,7 +45,7 @@ CREATE TABLE assets_progress (
 	id           TEXT PRIMARY KEY NOT NULL,
 	asset_id     TEXT NOT NULL UNIQUE,
 	course_id     TEXT NOT NULL,
-	video_pos    INTEGER NOT NULL DEFAULT 0,
+	video_pos    INTEGER NOT NULL DEFAULT -1,
 	completed	 BOOLEAN NOT NULL DEFAULT FALSE,
 	completed_at TEXT,
 	created_at   TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
