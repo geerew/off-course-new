@@ -65,13 +65,16 @@
 
 		const currentSecond = Math.floor(currentTime);
 
+		// Do nothing when the currentSecond is 0
+		if (currentSecond === 0) return;
+
 		if (currentSecond !== lastLoggedSecond) {
 			// Update the current progress
-			if (currentSecond % 5 === 0) progressDispatch('progress', currentSecond);
+			if (currentSecond % 3 === 0) progressDispatch('progress', currentSecond);
 
 			// When the currentSecond is greater than 0 and the currentSecond is greater than the
 			// duration - 5, dispatch the finished event. This will mark the video as finished
-			if (currentSecond > 0 && currentSecond >= videoDuration - 5 && !endedTrigger) {
+			if (currentSecond > 0 && currentSecond >= videoDuration - 10 && !endedTrigger) {
 				dispatch('finished', true);
 				endedTrigger = true;
 			}
@@ -112,7 +115,7 @@
 	onMount(() => {
 		player = videojs(videoEl, {
 			controls: true,
-			autoplay: true,
+			autoplay: false,
 			preload: 'auto',
 			fluid: true,
 

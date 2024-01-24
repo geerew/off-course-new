@@ -469,10 +469,6 @@
 							if (!selectedAsset) return;
 
 							// Set the course as started manually (This will automatically happen in the backend)
-							if (e.detail > 5 && !course.started) {
-								course.started = true;
-							}
-
 							updateAssetVideoPos(selectedAsset.id, e.detail);
 						}}
 						on:finished={() => {
