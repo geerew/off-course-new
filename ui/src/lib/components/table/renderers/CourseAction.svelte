@@ -40,7 +40,7 @@
 
 		<DropdownMenu.Item
 			class="cursor-pointer gap-2.5"
-			href="/settings/courses/course?id={course.id}"
+			href="/settings/courses/details?id={course.id}"
 		>
 			<BookText class="h-4 w-4" />
 			Details

@@ -7,18 +7,8 @@
 	import SettingsMenu from './SettingsMenu.svelte';
 </script>
 
-<header
-	class={cn(
-		'w-full border-b',
-		$page.url.pathname.startsWith('/settings') ? '' : 'h-[var(--header-height)]'
-	)}
->
-	<div
-		class={cn(
-			'container flex items-center justify-between gap-8',
-			$page.url.pathname.startsWith('/settings') ? 'h-16' : 'h-full'
-		)}
-	>
+<header class={cn('w-full border-b')}>
+	<div class="container flex h-16 items-center justify-between gap-8">
 		<div class="mr-3">
 			<a href="/" class="mr-6 flex items-center gap-2">
 				<Hexagon class="fill-primary h-8 w-8 rotate-90 stroke-none" />

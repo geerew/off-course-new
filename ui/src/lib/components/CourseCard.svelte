@@ -1,22 +1,15 @@
 <script lang="ts">
+	import { AspectRatio } from '$components/ui/aspect-ratio';
 	import { COURSE_API } from '$lib/api';
-	import type { ClassName } from '$lib/types/general';
 	import type { Course } from '$lib/types/models';
-	import { cn } from '$lib/utils';
 	import { createAvatar } from '@melt-ui/svelte';
 	import { Play } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
-	let className: ClassName = undefined;
-
 	// ----------------------
 	// Exports
 	// ----------------------
-
 	export let course: Course;
-	export { className as class };
-	export let imgClass: ClassName = undefined;
-	export let fallbackClass: ClassName = undefined;
 
 	// ----------------------
 	// Variables
@@ -62,18 +55,15 @@
 	});
 </script>
 
-<div class={className}>
-	<img {...$image} alt="Course Card" class={cn('rounded-md', imgClass)} />
+<AspectRatio ratio={16 / 9} class="bg-muted mx-h-48 overflow-hidden">
+	<!-- Image -->
+	<img {...$image} alt="Course Card" class="w-full" />
 
-	<slot>
-		<div
-			class={cn(
-				'bg-accent-1 flex h-48 w-[20rem] !cursor-default place-content-center items-center rounded-md lg:w-full',
-				fallbackClass
-			)}
-			{...$fallback}
-		>
-			<Play class="h-12 w-12 fill-gray-400 text-gray-400" />
-		</div>
-	</slot>
-</div>
+	<!-- Fallback -->
+	<div
+		class="bg-background mx-auto flex h-full w-full place-content-center items-center lg:w-full"
+		{...$fallback}
+	>
+		<Play class="fill-primary text-primary h-12 w-12 opacity-60" />
+	</div>
+</AspectRatio>
