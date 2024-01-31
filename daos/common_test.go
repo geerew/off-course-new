@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func setup(t *testing.T) (*appFs.AppFs, database.Database) {
 	loggerHook := zltest.New(t)
 	log.Logger = zerolog.New(loggerHook).Level(zerolog.DebugLevel)

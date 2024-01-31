@@ -1,7 +1,6 @@
 package jobs
 
 import (
-	"os"
 	"testing"
 
 	"github.com/geerew/off-course/database"
@@ -16,30 +15,25 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // SetupCourseScanner sets up a course scanner for testing
-func setupCourseScanner(t *testing.T) (*CourseScanner, *zltest.Tester, func(t *testing.T)) {
+func setupCourseScanner(t *testing.T) (*CourseScanner, database.Database, *zltest.Tester) {
 	loggerHook := zltest.New(t)
 	log.Logger = zerolog.New(loggerHook).Level(zerolog.DebugLevel)
 
 	appFs := appFs.NewAppFs(afero.NewMemMapFs())
 
 	db := database.NewSqliteDB(&database.SqliteDbConfig{
-		IsDebug: false,
-		DataDir: "./oc_data",
-		AppFs:   appFs,
+		IsDebug:  false,
+		DataDir:  "./oc_data",
+		AppFs:    appFs,
+		InMemory: true,
 	})
 
-	// Force DB to be in-memory
-	os.Setenv("OC_InMemDb", "true")
-
-	require.Nil(t, db.Bootstrap())
+	require.NoError(t, db.Bootstrap(), "Failed to bootstrap database")
 
 	courseScanner := NewCourseScanner(&CourseScannerConfig{
 		Db:    db,
 		AppFs: appFs,
 	})
 
-	// teardown
-	return courseScanner, loggerHook, func(t *testing.T) {
-		os.Unsetenv("OC_InMemDb")
-	}
+	return courseScanner, db, loggerHook
 }

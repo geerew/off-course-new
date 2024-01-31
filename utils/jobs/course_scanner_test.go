@@ -8,7 +8,8 @@ import (
 	"testing"
 	"time"
 
-	sq "github.com/Masterminds/squirrel"
+	"github.com/Masterminds/squirrel"
+	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/types"
@@ -21,10 +22,9 @@ import (
 
 func Test_Add(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
 
 		scan, err := scanner.Add(workingData[0].ID)
 		require.Nil(t, err)
@@ -32,10 +32,9 @@ func Test_Add(t *testing.T) {
 	})
 
 	t.Run("duplicate", func(t *testing.T) {
-		scanner, lh, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, lh := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
 
 		scan, err := scanner.Add(workingData[0].ID)
 		assert.Nil(t, err)
@@ -51,8 +50,7 @@ func Test_Add(t *testing.T) {
 	})
 
 	t.Run("invalid course", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, _, _ := setupCourseScanner(t)
 
 		scan, err := scanner.Add("test")
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -60,10 +58,9 @@ func Test_Add(t *testing.T) {
 	})
 
 	t.Run("not blocked", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 2, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 2, false, 0, 0)
 
 		scan1, err := scanner.Add(workingData[0].ID)
 		require.Nil(t, err)
@@ -75,16 +72,15 @@ func Test_Add(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
 
-		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableScans())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableScans())
 		require.Nil(t, err)
 
 		scan, err := scanner.Add(workingData[0].ID)
-		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", models.TableScans()))
+		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", daos.TableScans()))
 		assert.Nil(t, scan)
 	})
 }
@@ -93,10 +89,9 @@ func Test_Add(t *testing.T) {
 
 func Test_Worker(t *testing.T) {
 	t.Run("single job", func(t *testing.T) {
-		scanner, lh, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, lh := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
 
 		// Start the worker
 		go scanner.Worker(func(*CourseScanner, *models.Scan) error {
@@ -112,7 +107,7 @@ func Test_Worker(t *testing.T) {
 		time.Sleep(time.Millisecond * 3)
 
 		// Assert the scan job was deleted from the DB
-		s, err := models.GetScan(scanner.db, workingData[0].ID)
+		s, err := scanner.scanDao.Get(workingData[0].ID)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, s)
 
@@ -125,10 +120,9 @@ func Test_Worker(t *testing.T) {
 	})
 
 	t.Run("several jobs", func(t *testing.T) {
-		scanner, lh, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, lh := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 3, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 3, false, 0, 0)
 
 		for _, course := range workingData {
 			_, err := scanner.Add(course.ID)
@@ -145,7 +139,7 @@ func Test_Worker(t *testing.T) {
 
 		// Assert the scan job was deleted from the DB
 		for _, course := range workingData {
-			s, err := models.GetScan(scanner.db, course.ID)
+			s, err := scanner.scanDao.Get(course.ID)
 			require.ErrorIs(t, err, sql.ErrNoRows)
 			assert.Nil(t, s)
 		}
@@ -159,10 +153,9 @@ func Test_Worker(t *testing.T) {
 	})
 
 	t.Run("error processing", func(t *testing.T) {
-		scanner, lh, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, lh := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
 
 		// Start the worker
 		go scanner.Worker(func(*CourseScanner, *models.Scan) error {
@@ -186,10 +179,9 @@ func Test_Worker(t *testing.T) {
 	})
 
 	t.Run("scan error", func(t *testing.T) {
-		scanner, lh, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, lh := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
 
 		// Add the job
 		scan, err := scanner.Add(workingData[0].ID)
@@ -197,7 +189,7 @@ func Test_Worker(t *testing.T) {
 		assert.Equal(t, scan.CourseID, workingData[0].ID)
 
 		// Drop the DB
-		_, err = scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableScans())
+		_, err = db.Exec("DROP TABLE IF EXISTS " + daos.TableScans())
 		require.Nil(t, err)
 
 		// Start the worker
@@ -219,35 +211,33 @@ func Test_Worker(t *testing.T) {
 
 func Test_CourseProcessor(t *testing.T) {
 	t.Run("scan nil", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, _, _ := setupCourseScanner(t)
 
 		err := CourseProcessor(scanner, nil)
 		require.EqualError(t, err, "scan cannot be empty")
 	})
 
 	t.Run("error getting course", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
 
 		// Drop the table
-		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
 		require.Nil(t, err)
 
 		err = CourseProcessor(scanner, workingData[0].Scan)
-		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", models.TableCourses()))
+		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", daos.TableCourses()))
 	})
 
 	t.Run("course unavailable", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
 
 		// Mark the course as available
-		_, err := models.UpdateCourseAvailability(scanner.db, workingData[0].ID, true)
+		workingData[0].Available = true
+		err := scanner.courseDao.Update(workingData[0].Course)
 		require.Nil(t, err)
 
 		err = CourseProcessor(scanner, workingData[0].Scan)
@@ -255,13 +245,12 @@ func Test_CourseProcessor(t *testing.T) {
 	})
 
 	t.Run("card", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
 		// ----------------------------
 		// Found card
 		// ----------------------------
-		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
 		require.Empty(t, workingData[0].CardPath)
 
 		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
@@ -270,14 +259,14 @@ func Test_CourseProcessor(t *testing.T) {
 		err := CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		c, err := models.GetCourse(scanner.db, workingData[0].ID)
+		c, err := scanner.courseDao.Get(workingData[0].ID)
 		require.Nil(t, err)
 		assert.Equal(t, fmt.Sprintf("%s/card.jpg", workingData[0].Path), c.CardPath)
 
 		// ----------------------------
 		// Ignore card in chapter
 		// ----------------------------
-		workingData = models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		workingData = daos.NewTestData(t, db, 1, true, 0, 0)
 		require.Empty(t, workingData[0].CardPath)
 
 		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
@@ -286,7 +275,7 @@ func Test_CourseProcessor(t *testing.T) {
 		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		c, err = models.GetCourse(scanner.db, workingData[0].ID)
+		c, err = scanner.courseDao.Get(workingData[0].ID)
 		require.Nil(t, err)
 		assert.Empty(t, c.CardPath)
 		assert.Empty(t, workingData[0].CardPath)
@@ -294,7 +283,7 @@ func Test_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Multiple cards types
 		// ----------------------------
-		workingData = models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		workingData = daos.NewTestData(t, db, 1, true, 0, 0)
 		require.Empty(t, workingData[0].CardPath)
 
 		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
@@ -304,23 +293,22 @@ func Test_CourseProcessor(t *testing.T) {
 		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		c, err = models.GetCourse(scanner.db, workingData[0].ID)
+		c, err = scanner.courseDao.Get(workingData[0].ID)
 		require.Nil(t, err)
 		assert.Equal(t, fmt.Sprintf("%s/card.jpg", workingData[0].Path), c.CardPath)
 	})
 
 	t.Run("card error", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
 		require.Empty(t, workingData[0].CardPath)
 
 		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
 		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", workingData[0].Path))
 
 		// Rename the card_path column
-		_, err := scanner.db.Exec(fmt.Sprintf("ALTER TABLE %s RENAME COLUMN card_path TO ignore_card_path", models.TableCourses()))
+		_, err := db.Exec(fmt.Sprintf("ALTER TABLE %s RENAME COLUMN card_path TO ignore_card_path", daos.TableCourses()))
 		require.Nil(t, err)
 
 		err = CourseProcessor(scanner, workingData[0].Scan)
@@ -328,10 +316,9 @@ func Test_CourseProcessor(t *testing.T) {
 	})
 
 	t.Run("ignore files", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
 
 		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
 		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file 1", workingData[0].Path))
@@ -349,20 +336,19 @@ func Test_CourseProcessor(t *testing.T) {
 		err := CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		assets, err := models.GetAssets(scanner.db, &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": workingData[0].ID}})
+		assets, err := scanner.assetDao.List(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": workingData[0].ID}})
 		require.Nil(t, err)
 		require.Len(t, assets, 0)
 	})
 
 	t.Run("assets", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
 
 		dbParams := &database.DatabaseParams{
-			OrderBy: []string{"chapter asc", "prefix asc"},
-			Where:   sq.Eq{models.TableAssets() + ".course_id": workingData[0].ID},
+			OrderBy: []string{daos.TableAssets() + ".chapter asc", daos.TableAssets() + ".prefix asc"},
+			Where:   squirrel.Eq{daos.TableAssets() + ".course_id": workingData[0].ID},
 		}
 
 		// ----------------------------
@@ -376,7 +362,7 @@ func Test_CourseProcessor(t *testing.T) {
 		err := CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		assets, err := models.GetAssets(scanner.db, dbParams)
+		assets, err := scanner.assetDao.List(dbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 2)
 
@@ -400,7 +386,7 @@ func Test_CourseProcessor(t *testing.T) {
 		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		assets, err = models.GetAssets(scanner.db, dbParams)
+		assets, err = scanner.assetDao.List(dbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 
@@ -418,7 +404,7 @@ func Test_CourseProcessor(t *testing.T) {
 		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		assets, err = models.GetAssets(scanner.db, dbParams)
+		assets, err = scanner.assetDao.List(dbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 2)
 
@@ -436,33 +422,31 @@ func Test_CourseProcessor(t *testing.T) {
 	})
 
 	t.Run("assets error", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
 
 		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
 		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mkv", workingData[0].Path))
 
-		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableAssets())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
 		err = CourseProcessor(scanner, workingData[0].Scan)
-		require.ErrorContains(t, err, "no such table: "+models.TableAssets())
+		require.ErrorContains(t, err, "no such table: "+daos.TableAssets())
 	})
 
 	t.Run("attachments", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
 
 		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
 
-		assetDbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": workingData[0].ID}}
+		assetDbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": workingData[0].ID}}
 		attachmentDbParams := &database.DatabaseParams{
 			OrderBy: []string{"created_at asc"},
-			Where:   sq.Eq{models.TableAttachments() + ".course_id": workingData[0].ID},
+			Where:   squirrel.Eq{daos.TableAttachments() + ".course_id": workingData[0].ID},
 		}
 
 		// ----------------------------
@@ -474,7 +458,7 @@ func Test_CourseProcessor(t *testing.T) {
 		err := CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		assets, err := models.GetAssets(scanner.db, assetDbParams)
+		assets, err := scanner.assetDao.List(assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, "video", assets[0].Title)
@@ -483,7 +467,7 @@ func Test_CourseProcessor(t *testing.T) {
 		assert.Equal(t, fmt.Sprintf("%s/01 video.mp4", workingData[0].Path), assets[0].Path)
 		assert.True(t, assets[0].Type.IsVideo())
 
-		attachments, err := models.GetAttachments(scanner.db, attachmentDbParams)
+		attachments, err := scanner.attachmentDao.List(attachmentDbParams)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
 		assert.Equal(t, "info.txt", attachments[0].Title)
@@ -498,12 +482,12 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert the asset
-		assets, err = models.GetAssets(scanner.db, assetDbParams)
+		assets, err = scanner.assetDao.List(assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		require.Len(t, assets[0].Attachments, 2)
 
-		attachments, err = models.GetAttachments(scanner.db, attachmentDbParams)
+		attachments, err = scanner.attachmentDao.List(attachmentDbParams)
 		require.Nil(t, err)
 		require.Len(t, attachments, 2)
 		assert.Equal(t, "info.txt", attachments[0].Title)
@@ -520,13 +504,13 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 
 		// Assert the asset
-		assets, err = models.GetAssets(scanner.db, assetDbParams)
+		assets, err = scanner.assetDao.List(assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, "video", assets[0].Title)
 		require.Len(t, assets[0].Attachments, 1)
 
-		attachments, err = models.GetAttachments(scanner.db, attachmentDbParams)
+		attachments, err = scanner.attachmentDao.List(attachmentDbParams)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
 		assert.Equal(t, "code.zip", attachments[0].Title)
@@ -534,39 +518,37 @@ func Test_CourseProcessor(t *testing.T) {
 	})
 
 	t.Run("attachments error", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
 
 		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
 		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mkv", workingData[0].Path))
 		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 info", workingData[0].Path))
 
 		// Drop the attachments table
-		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableAttachments())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAttachments())
 		require.Nil(t, err)
 
 		err = CourseProcessor(scanner, workingData[0].Scan)
-		require.ErrorContains(t, err, "no such table: "+models.TableAttachments())
+		require.ErrorContains(t, err, "no such table: "+daos.TableAttachments())
 	})
 
 	t.Run("asset priority", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
 		// ----------------------------
 		// Priority is VIDEO -> HTML -> PDF
 		// ----------------------------
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
 
 		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
 
-		assetDbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": workingData[0].ID}}
+		assetDbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": workingData[0].ID}}
 		attachmentDbParams := &database.DatabaseParams{
 			OrderBy: []string{"created_at asc"},
-			Where:   sq.Eq{models.TableAttachments() + ".course_id": workingData[0].ID},
+			Where:   squirrel.Eq{daos.TableAttachments() + ".course_id": workingData[0].ID},
 		}
 
 		// ----------------------------
@@ -578,7 +560,7 @@ func Test_CourseProcessor(t *testing.T) {
 		err := CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		assets, err := models.GetAssets(scanner.db, assetDbParams)
+		assets, err := scanner.assetDao.List(assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, pdfFile, assets[0].Path)
@@ -594,14 +576,14 @@ func Test_CourseProcessor(t *testing.T) {
 		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		assets, err = models.GetAssets(scanner.db, assetDbParams)
+		assets, err = scanner.assetDao.List(assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, htmlFile, assets[0].Path)
 		assert.True(t, assets[0].Type.IsHTML())
 		require.Len(t, assets[0].Attachments, 1)
 
-		attachments, err := models.GetAttachments(scanner.db, attachmentDbParams)
+		attachments, err := scanner.attachmentDao.List(attachmentDbParams)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
 		assert.Equal(t, pdfFile, attachments[0].Path)
@@ -615,14 +597,14 @@ func Test_CourseProcessor(t *testing.T) {
 		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		assets, err = models.GetAssets(scanner.db, assetDbParams)
+		assets, err = scanner.assetDao.List(assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, videoFile, assets[0].Path)
 		assert.True(t, assets[0].Type.IsVideo())
 		require.Len(t, assets[0].Attachments, 2)
 
-		attachments, err = models.GetAttachments(scanner.db, attachmentDbParams)
+		attachments, err = scanner.attachmentDao.List(attachmentDbParams)
 		require.Nil(t, err)
 		require.Len(t, attachments, 2)
 		assert.Equal(t, pdfFile, attachments[0].Path)
@@ -637,14 +619,14 @@ func Test_CourseProcessor(t *testing.T) {
 		err = CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		assets, err = models.GetAssets(scanner.db, assetDbParams)
+		assets, err = scanner.assetDao.List(assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, videoFile, assets[0].Path)
 		assert.True(t, assets[0].Type.IsVideo())
 		require.Len(t, assets[0].Attachments, 3)
 
-		attachments, err = models.GetAttachments(scanner.db, attachmentDbParams)
+		attachments, err = scanner.attachmentDao.List(attachmentDbParams)
 		require.Nil(t, err)
 		require.Len(t, attachments, 3)
 		assert.Equal(t, pdfFile, attachments[0].Path)
@@ -653,17 +635,16 @@ func Test_CourseProcessor(t *testing.T) {
 	})
 
 	t.Run("course updated", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 1, 10)
+		workingData := daos.NewTestData(t, db, 1, true, 1, 10)
 
 		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
 
 		err := CourseProcessor(scanner, workingData[0].Scan)
 		require.Nil(t, err)
 
-		updatedCourse, err := models.GetCourse(scanner.db, workingData[0].ID)
+		updatedCourse, err := scanner.courseDao.Get(workingData[0].ID)
 		require.Nil(t, err)
 		assert.NotEqual(t, workingData[0].UpdatedAt, updatedCourse.UpdatedAt)
 	})
@@ -786,40 +767,38 @@ func Test_IsCard(t *testing.T) {
 
 func Test_UpdateAssets(t *testing.T) {
 	t.Run("nothing added or deleted", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 10, 0)
+		workingData := daos.NewTestData(t, db, 1, true, 10, 0)
 
-		err := updateAssets(scanner.db, workingData[0].ID, workingData[0].Assets)
+		err := updateAssets(scanner.assetDao, workingData[0].ID, workingData[0].Assets)
 		require.Nil(t, err)
 
-		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": workingData[0].ID}}
-		count, err := models.CountAssets(scanner.db, dbParams)
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": workingData[0].ID}}
+		count, err := scanner.assetDao.Count(dbParams)
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 	})
 
 	t.Run("add", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 12, 0)
+		workingData := daos.NewTestData(t, db, 1, true, 12, 0)
 
 		// Delete the assets (so we can add them again)
 		for _, a := range workingData[0].Assets {
-			require.Nil(t, models.DeleteAsset(scanner.db, a.ID))
+			require.Nil(t, scanner.assetDao.Delete(a.ID))
 		}
 
-		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": workingData[0].ID}}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": workingData[0].ID}}
 
 		// ----------------------------
 		// Add 10 assets
 		// ----------------------------
-		err := updateAssets(scanner.db, workingData[0].ID, workingData[0].Assets[:10])
+		err := updateAssets(scanner.assetDao, workingData[0].ID, workingData[0].Assets[:10])
 		require.Nil(t, err)
 
-		count, err := models.CountAssets(scanner.db, dbParams)
+		count, err := scanner.assetDao.Count(dbParams)
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 
@@ -829,10 +808,10 @@ func Test_UpdateAssets(t *testing.T) {
 		workingData[0].Assets[10].ID = ""
 		workingData[0].Assets[11].ID = ""
 
-		err = updateAssets(scanner.db, workingData[0].ID, workingData[0].Assets)
+		err = updateAssets(scanner.assetDao, workingData[0].ID, workingData[0].Assets)
 		require.Nil(t, err)
 
-		count, err = models.CountAssets(scanner.db, dbParams)
+		count, err = scanner.assetDao.Count(dbParams)
 		require.Nil(t, err)
 		require.Equal(t, 12, count)
 
@@ -843,22 +822,21 @@ func Test_UpdateAssets(t *testing.T) {
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 12, 0)
+		workingData := daos.NewTestData(t, db, 1, true, 12, 0)
 
-		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": workingData[0].ID}}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": workingData[0].ID}}
 
 		// ----------------------------
 		// Remove 2 assets
 		// ----------------------------
 		workingData[0].Assets = workingData[0].Assets[2:]
 
-		err := updateAssets(scanner.db, workingData[0].ID, workingData[0].Assets)
+		err := updateAssets(scanner.assetDao, workingData[0].ID, workingData[0].Assets)
 		require.Nil(t, err)
 
-		count, err := models.CountAssets(scanner.db, dbParams)
+		count, err := scanner.assetDao.Count(dbParams)
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 
@@ -867,24 +845,23 @@ func Test_UpdateAssets(t *testing.T) {
 		// ----------------------------
 		workingData[0].Assets = workingData[0].Assets[2:]
 
-		err = updateAssets(scanner.db, workingData[0].ID, workingData[0].Assets)
+		err = updateAssets(scanner.assetDao, workingData[0].ID, workingData[0].Assets)
 		require.Nil(t, err)
 
-		count, err = models.CountAssets(scanner.db, dbParams)
+		count, err = scanner.assetDao.Count(dbParams)
 		require.Nil(t, err)
 		require.Equal(t, 8, count)
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
 		// Drop the table
-		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableAssets())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
-		err = updateAssets(scanner.db, "1234", []*models.Asset{})
-		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", models.TableAssets()))
+		err = updateAssets(scanner.assetDao, "1234", []*models.Asset{})
+		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", daos.TableAssets()))
 	})
 }
 
@@ -892,70 +869,67 @@ func Test_UpdateAssets(t *testing.T) {
 
 func Test_UpdateAttachments(t *testing.T) {
 	t.Run("nothing added or delete)", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 1, 10)
+		workingData := daos.NewTestData(t, db, 1, true, 1, 10)
 
-		err := updateAttachments(scanner.db, workingData[0].ID, workingData[0].Assets[0].Attachments)
+		err := updateAttachments(scanner.attachmentDao, workingData[0].ID, workingData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
-		count, err := models.CountAttachments(scanner.db, &database.DatabaseParams{Where: sq.Eq{models.TableAttachments() + ".course_id": workingData[0].ID}})
+		count, err := scanner.attachmentDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": workingData[0].ID}})
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 	})
 
 	t.Run("add", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 1, 12)
+		workingData := daos.NewTestData(t, db, 1, true, 1, 12)
 
 		// Delete the attachments (so we can add them again)
 		for _, a := range workingData[0].Assets[0].Attachments {
-			require.Nil(t, models.DeleteAttachment(scanner.db, a.ID))
+			require.Nil(t, scanner.attachmentDao.Delete(a.ID))
 		}
 
-		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAttachments() + ".course_id": workingData[0].ID}}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": workingData[0].ID}}
 
 		// ----------------------------
 		// Add 10 attachments
 		// ----------------------------
-		err := updateAttachments(scanner.db, workingData[0].ID, workingData[0].Assets[0].Attachments[:10])
+		err := updateAttachments(scanner.attachmentDao, workingData[0].ID, workingData[0].Assets[0].Attachments[:10])
 		require.Nil(t, err)
 
-		count, err := models.CountAttachments(scanner.db, dbParams)
+		count, err := scanner.attachmentDao.Count(dbParams)
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 
 		// ----------------------------
 		// Add another 2 attachments
 		// ----------------------------
-		err = updateAttachments(scanner.db, workingData[0].ID, workingData[0].Assets[0].Attachments)
+		err = updateAttachments(scanner.attachmentDao, workingData[0].ID, workingData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
-		count, err = models.CountAttachments(scanner.db, dbParams)
+		count, err = scanner.attachmentDao.Count(dbParams)
 		require.Nil(t, err)
 		require.Equal(t, 12, count)
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := models.NewTestData(t, scanner.db, 1, true, 1, 12)
+		workingData := daos.NewTestData(t, db, 1, true, 1, 12)
 
-		dbParams := &database.DatabaseParams{Where: sq.Eq{models.TableAttachments() + ".course_id": workingData[0].ID}}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": workingData[0].ID}}
 
 		// ----------------------------
 		// Remove 2 attachments
 		// ----------------------------
 		workingData[0].Assets[0].Attachments = workingData[0].Assets[0].Attachments[2:]
 
-		err := updateAttachments(scanner.db, workingData[0].ID, workingData[0].Assets[0].Attachments)
+		err := updateAttachments(scanner.attachmentDao, workingData[0].ID, workingData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
-		count, err := models.CountAttachments(scanner.db, dbParams)
+		count, err := scanner.attachmentDao.Count(dbParams)
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 
@@ -964,24 +938,23 @@ func Test_UpdateAttachments(t *testing.T) {
 		// ----------------------------
 		workingData[0].Assets[0].Attachments = workingData[0].Assets[0].Attachments[2:]
 
-		err = updateAttachments(scanner.db, workingData[0].ID, workingData[0].Assets[0].Attachments)
+		err = updateAttachments(scanner.attachmentDao, workingData[0].ID, workingData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
-		count, err = models.CountAttachments(scanner.db, dbParams)
+		count, err = scanner.attachmentDao.Count(dbParams)
 		require.Nil(t, err)
 		require.Equal(t, 8, count)
 
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		scanner, _, teardown := setupCourseScanner(t)
-		defer teardown(t)
+		scanner, db, _ := setupCourseScanner(t)
 
 		// Drop the table
-		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + models.TableAttachments())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAttachments())
 		require.Nil(t, err)
 
-		err = updateAttachments(scanner.db, "1234", []*models.Attachment{})
-		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", models.TableAttachments()))
+		err = updateAttachments(scanner.attachmentDao, "1234", []*models.Attachment{})
+		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", daos.TableAttachments()))
 	})
 }
