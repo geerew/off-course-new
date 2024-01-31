@@ -16,21 +16,22 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Database defines the interface for a database
-type Database interface {
-	Bootstrap() error
-	DB() *sql.DB
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
-}
+// Defines the sql functions
+type (
+	ExecFn     = func(query string, args ...interface{}) (sql.Result, error)
+	QueryFn    = func(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRowFn = func(query string, args ...interface{}) *sql.Row
+)
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type Expand struct {
-	Table   string
-	Columns []string
-	OrderBy []string
+// Database defines the interface for a database
+type Database interface {
+	Bootstrap() error
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+	RunInTransaction(txFunc func(*sql.Tx) error) error
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -39,6 +40,9 @@ type Expand struct {
 type DatabaseParams struct {
 	// A slice of columns to order by (ex ["id DESC", "title ASC"])
 	OrderBy []string
+
+	// A slice of columns to select (ex ["id", "title"])
+	Columns []string
 
 	// Any valid squirrel WHERE expression
 	//
@@ -52,8 +56,6 @@ type DatabaseParams struct {
 	//   NOT -> sq.NotEq{"id": "123"}
 	Where any
 
-	Expand []Expand
-
 	// Used to paginate the results
 	Pagination *pagination.Pagination
 }
@@ -62,19 +64,21 @@ type DatabaseParams struct {
 
 // SqliteDb defines an sqlite storage
 type SqliteDb struct {
-	db      *sql.DB
-	isDebug bool
-	dataDir string
-	appFs   *appFs.AppFs
+	db       *sql.DB
+	isDebug  bool
+	dataDir  string
+	appFs    *appFs.AppFs
+	inMemory bool
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // SqliteDbConfig defines the config when creating a new sqlite storage
 type SqliteDbConfig struct {
-	IsDebug bool
-	DataDir string
-	AppFs   *appFs.AppFs
+	IsDebug  bool
+	DataDir  string
+	AppFs    *appFs.AppFs
+	InMemory bool
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -82,9 +86,10 @@ type SqliteDbConfig struct {
 // NewSqlite creates a new SqliteDb
 func NewSqliteDB(config *SqliteDbConfig) *SqliteDb {
 	return &SqliteDb{
-		isDebug: config.IsDebug,
-		dataDir: config.DataDir,
-		appFs:   config.AppFs,
+		isDebug:  config.IsDebug,
+		dataDir:  config.DataDir,
+		appFs:    config.AppFs,
+		inMemory: config.InMemory,
 	}
 }
 
@@ -98,7 +103,7 @@ func (s *SqliteDb) Bootstrap() error {
 	}
 
 	dsn := filepath.Join(s.dataDir, "data.db")
-	if os.Getenv("OC_InMemDb") != "" {
+	if s.inMemory {
 		dsn = "file::memory:"
 	}
 
@@ -141,15 +146,8 @@ func (s *SqliteDb) Bootstrap() error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// DB returns the DB connection
-func (s *SqliteDb) DB() *sql.DB {
-	return s.db
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// LogQuery logs the SQL command if debug mode is enabled
-func (s *SqliteDb) LogQuery(query string, args ...interface{}) {
+// logQuery logs the SQL command if debug mode is enabled
+func (s *SqliteDb) logQuery(query string, args ...interface{}) {
 	if s.isDebug {
 		log.Debug().Msgf("SQL Query: %s; Arguments: %v", query, args)
 	}
@@ -159,7 +157,7 @@ func (s *SqliteDb) LogQuery(query string, args ...interface{}) {
 
 // Exec executes a query without returning any rows
 func (s *SqliteDb) Exec(query string, args ...interface{}) (sql.Result, error) {
-	s.LogQuery(query, args...)
+	s.logQuery(query, args...)
 	return s.db.Exec(query, args...)
 }
 
@@ -167,7 +165,7 @@ func (s *SqliteDb) Exec(query string, args ...interface{}) (sql.Result, error) {
 
 // Query executes a query that returns rows, typically a SELECT
 func (s *SqliteDb) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	s.LogQuery(query, args...)
+	s.logQuery(query, args...)
 	return s.db.Query(query, args...)
 }
 
@@ -175,8 +173,24 @@ func (s *SqliteDb) Query(query string, args ...interface{}) (*sql.Rows, error) {
 
 // QueryRow executes a query that is expected to return at most one row
 func (s *SqliteDb) QueryRow(query string, args ...interface{}) *sql.Row {
-	s.LogQuery(query, args...)
+	s.logQuery(query, args...)
 	return s.db.QueryRow(query, args...)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (s *SqliteDb) RunInTransaction(txFunc func(*sql.Tx) error) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	if err := txFunc(tx); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -194,7 +208,7 @@ func (s *SqliteDb) migrate() error {
 		return err
 	}
 
-	if err := goose.Up(s.DB(), "."); err != nil {
+	if err := goose.Up(s.db, "."); err != nil {
 		return err
 	}
 

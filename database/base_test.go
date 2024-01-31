@@ -1,7 +1,6 @@
 package database
 
 import (
-	"os"
 	"testing"
 
 	"github.com/geerew/off-course/utils/appFs"
@@ -15,13 +14,11 @@ func Test_Bootstrap(t *testing.T) {
 		appFs := appFs.NewAppFs(afero.NewMemMapFs())
 
 		db := NewSqliteDB(&SqliteDbConfig{
-			IsDebug: false,
-			DataDir: "./oc_data",
-			AppFs:   appFs,
+			IsDebug:  false,
+			DataDir:  "./oc_data",
+			AppFs:    appFs,
+			InMemory: true,
 		})
-
-		// Force DB to be in-memory
-		os.Setenv("OC_InMemDb", "true")
 
 		require.Nil(t, db.Bootstrap())
 
@@ -31,13 +28,11 @@ func Test_Bootstrap(t *testing.T) {
 		appFs := appFs.NewAppFs(afero.NewReadOnlyFs(afero.NewMemMapFs()))
 
 		db := NewSqliteDB(&SqliteDbConfig{
-			IsDebug: false,
-			DataDir: "./oc_data",
-			AppFs:   appFs,
+			IsDebug:  false,
+			DataDir:  "./oc_data",
+			AppFs:    appFs,
+			InMemory: true,
 		})
-
-		// Force DB to be in-memory
-		os.Setenv("OC_InMemDb", "true")
 
 		err := db.Bootstrap()
 
@@ -49,13 +44,11 @@ func Test_Bootstrap(t *testing.T) {
 		appFs := appFs.NewAppFs(afero.NewMemMapFs())
 
 		db := NewSqliteDB(&SqliteDbConfig{
-			IsDebug: false,
-			DataDir: string([]byte{0x7f}), // using an invalid path
-			AppFs:   appFs,
+			IsDebug:  false,
+			DataDir:  string([]byte{0x7f}), // using an invalid path
+			AppFs:    appFs,
+			InMemory: true,
 		})
-
-		// Force DB to be in-memory
-		os.Setenv("OC_InMemDb", "true")
 
 		require.Nil(t, db.Bootstrap())
 	})

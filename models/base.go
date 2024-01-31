@@ -1,22 +1,15 @@
 package models
 
 import (
-	sq "github.com/Masterminds/squirrel"
-	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/utils/security"
 	"github.com/geerew/off-course/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type countFn = func(database.Database, *database.DatabaseParams) (int, error)
+// type countFn = func(database.DatabaseExecer, *database.DatabaseParams) (int, error)
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Scannable is an interface for a database row
-type Scannable interface {
-	Scan(dest ...interface{}) error
-}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -56,26 +49,3 @@ func (b *BaseModel) RefreshUpdatedAt() {
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// paginate applies pagination to the query
-func paginate(db database.Database, params *database.DatabaseParams, builder sq.SelectBuilder, count countFn) (sq.SelectBuilder, error) {
-	if count, err := count(db, params); err != nil {
-		return builder, err
-	} else {
-		params.Pagination.SetCount(count)
-		builder = params.Pagination.Apply(builder)
-	}
-
-	return builder, nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// NilStr returns nil when a string is empty
-func NilStr(s string) any {
-	if s == "" {
-		return nil
-	}
-
-	return s
-}
