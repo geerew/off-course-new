@@ -9,8 +9,8 @@ import (
 	"syscall"
 
 	"github.com/geerew/off-course/api"
+	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
-	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/jobs"
 	"github.com/geerew/off-course/utils/pagination"
@@ -100,7 +100,7 @@ func main() {
 	wg.Wait()
 
 	// TMP -> Delete all scans
-	_, err := db.Exec("DELETE FROM " + models.TableScans())
+	_, err := db.Exec("DELETE FROM " + daos.TableScans())
 	if err != nil {
 		log.Error().Err(err).Msg("")
 	}
@@ -116,12 +116,14 @@ func updateCourseAvailability(db database.Database) error {
 	// This will be updated after the first fetch
 	var totalPages = 1
 
+	courseDao := daos.NewCourseDao(db)
+
 	for page <= totalPages {
 		p := pagination.New(page, perPage)
 		paginationParams := &database.DatabaseParams{Pagination: p}
 
 		// Fetch a batch of courses
-		courses, err := models.GetCourses(db, paginationParams)
+		courses, err := courseDao.List(paginationParams)
 		if err != nil {
 			return err
 		}
@@ -133,14 +135,14 @@ func updateCourseAvailability(db database.Database) error {
 
 		// Process each course in the batch
 		for _, course := range courses {
-			available := false
+			course.Available = false
 			_, err := os.Stat(course.Path)
 			if err == nil {
-				available = true
+				course.Available = true
 			}
 
 			// Update the course's availability in the database
-			_, err = models.UpdateCourseAvailability(db, course.ID, available)
+			err = courseDao.Update(course)
 			if err != nil {
 				log.Error().Err(err).Msgf("Failed to update availability for course %s", course.ID)
 			}
