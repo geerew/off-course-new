@@ -12,7 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	sq "github.com/Masterminds/squirrel"
+	"github.com/Masterminds/squirrel"
+	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
@@ -28,8 +29,7 @@ import (
 
 func TestCourses_GetCourses(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
 		require.NoError(t, err)
@@ -41,10 +41,9 @@ func TestCourses_GetCourses(t *testing.T) {
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		models.NewTestData(t, db, 5, false, 0, 0)
+		daos.NewTestData(t, db, 5, false, 0, 0)
 
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
 		require.NoError(t, err)
@@ -56,10 +55,10 @@ func TestCourses_GetCourses(t *testing.T) {
 	})
 
 	t.Run("200 (availability)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 3, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 3, false, 0, 0)
+		courseDao := daos.NewCourseDao(db)
 
 		// ----------------------------
 		// All unavailable
@@ -79,10 +78,11 @@ func TestCourses_GetCourses(t *testing.T) {
 		// ----------------------------
 		// Several available
 		// ----------------------------
-		_, err = models.UpdateCourseAvailability(db, workingData[0].ID, true)
-		require.Nil(t, err)
-		_, err = models.UpdateCourseAvailability(db, workingData[2].ID, true)
-		require.Nil(t, err)
+		workingData[0].Available = true
+		require.Nil(t, courseDao.Update(workingData[0].Course))
+
+		workingData[2].Available = true
+		require.Nil(t, courseDao.Update(workingData[2].Course))
 
 		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?orderBy=created_at%20asc", nil))
 		require.NoError(t, err)
@@ -98,10 +98,9 @@ func TestCourses_GetCourses(t *testing.T) {
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 5, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 5, false, 0, 0)
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -129,10 +128,9 @@ func TestCourses_GetCourses(t *testing.T) {
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 17, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 17, false, 0, 0)
 
 		// ----------------------------
 		// Get the first page (10 courses)
@@ -175,14 +173,17 @@ func TestCourses_GetCourses(t *testing.T) {
 	})
 
 	t.Run("200 (started)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 2, 0)
+		workingData := daos.NewTestData(t, db, 2, false, 2, 0)
 
-		// Set the first course as started
-		_, err := models.UpdateCourseProgressStarted(db, workingData[0].ID, true)
-		require.Nil(t, err)
+		// Set the first course as started (by marking the first asset as started)
+		apDao := daos.NewAssetProgressDao(db)
+		ap := &models.AssetProgress{
+			AssetID:  workingData[0].Assets[0].ID,
+			VideoPos: 10,
+		}
+		require.Nil(t, apDao.Update(ap))
 
 		// ------------------
 		// `started` not defined
@@ -221,15 +222,18 @@ func TestCourses_GetCourses(t *testing.T) {
 	})
 
 	t.Run("200 (completed)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 2, 0)
+		workingData := daos.NewTestData(t, db, 2, false, 2, 0)
 
 		// Set the first course as completed by marking the assets as completed
+		apDao := daos.NewAssetProgressDao(db)
 		for _, a := range workingData[0].Assets {
-			_, err := models.UpdateAssetProgressCompleted(db, a.ID, true)
-			require.Nil(t, err)
+			ap := &models.AssetProgress{
+				AssetID:   a.ID,
+				Completed: true,
+			}
+			require.Nil(t, apDao.Update(ap))
 		}
 
 		// ------------------
@@ -269,11 +273,10 @@ func TestCourses_GetCourses(t *testing.T) {
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		// Drop the courses table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
 		require.Nil(t, err)
 
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
@@ -286,10 +289,9 @@ func TestCourses_GetCourses(t *testing.T) {
 
 func TestCourses_GetCourse(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 3, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 3, false, 0, 0)
 
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[2].ID, nil))
 		require.NoError(t, err)
@@ -302,10 +304,9 @@ func TestCourses_GetCourse(t *testing.T) {
 	})
 
 	t.Run("200 (availability)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 3, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 3, false, 0, 0)
 
 		// ----------------------------
 		// Unavailable
@@ -323,8 +324,9 @@ func TestCourses_GetCourse(t *testing.T) {
 		// ----------------------------
 		// Available
 		// ----------------------------
-		_, err = models.UpdateCourseAvailability(db, workingData[2].ID, true)
-		require.Nil(t, err)
+		courseDao := daos.NewCourseDao(db)
+		workingData[2].Available = true
+		require.Nil(t, courseDao.Update(workingData[2].Course))
 
 		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[2].ID, nil))
 		require.NoError(t, err)
@@ -334,12 +336,10 @@ func TestCourses_GetCourse(t *testing.T) {
 		require.Nil(t, err)
 		assert.Equal(t, workingData[2].ID, courseResp.ID)
 		assert.True(t, courseResp.Available)
-
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test", nil))
 		require.NoError(t, err)
@@ -347,10 +347,9 @@ func TestCourses_GetCourse(t *testing.T) {
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
 		require.Nil(t, err)
 
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test", nil))
@@ -363,10 +362,9 @@ func TestCourses_GetCourse(t *testing.T) {
 
 func TestCourses_Create(t *testing.T) {
 	t.Run("201 (created)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, nil, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, nil, 1, false, 0, 0)
 		appFs.Fs.MkdirAll(workingData[0].Path, os.ModePerm)
 
 		postData := fmt.Sprintf(`{"title": "%s", "path": "%s" }`, workingData[0].Title, workingData[0].Path)
@@ -387,8 +385,7 @@ func TestCourses_Create(t *testing.T) {
 	})
 
 	t.Run("400 (bind error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(`{`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
@@ -400,8 +397,7 @@ func TestCourses_Create(t *testing.T) {
 	})
 
 	t.Run("400 (invalid data)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		// ----------------------------
 		// Missing title
@@ -438,8 +434,7 @@ func TestCourses_Create(t *testing.T) {
 	})
 
 	t.Run("400 (existing course)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		coursePath := "/course 1/"
 		appFs.Fs.MkdirAll(coursePath, os.ModePerm)
@@ -460,11 +455,10 @@ func TestCourses_Create(t *testing.T) {
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		// Drop the courses table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
 		require.Nil(t, err)
 
 		coursePath := "/course 1/"
@@ -481,11 +475,10 @@ func TestCourses_Create(t *testing.T) {
 	})
 
 	t.Run("500 (scan error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		// Drop scan table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableScans())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableScans())
 		require.Nil(t, err)
 
 		coursePath := "/course 1/"
@@ -506,10 +499,14 @@ func TestCourses_Create(t *testing.T) {
 
 func TestCourses_DeleteCourse(t *testing.T) {
 	t.Run("204 (deleted)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 3, true, 3, 3)
+		workingData := daos.NewTestData(t, db, 3, true, 3, 3)
+
+		courseDao := daos.NewCourseDao(db)
+		scanDao := daos.NewScanDao(db)
+		assetsDao := daos.NewAssetDao(db)
+		attachmentsDao := daos.NewAttachmentDao(db)
 
 		// ----------------------------
 		// Delete course 3
@@ -518,7 +515,7 @@ func TestCourses_DeleteCourse(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNoContent, status)
 
-		_, err = models.GetCourse(db, workingData[2].ID)
+		_, err = courseDao.Get(workingData[2].ID)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 
 		// ----------------------------
@@ -526,23 +523,22 @@ func TestCourses_DeleteCourse(t *testing.T) {
 		// ----------------------------
 
 		// Scan
-		_, err = models.GetScan(db, workingData[2].ID)
+		_, err = scanDao.Get(workingData[2].ID)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 
 		// Assets
-		count, err := models.CountAssets(db, &database.DatabaseParams{Where: sq.Eq{models.TableAssets() + ".course_id": workingData[2].ID}})
+		count, err := assetsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": workingData[2].ID}})
 		require.Nil(t, err)
 		assert.Zero(t, count)
 
 		// Attachments
-		count, err = models.CountAttachments(db, &database.DatabaseParams{Where: sq.Eq{models.TableAttachments() + ".course_id": workingData[2].ID}})
+		count, err = attachmentsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": workingData[2].ID}})
 		require.Nil(t, err)
 		assert.Zero(t, count)
 	})
 
 	t.Run("204 (not found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodDelete, "/api/courses/test", nil))
 		require.NoError(t, err)
@@ -550,11 +546,10 @@ func TestCourses_DeleteCourse(t *testing.T) {
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		// Drop the table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
 		require.Nil(t, err)
 
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodDelete, "/api/courses/test", nil))
@@ -567,27 +562,27 @@ func TestCourses_DeleteCourse(t *testing.T) {
 
 func TestCourses_Card(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		courseDao := daos.NewCourseDao(db)
 
-		updatedCourse, err := models.UpdateCourseCardPath(db, workingData[0].ID, "/"+workingData[0].Path+"/card.png")
-		require.Nil(t, err)
+		// Update card path
+		workingData[0].CardPath = "/" + workingData[0].Path + "/card.png"
+		require.Nil(t, courseDao.Update(workingData[0].Course))
 
-		// Create the card
-		appFs.Fs.MkdirAll("/"+updatedCourse.Path, os.ModePerm)
-		require.Nil(t, afero.WriteFile(appFs.Fs, "/"+updatedCourse.Path+"/card.png", []byte("test"), os.ModePerm))
+		// Create
+		appFs.Fs.MkdirAll("/"+workingData[0].Path, os.ModePerm)
+		require.Nil(t, afero.WriteFile(appFs.Fs, workingData[0].CardPath, []byte("test"), os.ModePerm))
 
-		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+updatedCourse.ID+"/card", nil))
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/card", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 		assert.Equal(t, "test", string(body))
 	})
 
 	t.Run("404 (invalid id)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test/card", nil))
 		require.NoError(t, err)
@@ -596,10 +591,9 @@ func TestCourses_Card(t *testing.T) {
 	})
 
 	t.Run("404 (no card)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
 
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/card", nil))
 		require.NoError(t, err)
@@ -608,26 +602,26 @@ func TestCourses_Card(t *testing.T) {
 	})
 
 	t.Run("404 (card not found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		courseDao := daos.NewCourseDao(db)
 
-		updatedCourse, err := models.UpdateCourseCardPath(db, workingData[0].ID, workingData[0].Path+"/card.png")
-		require.Nil(t, err)
+		// Update card path
+		workingData[0].CardPath = "/" + workingData[0].Path + "/card.png"
+		require.Nil(t, courseDao.Update(workingData[0].Course))
 
-		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+updatedCourse.ID+"/card", nil))
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/card", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
 		assert.Equal(t, "Course card not found", string(body))
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		// Drop the table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
 		require.Nil(t, err)
 
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test/card", nil))
@@ -640,10 +634,9 @@ func TestCourses_Card(t *testing.T) {
 
 func TestCourses_GetAssets(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 2, false, 0, 0)
 
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets", nil))
 		require.NoError(t, err)
@@ -655,10 +648,9 @@ func TestCourses_GetAssets(t *testing.T) {
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 3, 0)
+		workingData := daos.NewTestData(t, db, 2, false, 3, 0)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/?orderBy=created_at%20asc", nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
@@ -675,10 +667,9 @@ func TestCourses_GetAssets(t *testing.T) {
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 3, 0)
+		workingData := daos.NewTestData(t, db, 2, false, 3, 0)
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -714,10 +705,9 @@ func TestCourses_GetAssets(t *testing.T) {
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 17, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 17, 0)
 
 		// ------------------------
 		// Get the first page (10 assets)
@@ -763,8 +753,7 @@ func TestCourses_GetAssets(t *testing.T) {
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test/assets", nil))
 		require.NoError(t, err)
@@ -772,10 +761,9 @@ func TestCourses_GetAssets(t *testing.T) {
 	})
 
 	t.Run("500 (course internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
 		require.Nil(t, err)
 
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test/assets", nil))
@@ -784,12 +772,11 @@ func TestCourses_GetAssets(t *testing.T) {
 	})
 
 	t.Run("500 (asset internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
 
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAssets())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/", nil))
@@ -802,10 +789,9 @@ func TestCourses_GetAssets(t *testing.T) {
 
 func TestCourses_GetAsset(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 3, 0)
+		workingData := daos.NewTestData(t, db, 2, false, 3, 0)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[1].ID, nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
@@ -822,10 +808,9 @@ func TestCourses_GetAsset(t *testing.T) {
 	})
 
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 3, 0)
+		workingData := daos.NewTestData(t, db, 2, false, 3, 0)
 
 		// Request an asset that does not belong to the course
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[1].Assets[0].ID, nil)
@@ -836,8 +821,7 @@ func TestCourses_GetAsset(t *testing.T) {
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test_course/assets/test_asset", nil))
 		require.NoError(t, err)
@@ -845,10 +829,9 @@ func TestCourses_GetAsset(t *testing.T) {
 	})
 
 	t.Run("404 (asset not found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 2, false, 0, 0)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/test_asset", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
@@ -857,11 +840,10 @@ func TestCourses_GetAsset(t *testing.T) {
 	})
 
 	t.Run("500 (course internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		// Drop the courses table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/test_course/assets/test_asset", nil)
@@ -871,20 +853,18 @@ func TestCourses_GetAsset(t *testing.T) {
 	})
 
 	t.Run("500 (asset internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
 
 		// Drop the assets table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAssets())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/test_asset", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
-
 	})
 }
 
@@ -892,10 +872,9 @@ func TestCourses_GetAsset(t *testing.T) {
 
 func TestCourses_GetAttachments(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 2, 0)
+		workingData := daos.NewTestData(t, db, 2, false, 2, 0)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/"+workingData[1].Assets[1].ID+"/attachments", nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
@@ -908,10 +887,9 @@ func TestCourses_GetAttachments(t *testing.T) {
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 2, 3)
+		workingData := daos.NewTestData(t, db, 2, false, 2, 3)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/"+workingData[1].Assets[0].ID+"/attachments?orderBy=created_at%20asc", nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
@@ -928,10 +906,9 @@ func TestCourses_GetAttachments(t *testing.T) {
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 2, 3)
+		workingData := daos.NewTestData(t, db, 2, false, 2, 3)
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -967,10 +944,9 @@ func TestCourses_GetAttachments(t *testing.T) {
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 1, 17)
+		workingData := daos.NewTestData(t, db, 1, false, 1, 17)
 
 		// ----------------------------
 		// Get the first page (10 attachments)
@@ -1015,8 +991,7 @@ func TestCourses_GetAttachments(t *testing.T) {
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/test_course/assets/test_asset/attachments", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
@@ -1026,11 +1001,10 @@ func TestCourses_GetAttachments(t *testing.T) {
 	})
 
 	t.Run("500 (course lookup internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		// Drop the courses table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/test_course/assets/test_asset/attachments", nil)
@@ -1041,10 +1015,9 @@ func TestCourses_GetAttachments(t *testing.T) {
 	})
 
 	t.Run("404 (asset not found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/1234/attachments", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
@@ -1054,13 +1027,12 @@ func TestCourses_GetAttachments(t *testing.T) {
 	})
 
 	t.Run("500 (asset lookup internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
 
 		// Drop the assets table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAssets())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/1234/attachments", nil)
@@ -1071,10 +1043,9 @@ func TestCourses_GetAttachments(t *testing.T) {
 	})
 
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 2, 5)
+		workingData := daos.NewTestData(t, db, 2, false, 2, 5)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[1].Assets[0].ID+"/attachments", nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
@@ -1084,13 +1055,12 @@ func TestCourses_GetAttachments(t *testing.T) {
 	})
 
 	t.Run("500 (attachments lookup internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 1, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 1, 0)
 
 		// Drop the attachments table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAttachments())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAttachments())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments", nil)
@@ -1105,10 +1075,9 @@ func TestCourses_GetAttachments(t *testing.T) {
 
 func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 5, 3)
+		workingData := daos.NewTestData(t, db, 2, false, 5, 3)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments/"+workingData[0].Assets[0].Attachments[2].ID, nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
@@ -1123,10 +1092,9 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	})
 
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 5, 0)
+		workingData := daos.NewTestData(t, db, 2, false, 5, 0)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[1].Assets[0].ID+"/attachments/test_attachment", nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
@@ -1136,10 +1104,9 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	})
 
 	t.Run("400 (invalid attachment for course)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 5, 3)
+		workingData := daos.NewTestData(t, db, 2, false, 5, 3)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments/"+workingData[0].Assets[1].Attachments[2].ID, nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
@@ -1149,8 +1116,7 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/test_course/assets/test_asset/attachments/test_attachment", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
@@ -1159,10 +1125,9 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	})
 
 	t.Run("404 (asset not found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 2, false, 0, 0)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
@@ -1171,10 +1136,9 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	})
 
 	t.Run("404 (attachment not found)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 5, 0)
+		workingData := daos.NewTestData(t, db, 2, false, 5, 0)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[2].ID+"/attachments/test_attachment", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
@@ -1183,13 +1147,12 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	})
 
 	t.Run("500 (course internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
 
 		// Drop the courses table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
@@ -1199,13 +1162,12 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	})
 
 	t.Run("500 (asset internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 0, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
 
 		// Drop the assets table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAssets())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
@@ -1215,13 +1177,12 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	})
 
 	t.Run("500 (attachments internal error)", func(t *testing.T) {
-		appFs, db, cs, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, cs, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 1, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 1, 0)
 
 		// Drop the attachments table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAttachments())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAttachments())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments/test_attachment", nil)

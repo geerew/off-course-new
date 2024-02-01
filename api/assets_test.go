@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
@@ -25,8 +26,7 @@ import (
 
 func TestAssets_GetAssets(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
 		require.NoError(t, err)
@@ -38,11 +38,10 @@ func TestAssets_GetAssets(t *testing.T) {
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		// Create 10 assets
-		models.NewTestData(t, db, 2, false, 5, 0)
+		daos.NewTestData(t, db, 2, false, 5, 0)
 
 		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
 		require.NoError(t, err)
@@ -54,11 +53,10 @@ func TestAssets_GetAssets(t *testing.T) {
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		// Create 10 assets
-		workingData := models.NewTestData(t, db, 2, false, 5, 0)
+		workingData := daos.NewTestData(t, db, 2, false, 5, 0)
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -86,11 +84,10 @@ func TestAssets_GetAssets(t *testing.T) {
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		// 18 assets
-		workingData := models.NewTestData(t, db, 3, false, 6, 0)
+		workingData := daos.NewTestData(t, db, 3, false, 6, 0)
 
 		// ----------------------------
 		// Get the first page (10 assets)
@@ -134,11 +131,10 @@ func TestAssets_GetAssets(t *testing.T) {
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		// Drop the table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAssets())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
 		status, _, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
@@ -151,10 +147,9 @@ func TestAssets_GetAssets(t *testing.T) {
 
 func TestAssets_GetAsset(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 5, 2)
+		workingData := daos.NewTestData(t, db, 2, false, 5, 2)
 
 		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+workingData[1].Assets[3].ID, nil))
 		require.NoError(t, err)
@@ -171,8 +166,7 @@ func TestAssets_GetAsset(t *testing.T) {
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		status, _, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/test", nil))
 		require.NoError(t, err)
@@ -180,11 +174,10 @@ func TestAssets_GetAsset(t *testing.T) {
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		// Drop the table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAssets())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
 		status, _, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/test", nil))
@@ -197,13 +190,12 @@ func TestAssets_GetAsset(t *testing.T) {
 
 func TestAssets_UpdateAsset(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		f := fiber.New()
 		bindAssetsApi(f.Group("/api"), appFs, db)
 
-		workingData := models.NewTestData(t, db, 1, false, 1, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 1, 0)
 
 		// ----------------------------
 		// Update the video position
@@ -280,8 +272,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 	})
 
 	t.Run("400 (invalid data)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		req := httptest.NewRequest(http.MethodPut, "/api/assets/test", strings.NewReader(`bob`))
 		req.Header.Set("Content-Type", "application/json")
@@ -292,8 +283,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		req := httptest.NewRequest(http.MethodPut, "/api/assets/test", strings.NewReader(`{"id": "1234567"}`))
 		req.Header.Set("Content-Type", "application/json")
@@ -304,14 +294,13 @@ func TestAssets_UpdateAsset(t *testing.T) {
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		f := fiber.New()
 		bindAssetsApi(f.Group("/api"), appFs, db)
 
 		// Drop the table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAssets())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodPut, "/api/assets/test", strings.NewReader(`{"id": "1234567"}`))
@@ -327,10 +316,9 @@ func TestAssets_UpdateAsset(t *testing.T) {
 
 func TestAssets_ServeAsset(t *testing.T) {
 	t.Run("200 (full video)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 2, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 2, 0)
 
 		// Create asset
 		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(workingData[0].Assets[1].Path), os.ModePerm))
@@ -343,10 +331,9 @@ func TestAssets_ServeAsset(t *testing.T) {
 	})
 
 	t.Run("200 (stream video)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 2, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 2, 0)
 
 		// Create asset
 		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(workingData[0].Assets[1].Path), os.ModePerm))
@@ -362,10 +349,9 @@ func TestAssets_ServeAsset(t *testing.T) {
 	})
 
 	t.Run("400 (invalid path)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 2, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 2, 0)
 
 		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+workingData[0].Assets[1].ID+"/serve", nil))
 		require.NoError(t, err)
@@ -374,10 +360,9 @@ func TestAssets_ServeAsset(t *testing.T) {
 	})
 
 	t.Run("400 (invalid video range)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 1, false, 2, 0)
+		workingData := daos.NewTestData(t, db, 1, false, 2, 0)
 
 		// Create asset
 		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(workingData[0].Assets[1].Path), os.ModePerm))
@@ -393,8 +378,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		status, _, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/test/serve", nil))
 		require.NoError(t, err)
@@ -402,13 +386,12 @@ func TestAssets_ServeAsset(t *testing.T) {
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		f := fiber.New()
 		bindAssetsApi(f.Group("/api"), appFs, db)
 
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAssets())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
 		status, _, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/test/serve", nil))

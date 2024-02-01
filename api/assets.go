@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
@@ -22,8 +23,9 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type assets struct {
-	appFs *appFs.AppFs
-	db    database.Database
+	appFs            *appFs.AppFs
+	assetDao         *daos.AssetDao
+	assetProgressDao *daos.AssetProgressDao
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -56,7 +58,11 @@ const maxInitialChunkSize = 1024 * 1024 * 5 // 5MB, adjust as needed
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func bindAssetsApi(router fiber.Router, appFs *appFs.AppFs, db database.Database) {
-	api := assets{appFs: appFs, db: db}
+	api := assets{
+		appFs:            appFs,
+		assetDao:         daos.NewAssetDao(db),
+		assetProgressDao: daos.NewAssetProgressDao(db),
+	}
 
 	subGroup := router.Group("/assets")
 
@@ -75,7 +81,7 @@ func (api *assets) getAssets(c *fiber.Ctx) error {
 		Pagination: pagination.NewFromApi(c),
 	}
 
-	assets, err := models.GetAssets(api.db, dbParams)
+	assets, err := api.assetDao.List(dbParams)
 	if err != nil {
 		log.Err(err).Msg("error looking up assets")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -99,7 +105,8 @@ func (api *assets) getAssets(c *fiber.Ctx) error {
 func (api *assets) getAsset(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	asset, err := models.GetAsset(api.db, id)
+	// TODO: support attachments orderby
+	asset, err := api.assetDao.Get(id, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -128,20 +135,16 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 		})
 	}
 
-	// Video position
-	if _, err := models.UpdateAssetProgressVideoPos(api.db, id, reqAsset.VideoPos); err != nil {
-		if err == sql.ErrNoRows || strings.HasPrefix(err.Error(), "constraint failed: FOREIGN KEY constraint failed") {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
-		}
-
-		log.Err(err).Msg("error updating asset")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error updating asset - " + err.Error(),
-		})
+	// Create an asset progress
+	ap := &models.AssetProgress{
+		AssetID:   id,
+		CourseID:  reqAsset.CourseID,
+		VideoPos:  reqAsset.VideoPos,
+		Completed: reqAsset.Completed,
 	}
 
-	// Completed
-	if _, err := models.UpdateAssetProgressCompleted(api.db, id, reqAsset.Completed); err != nil {
+	// Update the asset progress
+	if err := api.assetProgressDao.Update(ap); err != nil {
 		if err == sql.ErrNoRows || strings.HasPrefix(err.Error(), "constraint failed: FOREIGN KEY constraint failed") {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
 		}
@@ -153,7 +156,7 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 	}
 
 	// Get the updated asset
-	updatedAsset, err := models.GetAsset(api.db, id)
+	asset, err := api.assetDao.Get(id, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -165,7 +168,7 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(assetResponseHelper([]*models.Asset{updatedAsset})[0])
+	return c.Status(fiber.StatusOK).JSON(assetResponseHelper([]*models.Asset{asset})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -173,7 +176,7 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 func (api *assets) serveAsset(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	asset, err := models.GetAsset(api.db, id)
+	asset, err := api.assetDao.Get(id, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {

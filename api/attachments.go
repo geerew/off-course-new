@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 
+	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
@@ -17,8 +18,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type attachments struct {
-	appFs *appFs.AppFs
-	db    database.Database
+	appFs         *appFs.AppFs
+	attachmentDao *daos.AttachmentDao
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -36,7 +37,10 @@ type attachmentResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func bindAttachmentsApi(router fiber.Router, appFs *appFs.AppFs, db database.Database) {
-	api := attachments{appFs: appFs, db: db}
+	api := attachments{
+		appFs:         appFs,
+		attachmentDao: daos.NewAttachmentDao(db),
+	}
 
 	subGroup := router.Group("/attachments")
 
@@ -54,7 +58,7 @@ func (api *attachments) getAttachments(c *fiber.Ctx) error {
 		Pagination: pagination.NewFromApi(c),
 	}
 
-	attachments, err := models.GetAttachments(api.db, dbParams)
+	attachments, err := api.attachmentDao.List(dbParams)
 	if err != nil {
 		log.Err(err).Msg("error looking up attachments")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -78,7 +82,7 @@ func (api *attachments) getAttachments(c *fiber.Ctx) error {
 func (api *attachments) getAttachment(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	attachment, err := models.GetAttachment(api.db, id)
+	attachment, err := api.attachmentDao.Get(id)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -99,7 +103,7 @@ func (api *attachments) getAttachment(c *fiber.Ctx) error {
 func (api *attachments) serveAttachment(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	attachment, err := models.GetAttachment(api.db, id)
+	attachment, err := api.attachmentDao.Get(id)
 
 	if err != nil {
 		if err == sql.ErrNoRows {

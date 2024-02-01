@@ -5,7 +5,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Masterminds/squirrel"
 	sq "github.com/Masterminds/squirrel"
+	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
@@ -22,8 +24,10 @@ import (
 
 type courses struct {
 	appFs         *appFs.AppFs
-	db            database.Database
 	courseScanner *jobs.CourseScanner
+	courseDao     *daos.CourseDao
+	assetDao      *daos.AssetDao
+	attachmentDao *daos.AttachmentDao
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -50,7 +54,13 @@ type courseResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func bindCoursesApi(router fiber.Router, appFs *appFs.AppFs, db database.Database, courseScanner *jobs.CourseScanner) {
-	api := courses{appFs: appFs, db: db, courseScanner: courseScanner}
+	api := courses{
+		appFs:         appFs,
+		courseScanner: courseScanner,
+		courseDao:     daos.NewCourseDao(db),
+		assetDao:      daos.NewAssetDao(db),
+		attachmentDao: daos.NewAttachmentDao(db),
+	}
 
 	subGroup := router.Group("/courses")
 
@@ -87,23 +97,26 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 	// Filter on started (if defined)
 	if started != "undefined" {
 		if started == "true" {
-			dbParams.Where = sq.And{sq.Eq{models.TableCoursesProgress() + ".started": true}, sq.NotEq{models.TableCoursesProgress() + ".percent": 100}}
+			dbParams.Where = squirrel.And{
+				squirrel.Eq{daos.TableCoursesProgress() + ".started": true},
+				squirrel.NotEq{daos.TableCoursesProgress() + ".percent": 100},
+			}
 		} else {
-			dbParams.Where = sq.NotEq{models.TableCoursesProgress() + ".started": true}
+			dbParams.Where = squirrel.NotEq{daos.TableCoursesProgress() + ".started": true}
 		}
 	}
 
 	// Filter on completed (if defined)
 	if completed != "undefined" {
 		if completed == "true" {
-			dbParams.Where = sq.Eq{models.TableCoursesProgress() + ".percent": 100}
+			dbParams.Where = squirrel.Eq{daos.TableCoursesProgress() + ".percent": 100}
 
 		} else {
-			dbParams.Where = sq.Lt{models.TableCoursesProgress() + ".percent": 100}
+			dbParams.Where = squirrel.Lt{daos.TableCoursesProgress() + ".percent": 100}
 		}
 	}
 
-	courses, err := models.GetCourses(api.db, dbParams)
+	courses, err := api.courseDao.List(dbParams)
 
 	if err != nil {
 		log.Err(err).Msg("error looking up courses")
@@ -128,7 +141,7 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 func (api *courses) getCourse(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	course, err := models.GetCourse(api.db, id)
+	course, err := api.courseDao.Get(id)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -172,7 +185,7 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 	// Set the course to available
 	course.Available = true
 
-	if err := models.CreateCourse(api.db, course); err != nil {
+	if err := api.courseDao.Create(course); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"message": "a course with this path already exists - " + err.Error(),
@@ -203,7 +216,7 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 func (api *courses) deleteCourse(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	err := models.DeleteCourse(api.db, id)
+	err := api.courseDao.Delete(id)
 	if err != nil {
 		log.Err(err).Msg("error deleting course")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -220,7 +233,7 @@ func (api *courses) deleteCourse(c *fiber.Ctx) error {
 func (api *courses) getCard(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	course, err := models.GetCourse(api.db, id)
+	course, err := api.courseDao.Get(id)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -254,7 +267,7 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// Get the course
-	_, err := models.GetCourse(api.db, id)
+	_, err := api.courseDao.Get(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -268,11 +281,11 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 
 	dbParams := &database.DatabaseParams{
 		OrderBy:    []string{c.Query("orderBy", []string{"chapter asc", "prefix asc"}...)},
-		Where:      sq.Eq{models.TableAssets() + ".course_id": id},
+		Where:      sq.Eq{daos.TableAssets() + ".course_id": id},
 		Pagination: pagination.NewFromApi(c),
 	}
 
-	assets, err := models.GetAssets(api.db, dbParams)
+	assets, err := api.assetDao.List(dbParams)
 	if err != nil {
 		log.Err(err).Msg("error looking up assets")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -297,7 +310,7 @@ func (api *courses) getAsset(c *fiber.Ctx) error {
 	id := c.Params("id")
 	assetId := c.Params("asset")
 
-	_, err := models.GetCourse(api.db, id)
+	_, err := api.courseDao.Get(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -309,7 +322,7 @@ func (api *courses) getAsset(c *fiber.Ctx) error {
 		})
 	}
 
-	asset, err := models.GetAsset(api.db, assetId)
+	asset, err := api.assetDao.Get(assetId, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -336,7 +349,7 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 	assetId := c.Params("asset")
 
 	// Get the course
-	_, err := models.GetCourse(api.db, id)
+	_, err := api.courseDao.Get(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -349,7 +362,7 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 	}
 
 	// Get the asset
-	asset, err := models.GetAsset(api.db, assetId)
+	asset, err := api.assetDao.Get(assetId, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -367,11 +380,11 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 
 	dbParams := &database.DatabaseParams{
 		OrderBy:    []string{c.Query("orderBy", []string{"title asc"}...)},
-		Where:      sq.Eq{models.TableAttachments() + ".asset_id": assetId},
+		Where:      sq.Eq{daos.TableAttachments() + ".asset_id": assetId},
 		Pagination: pagination.NewFromApi(c),
 	}
 
-	attachments, err := models.GetAttachments(api.db, dbParams)
+	attachments, err := api.attachmentDao.List(dbParams)
 	if err != nil {
 		log.Err(err).Msg("error looking up attachments")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -398,7 +411,7 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 	attachmentId := c.Params("attachment")
 
 	// Get the course
-	_, err := models.GetCourse(api.db, id)
+	_, err := api.courseDao.Get(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -411,7 +424,7 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 	}
 
 	// Get the asset
-	asset, err := models.GetAsset(api.db, assetId)
+	asset, err := api.assetDao.Get(assetId, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -428,7 +441,7 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 	}
 
 	// Get the attachment
-	attachment, err := models.GetAttachment(api.db, attachmentId)
+	attachment, err := api.attachmentDao.Get(attachmentId)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")

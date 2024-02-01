@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 
+	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
@@ -16,7 +17,7 @@ import (
 
 type scans struct {
 	appFs         *appFs.AppFs
-	db            database.Database
+	scanDao       *daos.ScanDao
 	courseScanner *jobs.CourseScanner
 }
 
@@ -33,7 +34,11 @@ type scanResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func bindScansApi(router fiber.Router, appFs *appFs.AppFs, db database.Database, courseScanner *jobs.CourseScanner) {
-	api := scans{appFs: appFs, db: db, courseScanner: courseScanner}
+	api := scans{
+		appFs:         appFs,
+		scanDao:       daos.NewScanDao(db),
+		courseScanner: courseScanner,
+	}
 
 	subGroup := router.Group("/scans")
 
@@ -46,7 +51,7 @@ func bindScansApi(router fiber.Router, appFs *appFs.AppFs, db database.Database,
 func (api *scans) getScan(c *fiber.Ctx) error {
 	courseId := c.Params("courseId")
 
-	scan, err := models.GetScan(api.db, courseId)
+	scan, err := api.scanDao.Get(courseId)
 
 	if err != nil {
 		if err == sql.ErrNoRows {

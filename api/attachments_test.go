@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
-	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/gofiber/fiber/v2"
@@ -20,12 +20,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// import (
+// 	"encoding/json"
+// 	"io"
+// 	"net/http"
+// 	"net/http/httptest"
+// 	"net/url"
+// 	"os"
+// 	"path/filepath"
+// 	"testing"
+
+// 	"github.com/geerew/off-course/database"
+// 	"github.com/geerew/off-course/models"
+// 	"github.com/geerew/off-course/utils/appFs"
+// 	"github.com/geerew/off-course/utils/pagination"
+// 	"github.com/gofiber/fiber/v2"
+// 	"github.com/spf13/afero"
+// 	"github.com/stretchr/testify/assert"
+// 	"github.com/stretchr/testify/require"
+// )
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestAttachments_GetAttachments(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
 		require.NoError(t, err)
@@ -37,10 +56,9 @@ func TestAttachments_GetAttachments(t *testing.T) {
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
-		models.NewTestData(t, db, 2, false, 2, 2)
+		daos.NewTestData(t, db, 2, false, 2, 2)
 
 		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
 		require.NoError(t, err)
@@ -52,10 +70,9 @@ func TestAttachments_GetAttachments(t *testing.T) {
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 2, 4)
+		workingData := daos.NewTestData(t, db, 2, false, 2, 4)
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -89,10 +106,9 @@ func TestAttachments_GetAttachments(t *testing.T) {
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 2, 4)
+		workingData := daos.NewTestData(t, db, 2, false, 2, 4)
 
 		// ----------------------------
 		// Get the first page (10 attachments)
@@ -136,11 +152,10 @@ func TestAttachments_GetAttachments(t *testing.T) {
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		// Drop the table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAttachments())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAttachments())
 		require.Nil(t, err)
 
 		status, _, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
@@ -153,10 +168,9 @@ func TestAttachments_GetAttachments(t *testing.T) {
 
 func TestAttachments_GetAttachment(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 2, 2)
+		workingData := daos.NewTestData(t, db, 2, false, 2, 2)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/attachments/"+workingData[1].Assets[1].Attachments[0].ID, nil)
 		status, body, err := attachmentsRequestHelper(t, appFs, db, req)
@@ -172,8 +186,7 @@ func TestAttachments_GetAttachment(t *testing.T) {
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		status, _, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/test", nil))
 		require.NoError(t, err)
@@ -181,11 +194,10 @@ func TestAttachments_GetAttachment(t *testing.T) {
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		// Drop the table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAttachments())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAttachments())
 		require.Nil(t, err)
 
 		status, _, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/test", nil))
@@ -198,10 +210,9 @@ func TestAttachments_GetAttachment(t *testing.T) {
 
 func TestAttachments_ServeAttachment(t *testing.T) {
 	t.Run("200 (ok)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 2, 2)
+		workingData := daos.NewTestData(t, db, 2, false, 2, 2)
 
 		// Create attachment file
 		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(workingData[1].Assets[0].Attachments[0].Path), os.ModePerm))
@@ -214,10 +225,9 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 	})
 
 	t.Run("400 (invalid path)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
-		workingData := models.NewTestData(t, db, 2, false, 2, 2)
+		workingData := daos.NewTestData(t, db, 2, false, 2, 2)
 
 		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/"+workingData[1].Assets[0].Attachments[0].ID+"/serve", nil))
 		require.NoError(t, err)
@@ -226,8 +236,7 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		status, _, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/test/serve", nil))
 		require.NoError(t, err)
@@ -235,11 +244,10 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, db, _, _ := setup(t)
 
 		// Drop the table
-		_, err := db.DB().Exec("DROP TABLE IF EXISTS " + models.TableAttachments())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAttachments())
 		require.Nil(t, err)
 
 		status, _, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/test/serve", nil))

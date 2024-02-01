@@ -19,8 +19,7 @@ import (
 
 func TestFsPath(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, _, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, _, _, _ := setup(t)
 
 		appFs.Fs.MkdirAll("/", os.ModePerm)
 		appFs.Fs.MkdirAll("/dir1", os.ModePerm)
@@ -41,8 +40,7 @@ func TestFsPath(t *testing.T) {
 	})
 
 	t.Run("404 (path not found)", func(t *testing.T) {
-		appFs, _, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, _, _, _ := setup(t)
 
 		status, _, err := fsRequestHelper(t, appFs, http.MethodGet, "/api/filesystem/"+utils.EncodeString("nonexistent/path"))
 		require.Nil(t, err)
@@ -50,8 +48,7 @@ func TestFsPath(t *testing.T) {
 	})
 
 	t.Run("400 (decode error)", func(t *testing.T) {
-		appFs, _, _, _, teardown := setup(t)
-		defer teardown(t)
+		appFs, _, _, _ := setup(t)
 
 		status, body, err := fsRequestHelper(t, appFs, http.MethodGet, "/api/filesystem/`")
 
