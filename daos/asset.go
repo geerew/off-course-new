@@ -85,7 +85,7 @@ func (dao *AssetDao) Create(a *models.Asset) error {
 //
 // The dbParams can be used to order the attachments
 func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams) (*models.Asset, error) {
-	return dao.get(id, dbParams, dao.db.QueryRow)
+	return dao.get(id, dbParams, dao.db.QueryRow, dao.db.Query)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -94,7 +94,7 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams) (*models.
 //
 // The dbParams can be used to order the attachments
 func (dao *AssetDao) GetTx(id string, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Asset, error) {
-	return dao.get(id, dbParams, tx.QueryRow)
+	return dao.get(id, dbParams, tx.QueryRow, tx.Query)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -188,7 +188,7 @@ func (dao *AssetDao) Delete(id string) error {
 // Get selects an asset with the given ID
 //
 // The dbParams can be used to order the attachments
-func (dao *AssetDao) get(id string, dbParams *database.DatabaseParams, QueryRowFn database.QueryRowFn) (*models.Asset, error) {
+func (dao *AssetDao) get(id string, dbParams *database.DatabaseParams, QueryRowFn database.QueryRowFn, QueryFn database.QueryFn) (*models.Asset, error) {
 	generic := NewGenericDao(dao.db, dao.table)
 
 	assetDbParams := &database.DatabaseParams{
@@ -223,7 +223,7 @@ func (dao *AssetDao) get(id string, dbParams *database.DatabaseParams, QueryRowF
 		}
 	}
 
-	attachments, err := attachmentDao.List(attachmentDbParams)
+	attachments, err := attachmentDao.list(attachmentDbParams, QueryRowFn, QueryFn)
 	if err != nil {
 		return nil, err
 	}

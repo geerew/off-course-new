@@ -1,6 +1,8 @@
 package daos
 
 import (
+	"database/sql"
+
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
@@ -97,8 +99,31 @@ func (dao *AttachmentDao) Get(id string) (*models.Attachment, error) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// List selects attachment
+// List selects attachments
 func (dao *AttachmentDao) List(dbParams *database.DatabaseParams) ([]*models.Attachment, error) {
+	return dao.list(dbParams, dao.db.QueryRow, dao.db.Query)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// List selects attachments in a transaction
+func (dao *AttachmentDao) ListTx(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Attachment, error) {
+	return dao.list(dbParams, tx.QueryRow, tx.Query)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Delete deletes an attachment with the given ID
+func (dao *AttachmentDao) Delete(id string) error {
+	generic := NewGenericDao(dao.db, dao.table)
+	return generic.Delete(id)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Internal
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (dao *AttachmentDao) list(dbParams *database.DatabaseParams, queryRowFn database.QueryRowFn, queryFn database.QueryFn) ([]*models.Attachment, error) {
 	generic := NewGenericDao(dao.db, dao.table)
 
 	if dbParams == nil {
@@ -113,7 +138,7 @@ func (dao *AttachmentDao) List(dbParams *database.DatabaseParams) ([]*models.Att
 		dbParams.Columns = dao.selectColumns()
 	}
 
-	rows, err := generic.List(dao.baseSelect(), dbParams)
+	rows, err := generic.list(dao.baseSelect(), dbParams, queryRowFn, queryFn)
 	if err != nil {
 		return nil, err
 	}
@@ -137,16 +162,6 @@ func (dao *AttachmentDao) List(dbParams *database.DatabaseParams) ([]*models.Att
 	return attachments, nil
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Delete deletes an attachment with the given ID
-func (dao *AttachmentDao) Delete(id string) error {
-	generic := NewGenericDao(dao.db, dao.table)
-	return generic.Delete(id)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // baseSelect returns the default select builder

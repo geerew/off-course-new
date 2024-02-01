@@ -204,29 +204,16 @@ func TestAssetProgress_Update(t *testing.T) {
 		assert.EqualError(t, err, "id cannot be empty")
 	})
 
-	t.Run("duplicate id", func(t *testing.T) {
-		_, dao, db := AssetProgressSetup(t)
-
-		workingData := NewTestData(t, db, 1, false, 1, 0)
-		ap := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
-
-		ap.AssetID = "1234"
-
-		err := dao.Update(ap)
-		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.id", dao.table))
-	})
-
 	t.Run("invalid asset id", func(t *testing.T) {
 		_, dao, db := AssetProgressSetup(t)
 
 		workingData := NewTestData(t, db, 1, false, 1, 0)
 		ap := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
 
-		ap.ID = "1234"
 		ap.AssetID = "1234"
 
 		err := dao.Update(ap)
-		require.ErrorContains(t, err, "FOREIGN KEY constraint failed")
+		require.ErrorIs(t, err, sql.ErrNoRows)
 	})
 
 	t.Run("db error", func(t *testing.T) {

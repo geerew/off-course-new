@@ -86,7 +86,7 @@ func (dao *AssetProgressDao) Update(ap *models.AssetProgress) error {
 // This is to be used in a transaction
 // Note: Only the `video_pos` and `completed` can be updated
 func (dao *AssetProgressDao) UpdateTx(ap *models.AssetProgress, tx *sql.Tx) error {
-	if ap.CourseID == "" || ap.AssetID == "" {
+	if ap.AssetID == "" {
 		return ErrEmptyId
 	}
 
@@ -94,42 +94,50 @@ func (dao *AssetProgressDao) UpdateTx(ap *models.AssetProgress, tx *sql.Tx) erro
 		ap.VideoPos = 0
 	}
 
-	currentAp, err := dao.GetTx(ap.AssetID, tx)
-	if err != nil && err != sql.ErrNoRows {
+	// Get the asset
+	assetDao := NewAssetDao(dao.db)
+	asset, err := assetDao.GetTx(ap.AssetID, nil, tx)
+	if err != nil {
 		return err
 	}
 
-	if currentAp != nil {
-		// Do nothing when there is no change
-		if ap.VideoPos == currentAp.VideoPos && ap.Completed == currentAp.Completed {
-			return nil
-		}
-
-		// Set or clear the completed at time
-		if ap.Completed && ap.CompletedAt.IsZero() {
-			ap.CompletedAt = types.NowDateTime()
-		} else if !ap.Completed {
-			ap.CompletedAt = types.DateTime{}
-		}
-	} else {
-		// There is no current asset progress, so set an ID (if not already set) and a created at
-		// time
-		if ap.ID == "" {
-			ap.RefreshId()
-		}
-
-		ap.RefreshCreatedAt()
+	// Return when nothing has changed
+	if asset.VideoPos == ap.VideoPos && asset.Completed == ap.Completed {
+		return nil
 	}
 
+	// Set an id (if empty)
+	if ap.ID == "" {
+		ap.RefreshId()
+	}
+
+	// Set course id (if empty)
+	if ap.CourseID == "" {
+		ap.CourseID = asset.CourseID
+	}
+
+	ap.RefreshCreatedAt()
 	ap.RefreshUpdatedAt()
+
+	if ap.Completed {
+		if !asset.CompletedAt.IsZero() {
+			ap.CompletedAt = asset.CompletedAt
+		} else {
+			ap.CompletedAt = types.NowDateTime()
+		}
+	} else {
+		ap.CompletedAt = types.DateTime{}
+	}
 
 	// Update (or create if it doesn't exist)
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.table).
 		SetMap(dao.data(ap)).
-		Suffix("ON CONFLICT (asset_id) DO UPDATE SET video_pos = ?, completed = ?, completed_at = ?, updated_at = ?",
-			ap.VideoPos, ap.Completed, ap.CompletedAt, ap.UpdatedAt).
+		Suffix(
+			"ON CONFLICT (asset_id) DO UPDATE SET video_pos = ?, completed = ?, completed_at = ?, updated_at = ?",
+			ap.VideoPos, ap.Completed, NilStr(ap.CompletedAt.String()), ap.UpdatedAt,
+		).
 		ToSql()
 
 	_, err = tx.Exec(query, args...)
