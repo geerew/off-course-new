@@ -198,7 +198,7 @@ func TestAssetProgress_Update(t *testing.T) {
 		workingData := NewTestData(t, db, 1, false, 1, 0)
 		ap := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
 
-		ap.ID = ""
+		ap.AssetID = ""
 
 		err := dao.Update(ap)
 		assert.EqualError(t, err, "id cannot be empty")

@@ -205,7 +205,6 @@ func TestAsset_Get(t *testing.T) {
 			CourseID: workingData[0].ID,
 			VideoPos: 50,
 		}
-		ap.RefreshId()
 
 		err = apDao.Update(ap)
 		require.Nil(t, err)
@@ -330,7 +329,6 @@ func TestAsset_List(t *testing.T) {
 			CourseID: workingData[0].ID,
 			VideoPos: 50,
 		}
-		ap1.RefreshId()
 		require.Nil(t, apDao.Update(ap1))
 
 		// Find all started videos
@@ -353,7 +351,6 @@ func TestAsset_List(t *testing.T) {
 			Completed:   true,
 			CompletedAt: types.NowDateTime(),
 		}
-		ap2.RefreshId()
 		require.Nil(t, apDao.Update(ap2))
 
 		// Find completed assets

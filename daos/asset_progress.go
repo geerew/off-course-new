@@ -86,7 +86,7 @@ func (dao *AssetProgressDao) Update(ap *models.AssetProgress) error {
 // This is to be used in a transaction
 // Note: Only the `video_pos` and `completed` can be updated
 func (dao *AssetProgressDao) UpdateTx(ap *models.AssetProgress, tx *sql.Tx) error {
-	if ap.ID == "" || ap.CourseID == "" || ap.AssetID == "" {
+	if ap.CourseID == "" || ap.AssetID == "" {
 		return ErrEmptyId
 	}
 
@@ -112,7 +112,12 @@ func (dao *AssetProgressDao) UpdateTx(ap *models.AssetProgress, tx *sql.Tx) erro
 			ap.CompletedAt = types.DateTime{}
 		}
 	} else {
-		// There is no current asset progress, so set the created at time
+		// There is no current asset progress, so set an ID (if not already set) and a created at
+		// time
+		if ap.ID == "" {
+			ap.RefreshId()
+		}
+
 		ap.RefreshCreatedAt()
 	}
 
