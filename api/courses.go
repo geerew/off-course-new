@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/Masterminds/squirrel"
-	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
@@ -281,7 +280,7 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 
 	dbParams := &database.DatabaseParams{
 		OrderBy:    []string{c.Query("orderBy", []string{"chapter asc", "prefix asc"}...)},
-		Where:      sq.Eq{daos.TableAssets() + ".course_id": id},
+		Where:      squirrel.Eq{daos.TableAssets() + ".course_id": id},
 		Pagination: pagination.NewFromApi(c),
 	}
 
@@ -380,7 +379,7 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 
 	dbParams := &database.DatabaseParams{
 		OrderBy:    []string{c.Query("orderBy", []string{"title asc"}...)},
-		Where:      sq.Eq{daos.TableAttachments() + ".asset_id": assetId},
+		Where:      squirrel.Eq{daos.TableAttachments() + ".asset_id": assetId},
 		Pagination: pagination.NewFromApi(c),
 	}
 
