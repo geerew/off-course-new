@@ -4,7 +4,9 @@ package models
 // Defines a model for the table `scans`
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-import "github.com/geerew/off-course/utils/types"
+import (
+	"github.com/geerew/off-course/utils/types"
+)
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

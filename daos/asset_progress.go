@@ -67,7 +67,7 @@ func (dao *AssetProgressDao) GetTx(assetId string, tx *sql.Tx) (*models.AssetPro
 
 // Update updates a asset progress
 //
-// # It is always run in a transaction
+// This always run in a transaction. It calls `UpdateTx`
 //
 // Note: Only the `video_pos` and `completed` can be updated
 func (dao *AssetProgressDao) Update(ap *models.AssetProgress) error {
