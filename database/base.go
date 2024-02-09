@@ -41,19 +41,19 @@ type DatabaseParams struct {
 	// A slice of columns to order by (ex ["id DESC", "title ASC"])
 	OrderBy []string
 
-	// A slice of columns to select (ex ["id", "title"])
+	// A slice of columns to select (ex ["id", "title", table.col])
 	Columns []string
 
 	// Any valid squirrel WHERE expression
 	//
 	// Examples:
 	//
-	//   EQ -> sq.Eq{"id": "123"}
-	//   IN -> sq.Eq{"id": []string{"123", "456"}}
-	//   OR -> sq.Expr("id = ?", "123"), sq.Expr("id = ?", "456")}
-	//   AND -> sq.And{sq.Eq{"id": "123"}, sq.Eq{"title": "devops"}}
-	//   LIKE -> sq.Like{"title": "%dev%"}
-	//   NOT -> sq.NotEq{"id": "123"}
+	//   EQ:   sq.Eq{"id": "123"}
+	//   IN:   sq.Eq{"id": []string{"123", "456"}}
+	//   OR:   sq.Or{sq.Expr("id = ?", "123"), sq.Expr("id = ?", "456")}
+	//   AND:  sq.And{sq.Eq{"id": "123"}, sq.Eq{"title": "devops"}}
+	//   LIKE: sq.Like{"title": "%dev%"}
+	//   NOT:  sq.NotEq{"id": "123"}
 	Where any
 
 	// Used to paginate the results

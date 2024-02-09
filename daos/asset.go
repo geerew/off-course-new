@@ -90,7 +90,7 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams) (*models.
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get selects an asset with the given ID in a transaction
+// Get selects an asset with the given ID in a transaction. It will also get the attachments
 //
 // The dbParams can be used to order the attachments
 func (dao *AssetDao) GetTx(id string, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Asset, error) {
@@ -107,7 +107,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams) ([]*models.Asset, e
 		dbParams = &database.DatabaseParams{}
 	}
 
-	existingOrderBy := dbParams.OrderBy
+	origOrderBy := dbParams.OrderBy
 
 	dbParams.OrderBy = dao.processOrderBy(dbParams.OrderBy)
 
@@ -147,8 +147,18 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams) ([]*models.Asset, e
 			assetIds = append(assetIds, a.ID)
 		}
 
+		// Reduce the order by clause to only include columns specific to the attachments table
+		var reducedOrderBy []string
+		for _, ob := range origOrderBy {
+			table, _ := extractTableColumn(ob)
+
+			if table == attachmentDao.table {
+				reducedOrderBy = append(reducedOrderBy, ob)
+			}
+		}
+
 		dbParams = &database.DatabaseParams{
-			OrderBy: existingOrderBy,
+			OrderBy: reducedOrderBy,
 			Where:   squirrel.Eq{"asset_id": assetIds},
 		}
 
