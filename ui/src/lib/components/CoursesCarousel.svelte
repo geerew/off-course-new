@@ -187,29 +187,31 @@
 	<div class="flex flex-row items-center justify-between pb-5">
 		<h2 class="text-lg font-bold">{variant === 'latest' ? 'New Courses' : 'Ongoing Courses'}</h2>
 		<div class="flex gap-1">
-			<Button
-				variant="ghost"
-				disabled={!$canScrollPrev}
-				on:click={() => {
-					currentSlide -= scrollBy;
-					api.scrollTo(currentSlide);
-				}}
-				class="hover:text-primary px-3"
-			>
-				<ArrowLeft class="h-6 w-6" />
-			</Button>
+			{#if !loadingCourses && !loadingCoursesError && courses.length > 0}
+				<Button
+					variant="ghost"
+					disabled={!$canScrollPrev}
+					on:click={() => {
+						currentSlide -= scrollBy;
+						api.scrollTo(currentSlide);
+					}}
+					class="hover:text-primary px-3"
+				>
+					<ArrowLeft class="h-6 w-6" />
+				</Button>
 
-			<Button
-				variant="ghost"
-				disabled={!$canScrollNext}
-				on:click={() => {
-					currentSlide += scrollBy;
-					api.scrollTo(currentSlide);
-				}}
-				class="hover:text-primary px-3"
-			>
-				<ArrowRight class="h-6 w-6" />
-			</Button>
+				<Button
+					variant="ghost"
+					disabled={!$canScrollNext}
+					on:click={() => {
+						currentSlide += scrollBy;
+						api.scrollTo(currentSlide);
+					}}
+					class="hover:text-primary px-3"
+				>
+					<ArrowRight class="h-6 w-6" />
+				</Button>
+			{/if}
 		</div>
 	</div>
 	{#if loadingCourses}
