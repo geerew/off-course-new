@@ -133,6 +133,35 @@
 		}
 	}
 
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	// Return a random empty message. To be used when no courses are found
+	function randomEmptyMessage(): string {
+		const phrases = [
+			'Not a course in sight',
+			'A blank slate',
+			'Tumbleweeds...',
+			"I've got nothing...",
+			'All quiet on the course front',
+			'Course-free zone',
+			'Silent halls',
+			"Do you hear that? It's the sound of no courses",
+			'No courses to be found',
+			'Nothing to see here',
+			'ECHO echo echo',
+			'Waiting for liftoff',
+			'Uncharted territories',
+			'The great course void',
+			'No courses, only dreams',
+			'Where courses dare not tread',
+			'A sea of tranquility',
+			'Awaiting ignition'
+		];
+
+		const randomIndex = Math.floor(Math.random() * phrases.length);
+		return phrases[randomIndex];
+	}
+
 	// ----------------------
 	// Reactive
 	// ----------------------
@@ -195,7 +224,7 @@
 						currentSlide -= scrollBy;
 						api.scrollTo(currentSlide);
 					}}
-					class="hover:text-primary px-3"
+					class="hover:text-secondary px-3"
 				>
 					<ArrowLeft class="h-6 w-6" />
 				</Button>
@@ -207,7 +236,7 @@
 						currentSlide += scrollBy;
 						api.scrollTo(currentSlide);
 					}}
-					class="hover:text-primary px-3"
+					class="hover:text-secondary px-3"
 				>
 					<ArrowRight class="h-6 w-6" />
 				</Button>
@@ -223,7 +252,7 @@
 	{:else if courses.length === 0}
 		<div class="flex min-h-[6rem] w-full flex-grow flex-col place-content-center items-center p-10">
 			<span class="text-muted-foreground">
-				{variant === 'latest' ? 'No courses have been added' : 'You have not started any courses'}
+				{randomEmptyMessage()}
 			</span>
 		</div>
 	{:else}
@@ -246,7 +275,7 @@
 									<CourseCard {course} />
 
 									<div class="flex h-full flex-col justify-between p-3 text-sm md:p-3">
-										<h3 class="group-hover:text-primary font-semibold">
+										<h3 class="group-hover:text-secondary font-semibold">
 											{course.title}
 										</h3>
 

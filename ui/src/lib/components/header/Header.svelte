@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { site } from '$lib/config/site';
-	import { cn } from '$lib/utils';
 	import { Hexagon } from 'lucide-svelte';
 	import HeaderMenu from './HeaderMenu.svelte';
 	import SettingsMenu from './SettingsMenu.svelte';
 </script>
 
-<header class={cn('w-full border-b')}>
+<header class="w-full border-b">
 	<div class="container flex h-16 items-center justify-between gap-8">
 		<div class="mr-3">
 			<a href="/" class="mr-6 flex items-center gap-2">

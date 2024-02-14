@@ -344,7 +344,7 @@
 
 <Sheet.Root bind:open={isOpen}>
 	<Sheet.Trigger asChild let:builder>
-		<Button builders={[builder]} class="gap-2 rounded px-3 py-1.5">
+		<Button builders={[builder]} class="h-8 gap-2 rounded px-3 md:h-10">
 			<BookPlus class="h-4 w-4" />
 			<span>Add Courses</span>
 		</Button>
