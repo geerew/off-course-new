@@ -1,9 +1,10 @@
-import type { Asset, CourseChapters } from '$lib/types/models';
+import type { Asset, Course, CourseChapters } from '$lib/types/models';
 import { clsx, type ClassValue } from 'clsx';
-import type { SortKey } from 'svelte-headless-table/dist/plugins/';
+import type { SortKey } from 'svelte-headless-table/plugins/';
 import { cubicOut } from 'svelte/easing';
 import type { TransitionConfig } from 'svelte/transition';
 import { twMerge } from 'tailwind-merge';
+import { GetCourse } from './api';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -146,3 +147,26 @@ export const flyAndScale = (
 		easing: cubicOut
 	};
 };
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Gets the course id from the search params and queries the api for the course
+export async function GetCourseFromParams(params: URLSearchParams): Promise<Course> {
+	let course: Course | undefined = undefined;
+
+	const id = params && params.get('id');
+	if (!id) throw new Error('Missing course ID');
+
+	await GetCourse(id)
+		.then(async (resp) => {
+			if (!resp) return;
+			course = { ...resp };
+		})
+		.catch((error: Error) => {
+			throw error;
+		});
+
+	if (!course) throw new Error('Course was not found');
+
+	return course;
+}
