@@ -64,7 +64,22 @@ const config = {
 			}
 		}
 	},
-	plugins: [require('@tailwindcss/forms')]
+	plugins: [
+		require('@tailwindcss/forms'),
+		require('tailwindcss-animate'),
+		// eslint-disable-next-line @typescript-eslint/no-var-requires
+		require('vidstack/tailwind.cjs')({
+			prefix: 'media',
+			webComponents: true
+		}),
+		customVariants
+	]
 };
+
+function customVariants({ addVariant, matchVariant }) {
+	matchVariant('parent-data', (value) => `.parent[data-${value}] > &`);
+	addVariant('hocus', ['&:hover', '&:focus-visible']);
+	addVariant('group-hocus', ['.group:hover &', '.group:focus-visible &']);
+}
 
 export default config;
