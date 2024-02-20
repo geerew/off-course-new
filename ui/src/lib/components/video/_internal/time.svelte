@@ -11,8 +11,9 @@
 	// The input (range) element
 	let inputEl: HTMLInputElement;
 
-	// The value (%) of the slider
+	// The % of the slider for time and buffered
 	let value: number = 0;
+	let buffered: number = 0;
 
 	// True when the thumb is being dragged
 	let isDragging = false;
@@ -32,8 +33,6 @@
 	// Duration and current time of the video (set by the player)
 	let duration = 0;
 	let time = 0;
-
-	// Create a throttled version of the seeking function
 
 	// ----------------------
 	// Functions
@@ -61,7 +60,7 @@
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Format the current time and duration into a human-readable format
-	function formatTime(): string {
+	function formatTime(currentTime: number): string {
 		// Determine the format based on the total duration
 		const totalHours = Math.floor(duration / 3600);
 
@@ -92,7 +91,7 @@
 		const includeHours = totalHours > 0;
 
 		// Format the current time and total duration
-		const formattedCurrentTime = formatDuration(time, includeMinutes, includeHours);
+		const formattedCurrentTime = formatDuration(currentTime, includeMinutes, includeHours);
 		const formattedTotalDuration = formatDuration(duration, includeMinutes, includeHours);
 
 		return `${formattedCurrentTime} of ${formattedTotalDuration}`;
@@ -104,7 +103,8 @@
 
 	// Any time the value changes, update the fill of the slider
 	$: if (inputEl) {
-		inputEl.style.setProperty('--slider-fill', value + '%');
+		inputEl.style.setProperty('--slider-time', value + '%');
+		inputEl.style.setProperty('--slider-buffered', buffered + '%');
 	}
 
 	// ----------------------
@@ -122,7 +122,7 @@
 			duration = playerDuration;
 
 			// Set the human-readable time
-			formattedTime = formatTime();
+			formattedTime = formatTime(0);
 			lastLoggedSecond = 0;
 		});
 
@@ -132,12 +132,12 @@
 			if (duration === 0 || isDragging) return;
 
 			time = currentTime;
-			value = (time / duration ?? 0) * 100;
+			value = (currentTime / duration ?? 0) * 100;
 
-			const currentSecond = Math.floor(currentTime);
+			const currentSecond = Math.floor(time);
 			if (currentSecond !== lastLoggedSecond) {
 				lastLoggedSecond = currentSecond;
-				formattedTime = formatTime();
+				formattedTime = formatTime(time);
 			}
 		});
 
@@ -146,8 +146,13 @@
 			isPaused = paused;
 		});
 
+		const bufferedUnsub = player.subscribe(({ bufferedEnd: playerBufferedEnd, canLoad }) => {
+			buffered = (playerBufferedEnd / duration ?? 0) * 100;
+		});
+
 		// Unsubscribe
 		return () => {
+			bufferedUnsub();
 			durationUnsub();
 			timeUnsub();
 			pausedUnsub();
@@ -176,11 +181,11 @@
 			if (!isPaused) remote.pause();
 		}}
 		on:pointerup={() => {
-			if (isDragging) {
-				remote.seek((value / 100) * duration);
-				isDragging = false;
-				if (shouldUnpause) remote.play();
-			}
+			if (!isDragging) return;
+
+			remote.seek((value / 100) * duration);
+			isDragging = false;
+			if (shouldUnpause) remote.play();
 		}}
 		on:pointercancel={() => (isDragging = false)}
 	/>
@@ -224,15 +229,25 @@
 		@apply h-[5px] rounded-sm shadow-none;
 		background:
 			linear-gradient(theme(colors.secondary.DEFAULT), theme(colors.secondary.DEFAULT)) 0 /
-				var(--slider-fill, 0%) 100% no-repeat,
+				var(--slider-time, 0%) 100% no-repeat,
 			#ffffff50;
 	}
 
 	input[type='range']::-moz-range-track {
 		@apply h-[5px] rounded-sm shadow-none;
+		/* prettier-ignore */
 		background:
-			linear-gradient(theme(colors.secondary.DEFAULT), theme(colors.secondary.DEFAULT)) 0 /
-				var(--slider-fill, 0%) 100% no-repeat,
-			#ffffff50;
+			linear-gradient(
+				to right, 
+				theme(colors.secondary.DEFAULT), 
+				theme(colors.secondary.DEFAULT) var(--slider-time, 0%),
+				#ffffff80 var(--slider-time, 0%),
+				#ffffff80 var(--slider-buffered, 0%),
+				#ffffff50 var(--slider-time, 0%) 100%
+			)
+
+		/* 0 / */
+		/* var(--slider-time, 0%) 100% no-repeat, */
+		/* #ffffff50; */
 	}
 </style>

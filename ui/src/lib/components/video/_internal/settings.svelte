@@ -4,7 +4,7 @@
 	import { Check, ChevronLeft, ChevronRight, Settings } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { MediaRemoteControl } from 'vidstack';
-
+	import { getCtx } from './context';
 	// ----------------------
 	// Variables
 	// ----------------------
@@ -22,6 +22,31 @@
 	// The current playback rate the the available playback rates
 	let playbackRate = 1;
 	let playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 4];
+
+	// Get the ctx for the controls
+	const ctx = getCtx();
+
+	// ----------------------
+	// Reactive
+	// ----------------------
+
+	// Toggle the idle tracking of controls
+	function controls(open: boolean) {
+		if (open) {
+			// Update the ctx to mark settings as true (open)
+			ctx.set({ ...$ctx, settings: true });
+			remote.pauseControls();
+		} else {
+			// Update the ctx to mark settings as false (closed) and resume idle tracking if possible
+			ctx.set({ ...$ctx, settings: false });
+			if (!$ctx.controls && !$ctx.settings) remote.resumeControls();
+		}
+	}
+
+	// ----------------------
+	// Reactive
+	// ----------------------
+	$: controls(open);
 
 	// ----------------------
 	// Lifecycle
