@@ -75,6 +75,7 @@ func main() {
 
 	// TODO: Handle this better...
 	c := cron.New()
+	go func() { updateCourseAvailability(db) }()
 	c.AddFunc("@every 5m", func() { updateCourseAvailability(db) })
 	c.Start()
 
@@ -109,7 +110,7 @@ func main() {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func updateCourseAvailability(db database.Database) error {
-	log.Debug().Msg("Updating course availability...")
+	log.Info().Msg("Updating course availability...")
 	const perPage = 100
 	var page = 1
 
