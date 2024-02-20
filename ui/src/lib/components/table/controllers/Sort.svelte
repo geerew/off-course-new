@@ -4,7 +4,7 @@
 	import { cn } from '$lib/utils';
 	import { ArrowDownUp, ChevronDown, ChevronRight, ChevronUp } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
-	import type { WritableSortKeys } from 'svelte-headless-table/dist/plugins';
+	import type { WritableSortKeys } from 'svelte-headless-table/plugins';
 
 	// -------------------
 	// Exports

@@ -241,7 +241,7 @@
 <div class="bg-background flex w-full flex-col gap-4 pb-10">
 	<!-- Heading -->
 	<div class="w-full border-b">
-		<div class="container flex items-center py-4 md:py-6">
+		<div class="container flex items-center gap-2.5 py-2 md:py-4">
 			<span class="grow text-lg font-semibold md:text-2xl">Courses</span>
 			<AddCourses
 				on:added={() => {

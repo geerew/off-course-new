@@ -1,6 +1,6 @@
 import type { Asset, Course, CourseChapters } from '$lib/types/models';
 import { clsx, type ClassValue } from 'clsx';
-import type { SortKey } from 'svelte-headless-table/plugins/';
+import type { SortKey } from 'svelte-headless-table/plugins';
 import { cubicOut } from 'svelte/easing';
 import type { TransitionConfig } from 'svelte/transition';
 import { twMerge } from 'tailwind-merge';

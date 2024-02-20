@@ -9,17 +9,10 @@
 	import Badge from '$components/ui/badge/badge.svelte';
 	import Button from '$components/ui/button/button.svelte';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
-	import {
-		ATTACHMENT_API,
-		AddScan,
-		COURSE_API,
-		ErrorMessage,
-		GetAllCourseAssets,
-		GetCourse
-	} from '$lib/api';
+	import { ATTACHMENT_API, AddScan, COURSE_API, ErrorMessage, GetAllCourseAssets } from '$lib/api';
 	import { addToast } from '$lib/stores/addToast';
 	import type { Asset, Course, CourseChapters } from '$lib/types/models';
-	import { buildChapterStructure, cn, isBrowser } from '$lib/utils';
+	import { GetCourseFromParams, buildChapterStructure, cn, isBrowser } from '$lib/utils';
 	import {
 		CalendarPlus,
 		CalendarSearch,
@@ -73,18 +66,13 @@
 	// Functions
 	// ----------------------
 
-	// Gets the course id from the search params and queries the api for the course
+	// Lookup the course based upon the search params
 	const getCourse = async () => {
 		if (!isBrowser) return false;
 
-		const params = isBrowser && $page.url.searchParams;
-		const id = params && params.get('id');
-		if (!id) return false;
-
-		return await GetCourse(id)
-			.then(async (resp) => {
-				if (!resp) return false;
-				course = { ...resp };
+		return await GetCourseFromParams($page.url.searchParams)
+			.then((resp) => {
+				course = resp;
 				return true;
 			})
 			.catch((err) => {
@@ -248,7 +236,7 @@
 								{/if}
 							</div>
 
-							<div class="flex flex-row gap-3 pt-3.5">
+							<div class="flex flex-row place-content-center gap-3 pt-3.5 md:place-content-start">
 								<!-- Availability -->
 								{#if course.available}
 									<Badge
