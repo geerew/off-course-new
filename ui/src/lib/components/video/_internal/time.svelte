@@ -34,10 +34,6 @@
 	on:pointerdown={() => {
 		ctx.set({ ...$ctx, draggingTime: true });
 	}}
-	on:pointerup={(e) => {
-		if ($ctx.ended) ctx.set({ ...$ctx, ended: false });
-		ctx.set({ ...$ctx, draggingTime: false });
-	}}
 >
 	<!-- Track and fill -->
 	<div
@@ -51,7 +47,7 @@
 	<!-- Actual time -->
 	<div
 		class={cn(
-			'pointer-events-none absolute flex flex-col items-center transition-opacity duration-200',
+			'pointer-events-none absolute z-20 flex flex-col items-center transition-opacity duration-200',
 			$ctx.draggingTime || isPointering ? 'opacity-0' : 'opacity-100'
 		)}
 		bind:this={timeBubbleEl}

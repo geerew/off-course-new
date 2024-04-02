@@ -36,6 +36,9 @@
 
 	const dispatch = createEventDispatcher<Record<'progress' | 'finished' | 'next', number>>();
 
+	// Current time of the player
+	let currentTime = -1;
+
 	// Used to only do stuff when the logged second changes
 	let lastLoggedSecond = -1;
 
@@ -108,7 +111,8 @@
 	function timeChange(e: MediaTimeUpdateEvent) {
 		if (duration === -1) return;
 
-		const currentSecond = Math.floor(e.detail.currentTime);
+		currentTime = e.detail.currentTime;
+		const currentSecond = Math.floor(currentTime);
 
 		// Do nothing when we have already processed this second
 		if (currentSecond === 0 || currentSecond === lastLoggedSecond) return;
@@ -181,6 +185,10 @@
 	on:duration-change={durationChange}
 	on:ended={() => {
 		ctx.set({ ...$ctx, ended: true });
+	}}
+	on:pointerup={() => {
+		if ($ctx.ended && currentTime !== duration) ctx.set({ ...$ctx, ended: false });
+		if ($ctx.draggingTime) ctx.set({ ...$ctx, draggingTime: false });
 	}}
 >
 	<media-provider />
