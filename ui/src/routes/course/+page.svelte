@@ -16,7 +16,15 @@
 		cn,
 		isBrowser
 	} from '$lib/utils';
-	import { CheckCircle2, ChevronRight, CircleDotDashed, Dot, Download } from 'lucide-svelte';
+	import {
+		ArrowLeft,
+		ArrowRight,
+		CheckCircle2,
+		ChevronRight,
+		CircleDotDashed,
+		Dot,
+		Download
+	} from 'lucide-svelte';
 	import { onMount, tick } from 'svelte';
 
 	// ----------------------
@@ -449,7 +457,7 @@
 				</div>
 			</div>
 
-			<div class="flex h-full w-full flex-col">
+			<div class="flex h-full w-full flex-col pb-8">
 				{#if selectedAsset && selectedAsset.assetType === 'video'}
 					<Video
 						title={selectedAsset.title}
@@ -476,6 +484,36 @@
 							selectedAsset = nextAsset;
 						}}
 					/>
+
+					<div class="flex w-full flex-row gap-3 pt-5">
+						{#if prevAsset}
+							<Button
+								variant="outline"
+								class="hover:bg-muted/50 hover:text-primary flex h-auto basis-1/2 flex-row items-center justify-start gap-4 whitespace-normal rounded-sm border p-3 text-start"
+							>
+								<span class="text-start">
+									<ArrowLeft class="h-5 w-5" />
+								</span>
+								{prevAsset?.prefix}. {prevAsset?.title}
+							</Button>
+						{:else}
+							<div class="basis-1/2"></div>
+						{/if}
+
+						{#if nextAsset}
+							<Button
+								variant="outline"
+								class="hover:bg-muted hover:text-primary flex h-auto basis-1/2 flex-row items-center justify-end gap-4 whitespace-normal rounded-sm border p-3 text-end"
+							>
+								<span class="text-start">
+									{nextAsset?.prefix}. {nextAsset?.title}
+								</span>
+								<ArrowRight class="h-5 w-5" />
+							</Button>
+						{:else}
+							<div class="basis-1/2"></div>
+						{/if}
+					</div>
 				{/if}
 			</div>
 		</div>
