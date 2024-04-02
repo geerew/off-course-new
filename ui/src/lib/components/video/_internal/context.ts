@@ -2,13 +2,22 @@ import { getContext, setContext } from 'svelte';
 import { writable, type Writable } from 'svelte/store';
 
 type Props = {
-	controls: boolean;
-	settings: boolean;
+	controlsOpen: boolean;
+	settingsOpen: boolean;
+	ended: boolean;
+	buffering: boolean;
+	draggingTime: boolean;
 };
 type Context = Writable<Props>;
 
 export function setCtx() {
-	const props = writable<Props>({ controls: false, settings: false });
+	const props = writable<Props>({
+		controlsOpen: false,
+		settingsOpen: false,
+		ended: false,
+		buffering: true,
+		draggingTime: false
+	});
 	setContext('ctx', props);
 }
 

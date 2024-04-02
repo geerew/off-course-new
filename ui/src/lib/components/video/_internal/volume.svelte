@@ -1,150 +1,72 @@
 <script lang="ts">
 	import * as Tooltip from '$components/ui/tooltip';
 	import { flyAndScale } from '$lib/utils';
-	import { Volume2, VolumeX } from 'lucide-svelte';
-	import { onMount } from 'svelte';
-	import { MediaRemoteControl } from 'vidstack';
-
-	// ----------------------
-	// Variables
-	// ----------------------
-
-	const remote = new MediaRemoteControl();
-
-	let inputEl: HTMLInputElement;
-	let value: number;
-	let preMutedVolume: number;
-
-	// ----------------------
-	// Functions
-	// ----------------------
-
-	// Changes the value and updates the fill
-	function update(value: number) {
-		if (value < 0 || value > 1 || !inputEl) return;
-		remote.changeVolume(value);
-		inputEl.style.setProperty('--slider-fill', (value / +inputEl.max) * 100 + '%');
-	}
-
-	// ----------------------
-	// Reactive
-	// ----------------------
-
-	// When the value changes, update the fill
-	$: update(value);
-
-	// ----------------------
-	// Lifecycle
-	// ----------------------
-
-	onMount(() => {
-		// Find the player
-		const player = remote.getPlayer(inputEl);
-
-		if (!player) return;
-
-		// Default to the player's value
-		value = player.volume ?? 1;
-		preMutedVolume = value;
-
-		// When the muted state changes, update the value
-		const mutedUnsub = player.subscribe(({ muted }) => {
-			if (muted) {
-				preMutedVolume = value;
-				value = 0;
-			} else {
-				value = preMutedVolume === 0 ? 0.25 : preMutedVolume;
-			}
-		});
-
-		// Unsubscribe
-		return () => {
-			mutedUnsub();
-		};
-	});
 </script>
 
-<media-controls-group class="flex shrink-0 items-center gap-1.5">
-	<!-- Button -->
-	<Tooltip.Root openDelay={100} portal={null} closeOnPointerDown={false}>
-		<Tooltip.Trigger class="inline-flex">
-			<media-mute-button
-				class="ring-media-focus hover:bg-secondary group relative inline-flex cursor-pointer items-center justify-center rounded-md p-1.5 text-white outline-none ring-inset data-[focus]:ring-4"
-			>
-				<VolumeX
-					class="hidden size-[18px] group-data-[state='muted']:block [&>:nth-child(1)]:fill-white"
-				/>
-				<Volume2
-					class="hidden size-[18px] group-data-[state='high']:block group-data-[state='low']:block [&>:nth-child(1)]:fill-white"
-				/>
-			</media-mute-button>
-		</Tooltip.Trigger>
-
-		<Tooltip.Content
-			class="bg-background text-foreground rounded-sm border-none px-1.5 py-1 text-xs"
-			transition={flyAndScale}
-			transitionConfig={{ y: 8, duration: 100 }}
-			sideOffset={5}
+<Tooltip.Root openDelay={100} portal={null} closeOnPointerDown={true}>
+	<Tooltip.Trigger
+		class="hover:text-secondary inline-flex h-auto cursor-pointer items-center text-white"
+	>
+		<media-mute-button
+			class="hover:text-secondary =h-auto group inline-flex cursor-pointer items-center text-white"
 		>
-			<Tooltip.Arrow />
-			<span class="media-muted:hidden">Mute</span>
-			<span class="media-muted:block hidden">Unmute</span>
-		</Tooltip.Content>
-	</Tooltip.Root>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				fill="currentColor"
+				class="hidden size-[22px] group-data-[state='muted']:block"
+			>
+				<path
+					d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06ZM17.78 9.22a.75.75 0 1 0-1.06 1.06L18.44 12l-1.72 1.72a.75.75 0 1 0 1.06 1.06l1.72-1.72 1.72 1.72a.75.75 0 1 0 1.06-1.06L20.56 12l1.72-1.72a.75.75 0 1 0-1.06-1.06l-1.72 1.72-1.72-1.72Z"
+				/>
+			</svg>
 
-	<!-- Slider -->
-	<input
-		bind:this={inputEl}
-		bind:value
-		type="range"
-		min="0"
-		max="1"
-		step="0.01"
-		aria-valuenow={value * 100}
-		aria-valuetext={Math.round(value * 100) + '%'}
-	/>
-</media-controls-group>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				fill="currentColor"
+				class="hidden size-[22px] group-data-[state='high']:block group-data-[state='low']:block"
+			>
+				<path
+					d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z"
+				/>
+				<path
+					d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06Z"
+				/>
+			</svg>
+		</media-mute-button>
+	</Tooltip.Trigger>
 
-<style lang="postcss">
-	input[type='range'] {
-		@apply h-4 w-20 appearance-none bg-transparent;
-	}
+	<Tooltip.Content
+		class="bg-background text-foreground rounded-sm border-none px-1.5 py-1 text-xs"
+		transition={flyAndScale}
+		transitionConfig={{ y: 8, duration: 100 }}
+		sideOffset={8}
+	>
+		<span class="media-muted:hidden">Mute</span>
+		<span class="media-muted:block hidden">Unmute</span>
+	</Tooltip.Content>
+</Tooltip.Root>
 
-	input[type='range']:focus {
-		outline: none;
-	}
+<media-volume-slider
+	class="group relative inline-flex h-[22px] w-full max-w-[80px] cursor-pointer touch-none select-none items-center outline-none aria-hidden:hidden"
+>
+	<!-- Track -->
+	<div
+		class="relative z-0 h-[5px] w-full rounded-sm bg-white/30 ring-sky-400 group-data-[focus]:ring-[3px]"
+	>
+		<!-- Track Fill -->
+		<div
+			class="bg-secondary absolute h-full w-[var(--slider-fill)] rounded-sm will-change-[width]"
+		></div>
+	</div>
 
-	/* Thumb */
-	input[type='range']::-webkit-slider-thumb {
-		@apply -mt-1 size-3 appearance-none rounded-full border-none bg-white shadow-[0_0_2px_0px_#000000] transition-all duration-200 ease-in-out;
-
-		&:active {
-			@apply shadow-[0_0_2px_0px_#000000,0_0_0_3px_#ffffff40];
-		}
-	}
-
-	input[type='range']::-moz-range-thumb {
-		@apply size-3 appearance-none rounded-full border-none bg-white shadow-[0_0_1px_0px_#000000] transition-all delay-0 duration-200 [animation:ease] [transition-timing-function:ease];
-
-		&:active {
-			@apply shadow-[0_0_2px_0px_#000000,0_0_0_3px_#ffffff40];
-		}
-	}
-
-	/* Track */
-	input[type='range']::-webkit-slider-runnable-track {
-		@apply h-[5px] rounded-sm shadow-none;
-		background:
-			linear-gradient(theme(colors.secondary.DEFAULT), theme(colors.secondary.DEFAULT)) 0 /
-				var(--slider-fill, 0%) 100% no-repeat,
-			#ffffff50;
-	}
-
-	input[type='range']::-moz-range-track {
-		@apply h-[5px] rounded-sm shadow-none;
-		background:
-			linear-gradient(theme(colors.secondary.DEFAULT), theme(colors.secondary.DEFAULT)) 0 /
-				var(--slider-fill, 0%) 100% no-repeat,
-			#ffffff50;
-	}
-</style>
+	<!-- Preview -->
+	<media-slider-preview
+		class="pointer-events-none flex flex-col items-center opacity-0 transition-opacity duration-200 data-[visible]:opacity-100"
+	>
+		<media-slider-value
+			class="bg-foreground text-background rounded-sm px-2 py-px text-sm font-medium"
+		></media-slider-value>
+	</media-slider-preview>
+</media-volume-slider>

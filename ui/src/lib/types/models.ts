@@ -1,11 +1,11 @@
 import {
 	array,
 	boolean,
-	enumType,
 	merge,
 	number,
 	object,
 	optional,
+	picklist,
 	string,
 	type Output
 } from 'valibot';
@@ -14,7 +14,7 @@ import {
 // Scan Status
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-const ScanStatusSchema = enumType(['waiting', 'processing', '']);
+const ScanStatusSchema = picklist(['waiting', 'processing', '']);
 export type ScanStatus = Output<typeof ScanStatusSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -45,7 +45,7 @@ export type Attachment = Output<typeof AttachmentSchema>;
 // Asset
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-const AssetTypeSchema = enumType(['video', 'html', 'pdf']);
+const AssetTypeSchema = picklist(['video', 'html', 'pdf']);
 export type AssetType = Output<typeof AssetTypeSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

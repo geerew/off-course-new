@@ -1,253 +1,74 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { MediaRemoteControl } from 'vidstack';
+	import { cn } from '$lib/utils';
+	import { getCtx } from './context';
 
 	// ----------------------
 	// Variables
 	// ----------------------
 
-	const remote = new MediaRemoteControl();
+	let isPointering = false;
 
-	// The input (range) element
-	let inputEl: HTMLInputElement;
+	let timeBubbleEl: HTMLDivElement;
+	let timeBubbleWidth: number = 0;
 
-	// The % of the slider for time and buffered
-	let value: number = 0;
-	let buffered: number = 0;
-
-	// True when the thumb is being dragged
-	let isDragging = false;
-
-	// True when the video is paused
-	let isPaused = false;
-
-	// When true, the video should be unpaused after the thumb is released
-	let shouldUnpause = false;
-
-	// Used to only do stuff when the logged second changes
-	let lastLoggedSecond: number = -1;
-
-	// The time in a human-readable format
-	let formattedTime = '';
-
-	// Duration and current time of the video (set by the player)
-	let duration = 0;
-	let time = 0;
-
-	// ----------------------
-	// Functions
-	// ----------------------
-
-	// Calculates the seeking time based on the mouse position and dispatches a seeking event
-	function seeking(event: MouseEvent) {
-		if (!inputEl || duration <= 0) return;
-
-		const bounds = inputEl.getBoundingClientRect();
-
-		// The thumb is 12 px. So we need to offset the mouse position by 6 px to get the correct
-		// position
-		const thumbOffset = 6;
-
-		const adjustedWidth = bounds.width - thumbOffset * 2;
-		let mouseX = Math.max(0, event.clientX - bounds.left - thumbOffset);
-
-		const percentage = Math.max(0, Math.min((mouseX / adjustedWidth) * 100, 100));
-
-		const timePosition = (percentage / 100) * duration;
-		remote.seeking(timePosition);
-	}
-
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	// Format the current time and duration into a human-readable format
-	function formatTime(currentTime: number): string {
-		// Determine the format based on the total duration
-		const totalHours = Math.floor(duration / 3600);
-
-		// Helper function to format time
-		function formatDuration(
-			seconds: number,
-			includeMinutes: boolean,
-			includeHours: boolean
-		): string {
-			const hours = Math.floor(seconds / 3600);
-			const minutes = Math.floor((seconds % 3600) / 60);
-			const remainingSeconds = Math.floor(seconds % 60);
-
-			let timeString = '';
-
-			if (includeHours) {
-				timeString += `${hours.toString().padStart(2, '0')}:`;
-			}
-			if (includeMinutes || includeHours) {
-				timeString += `${minutes.toString().padStart(2, '0')}:`;
-			}
-			timeString += remainingSeconds.toString().padStart(2, '0');
-
-			return timeString;
-		}
-
-		const includeMinutes = duration >= 60 || totalHours > 0;
-		const includeHours = totalHours > 0;
-
-		// Format the current time and total duration
-		const formattedCurrentTime = formatDuration(currentTime, includeMinutes, includeHours);
-		const formattedTotalDuration = formatDuration(duration, includeMinutes, includeHours);
-
-		return `${formattedCurrentTime} of ${formattedTotalDuration}`;
-	}
+	// Video context
+	const ctx = getCtx();
 
 	// ----------------------
 	// Reactive
 	// ----------------------
 
-	// Any time the value changes, update the fill of the slider
-	$: if (inputEl) {
-		inputEl.style.setProperty('--slider-time', value + '%');
-		inputEl.style.setProperty('--slider-buffered', buffered + '%');
-	}
-
-	// ----------------------
-	// Lifecycle
-	// ----------------------
-
-	onMount(() => {
-		// Find the player
-		const player = remote.getPlayer(inputEl);
-		if (!player) return;
-
-		// Set the duration when the player is ready
-		const durationUnsub = player.subscribe(({ duration: playerDuration }) => {
-			if (playerDuration === 0) return;
-			duration = playerDuration;
-
-			// Set the human-readable time
-			formattedTime = formatTime(0);
-			lastLoggedSecond = 0;
-		});
-
-		// Update the time and range value
-		const timeUnsub = player.subscribe(({ currentTime }) => {
-			// Do nothing when the duration has not been set or the thumb is being dragged
-			if (duration === 0 || isDragging) return;
-
-			time = currentTime;
-			value = (currentTime / duration ?? 0) * 100;
-
-			const currentSecond = Math.floor(time);
-			if (currentSecond !== lastLoggedSecond) {
-				lastLoggedSecond = currentSecond;
-				formattedTime = formatTime(time);
-			}
-		});
-
-		// Update the paused state
-		const pausedUnsub = player.subscribe(({ paused }) => {
-			isPaused = paused;
-		});
-
-		const bufferedUnsub = player.subscribe(({ bufferedEnd: playerBufferedEnd, canLoad }) => {
-			buffered = (playerBufferedEnd / duration ?? 0) * 100;
-		});
-
-		// Unsubscribe
-		return () => {
-			bufferedUnsub();
-			durationUnsub();
-			timeUnsub();
-			pausedUnsub();
-		};
-	});
+	// Get the time bubble width
+	$: timeBubbleWidth = timeBubbleEl?.getBoundingClientRect().width;
 </script>
 
-<media-controls-group class="flex flex-grow items-center gap-1.5">
-	<!-- Range -->
-	<input
-		bind:this={inputEl}
-		bind:value
-		type="range"
-		min="0"
-		max="100"
-		step="0.01"
-		aria-valuenow={time}
-		aria-valuetext={formattedTime}
-		on:mousemove={seeking}
-		on:pointerdown={(e) => {
-			if (e.button !== 0) return;
-
-			isDragging = true;
-			shouldUnpause = !isPaused;
-
-			if (!isPaused) remote.pause();
-		}}
-		on:pointerup={() => {
-			if (!isDragging) return;
-
-			remote.seek((value / 100) * duration);
-			isDragging = false;
-			if (shouldUnpause) remote.play();
-		}}
-		on:pointercancel={() => (isDragging = false)}
-	/>
-
-	<!-- Time -->
-	<div class="font-ubuntu-mono mb-0.5 flex gap-0.5 text-sm font-semibold text-white">
-		<media-time class="time" type="current" padMinutes={true}></media-time>
-		<span>/</span>
-		<media-time class="time" type="duration" padMinutes={true}></media-time>
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+<media-time-slider
+	class="group relative inline-flex h-[22px] w-full cursor-pointer touch-none select-none items-center outline-none aria-hidden:hidden"
+	on:mouseenter={() => {
+		isPointering = true;
+	}}
+	on:mouseleave={() => {
+		isPointering = false;
+	}}
+	on:pointerdown={() => {
+		ctx.set({ ...$ctx, draggingTime: true });
+	}}
+	on:pointerup={(e) => {
+		if ($ctx.ended) ctx.set({ ...$ctx, ended: false });
+		ctx.set({ ...$ctx, draggingTime: false });
+	}}
+>
+	<!-- Track and fill -->
+	<div
+		class="relative z-0 h-1 w-full rounded-sm bg-white/30 ring-sky-400 transition-[height] duration-200 ease-in-out group-hover:h-1.5 group-data-[focus]:ring-[3px]"
+	>
+		<div
+			class="bg-secondary absolute h-full w-[var(--slider-fill)] rounded-sm will-change-[width]"
+		/>
 	</div>
-</media-controls-group>
 
-<style lang="postcss">
-	input[type='range'] {
-		@apply h-4 w-full appearance-none bg-transparent;
-	}
+	<!-- Actual time -->
+	<div
+		class={cn(
+			'pointer-events-none absolute flex flex-col items-center transition-opacity duration-200',
+			$ctx.draggingTime || isPointering ? 'opacity-0' : 'opacity-100'
+		)}
+		bind:this={timeBubbleEl}
+		style={`position: absolute; left: min(max(0px, calc(var(--slider-fill) - ${timeBubbleWidth / 2}px)), calc(100% - ${timeBubbleWidth}px)); width: max-content; bottom: calc(100% + var(--media-slider-preview-offset, 0px));`}
+	>
+		<media-slider-value
+			type="current"
+			class="bg-foreground text-background rounded-sm px-2 py-px text-sm font-medium"
+		/>
+	</div>
 
-	input[type='range']:focus {
-		outline: none;
-	}
-
-	/* Thumb */
-	input[type='range']::-webkit-slider-thumb {
-		@apply -mt-1 size-3 appearance-none rounded-full border-none bg-white shadow-[0_0_2px_0px_#000000] transition-all duration-200 ease-in-out;
-
-		&:active {
-			@apply shadow-[0_0_2px_0px_#000000,0_0_0_3px_#ffffff40];
-		}
-	}
-
-	input[type='range']::-moz-range-thumb {
-		@apply size-3 appearance-none rounded-full border-none bg-white shadow-[0_0_1px_0px_#000000] transition-all delay-0 duration-200 [animation:ease] [transition-timing-function:ease];
-
-		&:active {
-			@apply shadow-[0_0_2px_0px_#000000,0_0_0_3px_#ffffff40];
-		}
-	}
-
-	/* Track */
-	input[type='range']::-webkit-slider-runnable-track {
-		@apply h-[5px] rounded-sm shadow-none;
-		background:
-			linear-gradient(theme(colors.secondary.DEFAULT), theme(colors.secondary.DEFAULT)) 0 /
-				var(--slider-time, 0%) 100% no-repeat,
-			#ffffff50;
-	}
-
-	input[type='range']::-moz-range-track {
-		@apply h-[5px] rounded-sm shadow-none;
-		/* prettier-ignore */
-		background:
-			linear-gradient(
-				to right, 
-				theme(colors.secondary.DEFAULT), 
-				theme(colors.secondary.DEFAULT) var(--slider-time, 0%),
-				#ffffff80 var(--slider-time, 0%),
-				#ffffff80 var(--slider-buffered, 0%),
-				#ffffff50 var(--slider-time, 0%) 100%
-			)
-
-		/* 0 / */
-		/* var(--slider-time, 0%) 100% no-repeat, */
-		/* #ffffff50; */
-	}
-</style>
+	<!-- Pointer time -->
+	<media-slider-preview
+		class="pointer-events-none flex flex-col items-center opacity-0 transition-opacity duration-200 data-[visible]:opacity-100"
+	>
+		<media-slider-value
+			class="bg-foreground text-background rounded-sm px-2 py-px text-sm font-medium"
+		/>
+	</media-slider-preview>
+</media-time-slider>

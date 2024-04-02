@@ -1,14 +1,23 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { Error, Loading, Video } from '$components';
-	import { ErrorMessage, GetAllCourseAssets, GetCourse, UpdateAsset } from '$lib/api';
+	import { Error, Loading } from '$components';
+	import { Badge } from '$components/ui/badge';
+	import Button from '$components/ui/button/button.svelte';
+	import * as DropdownMenu from '$components/ui/dropdown-menu';
+	import { Video } from '$components/video';
+	import { ATTACHMENT_API, ErrorMessage, GetAllCourseAssets, UpdateAsset } from '$lib/api';
+	import * as Accordion from '$lib/components/ui/accordion';
 	import { addToast } from '$lib/stores/addToast';
 	import type { Asset, Course, CourseChapters } from '$lib/types/models';
-	import { NO_CHAPTER, buildChapterStructure, cn, isBrowser } from '$lib/utils';
-	import { createAccordion } from '@melt-ui/svelte';
-	import { ChevronRight, FileCode, FileText, FileVideo, Info } from 'lucide-svelte';
-	import { onMount } from 'svelte';
-	import { slide } from 'svelte/transition';
+	import {
+		GetCourseFromParams,
+		NO_CHAPTER,
+		buildChapterStructure,
+		cn,
+		isBrowser
+	} from '$lib/utils';
+	import { CheckCircle2, ChevronRight, CircleDotDashed, Dot, Download } from 'lucide-svelte';
+	import { onMount, tick } from 'svelte';
 
 	// ----------------------
 	// Variables
@@ -31,34 +40,32 @@
 	let chapters: CourseChapters = {};
 
 	// When an asset is selected, these will be populated
+	let selectedChapter: string[] = [];
 	let selectedAsset: Asset | null;
 	let prevAsset: Asset | null;
 	let nextAsset: Asset | null;
 
-	// Accordion to show the course chapters
-	const {
-		elements: { content, item, trigger },
-		helpers: { isSelected },
-		states: { value }
-	} = createAccordion({
-		multiple: true
-	});
+	// The title element
+	let titleEl: HTMLDivElement;
+
+	// scrollY and innerWidth are bound to the window scroll and resize events
+	let scrollY: number;
+	let innerWidth: number;
+
+	// The menu offset is used to determine the top position of the menu when the user scrolls
+	let topOffset = 0;
+	let menuPx = topOffset;
 
 	// ----------------------
 	// Functions
 	// ----------------------
 
-	// Gets the course id from the search params and queries the api for the course
+	// Lookup the course based upon the search params
 	const getCourse = async () => {
 		if (!isBrowser) return false;
 
-		const params = $page.url.searchParams;
-		const courseId = params && params.get('id');
-		if (!courseId) return false;
-
-		return await GetCourse(courseId)
-			.then(async (resp) => {
-				if (!resp) return false;
+		return await GetCourseFromParams($page.url.searchParams)
+			.then((resp) => {
 				course = resp;
 				return true;
 			})
@@ -71,57 +78,34 @@
 						status: 'error'
 					}
 				});
-
 				return false;
 			});
 	};
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	// Gets the assets + attachments for the given course. It will then build a chapter structure
-	// for the assets and selected the first asset that is not completed. If the course itself is
-	// completed, the first asset will be selected
+	// Gets the assets + attachments for the given course. It will build a chapter structure and
+	// set the selected asset based upon the query params. If there is no asset query param, it
+	// will set the first unfinished asset as the selected asset
 	const getAssets = async (courseId: string) => {
 		if (!isBrowser) return false;
 
 		const params = $page.url.searchParams;
 
-		return await GetAllCourseAssets(courseId)
+		return await GetAllCourseAssets(courseId, { orderBy: 'chapter asc, prefix asc' })
 			.then(async (resp) => {
 				if (!resp) return false;
 
-				// Build the assets chapter structure
-				let tmpChapters: CourseChapters = {};
-				if (resp) tmpChapters = buildChapterStructure(resp);
+				chapters = buildChapterStructure(resp);
 
-				// If an asset id is provided as a query param, lookup the asset and set it as
-				// the selected
-				const assetId = params && params.get('a_id');
-				if (assetId) selectedAsset = findAsset(assetId, tmpChapters);
+				// Set ?a=xxx as the selected asset
+				const assetId = params && params.get('a');
+				if (assetId) selectedAsset = findAsset(assetId, chapters);
 
-				// If there is still no selected asset, set it as the first unfinished asset
-				if (!selectedAsset) selectedAsset = findFirstUnfinishedAsset(course, tmpChapters);
-
-				// Set the chapter, update the query params for the selected asset and find the
-				// previous/next assets
-				//
-				// Note: At this point, the selected asset will be null if this course does not
-				// contain any assets
-				if (selectedAsset) {
-					!selectedAsset.chapter ? value.set([NO_CHAPTER]) : value.set([selectedAsset.chapter]);
-
-					// Update the query param. This is used in the event the user refreshes the
-					// page. They will reload the same asset
-					updateQueryParam(selectedAsset.id);
-
-					// Set the previous and next assets
-					const { prev, next } = findAdjacentAssets(selectedAsset, tmpChapters);
-					prevAsset = prev;
-					nextAsset = next;
-				}
+				// If there is no selected asset, set it as the first unfinished asset
+				if (!selectedAsset) selectedAsset = findFirstUnfinishedAsset(course, chapters);
 
 				assets = resp;
-				chapters = tmpChapters;
 				return true;
 			})
 			.catch((err) => {
@@ -163,50 +147,10 @@
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	// It flips the current `completed` state. So if the asset is completed, it will be marked as
-	// not completed, and vice versa. It then determines if the course is completed or not and
-	// updates the course accordingly
-	const flipAssetCompleted = async (assetId: string) => {
-		if (!assets) return;
-
-		// Get the asset
-		const asset = assets.find((a) => a.id === assetId);
-		if (!asset) return;
-
-		// Flip
-		asset.completed ? (asset.completed = false) : (asset.completed = true);
-
-		// Update the finished state for the asset
-		await UpdateAsset(asset).catch((err) => {
-			const errMsg = ErrorMessage(err);
-			console.error(errMsg);
-			$addToast({
-				data: {
-					message: errMsg,
-					status: 'error'
-				}
-			});
-
-			return;
-		});
-
-		// Update the chapters (for reactivity)
-		chapters = { ...chapters };
-	};
-
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 	// When the asset is a video, this will be called as the video is played and the time
 	// progresses. The data is stored in the backend and used when the asset is reloaded
-	const updateAssetVideoPos = async (assetId: string, position: number) => {
+	async function updateAsset(asset: Asset) {
 		if (!assets) return;
-
-		// Get the asset
-		const asset = assets.find((a) => a.id === assetId);
-		if (!asset || asset.assetType !== 'video') return;
-
-		// Set the progress
-		asset.videoPos = position;
 
 		// Update the asset
 		await UpdateAsset(asset).catch((err) => {
@@ -221,7 +165,7 @@
 
 			return;
 		});
-	};
+	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -259,8 +203,73 @@
 		if (typeof window === 'undefined') return;
 
 		const url = new URL(window.location.href);
-		url.searchParams.set('a_id', assetId);
+		url.searchParams.set('a', assetId);
 		history.pushState({}, '', url.toString());
+	}
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	// Calculate the menu offset based on the scroll position
+	function calculateMenuOffset() {
+		if (scrollY > topOffset) {
+			menuPx = 0;
+			return;
+		}
+
+		menuPx = topOffset - scrollY;
+	}
+
+	function scrollToSelected() {
+		const selectedElement = document.querySelector('[data-selected="true"]');
+		if (selectedElement) {
+			selectedElement.scrollIntoView({
+				behavior: 'smooth',
+				block: 'start',
+				inline: 'nearest'
+			});
+		}
+	}
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	// Called when the selected asset changes. It sets the  previous and next assets and updates
+	function updateSelectedAsset() {
+		if (!selectedAsset) return;
+
+		const assetChapter = !selectedAsset.chapter ? NO_CHAPTER : selectedAsset.chapter;
+
+		// Set ?a=xxx
+		updateQueryParam(selectedAsset.id);
+
+		// Set the previous and next assets
+		const { prev, next } = findAdjacentAssets(selectedAsset, chapters);
+		prevAsset = prev;
+		nextAsset = next;
+
+		selectedChapter = [assetChapter];
+	}
+
+	// ----------------------
+	// Reactive
+	// ----------------------
+
+	// When the window is resized, recalculate the menu offset
+	$: if (titleEl && innerWidth > 0) {
+		topOffset = 64 + titleEl.getBoundingClientRect().height;
+		calculateMenuOffset();
+	}
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	// As the user scrolls, recalculate the menu offset
+	$: if (scrollY > 0) {
+		calculateMenuOffset();
+	}
+
+	// When the selected asset changes, call updateSelectedAsset()
+	$: {
+		if (selectedAsset) {
+			updateSelectedAsset();
+		}
 	}
 
 	// ----------------------
@@ -279,8 +288,15 @@
 		}
 
 		loadingPage = false;
+
+		if (selectedAsset) {
+			await tick();
+			scrollToSelected();
+		}
 	});
 </script>
+
+<svelte:window bind:scrollY bind:innerWidth />
 
 <div class="flex w-full flex-col">
 	{#if loadingPage}
@@ -292,242 +308,176 @@
 	{:else if invalidCourseId || assets.length === 0}
 		<Error />
 	{:else}
-		<div class="w-full border-b">
-			<div class="container flex h-[var(--course-header-height)] items-center">
+		<!-- Heading -->
+		<div class="w-full border-b" bind:this={titleEl}>
+			<div class="container flex items-center gap-2.5 py-2 md:py-4">
 				<span class="grow text-base font-semibold md:text-lg">{course.title}</span>
-				<a
+				<Button
+					variant="outline"
 					href="/settings/courses/details?id={course.id}"
-					class="hover:bg-accent-1 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm duration-200"
+					class="h-8 md:h-10"
 				>
-					<Info class="h-4 w-4" />
-					<span>Details</span>
-				</a>
+					Details
+				</Button>
 			</div>
 		</div>
 
-		<div
-			class="container flex-1 items-start px-4 md:px-8 lg:grid lg:grid-cols-[300px_minmax(0,1fr)]"
-		>
-			<!-- Chapters -->
+		<div class="container flex flex-1 flex-row gap-2.5 pt-2">
 			<div
-				class="lg:sticky lg:left-0 lg:top-0 lg:h-[calc(100vh-var(--header-height)-var(--course-header-height)-1px)] lg:overflow-y-auto lg:border-r"
+				class="bg-muted/70 border-muted/70 sticky left-8 top-2 z-10 hidden w-72 shrink-0 overflow-hidden rounded-lg border lg:flex"
+				style="max-height: calc(100vh - {menuPx}px - 18px)"
 			>
-				{#if Object.keys(chapters).length === 0}
-					<div class="flex flex-col items-center justify-center py-6">
-						<span class="text-muted-foreground">No assets found</span>
-					</div>
-				{:else}
-					{#each Object.keys(chapters) as chapter, i}
-						{@const [prefix, ...rest] = chapter.split(' ')}
-						{@const title = rest.join(' ')}
-						{@const completedCount = chapters[chapter].filter((a) => a.completed).length}
+				<div class="flex flex-grow flex-col justify-between overflow-y-auto overflow-x-hidden">
+					<Accordion.Root bind:value={selectedChapter} multiple class="w-full rounded-lg">
+						{#each Object.keys(chapters) as chapter, i}
+							{@const numAssets = chapters[chapter].length}
+							{@const completedAssets = chapters[chapter].filter((a) => a.completed).length}
+							{@const lastChapter = Object.keys(chapters).length - 1 == i}
 
-						<div
-							{...$item(chapter)}
-							use:item
-							class={cn('flex flex-col border-b', $isSelected(chapter) && 'bg-accent-1')}
-						>
-							<!-- Chapter title (button) -->
-							<button
-								{...$trigger(chapter)}
-								use:trigger
-								class="hover:bg-accent-1 flex w-full flex-col gap-2 px-4 py-5"
+							<Accordion.Item
+								value={chapter}
+								class={cn('border-background', lastChapter && 'border-transparent')}
 							>
-								<div class="flex w-full flex-row gap-1.5">
-									<span class="shink-0 text-start text-sm font-semibold">{prefix}</span>
-									<span class="grow text-start text-sm font-semibold">{title}</span>
-									<ChevronRight
-										class={cn(
-											'mt-0.5 h-4 w-4 shrink-0 duration-200',
-											$isSelected(chapter) && 'rotate-90'
-										)}
-									/>
-								</div>
-								<div
-									class={cn(
-										'flex text-xs',
-										completedCount === chapters[chapter].length && 'text-success'
-									)}
-								>
-									{completedCount} of {chapters[chapter].length}
-									completed
-								</div>
-							</button>
+								<Accordion.Trigger class="hover:bg-muted px-3 py-4 text-start hover:no-underline">
+									<div class="flex w-full flex-col gap-2.5 pr-4">
+										<span class="text-sm font-semibold">{chapter}</span>
+										<div>
+											<Badge
+												class={cn(
+													'bg-muted text-success-foreground hover:bg-success items-center rounded-sm px-1',
+													numAssets === completedAssets && 'bg-success'
+												)}
+											>
+												{completedAssets}/{numAssets}
+											</Badge>
+										</div>
+									</div>
+								</Accordion.Trigger>
 
-							{#if $isSelected(chapter)}
-								<div
-									{...$content(chapter)}
-									use:content
-									transition:slide
-									class=" bg-background border-t"
-								>
+								<Accordion.Content class="bg-background flex flex-col">
 									{#each chapters[chapter] as asset, i}
 										{@const lastAsset = chapters[chapter].length - 1 == i}
-
-										<div
-											class={cn(
-												'hover:bg-accent-1/70 hover-full-border relative flex flex-col px-4 text-sm',
-												lastAsset && 'after:!-bottom-px hover:after:!-bottom-px',
-												selectedAsset && selectedAsset.id == asset.id
-													? 'bg-accent-1/70 full-border'
-													: ''
-											)}
-										>
-											<div
+										<div class={cn(!lastAsset && 'border-muted/70 border-b')}>
+											<Button
+												variant="ghost"
 												class={cn(
-													'flex gap-3 py-2.5 text-start text-sm ',
-													!lastAsset && 'border-b'
+													'flex h-auto w-full flex-row gap-2.5 whitespace-normal rounded-none px-3 py-4 text-start',
+													asset.id === selectedAsset?.id && 'bg-muted bg-opacity-40'
 												)}
+												data-selected={asset.id === selectedAsset?.id ? 'true' : 'false'}
 												on:click={() => {
-													// Update the selected asset and find the previous/next
-													if (selectedAsset === asset) return;
 													selectedAsset = asset;
-													const { prev, next } = findAdjacentAssets(selectedAsset, chapters);
-													prevAsset = prev;
-													nextAsset = next;
-
-													// Update the query param. This is used in the
-													// event the user refreshes the page
-													updateQueryParam(selectedAsset.id);
 												}}
-												on:keydown={(e) => {
-													if (e.key !== 'Enter') return;
-
-													// Update the selected asset and find the previous/next
-													if (selectedAsset === asset) return;
-													selectedAsset = asset;
-													const { prev, next } = findAdjacentAssets(selectedAsset, chapters);
-													prevAsset = prev;
-													nextAsset = next;
-
-													// Update the query param. This is used in the
-													// event the user refreshes the page
-													updateQueryParam(selectedAsset.id);
-												}}
-												tabindex="0"
-												role="button"
 											>
-												<!-- Finished/unfinished input -->
-												<button
-													class="flex"
-													on:click|stopPropagation={() => {
-														flipAssetCompleted(asset.id);
-													}}
-												>
-													<input tabindex="0" type="checkbox" checked={asset.completed} />
-												</button>
-
-												<div class="flex select-none flex-col gap-3">
-													<!-- Prefix + Title -->
-													<span>{asset.prefix} {asset.title}</span>
-
-													<div class="flex items-center gap-2">
-														<span
-															class="inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded border px-2 py-1 text-center text-xs"
-														>
-															<!-- Asset type -->
-															<svelte:component
-																this={asset.assetType === 'video'
-																	? FileVideo
-																	: asset.assetType === 'html'
-																		? FileCode
-																		: FileText}
-																class="h-4 w-4"
-															/>
-															<span>{asset.assetType}</span>
-														</span>
-
-														<!-- Attachments -->
+												<div class="flex grow flex-col gap-2.5">
+													<span class={cn(asset.id === selectedAsset?.id && 'text-primary')}
+														>{asset.prefix}. {asset.title}</span
+													>
+													<div
+														class="text-muted-foreground flex select-none flex-row flex-wrap items-center gap-y-2 text-xs"
+													>
+														<!-- Type -->
+														<span>{asset.assetType}</span>
 														{#if asset.attachments && asset.attachments.length > 0}
-															<!-- <AttachmentsPopover
-																attachments={asset.attachments}
-																showIcon={false}
-																showCount={false}
-															/> -->
+															<Dot class="h-5 w-5" />
+
+															<DropdownMenu.Root closeOnItemClick={false}>
+																<DropdownMenu.Trigger asChild let:builder>
+																	<Button
+																		builders={[builder]}
+																		variant="ghost"
+																		class="group relative flex h-auto items-center gap-1 px-0 py-0 text-xs hover:bg-transparent"
+																		on:click={(e) => {
+																			e.stopPropagation();
+																		}}
+																	>
+																		attachments
+
+																		<ChevronRight
+																			class="h-3 w-3 duration-200 group-data-[state=open]:rotate-90"
+																		/>
+																	</Button>
+																</DropdownMenu.Trigger>
+
+																<DropdownMenu.Content
+																	class="flex max-h-[10rem] w-auto max-w-xs flex-col overflow-y-scroll md:max-w-sm"
+																	fitViewport={true}
+																>
+																	{#each asset.attachments as attachment, i}
+																		{@const lastAttachment = asset.attachments.length - 1 == i}
+																		<DropdownMenu.Item
+																			class="cursor-pointer justify-between gap-3 text-xs"
+																			href={ATTACHMENT_API + '/' + attachment.id + '/serve'}
+																			download
+																		>
+																			<div class="flex flex-row gap-1.5">
+																				<span class="shrink-0">{i + 1}.</span>
+																				<span class="grow">{attachment.title}</span>
+																			</div>
+
+																			<Download class="flex h-3 w-3 shrink-0" />
+																		</DropdownMenu.Item>
+
+																		{#if !lastAttachment}
+																			<DropdownMenu.Separator
+																				class="bg-muted my-1 -ml-1 -mr-1 block h-px"
+																			/>
+																		{/if}
+																	{/each}
+																</DropdownMenu.Content>
+															</DropdownMenu.Root>
 														{/if}
 													</div>
 												</div>
-											</div>
+
+												<div class="mt-0.5 flex h-full w-4">
+													{#if asset.completed}
+														<CheckCircle2
+															class="stroke-success [&>:nth-child(2)]:stroke-success-foreground fill-success h-4 w-4"
+														/>
+													{:else if asset.assetType === 'video' && asset.videoPos > 0}
+														<CircleDotDashed class="stroke-secondary fill-secondary h-4 w-4" />
+													{/if}
+												</div>
+											</Button>
 										</div>
 									{/each}
-								</div>
-							{/if}
-						</div>
-					{/each}
-				{/if}
+								</Accordion.Content>
+							</Accordion.Item>
+						{/each}
+					</Accordion.Root>
+				</div>
 			</div>
 
-			<!-- Media -->
-			<div class="flex h-full">
+			<div class="flex h-full w-full flex-col">
 				{#if selectedAsset && selectedAsset.assetType === 'video'}
 					<Video
-						id={selectedAsset.id}
+						title={selectedAsset.title}
+						src={selectedAsset.id}
 						startTime={selectedAsset.videoPos}
-						prevVideo={prevAsset}
-						nextVideo={nextAsset}
+						{nextAsset}
 						on:progress={(e) => {
 							if (!selectedAsset) return;
-
-							// Set the course as started manually (This will automatically happen in the backend)
-							updateAssetVideoPos(selectedAsset.id, e.detail);
+							selectedAsset.videoPos = e.detail;
+							updateAsset(selectedAsset);
 						}}
-						on:finished={() => {
-							// Video finished. Mark the asset as completed but only if it is not
-							// already completed
-							if (!selectedAsset || selectedAsset.completed) return;
-							flipAssetCompleted(selectedAsset.id);
-						}}
-						on:previous={() => {
-							if (!prevAsset) return;
-							selectedAsset = prevAsset;
+						on:finished={(e) => {
+							if (!selectedAsset) return;
 
-							// Set the previous and next assets
-							const { prev, next } = findAdjacentAssets(selectedAsset, chapters);
-							prevAsset = prev;
-							nextAsset = next;
+							selectedAsset.videoPos = e.detail;
+							selectedAsset.completed = true;
+							updateAsset(selectedAsset);
 
-							// Update the query param. This is used in the event the user
-							// refreshes the page
-							updateQueryParam(selectedAsset.id);
+							// This is needed to update the n/n in the chapter title
+							chapters = { ...chapters };
 						}}
-						on:next={() => {
+						on:next={(e) => {
 							if (!nextAsset) return;
 							selectedAsset = nextAsset;
-
-							// Set the previous and next assets
-							const { prev, next } = findAdjacentAssets(selectedAsset, chapters);
-							prevAsset = prev;
-							nextAsset = next;
-
-							// Update the query param. This is used in the event the user
-							// refreshes the page
-							updateQueryParam(selectedAsset.id);
 						}}
 					/>
-				{:else}
-					TODO: handle type
 				{/if}
 			</div>
 		</div>
 	{/if}
 </div>
-
-<style lang="postcss">
-	.full-border {
-		@apply before:bg-border before:absolute before:-top-px before:left-0 before:z-10 before:h-px before:w-full;
-		@apply after:bg-border after:absolute after:bottom-0 after:left-0 after:z-10 after:h-px after:w-full;
-	}
-
-	.hover-full-border {
-		@apply hover:before:bg-border hover:before:absolute hover:before:-top-px hover:before:left-0 hover:before:z-10 hover:before:h-px hover:before:w-full;
-		@apply hover:after:bg-border hover:after:absolute hover:after:bottom-0 hover:after:left-0 hover:after:z-10 hover:after:h-px hover:after:w-full;
-	}
-
-	input {
-		@apply bg-background pointer-events-none cursor-pointer rounded border-2 p-2 duration-150;
-		@apply border-foreground/40;
-		@apply checked:bg-primary checked:hover:bg-primary checked:border-transparent;
-		@apply indeterminate:bg-muted/50 indeterminate:border-transparent;
-		@apply outline-none focus:ring-0 focus:ring-offset-0;
-	}
-</style>

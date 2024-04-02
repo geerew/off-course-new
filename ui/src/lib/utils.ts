@@ -170,3 +170,34 @@ export async function GetCourseFromParams(params: URLSearchParams): Promise<Cour
 
 	return course;
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+export const Throttle = <R, A extends unknown[]>(
+	fn: (...args: A) => R,
+	delay: number
+): [(...args: A) => R | undefined, () => void] => {
+	let wait = false;
+	let timeout: undefined | number;
+
+	return [
+		(...args: A) => {
+			if (wait) return undefined;
+
+			const val = fn(...args);
+
+			wait = true;
+
+			timeout = window.setTimeout(() => {
+				wait = false;
+			}, delay);
+
+			return val;
+		},
+
+		() => {
+			wait = false;
+			clearTimeout(timeout);
+		}
+	];
+};
