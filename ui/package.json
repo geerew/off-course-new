@@ -27,6 +27,7 @@
 		"eslint": "^8.28.0",
 		"eslint-config-prettier": "^8.5.0",
 		"eslint-plugin-svelte": "^2.30.0",
+		"follow-redirects": "^1.15.6",
 		"lucide-svelte": "^0.364.0",
 		"media-icons": "^0.10.0",
 		"mode-watcher": "^0.1.2",
