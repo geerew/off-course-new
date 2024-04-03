@@ -72,8 +72,7 @@
 	<media-slider-preview
 		class="pointer-events-none flex flex-col items-center opacity-0 transition-opacity duration-200 data-[visible]:opacity-100"
 	>
-		<media-slider-value
-			class="bg-foreground text-background rounded-sm px-2 py-px text-sm font-medium"
+		<media-slider-value class="rounded-sm bg-white px-2 py-px text-sm font-medium text-black"
 		></media-slider-value>
 	</media-slider-preview>
 </media-volume-slider>
