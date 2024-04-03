@@ -70,9 +70,7 @@
 	aria-valuemax="100"
 	aria-valuenow={progress}
 >
-	<div
-		class="grid place-items-center items-center [grid-template-areas:_stack] *:[grid-area:_stack]"
-	>
+	<div class="grid place-items-center [grid-template-areas:_stack] *:[grid-area:_stack]">
 		<svg
 			fill="none"
 			viewBox={`0 0 ${viewBox} ${viewBox}`}
@@ -85,7 +83,7 @@
 				cx={radius}
 				cy={radius}
 				stroke-width={stroke}
-				class="stroke-gray-600"
+				class="stroke-white"
 			/>
 			<circle
 				r={normalizedRadius}
@@ -101,11 +99,11 @@
 		<div>
 			<Button
 				variant="ghost"
-				class="group bg-inherit hover:bg-transparent"
+				class="group h-full bg-inherit hover:bg-transparent"
 				on:click={() => dispatch('completed')}
 			>
 				<Play
-					class="fill-foreground group-hover:fill-primary group-hover:stroke-primary size-10 duration-200"
+					class="group-hover:fill-primary group-hover:stroke-primary size-12  fill-white stroke-white duration-200"
 				/>
 			</Button>
 		</div>

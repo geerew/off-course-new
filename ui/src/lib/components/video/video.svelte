@@ -48,6 +48,11 @@
 	// Set by the player
 	let duration = -1;
 
+	// States
+	let muted = false;
+	let playing = false;
+	let fullscreen = false;
+
 	// Video context
 	setCtx();
 	const ctx = getCtx();
@@ -112,9 +117,12 @@
 		if (duration === -1) return;
 
 		currentTime = e.detail.currentTime;
-		const currentSecond = Math.floor(currentTime);
+
+		// Clear the ended state when the current time changes
+		if ($ctx.ended && currentTime !== duration) ctx.set({ ...$ctx, ended: false });
 
 		// Do nothing when we have already processed this second
+		const currentSecond = Math.floor(currentTime);
 		if (currentSecond === 0 || currentSecond === lastLoggedSecond) return;
 		lastLoggedSecond = currentSecond;
 
@@ -161,11 +169,34 @@
 	// ----------------------
 
 	onMount(() => {
+		// let playerUnsub: () => void;
+
+		// if (player) {
+		// 	const remote = new MediaRemoteControl();
+		// 	remote.setTarget(player);
+		// 	playerUnsub = player.subscribe(({ muted: mutedPlayer }) => {
+		// 		if ($ctx.draggingTimeSlider) {
+		// 			console.log('is dragging', mutedPlayer, muted);
+		// 			if (mutedPlayer !== muted) {
+		// 				console.log('changing the muted state back');
+		// 				remote.toggleMuted();
+		// 			}
+
+		// 			ctx.set({ ...$ctx, draggingTimeSlider: false });
+		// 		} else {
+		// 			console.log('muted changed', mutedPlayer);
+		// 			muted = mutedPlayer;
+		// 		}
+		// 	});
+		// }
+
 		document.addEventListener('keydown', keyboardSeek);
 		document.addEventListener('keyup', keyboardReset);
+
 		return () => {
 			document.removeEventListener('keydown', keyboardSeek);
 			document.removeEventListener('keyup', keyboardReset);
+			// playerUnsub();
 		};
 	});
 </script>
@@ -186,12 +217,23 @@
 	on:ended={() => {
 		ctx.set({ ...$ctx, ended: true });
 	}}
-	on:pointerup={() => {
-		if ($ctx.ended && currentTime !== duration) ctx.set({ ...$ctx, ended: false });
-		if ($ctx.draggingTime) ctx.set({ ...$ctx, draggingTime: false });
-	}}
 >
 	<media-provider />
+
+	<!-- When dragging a slider block all other interactions -->
+	{#if $ctx.draggingTimeSlider || $ctx.draggingVolumeSlider}
+		<div
+			class="absolute left-0 top-0 z-[99999] h-full w-full cursor-grabbing"
+			on:pointerup={() => {
+				if ($ctx.draggingTimeSlider) {
+					ctx.set({ ...$ctx, draggingTimeSlider: false });
+				} else {
+					ctx.set({ ...$ctx, draggingVolumeSlider: false });
+				}
+			}}
+		/>
+	{/if}
+
 	<Gestures />
 	<Controls />
 
@@ -210,7 +252,7 @@
 					</span>
 				</button>
 
-				<Progress duration={8} on:completed={() => dispatch('next', 1)} />
+				<Progress duration={500} on:completed={() => dispatch('next', 1)} />
 			</div>
 		</div>
 	{/if}

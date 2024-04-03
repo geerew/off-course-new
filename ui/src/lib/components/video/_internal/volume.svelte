@@ -1,6 +1,10 @@
 <script lang="ts">
 	import * as Tooltip from '$components/ui/tooltip';
 	import { flyAndScale } from '$lib/utils';
+	import { getCtx } from './context';
+
+	// Video context
+	const ctx = getCtx();
 </script>
 
 <Tooltip.Root openDelay={100} portal={null} closeOnPointerDown={true}>
@@ -50,6 +54,9 @@
 
 <media-volume-slider
 	class="group relative inline-flex h-[22px] w-full max-w-[80px] cursor-pointer touch-none select-none items-center outline-none aria-hidden:hidden"
+	on:pointerdown={() => {
+		ctx.set({ ...$ctx, draggingVolumeSlider: true });
+	}}
 >
 	<!-- Track -->
 	<div
