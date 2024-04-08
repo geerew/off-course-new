@@ -403,7 +403,7 @@
 													<span class="text-success font-bold"> completed </span>
 												{:else if asset.assetType === 'video' && asset.videoPos > 0}
 													<Dot class="h-5 w-5" />
-													<span class="text-secondary"> started </span>
+													<span class="text-secondary"> in-progress </span>
 												{/if}
 
 												<!-- Attachments -->
@@ -464,8 +464,8 @@
 												class="h-6 shrink-0 px-2 py-1"
 												href="/course?id={course.id}&a={asset.id}"
 											>
-												{#if asset.completed || (asset.assetType === 'video' && asset.videoPos === 0)}
-													<span>Start</span>
+												{#if asset.assetType !== 'video' || asset.completed || asset.videoPos === 0}
+													<span>Open</span>
 												{:else}
 													<span>Resume</span>
 												{/if}

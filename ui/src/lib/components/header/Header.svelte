@@ -6,8 +6,8 @@
 	import SettingsMenu from './SettingsMenu.svelte';
 </script>
 
-<header class="w-full border-b">
-	<div class="container flex h-16 items-center justify-between gap-8">
+<header class="bg-background sticky top-0 z-50 w-full border-b">
+	<div class="flex h-[var(--header-height)] items-center justify-between gap-8 px-4 md:px-8">
 		<div class="mr-3">
 			<a href="/" class="mr-6 flex items-center gap-2">
 				<Hexagon class="fill-primary h-8 w-8 rotate-90 stroke-none" />

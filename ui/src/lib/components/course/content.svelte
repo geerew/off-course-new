@@ -1,0 +1,80 @@
+<script lang="ts">
+	import { Video } from '$components/video';
+	import { ASSET_API } from '$lib/api';
+	import type { Asset } from '$lib/types/models';
+	import { createEventDispatcher } from 'svelte';
+	import PrevNext from './_internal/prev-next.svelte';
+	import Title from './_internal/title.svelte';
+
+	// ----------------------
+	// Exports
+	// ----------------------
+
+	export let selectedAsset: Asset | null;
+	export let prevAsset: Asset | null;
+	export let nextAsset: Asset | null;
+
+	// ----------------------
+	// Variables
+	// ----------------------
+	const dispatch = createEventDispatcher();
+</script>
+
+<div
+	class="mx-auto w-full max-w-[70rem] px-4 md:px-8 lg:ml-[var(--course-menu-width)] xl:ml-[max(var(--course-menu-width),23vw)]"
+>
+	<div class="flex h-full w-full flex-col gap-5 pb-8">
+		{#if selectedAsset}
+			<Title
+				asset={selectedAsset}
+				on:complete={() => {
+					if (!selectedAsset) return;
+					selectedAsset.completed = true;
+					dispatch('update');
+				}}
+				on:incomplete={() => {
+					if (!selectedAsset) return;
+					selectedAsset.completed = false;
+					dispatch('update');
+				}}
+			/>
+
+			{#if selectedAsset.assetType === 'video'}
+				<Video
+					title={selectedAsset.title}
+					src={selectedAsset.id}
+					startTime={selectedAsset.videoPos}
+					{nextAsset}
+					on:progress={(e) => {
+						if (!selectedAsset) return;
+						selectedAsset.videoPos = e.detail;
+						dispatch('update');
+					}}
+					on:complete={(e) => {
+						if (!selectedAsset) return;
+						selectedAsset.videoPos = e.detail;
+						selectedAsset.completed = true;
+						dispatch('update');
+					}}
+					on:next={() => {
+						if (!nextAsset) return;
+						selectedAsset = nextAsset;
+					}}
+				/>
+			{:else if selectedAsset.assetType === 'html'}
+				<iframe
+					src="{ASSET_API}/{selectedAsset.id}/serve"
+					class="h-full w-full"
+					title={selectedAsset.title}
+				/>
+			{/if}
+
+			<PrevNext
+				{prevAsset}
+				{nextAsset}
+				on:prev={() => (selectedAsset = prevAsset)}
+				on:next={() => (selectedAsset = nextAsset)}
+			/>
+		{/if}
+	</div>
+</div>

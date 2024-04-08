@@ -16,6 +16,7 @@ import (
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
+	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -346,6 +347,33 @@ func TestAssets_ServeAsset(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusPartialContent, status)
 		assert.Equal(t, "video", string(body))
+	})
+
+	t.Run("200 (html)", func(t *testing.T) {
+		appFs, db, _, _ := setup(t)
+
+		workingData := daos.NewTestData(t, nil, 1, false, 1, 0)
+
+		// Change asset to an html file
+		workingData[0].Assets[0].Path = strings.Replace(workingData[0].Assets[0].Path, ".mp4", ".html", 1)
+		workingData[0].Assets[0].Type = *types.NewAsset("html")
+
+		coursesDao := daos.NewCourseDao(db)
+		assetsDao := daos.NewAssetDao(db)
+
+		require.Nil(t, coursesDao.Create(workingData[0].Course))
+		require.Nil(t, assetsDao.Create(workingData[0].Assets[0]))
+
+		// Create asset
+		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(workingData[0].Assets[0].Path), os.ModePerm))
+		require.Nil(t, afero.WriteFile(appFs.Fs, workingData[0].Assets[0].Path, []byte("html"), os.ModePerm))
+
+		req := httptest.NewRequest(http.MethodGet, "/api/assets/"+workingData[0].Assets[0].ID+"/serve", nil)
+
+		status, body, err := assetsRequestHelper(t, appFs, db, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+		assert.Equal(t, "html", string(body))
 	})
 
 	t.Run("400 (invalid path)", func(t *testing.T) {

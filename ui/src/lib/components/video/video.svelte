@@ -34,7 +34,7 @@
 	// The player element
 	let player: MediaPlayerElement;
 
-	const dispatch = createEventDispatcher<Record<'progress' | 'finished' | 'next', number>>();
+	const dispatch = createEventDispatcher<Record<'progress' | 'complete' | 'next', number>>();
 
 	// Current time of the player
 	let currentTime = -1;
@@ -42,16 +42,11 @@
 	// Used to only do stuff when the logged second changes
 	let lastLoggedSecond = -1;
 
-	// True when the started/finished events are dispatched
-	let finishedDispatched = false;
+	// True when the completed event is dispatched
+	let completeDispatched = false;
 
 	// Set by the player
 	let duration = -1;
-
-	// States
-	let muted = false;
-	let playing = false;
-	let fullscreen = false;
 
 	// Video context
 	setCtx();
@@ -75,7 +70,7 @@
 		if (!e.detail) return;
 
 		lastLoggedSecond = -1;
-		finishedDispatched = false;
+		completeDispatched = false;
 		ctx.set({ ...$ctx, ended: false });
 
 		if (!player) return;
@@ -109,7 +104,7 @@
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Each second a progress event will be dispatched. Additionally, when the time is > 3 seconds
-	// a started event will be dispatched and when the time is > duration - 5 seconds, a finished
+	// a started event will be dispatched and when the time is > duration - 5 seconds, a completed
 	// event will be dispatched
 	//
 	// When the video is paused, nothing will happen
@@ -126,14 +121,14 @@
 		if (currentSecond === 0 || currentSecond === lastLoggedSecond) return;
 		lastLoggedSecond = currentSecond;
 
-		// For the last 5 seconds of the video, dispatch the finished event. After dispatching the
-		// event, finishedDispatched will be set to true, so we do not dispatch the event again.
-		// Prior dispatch common progress events. This will set finishedDispatched to false
+		// For the last 5 seconds of the video, dispatch the completed event. After dispatching the
+		// event, completeDispatched will be set to true, so we do not dispatch the event again.
+		// Prior dispatch common progress events. This will set completeDispatched to false
 		if (currentSecond >= duration - 5) {
-			if (finishedDispatched) return;
-			dispatch('finished', Math.floor(duration));
+			if (completeDispatched) return;
+			dispatch('complete', Math.floor(duration));
 		} else {
-			finishedDispatched = false;
+			completeDispatched = false;
 			dispatch('progress', currentSecond);
 		}
 	}
@@ -169,34 +164,12 @@
 	// ----------------------
 
 	onMount(() => {
-		// let playerUnsub: () => void;
-
-		// if (player) {
-		// 	const remote = new MediaRemoteControl();
-		// 	remote.setTarget(player);
-		// 	playerUnsub = player.subscribe(({ muted: mutedPlayer }) => {
-		// 		if ($ctx.draggingTimeSlider) {
-		// 			console.log('is dragging', mutedPlayer, muted);
-		// 			if (mutedPlayer !== muted) {
-		// 				console.log('changing the muted state back');
-		// 				remote.toggleMuted();
-		// 			}
-
-		// 			ctx.set({ ...$ctx, draggingTimeSlider: false });
-		// 		} else {
-		// 			console.log('muted changed', mutedPlayer);
-		// 			muted = mutedPlayer;
-		// 		}
-		// 	});
-		// }
-
 		document.addEventListener('keydown', keyboardSeek);
 		document.addEventListener('keyup', keyboardReset);
 
 		return () => {
 			document.removeEventListener('keydown', keyboardSeek);
 			document.removeEventListener('keyup', keyboardReset);
-			// playerUnsub();
 		};
 	});
 </script>
@@ -252,7 +225,7 @@
 					</span>
 				</button>
 
-				<Progress duration={500} on:completed={() => dispatch('next', 1)} />
+				<Progress duration={8} on:completed={() => dispatch('next', 1)} />
 			</div>
 		</div>
 	{/if}

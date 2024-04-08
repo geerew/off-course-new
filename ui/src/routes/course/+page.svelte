@@ -1,31 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { Error, Loading } from '$components';
-	import { Badge } from '$components/ui/badge';
-	import Button from '$components/ui/button/button.svelte';
-	import * as DropdownMenu from '$components/ui/dropdown-menu';
-	import { Video } from '$components/video';
-	import { ATTACHMENT_API, ErrorMessage, GetAllCourseAssets, UpdateAsset } from '$lib/api';
-	import * as Accordion from '$lib/components/ui/accordion';
+	import { CourseContent, CourseMenu } from '$components/course';
+	import { ErrorMessage, GetAllCourseAssets, UpdateAsset } from '$lib/api';
 	import { addToast } from '$lib/stores/addToast';
 	import type { Asset, Course, CourseChapters } from '$lib/types/models';
-	import {
-		GetCourseFromParams,
-		NO_CHAPTER,
-		buildChapterStructure,
-		cn,
-		isBrowser
-	} from '$lib/utils';
-	import {
-		ArrowLeft,
-		ArrowRight,
-		CheckCircle2,
-		ChevronRight,
-		CircleDotDashed,
-		Dot,
-		Download
-	} from 'lucide-svelte';
-	import { onMount, tick } from 'svelte';
+	import { GetCourseFromParams, NO_CHAPTER, buildChapterStructure, isBrowser } from '$lib/utils';
+	import { onMount } from 'svelte';
 
 	// ----------------------
 	// Variables
@@ -53,16 +34,9 @@
 	let prevAsset: Asset | null;
 	let nextAsset: Asset | null;
 
-	// The title element
-	let titleEl: HTMLDivElement;
-
 	// scrollY and innerWidth are bound to the window scroll and resize events
 	let scrollY: number;
 	let innerWidth: number;
-
-	// The menu offset is used to determine the top position of the menu when the user scrolls
-	let topOffset = 0;
-	let menuPx = topOffset;
 
 	// ----------------------
 	// Functions
@@ -217,29 +191,6 @@
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	// Calculate the menu offset based on the scroll position
-	function calculateMenuOffset() {
-		if (scrollY > topOffset) {
-			menuPx = 0;
-			return;
-		}
-
-		menuPx = topOffset - scrollY;
-	}
-
-	function scrollToSelected() {
-		const selectedElement = document.querySelector('[data-selected="true"]');
-		if (selectedElement) {
-			selectedElement.scrollIntoView({
-				behavior: 'smooth',
-				block: 'start',
-				inline: 'nearest'
-			});
-		}
-	}
-
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 	// Called when the selected asset changes. It sets the  previous and next assets and updates
 	function updateSelectedAsset() {
 		if (!selectedAsset) return;
@@ -260,19 +211,6 @@
 	// ----------------------
 	// Reactive
 	// ----------------------
-
-	// When the window is resized, recalculate the menu offset
-	$: if (titleEl && innerWidth > 0) {
-		topOffset = 64 + titleEl.getBoundingClientRect().height;
-		calculateMenuOffset();
-	}
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	// As the user scrolls, recalculate the menu offset
-	$: if (scrollY > 0) {
-		calculateMenuOffset();
-	}
-
 	// When the selected asset changes, call updateSelectedAsset()
 	$: {
 		if (selectedAsset) {
@@ -296,11 +234,6 @@
 		}
 
 		loadingPage = false;
-
-		if (selectedAsset) {
-			await tick();
-			scrollToSelected();
-		}
 	});
 </script>
 
@@ -316,206 +249,21 @@
 	{:else if invalidCourseId || assets.length === 0}
 		<Error />
 	{:else}
-		<!-- Heading -->
-		<div class="w-full border-b" bind:this={titleEl}>
-			<div class="container flex items-center gap-2.5 py-2 md:py-4">
-				<span class="grow text-base font-semibold md:text-lg">{course.title}</span>
-				<Button
-					variant="outline"
-					href="/settings/courses/details?id={course.id}"
-					class="h-8 md:h-10"
-				>
-					Details
-				</Button>
-			</div>
-		</div>
+		<div class="flex h-full flex-row">
+			<CourseMenu title={course.title} id={course.id} {chapters} bind:selectedAsset />
 
-		<div class="container flex flex-1 flex-row gap-2.5 pt-2">
-			<div
-				class="bg-muted/70 border-muted/70 sticky left-8 top-2 z-10 hidden w-72 shrink-0 overflow-hidden rounded-lg border lg:flex"
-				style="max-height: calc(100vh - {menuPx}px - 18px)"
-			>
-				<div class="flex flex-grow flex-col justify-between overflow-y-auto overflow-x-hidden">
-					<Accordion.Root bind:value={selectedChapter} multiple class="w-full rounded-lg">
-						{#each Object.keys(chapters) as chapter, i}
-							{@const numAssets = chapters[chapter].length}
-							{@const completedAssets = chapters[chapter].filter((a) => a.completed).length}
-							{@const lastChapter = Object.keys(chapters).length - 1 == i}
+			<CourseContent
+				bind:selectedAsset
+				bind:prevAsset
+				bind:nextAsset
+				on:update={() => {
+					console.log('updated asset');
+					if (!selectedAsset) return;
 
-							<Accordion.Item
-								value={chapter}
-								class={cn('border-background', lastChapter && 'border-transparent')}
-							>
-								<Accordion.Trigger class="hover:bg-muted px-3 py-4 text-start hover:no-underline">
-									<div class="flex w-full flex-col gap-2.5 pr-4">
-										<span class="text-sm font-semibold">{chapter}</span>
-										<div>
-											<Badge
-												class={cn(
-													'bg-muted text-success-foreground hover:bg-success items-center rounded-sm px-1',
-													numAssets === completedAssets && 'bg-success'
-												)}
-											>
-												{completedAssets}/{numAssets}
-											</Badge>
-										</div>
-									</div>
-								</Accordion.Trigger>
-
-								<Accordion.Content class="bg-background flex flex-col">
-									{#each chapters[chapter] as asset, i}
-										{@const lastAsset = chapters[chapter].length - 1 == i}
-										<div class={cn(!lastAsset && 'border-muted/70 border-b')}>
-											<Button
-												variant="ghost"
-												class={cn(
-													'flex h-auto w-full flex-row gap-2.5 whitespace-normal rounded-none px-3 py-4 text-start',
-													asset.id === selectedAsset?.id && 'bg-muted bg-opacity-40'
-												)}
-												data-selected={asset.id === selectedAsset?.id ? 'true' : 'false'}
-												on:click={() => {
-													selectedAsset = asset;
-												}}
-											>
-												<div class="flex grow flex-col gap-2.5">
-													<span class={cn(asset.id === selectedAsset?.id && 'text-primary')}
-														>{asset.prefix}. {asset.title}</span
-													>
-													<div
-														class="text-muted-foreground flex select-none flex-row flex-wrap items-center gap-y-2 text-xs"
-													>
-														<!-- Type -->
-														<span>{asset.assetType}</span>
-														{#if asset.attachments && asset.attachments.length > 0}
-															<Dot class="h-5 w-5" />
-
-															<DropdownMenu.Root closeOnItemClick={false}>
-																<DropdownMenu.Trigger asChild let:builder>
-																	<Button
-																		builders={[builder]}
-																		variant="ghost"
-																		class="group relative flex h-auto items-center gap-1 px-0 py-0 text-xs hover:bg-transparent"
-																		on:click={(e) => {
-																			e.stopPropagation();
-																		}}
-																	>
-																		attachments
-
-																		<ChevronRight
-																			class="h-3 w-3 duration-200 group-data-[state=open]:rotate-90"
-																		/>
-																	</Button>
-																</DropdownMenu.Trigger>
-
-																<DropdownMenu.Content
-																	class="flex max-h-[10rem] w-auto max-w-xs flex-col overflow-y-scroll md:max-w-sm"
-																	fitViewport={true}
-																>
-																	{#each asset.attachments as attachment, i}
-																		{@const lastAttachment = asset.attachments.length - 1 == i}
-																		<DropdownMenu.Item
-																			class="cursor-pointer justify-between gap-3 text-xs"
-																			href={ATTACHMENT_API + '/' + attachment.id + '/serve'}
-																			download
-																		>
-																			<div class="flex flex-row gap-1.5">
-																				<span class="shrink-0">{i + 1}.</span>
-																				<span class="grow">{attachment.title}</span>
-																			</div>
-
-																			<Download class="flex h-3 w-3 shrink-0" />
-																		</DropdownMenu.Item>
-
-																		{#if !lastAttachment}
-																			<DropdownMenu.Separator
-																				class="bg-muted my-1 -ml-1 -mr-1 block h-px"
-																			/>
-																		{/if}
-																	{/each}
-																</DropdownMenu.Content>
-															</DropdownMenu.Root>
-														{/if}
-													</div>
-												</div>
-
-												<div class="mt-0.5 flex h-full w-4">
-													{#if asset.completed}
-														<CheckCircle2
-															class="stroke-success [&>:nth-child(2)]:stroke-success-foreground fill-success h-4 w-4"
-														/>
-													{:else if asset.assetType === 'video' && asset.videoPos > 0}
-														<CircleDotDashed class="stroke-secondary fill-secondary h-4 w-4" />
-													{/if}
-												</div>
-											</Button>
-										</div>
-									{/each}
-								</Accordion.Content>
-							</Accordion.Item>
-						{/each}
-					</Accordion.Root>
-				</div>
-			</div>
-
-			<div class="flex h-full w-full flex-col pb-8">
-				{#if selectedAsset && selectedAsset.assetType === 'video'}
-					<Video
-						title={selectedAsset.title}
-						src={selectedAsset.id}
-						startTime={selectedAsset.videoPos}
-						{nextAsset}
-						on:progress={(e) => {
-							if (!selectedAsset) return;
-							selectedAsset.videoPos = e.detail;
-							updateAsset(selectedAsset);
-						}}
-						on:finished={(e) => {
-							if (!selectedAsset) return;
-
-							selectedAsset.videoPos = e.detail;
-							selectedAsset.completed = true;
-							updateAsset(selectedAsset);
-
-							// This is needed to update the n/n in the chapter title
-							chapters = { ...chapters };
-						}}
-						on:next={(e) => {
-							if (!nextAsset) return;
-							selectedAsset = nextAsset;
-						}}
-					/>
-
-					<div class="flex w-full flex-row gap-3 pt-5">
-						{#if prevAsset}
-							<Button
-								variant="outline"
-								class="hover:bg-muted/50 hover:text-primary flex h-auto basis-1/2 flex-row items-center justify-start gap-4 whitespace-normal rounded-sm border p-3 text-start"
-							>
-								<span class="text-start">
-									<ArrowLeft class="h-5 w-5" />
-								</span>
-								{prevAsset?.prefix}. {prevAsset?.title}
-							</Button>
-						{:else}
-							<div class="basis-1/2"></div>
-						{/if}
-
-						{#if nextAsset}
-							<Button
-								variant="outline"
-								class="hover:bg-muted hover:text-primary flex h-auto basis-1/2 flex-row items-center justify-end gap-4 whitespace-normal rounded-sm border p-3 text-end"
-							>
-								<span class="text-start">
-									{nextAsset?.prefix}. {nextAsset?.title}
-								</span>
-								<ArrowRight class="h-5 w-5" />
-							</Button>
-						{:else}
-							<div class="basis-1/2"></div>
-						{/if}
-					</div>
-				{/if}
-			</div>
+					updateAsset(selectedAsset);
+					chapters = { ...chapters };
+				}}
+			/>
 		</div>
 	{/if}
 </div>

@@ -198,6 +198,8 @@ func (api *assets) serveAsset(c *fiber.Ctx) error {
 
 	if asset.Type.IsVideo() {
 		return handleVideo(c, api.appFs, asset)
+	} else if asset.Type.IsHTML() {
+		return handleHtml(c, api.appFs, asset)
 	}
 
 	// TODO: Handle pdf and HTML
@@ -316,4 +318,31 @@ func handleVideo(c *fiber.Ctx, appFs *appFs.AppFs, asset *models.Asset) error {
 	}
 
 	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// handleHtml handles serving HTML files
+func handleHtml(c *fiber.Ctx, appFs *appFs.AppFs, asset *models.Asset) error {
+	// Open the HTML file
+	file, err := appFs.Fs.Open(asset.Path)
+	if err != nil {
+		log.Err(err).Str("path", asset.Path).Msg("error opening file")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "internal error - " + err.Error(),
+		})
+	}
+	defer file.Close()
+
+	// Read the content of the HTML file
+	content, err := afero.ReadAll(file)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "internal error - " + err.Error(),
+		})
+	}
+
+	c.Set(fiber.HeaderContentType, "text/html")
+
+	return c.Send(content)
 }
