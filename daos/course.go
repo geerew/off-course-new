@@ -39,7 +39,7 @@ func TableCourses() string {
 // Count returns the number of courses
 func (dao *CourseDao) Count(params *database.DatabaseParams) (int, error) {
 	generic := NewGenericDao(dao.db, dao.table)
-	return generic.Count(dao.baseSelect(), params)
+	return generic.Count(dao.baseSelect(), params, nil)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -56,20 +56,10 @@ func (dao *CourseDao) Create(c *models.Course) error {
 	c.RefreshCreatedAt()
 	c.RefreshUpdatedAt()
 
-	data := map[string]interface{}{
-		"id":         c.ID,
-		"title":      NilStr(c.Title),
-		"path":       NilStr(c.Path),
-		"card_path":  NilStr(c.CardPath),
-		"available":  c.Available,
-		"created_at": c.CreatedAt,
-		"updated_at": c.UpdatedAt,
-	}
-
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.table).
-		SetMap(data).
+		SetMap(dao.data(c)).
 		ToSql()
 
 	return dao.db.RunInTransaction(func(tx *sql.Tx) error {
@@ -84,14 +74,16 @@ func (dao *CourseDao) Create(c *models.Course) error {
 		}
 
 		cpDao := NewCourseProgressDao(dao.db)
-		return cpDao.CreateTx(cp, tx)
+		return cpDao.Create(cp, tx)
 	})
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Get selects a course with the given ID
-func (dao *CourseDao) Get(id string) (*models.Course, error) {
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *CourseDao) Get(id string, tx *sql.Tx) (*models.Course, error) {
 	generic := NewGenericDao(dao.db, dao.table)
 
 	dbParams := &database.DatabaseParams{
@@ -99,7 +91,7 @@ func (dao *CourseDao) Get(id string) (*models.Course, error) {
 		Where:   squirrel.Eq{generic.table + ".id": id},
 	}
 
-	row, err := generic.Get(dao.baseSelect(), dbParams)
+	row, err := generic.Get(dao.baseSelect(), dbParams, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +107,9 @@ func (dao *CourseDao) Get(id string) (*models.Course, error) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // List selects courses
-func (dao *CourseDao) List(dbParams *database.DatabaseParams) ([]*models.Course, error) {
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Course, error) {
 	generic := NewGenericDao(dao.db, dao.table)
 
 	if dbParams == nil {
@@ -130,7 +124,7 @@ func (dao *CourseDao) List(dbParams *database.DatabaseParams) ([]*models.Course,
 		dbParams.Columns = dao.selectColumns()
 	}
 
-	rows, err := generic.List(dao.baseSelect(), dbParams)
+	rows, err := generic.List(dao.baseSelect(), dbParams, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -182,9 +176,15 @@ func (dao *CourseDao) Update(course *models.Course) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Delete deletes a course with the given ID
-func (dao *CourseDao) Delete(id string) error {
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *CourseDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
+	if dbParams == nil || dbParams.Where == nil {
+		return ErrMissingWhere
+	}
+
 	generic := NewGenericDao(dao.db, dao.table)
-	return generic.Delete(id)
+	return generic.Delete(dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -222,6 +222,21 @@ func (dao *CourseDao) selectColumns() []string {
 		TableCoursesProgress() + ".percent",
 		TableCoursesProgress() + ".completed_at",
 		TableCoursesProgress() + ".updated_at as progress_updated_at",
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// data generates a map of key/values for a course
+func (dao *CourseDao) data(c *models.Course) map[string]any {
+	return map[string]any{
+		"id":         c.ID,
+		"title":      NilStr(c.Title),
+		"path":       NilStr(c.Path),
+		"card_path":  NilStr(c.CardPath),
+		"available":  c.Available,
+		"created_at": c.CreatedAt,
+		"updated_at": c.UpdatedAt,
 	}
 }
 

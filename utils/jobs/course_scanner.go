@@ -62,7 +62,7 @@ func NewCourseScanner(config *CourseScannerConfig) *CourseScanner {
 func (cs *CourseScanner) Add(courseId string) (*models.Scan, error) {
 
 	// Check if the course exists
-	course, err := cs.courseDao.Get(courseId)
+	course, err := cs.courseDao.Get(courseId, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (cs *CourseScanner) Worker(processor func(*CourseScanner, *models.Scan) err
 			}
 
 			// Cleanup
-			if err := cs.scanDao.Delete(nextScan.ID); err != nil {
+			if err := cs.scanDao.Delete(&database.DatabaseParams{Where: sq.Eq{"id": nextScan.ID}}, nil); err != nil {
 				log.Error().Str("job", nextScan.ID).Err(err).Msg("error deleting scan job")
 				break
 			}
@@ -141,7 +141,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 	}
 
 	// Get the course for this scan
-	course, err := cs.courseDao.Get(scan.CourseID)
+	course, err := cs.courseDao.Get(scan.CourseID, nil)
 	if err != nil {
 		log.Debug().Str("course", scan.CourseID).Msg("ignoring scan job as the course no longer exists")
 		return err
@@ -463,7 +463,7 @@ func updateAssets(assetDao *daos.AssetDao, courseId string, assets []*models.Ass
 		Where: sq.Eq{daos.TableAssets() + ".course_id": courseId},
 	}
 
-	existingAssets, err := assetDao.List(dbParams)
+	existingAssets, err := assetDao.List(dbParams, nil)
 	if err != nil {
 		return err
 	}
@@ -482,7 +482,7 @@ func updateAssets(assetDao *daos.AssetDao, courseId string, assets []*models.Ass
 
 	// Delete the irrelevant assets
 	for _, asset := range toDelete {
-		err := assetDao.Delete(asset.ID)
+		err := assetDao.Delete(&database.DatabaseParams{Where: sq.Eq{"id": asset.ID}}, nil)
 		if err != nil {
 			log.Err(err).Str("path", asset.Path).Msg("error deleting asset")
 			return err
@@ -518,7 +518,7 @@ func updateAttachments(attachmentDao *daos.AttachmentDao, courseId string, attac
 		Where: sq.Eq{daos.TableAttachments() + ".course_id": courseId},
 	}
 
-	existingAttachments, err := attachmentDao.List(dbParams)
+	existingAttachments, err := attachmentDao.List(dbParams, nil)
 	if err != nil {
 		return err
 	}
@@ -537,7 +537,7 @@ func updateAttachments(attachmentDao *daos.AttachmentDao, courseId string, attac
 
 	// Delete the irrelevant attachments
 	for _, attachment := range toDelete {
-		err := attachmentDao.Delete(attachment.ID)
+		err := attachmentDao.Delete(&database.DatabaseParams{Where: sq.Eq{"id": attachment.ID}}, nil)
 		if err != nil {
 			log.Err(err).Str("path", attachment.Path).Msg("error deleting attachment")
 			return err

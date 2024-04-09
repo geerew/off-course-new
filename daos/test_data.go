@@ -22,6 +22,7 @@ type TestBuilder struct {
 	db                  database.Database
 	numberOfCourses     int
 	scan                bool
+	tagsPerCourse       int
 	assetsPerCourse     int
 	attachmentsPerAsset int
 }

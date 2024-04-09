@@ -38,7 +38,7 @@ func TableAttachments() string {
 // Count returns the number of attachments
 func (dao *AttachmentDao) Count(params *database.DatabaseParams) (int, error) {
 	generic := NewGenericDao(dao.db, dao.table)
-	return generic.Count(dao.baseSelect(), params)
+	return generic.Count(dao.baseSelect(), params, nil)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -52,20 +52,10 @@ func (dao *AttachmentDao) Create(a *models.Attachment) error {
 	a.RefreshCreatedAt()
 	a.RefreshUpdatedAt()
 
-	data := map[string]interface{}{
-		"id":         a.ID,
-		"course_id":  NilStr(a.CourseID),
-		"asset_id":   NilStr(a.AssetID),
-		"title":      NilStr(a.Title),
-		"path":       NilStr(a.Path),
-		"created_at": a.CreatedAt,
-		"updated_at": a.UpdatedAt,
-	}
-
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.table).
-		SetMap(data).
+		SetMap(dao.data(a)).
 		ToSql()
 
 	_, err := dao.db.Exec(query, args...)
@@ -76,7 +66,9 @@ func (dao *AttachmentDao) Create(a *models.Attachment) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Get selects an attachment with the given ID
-func (dao *AttachmentDao) Get(id string) (*models.Attachment, error) {
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *AttachmentDao) Get(id string, tx *sql.Tx) (*models.Attachment, error) {
 	generic := NewGenericDao(dao.db, dao.table)
 
 	dbParams := &database.DatabaseParams{
@@ -84,7 +76,7 @@ func (dao *AttachmentDao) Get(id string) (*models.Attachment, error) {
 		Where:   squirrel.Eq{generic.table + ".id": id},
 	}
 
-	row, err := generic.Get(dao.baseSelect(), dbParams)
+	row, err := generic.Get(dao.baseSelect(), dbParams, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -100,30 +92,9 @@ func (dao *AttachmentDao) Get(id string) (*models.Attachment, error) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // List selects attachments
-func (dao *AttachmentDao) List(dbParams *database.DatabaseParams) ([]*models.Attachment, error) {
-	return dao.list(dbParams, dao.db.QueryRow, dao.db.Query)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// List selects attachments in a transaction
-func (dao *AttachmentDao) ListTx(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Attachment, error) {
-	return dao.list(dbParams, tx.QueryRow, tx.Query)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Delete deletes an attachment with the given ID
-func (dao *AttachmentDao) Delete(id string) error {
-	generic := NewGenericDao(dao.db, dao.table)
-	return generic.Delete(id)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Internal
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func (dao *AttachmentDao) list(dbParams *database.DatabaseParams, queryRowFn database.QueryRowFn, queryFn database.QueryFn) ([]*models.Attachment, error) {
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Attachment, error) {
 	generic := NewGenericDao(dao.db, dao.table)
 
 	if dbParams == nil {
@@ -138,7 +109,7 @@ func (dao *AttachmentDao) list(dbParams *database.DatabaseParams, queryRowFn dat
 		dbParams.Columns = dao.selectColumns()
 	}
 
-	rows, err := generic.list(dao.baseSelect(), dbParams, queryRowFn, queryFn)
+	rows, err := generic.List(dao.baseSelect(), dbParams, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -164,6 +135,22 @@ func (dao *AttachmentDao) list(dbParams *database.DatabaseParams, queryRowFn dat
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Delete deletes an attachment with the given ID
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *AttachmentDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
+	if dbParams == nil || dbParams.Where == nil {
+		return ErrMissingWhere
+	}
+
+	generic := NewGenericDao(dao.db, dao.table)
+	return generic.Delete(dbParams, tx)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Internal
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // baseSelect returns the default select builder
 //
 // Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
@@ -183,6 +170,21 @@ func (dao *AttachmentDao) baseSelect() squirrel.SelectBuilder {
 func (dao *AttachmentDao) selectColumns() []string {
 	return []string{
 		dao.table + ".*",
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// data generates a map of key/values for an attachment
+func (dao *AttachmentDao) data(a *models.Attachment) map[string]any {
+	return map[string]any{
+		"id":         a.ID,
+		"course_id":  NilStr(a.CourseID),
+		"asset_id":   NilStr(a.AssetID),
+		"title":      NilStr(a.Title),
+		"path":       NilStr(a.Path),
+		"created_at": a.CreatedAt,
+		"updated_at": a.UpdatedAt,
 	}
 }
 

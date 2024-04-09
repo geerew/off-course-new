@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
@@ -185,22 +186,15 @@ func TestScan_Delete(t *testing.T) {
 		_, dao, db := scanSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
-		err := dao.Delete(testData[0].ID)
+		err := dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": testData[0].ID}}, nil)
 		require.Nil(t, err)
 	})
 
-	t.Run("empty id", func(t *testing.T) {
+	t.Run("no db params", func(t *testing.T) {
 		_, dao, _ := scanSetup(t)
 
-		err := dao.Delete("")
-		assert.ErrorContains(t, err, "id cannot be empty")
-	})
-
-	t.Run("invalid id", func(t *testing.T) {
-		_, dao, _ := scanSetup(t)
-
-		err := dao.Delete("1234")
-		assert.Nil(t, err)
+		err := dao.Delete(nil, nil)
+		assert.ErrorIs(t, err, ErrMissingWhere)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -209,7 +203,7 @@ func TestScan_Delete(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
 		require.Nil(t, err)
 
-		err = dao.Delete("1234")
+		err = dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": "1234"}}, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.table)
 	})
 }
@@ -223,7 +217,7 @@ func TestScan_DeleteCascade(t *testing.T) {
 
 	// Delete the course
 	courseDao := NewCourseDao(db)
-	err := courseDao.Delete(testData[0].ID)
+	err := courseDao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": testData[0].ID}}, nil)
 	require.Nil(t, err)
 
 	// Check the scan was deleted

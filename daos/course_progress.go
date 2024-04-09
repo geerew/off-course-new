@@ -39,57 +39,13 @@ func TableCoursesProgress() string {
 
 // Create inserts a new course progress
 //
-// If this is part of a transaction, use `CreateTx`
-func (dao *CourseProgressDao) Create(cp *models.CourseProgress) error {
-	return dao.create(cp, dao.db.Exec)
-}
+// `tx` allows for the function to be run within a transaction
+func (dao *CourseProgressDao) Create(cp *models.CourseProgress, tx *sql.Tx) error {
+	execFn := dao.db.Exec
+	if tx != nil {
+		execFn = tx.Exec
+	}
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// CreateTx inserts a new course progress in a transaction
-func (dao *CourseProgressDao) CreateTx(cp *models.CourseProgress, tx *sql.Tx) error {
-	return dao.create(cp, tx.Exec)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Get selects a course progress with the given course ID
-func (dao *CourseProgressDao) Get(courseId string) (*models.CourseProgress, error) {
-	return dao.get(courseId, dao.db.QueryRow)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// CreateTx selects a course progress with the given course ID in a transaction
-func (dao *CourseProgressDao) GetTx(courseId string, tx *sql.Tx) (*models.CourseProgress, error) {
-	return dao.get(courseId, tx.QueryRow)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Refresh refreshes the current course progress for the given course ID
-func (dao *CourseProgressDao) Refresh(courseId string) error {
-	return dao.db.RunInTransaction(func(tx *sql.Tx) error {
-		return dao.refresh(courseId, tx.QueryRow, tx.Exec)
-	})
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// RefreshTx refreshes the current course progress for the given course ID in a transaction
-func (dao *CourseProgressDao) RefreshTx(courseId string, tx *sql.Tx) error {
-	return dao.refresh(courseId, tx.QueryRow, tx.Exec)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Internal
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// create inserts a new course progress
-//
-// NOTE: There is currently no support for users, but when there is, the default courses_progress
-// should be inserted for the admin user
-func (dao *CourseProgressDao) create(cp *models.CourseProgress, execFunc database.ExecFn) error {
 	if cp.ID == "" {
 		cp.RefreshId()
 	}
@@ -97,30 +53,23 @@ func (dao *CourseProgressDao) create(cp *models.CourseProgress, execFunc databas
 	cp.RefreshCreatedAt()
 	cp.RefreshUpdatedAt()
 
-	data := map[string]interface{}{
-		"id":           cp.ID,
-		"course_id":    NilStr(cp.CourseID),
-		"started":      cp.Started,
-		"started_at":   NilStr(cp.StartedAt.String()),
-		"percent":      cp.Percent,
-		"completed_at": NilStr(cp.CompletedAt.String()),
-		"created_at":   cp.CreatedAt,
-		"updated_at":   cp.UpdatedAt,
-	}
-
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.table).
-		SetMap(data).
+		SetMap(dao.data(cp)).
 		ToSql()
 
-	_, err := execFunc(query, args...)
+	_, err := execFn(query, args...)
 
 	return err
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Get selects a course progress with the given course ID
-func (dao *CourseProgressDao) get(courseId string, queryRowFn database.QueryRowFn) (*models.CourseProgress, error) {
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *CourseProgressDao) Get(courseId string, tx *sql.Tx) (*models.CourseProgress, error) {
 	generic := NewGenericDao(dao.db, dao.table)
 
 	dbParams := &database.DatabaseParams{
@@ -128,7 +77,7 @@ func (dao *CourseProgressDao) get(courseId string, queryRowFn database.QueryRowF
 		Where:   squirrel.Eq{generic.table + ".course_id": courseId},
 	}
 
-	row, err := generic.get(dao.baseSelect(), dbParams, queryRowFn)
+	row, err := generic.Get(dao.baseSelect(), dbParams, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -143,22 +92,33 @@ func (dao *CourseProgressDao) get(courseId string, queryRowFn database.QueryRowF
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// refresh does a refresh of the current course progress for the given course ID
+// refresh does a refresh of the current course progress for the given ID
 //
-// It calculates the number of assets, number of completed assets and number of videos started. It
+// It calculates the number of assets, number of completed assets and number of video assets started. It
 // then calculates the percent complete and whether the course has been started or not.
 //
-// When the course is started and `started_at` is null, `started_at` is set to the current time.
-// When not started, `started_at` is set to null
+// Based upon this calculation,
+//   - If the course has been started but `started_at` is null, `started_at` will be set to the current time
+//   - If the course is not started, `started_at` is set to null
+//   - If the course is 100% complete but `completed_at` is null, `completed_at` is set to the current time
+//   - If the course is not complete, `completed_at` is set to null
 //
-// When percent complete is 100 and `completed_at` is null, `completed_at` is set to the current
-// time. When not complete, `completed_at` is set to null
-func (dao *CourseProgressDao) refresh(courseId string, queryRowFn database.QueryRowFn, execFn database.ExecFn) error {
+// `tx` allows for the function to be run within a transaction
+func (dao *CourseProgressDao) Refresh(courseId string, tx *sql.Tx) error {
 	if courseId == "" {
 		return ErrEmptyId
 	}
 
-	// Count the number of assets, number of completed assets and number of videos started
+	queryRowFn := dao.db.QueryRow
+	execFn := dao.db.Exec
+
+	if tx != nil {
+		queryRowFn = tx.QueryRow
+		execFn = tx.Exec
+	}
+
+	// Count the number of assets, number of completed assets and number of video assets started for
+	// this course
 	query, args, _ := squirrel.
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
@@ -221,7 +181,12 @@ func (dao *CourseProgressDao) refresh(courseId string, queryRowFn database.Query
 
 	_, err = execFn(query, args...)
 	return err
+
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Internal
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // baseSelect returns the default select builder
 //
@@ -241,6 +206,22 @@ func (dao *CourseProgressDao) baseSelect() squirrel.SelectBuilder {
 func (dao *CourseProgressDao) selectColumns() []string {
 	return []string{
 		dao.table + ".*",
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// data generates a map of key/values for a course progress
+func (dao *CourseProgressDao) data(cp *models.CourseProgress) map[string]any {
+	return map[string]any{
+		"id":           cp.ID,
+		"course_id":    NilStr(cp.CourseID),
+		"started":      cp.Started,
+		"started_at":   NilStr(cp.StartedAt.String()),
+		"percent":      cp.Percent,
+		"completed_at": NilStr(cp.CompletedAt.String()),
+		"created_at":   cp.CreatedAt,
+		"updated_at":   cp.UpdatedAt,
 	}
 }
 

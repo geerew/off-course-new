@@ -115,7 +115,7 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 		}
 	}
 
-	courses, err := api.courseDao.List(dbParams)
+	courses, err := api.courseDao.List(dbParams, nil)
 
 	if err != nil {
 		log.Err(err).Msg("error looking up courses")
@@ -140,7 +140,7 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 func (api *courses) getCourse(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	course, err := api.courseDao.Get(id)
+	course, err := api.courseDao.Get(id, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -215,7 +215,7 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 func (api *courses) deleteCourse(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	err := api.courseDao.Delete(id)
+	err := api.courseDao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": id}}, nil)
 	if err != nil {
 		log.Err(err).Msg("error deleting course")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -232,7 +232,7 @@ func (api *courses) deleteCourse(c *fiber.Ctx) error {
 func (api *courses) getCard(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	course, err := api.courseDao.Get(id)
+	course, err := api.courseDao.Get(id, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -266,7 +266,7 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// Get the course
-	_, err := api.courseDao.Get(id)
+	_, err := api.courseDao.Get(id, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -284,7 +284,7 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 		Pagination: pagination.NewFromApi(c),
 	}
 
-	assets, err := api.assetDao.List(dbParams)
+	assets, err := api.assetDao.List(dbParams, nil)
 	if err != nil {
 		log.Err(err).Msg("error looking up assets")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -309,7 +309,7 @@ func (api *courses) getAsset(c *fiber.Ctx) error {
 	id := c.Params("id")
 	assetId := c.Params("asset")
 
-	_, err := api.courseDao.Get(id)
+	_, err := api.courseDao.Get(id, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -321,7 +321,7 @@ func (api *courses) getAsset(c *fiber.Ctx) error {
 		})
 	}
 
-	asset, err := api.assetDao.Get(assetId, nil)
+	asset, err := api.assetDao.Get(assetId, nil, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -348,7 +348,7 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 	assetId := c.Params("asset")
 
 	// Get the course
-	_, err := api.courseDao.Get(id)
+	_, err := api.courseDao.Get(id, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -361,7 +361,7 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 	}
 
 	// Get the asset
-	asset, err := api.assetDao.Get(assetId, nil)
+	asset, err := api.assetDao.Get(assetId, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -383,7 +383,7 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 		Pagination: pagination.NewFromApi(c),
 	}
 
-	attachments, err := api.attachmentDao.List(dbParams)
+	attachments, err := api.attachmentDao.List(dbParams, nil)
 	if err != nil {
 		log.Err(err).Msg("error looking up attachments")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -410,7 +410,7 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 	attachmentId := c.Params("attachment")
 
 	// Get the course
-	_, err := api.courseDao.Get(id)
+	_, err := api.courseDao.Get(id, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -423,7 +423,7 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 	}
 
 	// Get the asset
-	asset, err := api.assetDao.Get(assetId, nil)
+	asset, err := api.assetDao.Get(assetId, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -440,7 +440,7 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 	}
 
 	// Get the attachment
-	attachment, err := api.attachmentDao.Get(attachmentId)
+	attachment, err := api.attachmentDao.Get(attachmentId, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")

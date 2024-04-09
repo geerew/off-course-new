@@ -38,65 +38,111 @@ func TableAssetsProgress() string {
 
 // Create inserts a new asset progress
 //
-// If this is part of a transaction, use `CreateTx`
-func (dao *AssetProgressDao) Create(cp *models.AssetProgress) error {
-	return dao.create(cp, dao.db.Exec)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// CreateTx inserts a new asset progress in a transaction
-func (dao *AssetProgressDao) CreateTx(cp *models.AssetProgress, tx *sql.Tx) error {
-	return dao.create(cp, tx.Exec)
+// The function must be run within a transaction as it also updates the course progress. If `tx` is
+// nil, the function will create a new transaction
+func (dao *AssetProgressDao) Create(ap *models.AssetProgress, tx *sql.Tx) error {
+	if tx == nil {
+		return dao.db.RunInTransaction(func(tx *sql.Tx) error {
+			return dao.create(ap, tx)
+		})
+	} else {
+		return dao.create(ap, tx)
+	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Get selects an asset progress with the given asset ID
-func (dao *AssetProgressDao) Get(assetId string) (*models.AssetProgress, error) {
-	return dao.get(assetId, dao.db.QueryRow)
+func (dao *AssetProgressDao) Get(assetId string, tx *sql.Tx) (*models.AssetProgress, error) {
+	generic := NewGenericDao(dao.db, dao.table)
+
+	dbParams := &database.DatabaseParams{
+		Columns: dao.selectColumns(),
+		Where:   squirrel.Eq{generic.table + ".asset_id": assetId},
+	}
+
+	row, err := generic.Get(dao.baseSelect(), dbParams, tx)
+	if err != nil {
+		return nil, err
+	}
+
+	cp, err := dao.scanRow(row)
+	if err != nil {
+		return nil, err
+	}
+
+	return cp, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (dao *AssetProgressDao) GetTx(assetId string, tx *sql.Tx) (*models.AssetProgress, error) {
-	return dao.get(assetId, tx.QueryRow)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Update updates a asset progress
+// Update updates the `video_pos` (for video assets) and `completed`
 //
-// This always run in a transaction. It calls `UpdateTx`
-//
-// Note: Only the `video_pos` and `completed` can be updated
-func (dao *AssetProgressDao) Update(ap *models.AssetProgress) error {
-	return dao.db.RunInTransaction(func(tx *sql.Tx) error {
-		return dao.UpdateTx(ap, tx)
-	})
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// UpdateTx updates the `video_pos` when the type is a video and `completed` of an asset progress
-//
-// When the `completed` is true, `completed_at` is set to the current time. When the `completed`
+// When `completed` is true, `completed_at` is set to the current time. When the `completed`
 // is false, `completed_at` is set to null
 //
-// This is to be used in a transaction
-// Note: Only the `video_pos` and `completed` can be updated
-func (dao *AssetProgressDao) UpdateTx(ap *models.AssetProgress, tx *sql.Tx) error {
+// Note: Only the `video_pos` and `completed` may be updated
+//
+// The function must be run within a transaction as it also updates the course progress. If `tx` is
+// nil, the function will create a new transaction
+func (dao *AssetProgressDao) Update(ap *models.AssetProgress, tx *sql.Tx) error {
+	if tx == nil {
+		return dao.db.RunInTransaction(func(tx *sql.Tx) error {
+			return dao.update(ap, tx)
+		})
+	} else {
+		return dao.update(ap, tx)
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Internal
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (dao *AssetProgressDao) create(ap *models.AssetProgress, tx *sql.Tx) error {
+	if ap.ID == "" {
+		ap.RefreshId()
+	}
+
+	ap.RefreshCreatedAt()
+	ap.RefreshUpdatedAt()
+
+	query, args, _ := squirrel.
+		StatementBuilder.
+		Insert(dao.table).
+		SetMap(dao.data(ap)).
+		ToSql()
+
+	_, err := tx.Exec(query, args...)
+
+	if err != nil {
+		return err
+	}
+
+	// Refresh course progress
+	cpDao := NewCourseProgressDao(dao.db)
+	return cpDao.Refresh(ap.CourseID, tx)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (dao *AssetProgressDao) update(ap *models.AssetProgress, tx *sql.Tx) error {
 	if ap.AssetID == "" {
 		return ErrEmptyId
 	}
 
+	if tx == nil {
+		return ErrNilTransaction
+	}
+
+	// Normalize video position
 	if ap.VideoPos < 0 {
 		ap.VideoPos = 0
 	}
 
 	// Get the asset
 	assetDao := NewAssetDao(dao.db)
-	asset, err := assetDao.GetTx(ap.AssetID, nil, tx)
+	asset, err := assetDao.Get(ap.AssetID, nil, tx)
 	if err != nil {
 		return err
 	}
@@ -147,55 +193,7 @@ func (dao *AssetProgressDao) UpdateTx(ap *models.AssetProgress, tx *sql.Tx) erro
 
 	// Refresh course progress
 	cpDao := NewCourseProgressDao(dao.db)
-	return cpDao.RefreshTx(ap.CourseID, tx)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Internal
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// create inserts a new asset progress
-func (dao *AssetProgressDao) create(ap *models.AssetProgress, execFunc database.ExecFn) error {
-	if ap.ID == "" {
-		ap.RefreshId()
-	}
-
-	ap.RefreshCreatedAt()
-	ap.RefreshUpdatedAt()
-
-	query, args, _ := squirrel.
-		StatementBuilder.
-		Insert(dao.table).
-		SetMap(dao.data(ap)).
-		ToSql()
-
-	_, err := execFunc(query, args...)
-
-	return err
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// get selects an asset progress with the given asset ID
-func (dao *AssetProgressDao) get(assetId string, queryRowFn database.QueryRowFn) (*models.AssetProgress, error) {
-	generic := NewGenericDao(dao.db, dao.table)
-
-	dbParams := &database.DatabaseParams{
-		Columns: dao.selectColumns(),
-		Where:   squirrel.Eq{generic.table + ".asset_id": assetId},
-	}
-
-	row, err := generic.get(dao.baseSelect(), dbParams, queryRowFn)
-	if err != nil {
-		return nil, err
-	}
-
-	cp, err := dao.scanRow(row)
-	if err != nil {
-		return nil, err
-	}
-
-	return cp, nil
+	return cpDao.Refresh(ap.CourseID, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -224,7 +222,7 @@ func (dao *AssetProgressDao) selectColumns() []string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// selectColumns returns the columns to select
+// data generates a map of key/values for thane asset progress
 func (dao *AssetProgressDao) data(ap *models.AssetProgress) map[string]any {
 	return map[string]any{
 		"id":           ap.ID,

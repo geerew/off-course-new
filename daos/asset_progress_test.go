@@ -33,7 +33,7 @@ func TestAssetProgress_Create(t *testing.T) {
 			CourseID: testData[0].ID,
 		}
 
-		err := dao.Create(ap)
+		err := dao.Create(ap, nil)
 		require.Nil(t, err)
 		assert.NotEmpty(t, ap.ID)
 		assert.Equal(t, testData[0].Assets[0].ID, ap.AssetID)
@@ -55,10 +55,10 @@ func TestAssetProgress_Create(t *testing.T) {
 		}
 
 		// Create
-		require.Nil(t, dao.Create(ap))
+		require.Nil(t, dao.Create(ap, nil))
 
 		// Create (again)
-		require.ErrorContains(t, dao.Create(ap), fmt.Sprintf("UNIQUE constraint failed: %s.asset_id", dao.table))
+		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("UNIQUE constraint failed: %s.asset_id", dao.table))
 	})
 
 	t.Run("constraint errors", func(t *testing.T) {
@@ -66,29 +66,32 @@ func TestAssetProgress_Create(t *testing.T) {
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
-		// Asset ID
 		ap := &models.AssetProgress{}
-		require.ErrorContains(t, dao.Create(ap), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", TableAssetsProgress()))
-		ap.AssetID = ""
-		require.ErrorContains(t, dao.Create(ap), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", TableAssetsProgress()))
-		ap.AssetID = "1234"
 
 		// Asset ID
-		require.ErrorContains(t, dao.Create(ap), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", TableAssetsProgress()))
+		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", TableAssetsProgress()))
+		ap.AssetID = ""
+
+		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", TableAssetsProgress()))
+		ap.AssetID = "1234"
+
+		// Course ID
+		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", TableAssetsProgress()))
 		ap.CourseID = ""
-		require.ErrorContains(t, dao.Create(ap), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", TableAssetsProgress()))
+
+		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", TableAssetsProgress()))
 		ap.CourseID = "1234"
 
 		// Invalid asset ID
-		require.ErrorContains(t, dao.Create(ap), "FOREIGN KEY constraint failed")
+		require.ErrorContains(t, dao.Create(ap, nil), "FOREIGN KEY constraint failed")
 		ap.AssetID = testData[0].Assets[0].ID
 
 		// Invalid course ID
-		require.ErrorContains(t, dao.Create(ap), "FOREIGN KEY constraint failed")
+		require.ErrorContains(t, dao.Create(ap, nil), "FOREIGN KEY constraint failed")
 		ap.CourseID = testData[0].ID
 
 		// Success
-		require.Nil(t, dao.Create(ap))
+		require.Nil(t, dao.Create(ap, nil))
 	})
 }
 
@@ -104,10 +107,10 @@ func TestAssetProgress_Get(t *testing.T) {
 			require.Nil(t, dao.Create(&models.AssetProgress{
 				AssetID:  tc.Assets[0].ID,
 				CourseID: tc.ID,
-			}))
+			}, nil))
 		}
 
-		ap, err := dao.Get(testData[1].Assets[0].ID)
+		ap, err := dao.Get(testData[1].Assets[0].ID, nil)
 		require.Nil(t, err)
 		assert.Equal(t, testData[1].Assets[0].ID, ap.AssetID)
 	})
@@ -115,7 +118,7 @@ func TestAssetProgress_Get(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		_, dao, _ := AssetProgressSetup(t)
 
-		ap, err := dao.Get("1234")
+		ap, err := dao.Get("1234", nil)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, ap)
 	})
@@ -123,7 +126,7 @@ func TestAssetProgress_Get(t *testing.T) {
 	t.Run("empty id", func(t *testing.T) {
 		_, dao, _ := AssetProgressSetup(t)
 
-		ap, err := dao.Get("")
+		ap, err := dao.Get("", nil)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, ap)
 	})
@@ -134,7 +137,7 @@ func TestAssetProgress_Get(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
 		require.Nil(t, err)
 
-		_, err = dao.Get("1234")
+		_, err = dao.Get("1234", nil)
 		require.ErrorContains(t, err, "no such table: "+dao.table)
 	})
 }
@@ -152,7 +155,7 @@ func TestAssetProgress_Update(t *testing.T) {
 			AssetID:  testData[0].Assets[0].ID,
 			CourseID: testData[0].ID,
 		}
-		require.Nil(t, dao.Create(originalAp))
+		require.Nil(t, dao.Create(originalAp, nil))
 
 		require.Zero(t, originalAp.VideoPos)
 
@@ -162,14 +165,14 @@ func TestAssetProgress_Update(t *testing.T) {
 		// Set to 50
 		// ----------------------------
 		originalAp.VideoPos = 50
-		require.Nil(t, dao.Update(originalAp))
+		require.Nil(t, dao.Update(originalAp, nil))
 
-		updatedAp1, err := dao.Get(originalAp.AssetID)
+		updatedAp1, err := dao.Get(originalAp.AssetID, nil)
 		require.Nil(t, err)
 		require.Equal(t, 50, updatedAp1.VideoPos)
 
 		// Ensure the course was set to started
-		cp1, err := cpDao.Get(testData[0].ID)
+		cp1, err := cpDao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
 		assert.True(t, cp1.Started)
 		assert.False(t, cp1.StartedAt.IsZero())
@@ -178,14 +181,14 @@ func TestAssetProgress_Update(t *testing.T) {
 		// Set to -10 (should be set to 0)
 		// ----------------------------
 		updatedAp1.VideoPos = -10
-		require.Nil(t, dao.Update(updatedAp1))
+		require.Nil(t, dao.Update(updatedAp1, nil))
 
-		updatedAp2, err := dao.Get(updatedAp1.AssetID)
+		updatedAp2, err := dao.Get(updatedAp1.AssetID, nil)
 		require.Nil(t, err)
 		require.Zero(t, updatedAp2.VideoPos)
 
 		// Ensure the course is not started
-		cp2, err := cpDao.Get(testData[0].ID)
+		cp2, err := cpDao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
 		assert.False(t, cp2.Started)
 		assert.True(t, cp2.StartedAt.IsZero())
@@ -194,16 +197,16 @@ func TestAssetProgress_Update(t *testing.T) {
 		// Set completed
 		// ----------------------------
 		updatedAp2.Completed = true
-		require.Nil(t, dao.Update(updatedAp2))
+		require.Nil(t, dao.Update(updatedAp2, nil))
 
-		updatedAp3, err := dao.Get(updatedAp2.AssetID)
+		updatedAp3, err := dao.Get(updatedAp2.AssetID, nil)
 		require.Nil(t, err)
 		require.Zero(t, updatedAp3.VideoPos)
 		require.True(t, updatedAp3.Completed)
 		require.False(t, updatedAp3.CompletedAt.IsZero())
 
 		// Ensure the course is started and completed
-		cp3, err := cpDao.Get(testData[0].ID)
+		cp3, err := cpDao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
 		assert.True(t, cp3.Started)
 		assert.False(t, cp3.StartedAt.IsZero())
@@ -221,12 +224,12 @@ func TestAssetProgress_Update(t *testing.T) {
 			AssetID:  testData[0].Assets[0].ID,
 			CourseID: testData[0].ID,
 		}
-		require.Nil(t, dao.Create(ap))
+
+		require.Nil(t, dao.Create(ap, nil))
 
 		ap.AssetID = ""
 
-		err := dao.Update(ap)
-		assert.EqualError(t, err, "id cannot be empty")
+		require.EqualError(t, dao.Update(ap, nil), "id cannot be empty")
 	})
 
 	t.Run("invalid asset id", func(t *testing.T) {
@@ -239,12 +242,11 @@ func TestAssetProgress_Update(t *testing.T) {
 			AssetID:  testData[0].Assets[0].ID,
 			CourseID: testData[0].ID,
 		}
-		require.Nil(t, dao.Create(ap))
+		require.Nil(t, dao.Create(ap, nil))
 
 		ap.AssetID = "1234"
 
-		err := dao.Update(ap)
-		require.ErrorIs(t, err, sql.ErrNoRows)
+		require.ErrorIs(t, dao.Update(ap, nil), sql.ErrNoRows)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -257,13 +259,13 @@ func TestAssetProgress_Update(t *testing.T) {
 			AssetID:  testData[0].Assets[0].ID,
 			CourseID: testData[0].ID,
 		}
-		require.Nil(t, dao.Create(ap))
+
+		require.Nil(t, dao.Create(ap, nil))
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
 		require.Nil(t, err)
 
-		err = dao.Update(ap)
-		require.ErrorContains(t, err, "no such table: "+dao.table)
+		require.ErrorContains(t, dao.Update(ap, nil), "no such table: "+dao.table)
 	})
 }
 
@@ -280,15 +282,16 @@ func TestAssetProgress_DeleteCascade(t *testing.T) {
 			AssetID:  testData[0].Assets[0].ID,
 			CourseID: testData[0].ID,
 		}
-		require.Nil(t, dao.Create(ap))
+
+		require.Nil(t, dao.Create(ap, nil))
 
 		// Delete the course
 		courseDao := NewCourseDao(db)
-		err := courseDao.Delete(testData[0].ID)
+		err := courseDao.Delete(&database.DatabaseParams{Where: map[string]interface{}{"id": testData[0].ID}}, nil)
 		require.Nil(t, err)
 
 		// Check the asset progress was deleted
-		_, err = dao.Get(ap.ID)
+		_, err = dao.Get(ap.ID, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 	})
 
@@ -302,15 +305,16 @@ func TestAssetProgress_DeleteCascade(t *testing.T) {
 			AssetID:  testData[0].Assets[0].ID,
 			CourseID: testData[0].ID,
 		}
-		require.Nil(t, dao.Create(ap))
+
+		require.Nil(t, dao.Create(ap, nil))
 
 		// Delete the asset
 		assetDao := NewAssetDao(db)
-		err := assetDao.Delete(testData[0].Assets[0].ID)
+		err := assetDao.Delete(&database.DatabaseParams{Where: map[string]interface{}{"id": testData[0].Assets[0].ID}}, nil)
 		require.Nil(t, err)
 
 		// Check the asset progress was deleted
-		_, err = dao.Get(ap.ID)
+		_, err = dao.Get(ap.ID, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 	})
 }

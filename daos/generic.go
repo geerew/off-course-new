@@ -2,7 +2,6 @@ package daos
 
 import (
 	"database/sql"
-	"errors"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
@@ -26,70 +25,14 @@ func NewGenericDao(db database.Database, table string) *GenericDao {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of rows in a table
-func (dao *GenericDao) Count(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams) (int, error) {
-	return dao.count(baseSelect, dbParams, dao.db.QueryRow)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Count returns the number of rows in a table in a transaction
-func (dao *GenericDao) CountTx(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams, tx *sql.Tx) (int, error) {
-	return dao.count(baseSelect, dbParams, tx.QueryRow)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Get returns a row from a table
-func (dao *GenericDao) Get(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams) (*sql.Row, error) {
-	return dao.get(baseSelect, dbParams, dao.db.QueryRow)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Get returns a row from a table in a transaction
-func (dao *GenericDao) GetTx(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams, tx *sql.Tx) (*sql.Row, error) {
-	return dao.get(baseSelect, dbParams, tx.QueryRow)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// List returns rows from a table
-func (dao *GenericDao) List(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams) (*sql.Rows, error) {
-	return dao.list(baseSelect, dbParams, dao.db.QueryRow, dao.db.Query)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// List returns rows from a table in a transaction
-func (dao *GenericDao) ListTx(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams, tx *sql.Tx) (*sql.Rows, error) {
-	return dao.list(baseSelect, dbParams, tx.QueryRow, tx.Query)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Delete deletes a row from a table
-func (dao *GenericDao) Delete(id string) error {
-	if id == "" {
-		return errors.New("id cannot be empty")
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *GenericDao) Count(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams, tx *sql.Tx) (int, error) {
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
 	}
 
-	query, args, _ := squirrel.
-		StatementBuilder.
-		PlaceholderFormat(squirrel.Question).
-		Delete(dao.table).
-		Where(squirrel.Eq{"id": id}).
-		ToSql()
-
-	_, err := dao.db.Exec(query, args...)
-	return err
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Internal
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Count returns the number of rows in a table
-func (dao *GenericDao) count(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams, queryRowFn database.QueryRowFn) (int, error) {
 	builder := baseSelect.
 		Columns("COUNT(DISTINCT " + dao.table + ".id)")
 
@@ -107,7 +50,15 @@ func (dao *GenericDao) count(baseSelect squirrel.SelectBuilder, dbParams *databa
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (dao *GenericDao) get(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams, queryRowFn database.QueryRowFn) (*sql.Row, error) {
+// Get returns a row from a table
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *GenericDao) Get(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams, tx *sql.Tx) (*sql.Row, error) {
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
+	}
+
 	if dbParams == nil || dbParams.Where == nil {
 		return nil, ErrMissingWhere
 	}
@@ -139,7 +90,14 @@ func (dao *GenericDao) get(baseSelect squirrel.SelectBuilder, dbParams *database
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // List returns rows from a table
-func (dao *GenericDao) list(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams, queryRowFn database.QueryRowFn, queryFn database.QueryFn) (*sql.Rows, error) {
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *GenericDao) List(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams, tx *sql.Tx) (*sql.Rows, error) {
+	queryFn := dao.db.Query
+	if tx != nil {
+		queryFn = tx.Query
+	}
+
 	builder := baseSelect
 
 	if dbParams != nil {
@@ -156,7 +114,7 @@ func (dao *GenericDao) list(baseSelect squirrel.SelectBuilder, dbParams *databas
 		}
 
 		if dbParams.Pagination != nil {
-			if count, err := dao.count(baseSelect, dbParams, queryRowFn); err != nil {
+			if count, err := dao.Count(baseSelect, dbParams, tx); err != nil {
 				return nil, err
 			} else {
 				dbParams.Pagination.SetCount(count)
@@ -172,4 +130,30 @@ func (dao *GenericDao) list(baseSelect squirrel.SelectBuilder, dbParams *databas
 		ToSql()
 
 	return queryFn(query, args...)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Delete deletes a row from a table based upon a where clause
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *GenericDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
+	if dbParams == nil || dbParams.Where == nil {
+		return ErrMissingWhere
+	}
+
+	execFn := dao.db.Exec
+	if tx != nil {
+		execFn = tx.Exec
+	}
+
+	query, args, _ := squirrel.
+		StatementBuilder.
+		PlaceholderFormat(squirrel.Question).
+		Delete(dao.table).
+		Where(dbParams.Where).
+		ToSql()
+
+	_, err := execFn(query, args...)
+	return err
 }

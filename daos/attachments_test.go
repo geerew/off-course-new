@@ -109,7 +109,7 @@ func TestAttachment_Create(t *testing.T) {
 		err = dao.Create(testData[0].Assets[0].Attachments[0])
 		require.Nil(t, err)
 
-		newA, err := dao.Get(testData[0].Assets[0].Attachments[0].ID)
+		newA, err := dao.Get(testData[0].Assets[0].Attachments[0].ID, nil)
 		require.Nil(t, err)
 		assert.Equal(t, testData[0].Assets[0].Attachments[0].ID, newA.ID)
 		assert.Equal(t, testData[0].Assets[0].Attachments[0].CourseID, newA.CourseID)
@@ -181,7 +181,7 @@ func TestAttachment_Get(t *testing.T) {
 
 		testData := NewTestBuilder(t).Db(db).Courses(2).Assets(1).Attachments(1).Build()
 
-		a, err := dao.Get(testData[1].Assets[0].Attachments[0].ID)
+		a, err := dao.Get(testData[1].Assets[0].Attachments[0].ID, nil)
 		require.Nil(t, err)
 		assert.Equal(t, testData[1].Assets[0].Attachments[0].ID, a.ID)
 	})
@@ -189,7 +189,7 @@ func TestAttachment_Get(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		_, dao, _ := attachmentSetup(t)
 
-		c, err := dao.Get("1234")
+		c, err := dao.Get("1234", nil)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, c)
 	})
@@ -197,7 +197,7 @@ func TestAttachment_Get(t *testing.T) {
 	t.Run("empty id", func(t *testing.T) {
 		_, dao, _ := attachmentSetup(t)
 
-		c, err := dao.Get("")
+		c, err := dao.Get("", nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, c)
 	})
@@ -208,7 +208,7 @@ func TestAttachment_Get(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
 		require.Nil(t, err)
 
-		_, err = dao.Get("1234")
+		_, err = dao.Get("1234", nil)
 		require.ErrorContains(t, err, "no such table: "+dao.table)
 	})
 }
@@ -219,7 +219,7 @@ func TestAttachment_List(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
 		_, dao, _ := attachmentSetup(t)
 
-		assets, err := dao.List(nil)
+		assets, err := dao.List(nil, nil)
 		require.Nil(t, err)
 		require.Zero(t, assets)
 	})
@@ -229,7 +229,7 @@ func TestAttachment_List(t *testing.T) {
 
 		NewTestBuilder(t).Db(db).Courses(5).Assets(1).Attachments(1).Build()
 
-		result, err := dao.List(nil)
+		result, err := dao.List(nil, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 5)
 
@@ -243,7 +243,7 @@ func TestAttachment_List(t *testing.T) {
 		// ----------------------------
 		// CREATED_AT DESC
 		// ----------------------------
-		result, err := dao.List(&database.DatabaseParams{OrderBy: []string{"created_at desc"}})
+		result, err := dao.List(&database.DatabaseParams{OrderBy: []string{"created_at desc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
 		assert.Equal(t, testData[2].Assets[0].Attachments[0].ID, result[0].ID)
@@ -253,7 +253,7 @@ func TestAttachment_List(t *testing.T) {
 		// ----------------------------
 		// CREATED_AT ASC
 		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"created_at asc"}})
+		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"created_at asc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
 		assert.Equal(t, testData[0].Assets[0].Attachments[0].ID, result[0].ID)
@@ -263,7 +263,7 @@ func TestAttachment_List(t *testing.T) {
 		// ----------------------------
 		// Error
 		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"unit_test asc"}})
+		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"unit_test asc"}}, nil)
 		require.ErrorContains(t, err, "no such column")
 		assert.Nil(t, result)
 	})
@@ -276,7 +276,7 @@ func TestAttachment_List(t *testing.T) {
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{TableAttachments() + ".id": testData[1].Assets[1].Attachments[0].ID}})
+		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{TableAttachments() + ".id": testData[1].Assets[1].Attachments[0].ID}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, testData[1].Assets[1].Attachments[0].ID, result[0].ID)
@@ -292,7 +292,7 @@ func TestAttachment_List(t *testing.T) {
 			OrderBy: []string{"created_at asc"},
 		}
 
-		result, err = dao.List(dbParams)
+		result, err = dao.List(dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 2)
 		assert.Equal(t, testData[1].Assets[1].Attachments[0].ID, result[0].ID)
@@ -301,7 +301,7 @@ func TestAttachment_List(t *testing.T) {
 		// ----------------------------
 		// ERROR
 		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Eq{"": ""}})
+		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Eq{"": ""}}, nil)
 		require.ErrorContains(t, err, "syntax error")
 		assert.Nil(t, result)
 	})
@@ -316,7 +316,7 @@ func TestAttachment_List(t *testing.T) {
 		// ----------------------------
 		p := pagination.New(1, 10)
 
-		result, err := dao.List(&database.DatabaseParams{Pagination: p})
+		result, err := dao.List(&database.DatabaseParams{Pagination: p}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, 17, p.TotalItems())
@@ -328,7 +328,7 @@ func TestAttachment_List(t *testing.T) {
 		// ----------------------------
 		p = pagination.New(2, 10)
 
-		result, err = dao.List(&database.DatabaseParams{Pagination: p})
+		result, err = dao.List(&database.DatabaseParams{Pagination: p}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 7)
 		require.Equal(t, 17, p.TotalItems())
@@ -342,7 +342,7 @@ func TestAttachment_List(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
 		require.Nil(t, err)
 
-		_, err = dao.List(nil)
+		_, err = dao.List(nil, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.table)
 	})
 }
@@ -354,22 +354,15 @@ func TestAttachment_Delete(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Attachments(1).Build()
-		err := dao.Delete(testData[0].Assets[0].Attachments[0].ID)
+		err := dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": testData[0].Assets[0].Attachments[0].ID}}, nil)
 		require.Nil(t, err)
 	})
 
-	t.Run("empty id", func(t *testing.T) {
+	t.Run("no db params", func(t *testing.T) {
 		_, dao, _ := attachmentSetup(t)
 
-		err := dao.Delete("")
-		assert.ErrorContains(t, err, "id cannot be empty")
-	})
-
-	t.Run("invalid id", func(t *testing.T) {
-		_, dao, _ := attachmentSetup(t)
-
-		err := dao.Delete("1234")
-		assert.Nil(t, err)
+		err := dao.Delete(nil, nil)
+		assert.ErrorIs(t, err, ErrMissingWhere)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -378,7 +371,7 @@ func TestAttachment_Delete(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
 		require.Nil(t, err)
 
-		err = dao.Delete("1234")
+		err = dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": "1234"}}, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.table)
 	})
 }
@@ -393,11 +386,11 @@ func TestAttachment_DeleteCascade(t *testing.T) {
 
 		// Delete the course
 		courseDao := NewCourseDao(db)
-		err := courseDao.Delete(testData[0].ID)
+		err := courseDao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": testData[0].ID}}, nil)
 		require.Nil(t, err)
 
 		// Check the asset was deleted
-		s, err := dao.Get(testData[0].Assets[0].Attachments[0].ID)
+		s, err := dao.Get(testData[0].Assets[0].Attachments[0].ID, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, s)
 	})
@@ -409,10 +402,10 @@ func TestAttachment_DeleteCascade(t *testing.T) {
 
 		// Delete the asset
 		assetDao := NewAssetDao(db)
-		err := assetDao.Delete(testData[0].Assets[0].ID)
+		err := assetDao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": testData[0].Assets[0].ID}}, nil)
 		require.Nil(t, err)
 
-		_, err = dao.Get(testData[0].Assets[0].Attachments[0].ID)
+		_, err = dao.Get(testData[0].Assets[0].Attachments[0].ID, nil)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 	})
 }

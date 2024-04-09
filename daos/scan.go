@@ -49,21 +49,13 @@ func (dao *ScanDao) Create(s *models.Scan) error {
 	s.RefreshCreatedAt()
 	s.RefreshUpdatedAt()
 
-	data := map[string]interface{}{
-		"id":         s.ID,
-		"course_id":  NilStr(s.CourseID),
-		"status":     NilStr(s.Status.String()),
-		"created_at": s.CreatedAt,
-		"updated_at": s.UpdatedAt,
-	}
-
 	// Default status to waiting
 	s.Status = types.NewScanStatus(types.ScanStatusWaiting)
 
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.table).
-		SetMap(data).
+		SetMap(dao.data(s)).
 		ToSql()
 
 	_, err := dao.db.Exec(query, args...)
@@ -82,7 +74,7 @@ func (dao *ScanDao) Get(courseId string) (*models.Scan, error) {
 		Where:   squirrel.Eq{generic.table + ".course_id": courseId},
 	}
 
-	row, err := generic.Get(dao.baseSelect(), dbParams)
+	row, err := generic.Get(dao.baseSelect(), dbParams, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -122,9 +114,15 @@ func (dao *ScanDao) Update(scan *models.Scan) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Delete deletes a scan with the given ID
-func (dao *ScanDao) Delete(id string) error {
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
+	if dbParams == nil || dbParams.Where == nil {
+		return ErrMissingWhere
+	}
+
 	generic := NewGenericDao(dao.db, dao.table)
-	return generic.Delete(id)
+	return generic.Delete(dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -139,7 +137,7 @@ func (dao *ScanDao) Next() (*models.Scan, error) {
 		OrderBy: []string{"created_at ASC"},
 	}
 
-	row, err := generic.Get(dao.baseSelect(), dbParams)
+	row, err := generic.Get(dao.baseSelect(), dbParams, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -184,6 +182,19 @@ func (dao *ScanDao) selectColumns() []string {
 	return []string{
 		dao.table + ".*",
 		TableCourses() + ".path AS course_path",
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// data generates a map of key/values for a scan
+func (dao *ScanDao) data(s *models.Scan) map[string]any {
+	return map[string]any{
+		"id":         s.ID,
+		"course_id":  NilStr(s.CourseID),
+		"status":     NilStr(s.Status.String()),
+		"created_at": s.CreatedAt,
+		"updated_at": s.UpdatedAt,
 	}
 }
 

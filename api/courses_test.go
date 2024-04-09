@@ -183,7 +183,7 @@ func TestCourses_GetCourses(t *testing.T) {
 			AssetID:  testData[0].Assets[0].ID,
 			VideoPos: 10,
 		}
-		require.Nil(t, apDao.Update(ap))
+		require.Nil(t, apDao.Update(ap, nil))
 
 		// ------------------
 		// `started` not defined
@@ -233,7 +233,7 @@ func TestCourses_GetCourses(t *testing.T) {
 				AssetID:   a.ID,
 				Completed: true,
 			}
-			require.Nil(t, apDao.Update(ap))
+			require.Nil(t, apDao.Update(ap, nil))
 		}
 
 		// ------------------
@@ -515,7 +515,7 @@ func TestCourses_DeleteCourse(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNoContent, status)
 
-		_, err = courseDao.Get(testData[2].ID)
+		_, err = courseDao.Get(testData[2].ID, nil)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 
 		// ----------------------------

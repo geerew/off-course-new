@@ -38,7 +38,7 @@ func TableAssets() string {
 // Count returns the number of assets
 func (dao *AssetDao) Count(params *database.DatabaseParams) (int, error) {
 	generic := NewGenericDao(dao.db, dao.table)
-	return generic.Count(dao.baseSelect(), params)
+	return generic.Count(dao.baseSelect(), params, nil)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -56,22 +56,10 @@ func (dao *AssetDao) Create(a *models.Asset) error {
 	a.RefreshCreatedAt()
 	a.RefreshUpdatedAt()
 
-	data := map[string]interface{}{
-		"id":         a.ID,
-		"course_id":  NilStr(a.CourseID),
-		"title":      NilStr(a.Title),
-		"prefix":     a.Prefix,
-		"chapter":    NilStr(a.Chapter),
-		"type":       NilStr(a.Type.String()),
-		"path":       NilStr(a.Path),
-		"created_at": a.CreatedAt,
-		"updated_at": a.UpdatedAt,
-	}
-
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.table).
-		SetMap(data).
+		SetMap(dao.data(a)).
 		ToSql()
 
 	_, err := dao.db.Exec(query, args...)
@@ -81,26 +69,62 @@ func (dao *AssetDao) Create(a *models.Asset) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get selects an asset with the given ID
+// Get selects an asset with the given ID.
 //
-// The dbParams can be used to order the attachments
-func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams) (*models.Asset, error) {
-	return dao.get(id, dbParams, dao.db.QueryRow, dao.db.Query)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Get selects an asset with the given ID in a transaction. It will also get the attachments
+// `dbparams` can be used to order the attachments
 //
-// The dbParams can be used to order the attachments
-func (dao *AssetDao) GetTx(id string, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Asset, error) {
-	return dao.get(id, dbParams, tx.QueryRow, tx.Query)
+// `tx` allows for the function to be run within a transaction
+func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Asset, error) {
+	generic := NewGenericDao(dao.db, dao.table)
+
+	assetDbParams := &database.DatabaseParams{
+		Columns: dao.selectColumns(),
+		Where:   squirrel.Eq{generic.table + ".id": id},
+	}
+
+	row, err := generic.Get(dao.baseSelect(), assetDbParams, tx)
+	if err != nil {
+		return nil, err
+	}
+
+	asset, err := dao.scanRow(row)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the attachments
+	attachmentDao := NewAttachmentDao(dao.db)
+
+	// Set the DB params
+	var attachmentDbParams *database.DatabaseParams
+
+	if dbParams == nil {
+		attachmentDbParams = &database.DatabaseParams{
+			Where: squirrel.Eq{"asset_id": asset.ID},
+		}
+	} else {
+		attachmentDbParams = &database.DatabaseParams{
+			OrderBy: dbParams.OrderBy,
+			Where:   squirrel.Eq{"asset_id": asset.ID},
+		}
+	}
+
+	attachments, err := attachmentDao.List(attachmentDbParams, tx)
+	if err != nil {
+		return nil, err
+	}
+
+	asset.Attachments = attachments
+
+	return asset, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // List selects assets
-func (dao *AssetDao) List(dbParams *database.DatabaseParams) ([]*models.Asset, error) {
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Asset, error) {
 	generic := NewGenericDao(dao.db, dao.table)
 
 	if dbParams == nil {
@@ -116,7 +140,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams) ([]*models.Asset, e
 		dbParams.Columns = dao.selectColumns()
 	}
 
-	rows, err := generic.List(dao.baseSelect(), dbParams)
+	rows, err := generic.List(dao.baseSelect(), dbParams, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +187,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams) ([]*models.Asset, e
 		}
 
 		// Get the attachments
-		attachments, err := attachmentDao.List(dbParams)
+		attachments, err := attachmentDao.List(dbParams, tx)
 		if err != nil {
 			return nil, err
 		}
@@ -186,63 +210,19 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams) ([]*models.Asset, e
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Delete deletes an asset with the given ID
-func (dao *AssetDao) Delete(id string) error {
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
+	if dbParams == nil || dbParams.Where == nil {
+		return ErrMissingWhere
+	}
+
 	generic := NewGenericDao(dao.db, dao.table)
-	return generic.Delete(id)
+	return generic.Delete(dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Internal
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Get selects an asset with the given ID
-//
-// The dbParams can be used to order the attachments
-func (dao *AssetDao) get(id string, dbParams *database.DatabaseParams, QueryRowFn database.QueryRowFn, QueryFn database.QueryFn) (*models.Asset, error) {
-	generic := NewGenericDao(dao.db, dao.table)
-
-	assetDbParams := &database.DatabaseParams{
-		Columns: dao.selectColumns(),
-		Where:   squirrel.Eq{generic.table + ".id": id},
-	}
-
-	row, err := generic.get(dao.baseSelect(), assetDbParams, QueryRowFn)
-	if err != nil {
-		return nil, err
-	}
-
-	asset, err := dao.scanRow(row)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get the attachments
-	attachmentDao := NewAttachmentDao(dao.db)
-
-	// Set the DB params
-	var attachmentDbParams *database.DatabaseParams
-
-	if dbParams == nil {
-		attachmentDbParams = &database.DatabaseParams{
-			Where: squirrel.Eq{"asset_id": asset.ID},
-		}
-	} else {
-		attachmentDbParams = &database.DatabaseParams{
-			OrderBy: dbParams.OrderBy,
-			Where:   squirrel.Eq{"asset_id": asset.ID},
-		}
-	}
-
-	attachments, err := attachmentDao.list(attachmentDbParams, QueryRowFn, QueryFn)
-	if err != nil {
-		return nil, err
-	}
-
-	asset.Attachments = attachments
-
-	return asset, nil
-}
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // baseSelect returns the default select builder
@@ -271,6 +251,23 @@ func (dao *AssetDao) selectColumns() []string {
 		TableAssetsProgress() + ".video_pos",
 		TableAssetsProgress() + ".completed",
 		TableAssetsProgress() + ".completed_at",
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// data generates a map of key/values for an asset
+func (dao *AssetDao) data(a *models.Asset) map[string]any {
+	return map[string]any{
+		"id":         a.ID,
+		"course_id":  NilStr(a.CourseID),
+		"title":      NilStr(a.Title),
+		"prefix":     a.Prefix,
+		"chapter":    NilStr(a.Chapter),
+		"type":       NilStr(a.Type.String()),
+		"path":       NilStr(a.Path),
+		"created_at": a.CreatedAt,
+		"updated_at": a.UpdatedAt,
 	}
 }
 

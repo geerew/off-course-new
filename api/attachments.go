@@ -58,7 +58,7 @@ func (api *attachments) getAttachments(c *fiber.Ctx) error {
 		Pagination: pagination.NewFromApi(c),
 	}
 
-	attachments, err := api.attachmentDao.List(dbParams)
+	attachments, err := api.attachmentDao.List(dbParams, nil)
 	if err != nil {
 		log.Err(err).Msg("error looking up attachments")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -82,7 +82,7 @@ func (api *attachments) getAttachments(c *fiber.Ctx) error {
 func (api *attachments) getAttachment(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	attachment, err := api.attachmentDao.Get(id)
+	attachment, err := api.attachmentDao.Get(id, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -103,7 +103,7 @@ func (api *attachments) getAttachment(c *fiber.Ctx) error {
 func (api *attachments) serveAttachment(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	attachment, err := api.attachmentDao.Get(id)
+	attachment, err := api.attachmentDao.Get(id, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {

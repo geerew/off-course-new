@@ -93,7 +93,7 @@ func TestCourse_Create(t *testing.T) {
 		err := dao.Create(testData[0].Course)
 		require.Nil(t, err)
 
-		newC, err := dao.Get(testData[0].ID)
+		newC, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
 		assert.NotEmpty(t, newC.ID)
 		assert.Equal(t, testData[0].Title, newC.Title)
@@ -152,7 +152,7 @@ func TestCourse_Get(t *testing.T) {
 
 		testData := NewTestBuilder(t).Db(db).Courses(2).Assets(1).Build()
 
-		c, err := dao.Get(testData[1].ID)
+		c, err := dao.Get(testData[1].ID, nil)
 		require.Nil(t, err)
 		assert.Equal(t, testData[1].ID, c.ID)
 		assert.Empty(t, testData[1].ScanStatus)
@@ -163,7 +163,7 @@ func TestCourse_Get(t *testing.T) {
 		scanDao := NewScanDao(db)
 		require.Nil(t, scanDao.Create(&models.Scan{CourseID: testData[1].ID}))
 
-		c, err = dao.Get(testData[1].ID)
+		c, err = dao.Get(testData[1].ID, nil)
 		require.Nil(t, err)
 		assert.Equal(t, string(types.ScanStatusWaiting), c.ScanStatus)
 
@@ -176,7 +176,7 @@ func TestCourse_Get(t *testing.T) {
 		testData[1].Available = true
 		require.Nil(t, dao.Update(testData[1].Course))
 
-		c, err = dao.Get(testData[1].ID)
+		c, err = dao.Get(testData[1].ID, nil)
 		require.Nil(t, err)
 		require.True(t, c.Available)
 
@@ -190,14 +190,14 @@ func TestCourse_Get(t *testing.T) {
 
 		// Get course progress
 		// cpDao := NewCourseProgressDao(db)
-		// origCp, err := cpDao.Get(testData[1].ID)
+		// origCp, err := cpDao.Get(testData[1].ID, nil)
 		// require.Nil(t, err)
 
 		// Update
 		// err = cpDao.Update(origCp)
 		// require.Nil(t, err)
 
-		// updatedCp, err :=  cpDao.Get(testData[1].ID)
+		// updatedCp, err :=  cpDao.Get(testData[1].ID, nil)
 		// require.Nil(t, err)
 		// assert.True(t, updatedCp.Started)
 		// assert.False(t, updatedCp.StartedAt.IsZero())
@@ -228,7 +228,7 @@ func TestCourse_Get(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		_, dao, _ := courseSetup(t)
 
-		c, err := dao.Get("1234")
+		c, err := dao.Get("1234", nil)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, c)
 	})
@@ -236,7 +236,7 @@ func TestCourse_Get(t *testing.T) {
 	t.Run("empty id", func(t *testing.T) {
 		_, dao, _ := courseSetup(t)
 
-		c, err := dao.Get("")
+		c, err := dao.Get("", nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, c)
 	})
@@ -247,7 +247,7 @@ func TestCourse_Get(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
 		require.Nil(t, err)
 
-		_, err = dao.Get("1234")
+		_, err = dao.Get("1234", nil)
 		require.ErrorContains(t, err, "no such table: "+dao.table)
 	})
 }
@@ -258,7 +258,7 @@ func TestCourse_List(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
 		_, dao, _ := courseSetup(t)
 
-		courses, err := dao.List(nil)
+		courses, err := dao.List(nil, nil)
 		require.Nil(t, err)
 		require.Zero(t, courses)
 	})
@@ -268,7 +268,7 @@ func TestCourse_List(t *testing.T) {
 
 		testData := NewTestBuilder(t).Db(db).Courses(5).Assets(2).Build()
 
-		result, err := dao.List(nil)
+		result, err := dao.List(nil, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 5)
 
@@ -281,7 +281,7 @@ func TestCourse_List(t *testing.T) {
 		scanDao := NewScanDao(db)
 		require.Nil(t, scanDao.Create(&models.Scan{CourseID: testData[1].ID}))
 
-		result, err = dao.List(nil)
+		result, err = dao.List(nil, nil)
 		require.Nil(t, err)
 		assert.Equal(t, testData[1].ID, result[1].ID)
 		assert.Equal(t, string(types.ScanStatusWaiting), result[1].ScanStatus)
@@ -298,7 +298,7 @@ func TestCourse_List(t *testing.T) {
 		require.Nil(t, dao.Update(testData[0].Course))
 
 		// Find available courses
-		result, err = dao.List(&database.DatabaseParams{Where: squirrel.And{squirrel.Eq{dao.table + ".available": true}}})
+		result, err = dao.List(&database.DatabaseParams{Where: squirrel.And{squirrel.Eq{dao.table + ".available": true}}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, testData[0].ID, result[0].ID)
@@ -316,10 +316,9 @@ func TestCourse_List(t *testing.T) {
 		}
 
 		// Create progress for asset 1 in course 1 and set the video position to 50
-		ap1 := &models.AssetProgress{AssetID: testData[0].Assets[0].ID, CourseID: testData[0].ID}
-		require.Nil(t, apDao.Create(ap1))
-		ap1.VideoPos = 50
-		require.Nil(t, apDao.Update(ap1))
+		ap1 := &models.AssetProgress{AssetID: testData[0].Assets[0].ID, CourseID: testData[0].ID, VideoPos: 50}
+
+		require.Nil(t, apDao.Create(ap1, nil))
 
 		// Find in-progress courses
 		dbParams := &database.DatabaseParams{
@@ -329,23 +328,21 @@ func TestCourse_List(t *testing.T) {
 			},
 		}
 
-		result, err = dao.List(dbParams)
+		result, err = dao.List(dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, testData[0].ID, result[0].ID)
 
 		// Set progress for asset 1 in course 1 as complete
 		ap1.Completed = true
-		require.Nil(t, apDao.Update(ap1))
+		require.Nil(t, apDao.Update(ap1, nil))
 
 		// Create progress for asset 2 in course 1 and set completed to true
-		ap2 := &models.AssetProgress{AssetID: testData[0].Assets[1].ID, CourseID: testData[0].ID}
-		require.Nil(t, apDao.Create(ap2))
-		ap2.Completed = true
-		require.Nil(t, apDao.Update(ap2))
+		ap2 := &models.AssetProgress{AssetID: testData[0].Assets[1].ID, CourseID: testData[0].ID, Completed: true}
+		require.Nil(t, apDao.Create(ap2, nil))
 
 		// Find completed courses
-		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Eq{TableCoursesProgress() + ".percent": 100}})
+		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Eq{TableCoursesProgress() + ".percent": 100}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, testData[0].ID, result[0].ID)
@@ -360,7 +357,7 @@ func TestCourse_List(t *testing.T) {
 		// CREATED_AT DESC
 		// ----------------------------
 		dbParams := &database.DatabaseParams{OrderBy: []string{"created_at desc"}}
-		result, err := dao.List(dbParams)
+		result, err := dao.List(dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
 		assert.Equal(t, testData[2].ID, result[0].ID)
@@ -368,7 +365,7 @@ func TestCourse_List(t *testing.T) {
 		// ----------------------------
 		// CREATED_AT ASC
 		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"created_at asc"}})
+		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"created_at asc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
 		assert.Equal(t, testData[0].ID, result[0].ID)
@@ -389,7 +386,7 @@ func TestCourse_List(t *testing.T) {
 		testData[2].Scan.Status = types.NewScanStatus(types.ScanStatusProcessing)
 		require.Nil(t, scanDao.Update(testData[2].Scan))
 
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{TableScans() + ".status desc"}})
+		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{TableScans() + ".status desc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
 
@@ -400,7 +397,7 @@ func TestCourse_List(t *testing.T) {
 		// ----------------------------
 		// SCAN_STATUS ASC
 		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"scan_status asc"}})
+		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"scan_status asc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
 
@@ -412,7 +409,7 @@ func TestCourse_List(t *testing.T) {
 		// Error
 		// ----------------------------
 		dbParams = &database.DatabaseParams{OrderBy: []string{"unit_test asc"}}
-		result, err = dao.List(dbParams)
+		result, err = dao.List(dbParams, nil)
 		require.ErrorContains(t, err, "no such column")
 		assert.Nil(t, result)
 	})
@@ -425,7 +422,7 @@ func TestCourse_List(t *testing.T) {
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{dao.table + ".id": testData[2].ID}})
+		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{dao.table + ".id": testData[2].ID}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, testData[2].ID, result[0].ID)
@@ -437,7 +434,7 @@ func TestCourse_List(t *testing.T) {
 			Where:   squirrel.Or{squirrel.Eq{dao.table + ".id": testData[1].ID}, squirrel.Eq{dao.table + ".id": testData[2].ID}},
 			OrderBy: []string{"created_at asc"},
 		}
-		result, err = dao.List(dbParams)
+		result, err = dao.List(dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 2)
 		assert.Equal(t, testData[1].ID, result[0].ID)
@@ -446,7 +443,7 @@ func TestCourse_List(t *testing.T) {
 		// ----------------------------
 		// ERROR
 		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Eq{"": ""}})
+		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Eq{"": ""}}, nil)
 		require.ErrorContains(t, err, "syntax error")
 		assert.Nil(t, result)
 	})
@@ -461,7 +458,7 @@ func TestCourse_List(t *testing.T) {
 		// ----------------------------
 		p := pagination.New(1, 10)
 
-		result, err := dao.List(&database.DatabaseParams{Pagination: p})
+		result, err := dao.List(&database.DatabaseParams{Pagination: p}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, 17, p.TotalItems())
@@ -473,7 +470,7 @@ func TestCourse_List(t *testing.T) {
 		// ----------------------------
 		p = pagination.New(2, 10)
 
-		result, err = dao.List(&database.DatabaseParams{Pagination: p})
+		result, err = dao.List(&database.DatabaseParams{Pagination: p}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 7)
 		require.Equal(t, 17, p.TotalItems())
@@ -487,7 +484,7 @@ func TestCourse_List(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
 		require.Nil(t, err)
 
-		_, err = dao.List(nil)
+		_, err = dao.List(nil, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.table)
 	})
 }
@@ -505,7 +502,7 @@ func TestCourse_Update(t *testing.T) {
 		testData[0].CardPath = "/path/to/card.jpg"
 		require.Nil(t, dao.Update(testData[0].Course))
 
-		c, err := dao.Get(testData[0].ID)
+		c, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
 		assert.Equal(t, testData[0].CardPath, c.CardPath)
 	})
@@ -520,7 +517,7 @@ func TestCourse_Update(t *testing.T) {
 		testData[0].Available = true
 		require.Nil(t, dao.Update(testData[0].Course))
 
-		c, err := dao.Get(testData[0].ID)
+		c, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
 		assert.True(t, c.Available)
 	})
@@ -560,22 +557,16 @@ func TestCourse_Delete(t *testing.T) {
 		_, dao, db := courseSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
-		err := dao.Delete(testData[0].ID)
+
+		err := dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": testData[0].ID}}, nil)
 		require.Nil(t, err)
 	})
 
-	t.Run("empty id", func(t *testing.T) {
+	t.Run("no db params", func(t *testing.T) {
 		_, dao, _ := courseSetup(t)
 
-		err := dao.Delete("")
-		assert.ErrorContains(t, err, "id cannot be empty")
-	})
-
-	t.Run("invalid id", func(t *testing.T) {
-		_, dao, _ := courseSetup(t)
-
-		err := dao.Delete("1234")
-		assert.Nil(t, err)
+		err := dao.Delete(nil, nil)
+		assert.ErrorIs(t, err, ErrMissingWhere)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -584,7 +575,7 @@ func TestCourse_Delete(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
 		require.Nil(t, err)
 
-		err = dao.Delete("1234")
+		err = dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": "1234"}}, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.table)
 	})
 }

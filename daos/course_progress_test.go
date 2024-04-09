@@ -30,7 +30,7 @@ func TestCourseProgress_Create(t *testing.T) {
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
-		cp, err := dao.Get(testData[0].ID)
+		cp, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
 		assert.False(t, cp.Started)
 		assert.True(t, cp.StartedAt.IsZero())
@@ -45,10 +45,10 @@ func TestCourseProgress_Create(t *testing.T) {
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
-		cp, err := dao.Get(testData[0].ID)
+		cp, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
 
-		err = dao.Create(cp)
+		err = dao.Create(cp, nil)
 		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.course_id", dao.table))
 	})
 
@@ -64,17 +64,17 @@ func TestCourseProgress_Create(t *testing.T) {
 
 		// Course ID
 		cp := &models.CourseProgress{}
-		require.ErrorContains(t, dao.Create(cp), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.table))
+		require.ErrorContains(t, dao.Create(cp, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.table))
 		cp.CourseID = ""
-		require.ErrorContains(t, dao.Create(cp), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.table))
+		require.ErrorContains(t, dao.Create(cp, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.table))
 		cp.CourseID = "1234"
 
 		// Invalid Course ID
-		require.ErrorContains(t, dao.Create(cp), "FOREIGN KEY constraint failed")
+		require.ErrorContains(t, dao.Create(cp, nil), "FOREIGN KEY constraint failed")
 		cp.CourseID = testData[0].ID
 
 		// Success
-		require.Nil(t, dao.Create(cp))
+		require.Nil(t, dao.Create(cp, nil))
 	})
 }
 
@@ -86,7 +86,7 @@ func TestCourseProgress_Get(t *testing.T) {
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
-		cp, err := dao.Get(testData[0].ID)
+		cp, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
 		assert.Equal(t, testData[0].ID, cp.CourseID)
 	})
@@ -94,7 +94,7 @@ func TestCourseProgress_Get(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		_, dao, _ := CourseProgressSetup(t)
 
-		cp, err := dao.Get("1234")
+		cp, err := dao.Get("1234", nil)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, cp)
 	})
@@ -102,7 +102,7 @@ func TestCourseProgress_Get(t *testing.T) {
 	t.Run("empty id", func(t *testing.T) {
 		_, dao, _ := CourseProgressSetup(t)
 
-		cp, err := dao.Get("")
+		cp, err := dao.Get("", nil)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, cp)
 	})
@@ -113,7 +113,7 @@ func TestCourseProgress_Get(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
 		require.Nil(t, err)
 
-		_, err = dao.Get("1234")
+		_, err = dao.Get("1234", nil)
 		require.ErrorContains(t, err, "no such table: "+dao.table)
 	})
 }
@@ -124,8 +124,8 @@ func TestCourseProgress_Update(t *testing.T) {
 	t.Run("status", func(t *testing.T) {
 		_, dao, db := CourseProgressSetup(t)
 
+		// Create a course with 2 assets
 		apDao := NewAssetProgressDao(db)
-
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(2).Build()
 
 		// Create an asset progress for the first asset
@@ -134,10 +134,11 @@ func TestCourseProgress_Update(t *testing.T) {
 			AssetID:  testData[0].Assets[0].ID,
 			CourseID: testData[0].ID,
 		}
-		require.Nil(t, assetProgressDao.Create(ap1))
 
-		// Ensure the percent is 0, started is false, and the started_at and completed_at are not set
-		origCp, err := dao.Get(testData[0].ID)
+		require.Nil(t, assetProgressDao.Create(ap1, nil))
+
+		// Ensure the course percent is 0, started is false, and the started_at and completed_at are not set
+		origCp, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
 		assert.False(t, origCp.Started)
 		assert.True(t, origCp.StartedAt.IsZero())
@@ -149,10 +150,10 @@ func TestCourseProgress_Update(t *testing.T) {
 		// ----------------------------
 		time.Sleep(1 * time.Millisecond)
 		ap1.Completed = true
-		require.Nil(t, apDao.Update(ap1))
+		require.Nil(t, apDao.Update(ap1, nil))
 
-		// Check the percent is 50, started is true, started_at is set and completed_at is not set
-		updatedCp1, err := dao.Get(origCp.CourseID)
+		// Check the course percent is 50, started is true, started_at is set and completed_at is not set
+		updatedCp1, err := dao.Get(origCp.CourseID, nil)
 		require.Nil(t, err)
 		assert.True(t, updatedCp1.Started)
 		assert.False(t, updatedCp1.StartedAt.IsZero())
@@ -163,16 +164,15 @@ func TestCourseProgress_Update(t *testing.T) {
 		// Set the second asset to completed
 		// ----------------------------
 		ap2 := &models.AssetProgress{
-			AssetID:  testData[0].Assets[1].ID,
-			CourseID: testData[0].ID,
+			AssetID:   testData[0].Assets[1].ID,
+			CourseID:  testData[0].ID,
+			Completed: true,
 		}
-		require.Nil(t, assetProgressDao.Create(ap2))
 
-		ap2.Completed = true
-		require.Nil(t, apDao.Update(ap2))
+		require.Nil(t, apDao.Create(ap2, nil))
 
-		// Check the percent is 100, started is true, and started_at and completed_at are set
-		updatedCp2, err := dao.Get(origCp.CourseID)
+		// Check the course percent is 100, started is true, and started_at and completed_at are set
+		updatedCp2, err := dao.Get(origCp.CourseID, nil)
 		require.Nil(t, err)
 		assert.True(t, updatedCp2.Started)
 		assert.False(t, updatedCp2.StartedAt.IsZero())
@@ -184,10 +184,10 @@ func TestCourseProgress_Update(t *testing.T) {
 		// Set the second asset as uncompleted
 		// ----------------------------
 		ap2.Completed = false
-		require.Nil(t, apDao.Update(ap2))
+		require.Nil(t, apDao.Update(ap2, nil))
 
-		// Check the percent is 50, started is true, started_at is set and completed_at is not set
-		updatedCp3, err := dao.Get(origCp.CourseID)
+		// Check the course percent is 50, started is true, started_at is set and completed_at is not set
+		updatedCp3, err := dao.Get(origCp.CourseID, nil)
 		require.Nil(t, err)
 		assert.True(t, updatedCp3.Started)
 		assert.False(t, updatedCp3.StartedAt.IsZero())
@@ -200,10 +200,10 @@ func TestCourseProgress_Update(t *testing.T) {
 		// ----------------------------
 		time.Sleep(1 * time.Millisecond)
 		ap1.Completed = false
-		require.Nil(t, apDao.Update(ap1))
+		require.Nil(t, apDao.Update(ap1, nil))
 
 		// Check the percent is 0, started is false and started_at and completed_at are not set
-		updatedCp4, err := dao.Get(origCp.CourseID)
+		updatedCp4, err := dao.Get(origCp.CourseID, nil)
 		require.Nil(t, err)
 		assert.False(t, updatedCp4.Started)
 		assert.True(t, updatedCp4.StartedAt.IsZero())
@@ -215,12 +215,12 @@ func TestCourseProgress_Update(t *testing.T) {
 		_, dao, db := CourseProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
-		origCp, err := dao.Get(testData[0].ID)
+		origCp, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
 
 		origCp.CourseID = ""
 
-		err = dao.Refresh(origCp.CourseID)
+		err = dao.Refresh(origCp.CourseID, nil)
 		assert.EqualError(t, err, "id cannot be empty")
 	})
 
@@ -228,13 +228,13 @@ func TestCourseProgress_Update(t *testing.T) {
 		_, dao, db := CourseProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
-		origCp, err := dao.Get(testData[0].ID)
+		origCp, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
 
 		_, err = db.Exec("DROP TABLE IF EXISTS " + dao.table)
 		require.Nil(t, err)
 
-		err = dao.Refresh(origCp.CourseID)
+		err = dao.Refresh(origCp.CourseID, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.table)
 	})
 }
@@ -248,11 +248,11 @@ func TestCourseProgress_DeleteCascade(t *testing.T) {
 
 	// Delete the course
 	courseDao := NewCourseDao(db)
-	err := courseDao.Delete(testData[0].ID)
+	err := courseDao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": testData[0].ID}}, nil)
 	require.Nil(t, err)
 
 	// Check the course progress was deleted
-	cp, err := dao.Get(testData[0].ID)
+	cp, err := dao.Get(testData[0].ID, nil)
 	require.ErrorIs(t, err, sql.ErrNoRows)
 	assert.Nil(t, cp)
 }

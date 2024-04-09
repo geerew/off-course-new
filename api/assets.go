@@ -81,7 +81,7 @@ func (api *assets) getAssets(c *fiber.Ctx) error {
 		Pagination: pagination.NewFromApi(c),
 	}
 
-	assets, err := api.assetDao.List(dbParams)
+	assets, err := api.assetDao.List(dbParams, nil)
 	if err != nil {
 		log.Err(err).Msg("error looking up assets")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -106,7 +106,7 @@ func (api *assets) getAsset(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// TODO: support attachments orderby
-	asset, err := api.assetDao.Get(id, nil)
+	asset, err := api.assetDao.Get(id, nil, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -144,7 +144,7 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 	}
 
 	// Update the asset progress
-	if err := api.assetProgressDao.Update(ap); err != nil {
+	if err := api.assetProgressDao.Update(ap, nil); err != nil {
 		if err == sql.ErrNoRows || strings.HasPrefix(err.Error(), "constraint failed: FOREIGN KEY constraint failed") {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
 		}
@@ -156,7 +156,7 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 	}
 
 	// Get the updated asset
-	asset, err := api.assetDao.Get(id, nil)
+	asset, err := api.assetDao.Get(id, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -176,7 +176,7 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 func (api *assets) serveAsset(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	asset, err := api.assetDao.Get(id, nil)
+	asset, err := api.assetDao.Get(id, nil, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
