@@ -124,7 +124,7 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 		})
 	}
 
-	pResult, err := dbParams.Pagination.BuildResult(courseResponseHelper(api.appFs, courses))
+	pResult, err := dbParams.Pagination.BuildResult(courseResponseHelper(courses))
 	if err != nil {
 		log.Err(err).Msg("error building pagination result")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -153,7 +153,7 @@ func (api *courses) getCourse(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(courseResponseHelper(api.appFs, []*models.Course{course})[0])
+	return c.Status(fiber.StatusOK).JSON(courseResponseHelper([]*models.Course{course})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -207,7 +207,7 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 		course.ScanStatus = scan.Status.String()
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(courseResponseHelper(api.appFs, []*models.Course{course})[0])
+	return c.Status(fiber.StatusCreated).JSON(courseResponseHelper([]*models.Course{course})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -463,7 +463,7 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 // HELPER
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func courseResponseHelper(appFs *appFs.AppFs, courses []*models.Course) []*courseResponse {
+func courseResponseHelper(courses []*models.Course) []*courseResponse {
 	responses := []*courseResponse{}
 	for _, course := range courses {
 		responses = append(responses, &courseResponse{

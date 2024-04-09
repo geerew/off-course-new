@@ -27,7 +27,7 @@ func TestScans_GetScan(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Db(db).Courses(5).Scan().Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/scans/"+testData[2].ID, nil)
-		status, body, err := scansRequestHelper(t, appFs, db, cs, req)
+		status, body, err := scansRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -43,7 +43,7 @@ func TestScans_GetScan(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/scans/test", nil)
-		status, _, err := scansRequestHelper(t, appFs, db, cs, req)
+		status, _, err := scansRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
 	})
@@ -58,7 +58,7 @@ func TestScans_GetScan(t *testing.T) {
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/scans/test", nil)
-		status, _, err := scansRequestHelper(t, appFs, db, cs, req)
+		status, _, err := scansRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
@@ -75,7 +75,7 @@ func TestScans_CreateScan(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(fmt.Sprintf(`{"courseID": "%s"}`, testData[0].ID)))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := scansRequestHelper(t, appFs, db, cs, req)
+		status, body, err := scansRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, status)
 
@@ -91,7 +91,7 @@ func TestScans_CreateScan(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(`{`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := scansRequestHelper(t, appFs, db, cs, req)
+		status, body, err := scansRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		assert.Contains(t, string(body), "error parsing data")
@@ -103,7 +103,7 @@ func TestScans_CreateScan(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(`{"courseID": ""}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := scansRequestHelper(t, appFs, db, cs, req)
+		status, body, err := scansRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		assert.Contains(t, string(body), "a course ID is required")
@@ -115,7 +115,7 @@ func TestScans_CreateScan(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(`{"courseID": "test"}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := scansRequestHelper(t, appFs, db, cs, req)
+		status, body, err := scansRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		assert.Contains(t, string(body), "invalid course ID")
@@ -130,7 +130,7 @@ func TestScans_CreateScan(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(`{"courseID": "test"}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := scansRequestHelper(t, appFs, db, cs, req)
+		status, body, err := scansRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 		assert.Contains(t, string(body), "error creating scan job")
@@ -141,7 +141,7 @@ func TestScans_CreateScan(t *testing.T) {
 // HELPERS
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func scansRequestHelper(t *testing.T, appFs *appFs.AppFs, db database.Database, cs *jobs.CourseScanner, req *http.Request) (int, []byte, error) {
+func scansRequestHelper(appFs *appFs.AppFs, db database.Database, cs *jobs.CourseScanner, req *http.Request) (int, []byte, error) {
 	f := fiber.New()
 	bindScansApi(f.Group("/api"), appFs, db, cs)
 

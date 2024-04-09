@@ -27,7 +27,7 @@ func TestFsPath(t *testing.T) {
 		appFs.Fs.Create("/file2")
 		appFs.Fs.Create("/file3")
 
-		status, body, err := fsRequestHelper(t, appFs, http.MethodGet, "/api/filesystem/"+utils.EncodeString("/"))
+		status, body, err := fsRequestHelper(appFs, http.MethodGet, "/api/filesystem/"+utils.EncodeString("/"))
 		require.Nil(t, err)
 		assert.Equal(t, http.StatusOK, status)
 
@@ -42,7 +42,7 @@ func TestFsPath(t *testing.T) {
 	t.Run("404 (path not found)", func(t *testing.T) {
 		appFs, _, _, _ := setup(t)
 
-		status, _, err := fsRequestHelper(t, appFs, http.MethodGet, "/api/filesystem/"+utils.EncodeString("nonexistent/path"))
+		status, _, err := fsRequestHelper(appFs, http.MethodGet, "/api/filesystem/"+utils.EncodeString("nonexistent/path"))
 		require.Nil(t, err)
 		assert.Equal(t, http.StatusNotFound, status)
 	})
@@ -50,7 +50,7 @@ func TestFsPath(t *testing.T) {
 	t.Run("400 (decode error)", func(t *testing.T) {
 		appFs, _, _, _ := setup(t)
 
-		status, body, err := fsRequestHelper(t, appFs, http.MethodGet, "/api/filesystem/`")
+		status, body, err := fsRequestHelper(appFs, http.MethodGet, "/api/filesystem/`")
 
 		assert.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
@@ -62,7 +62,7 @@ func TestFsPath(t *testing.T) {
 // HELPERS
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func fsRequestHelper(t *testing.T, appFs *appFs.AppFs, method string, target string) (int, []byte, error) {
+func fsRequestHelper(appFs *appFs.AppFs, method string, target string) (int, []byte, error) {
 	f := fiber.New()
 	bindFsApi(f.Group("/api"), appFs)
 

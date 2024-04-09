@@ -29,7 +29,7 @@ func TestAssets_GetAssets(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
-		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
+		status, body, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -44,7 +44,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		// Create 10 assets
 		daos.NewTestBuilder(t).Db(db).Courses(2).Assets(5).Build()
 
-		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
+		status, body, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -62,7 +62,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		// ----------------------------
 		// CREATED_AT ASC
 		// ----------------------------
-		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/?orderBy=created_at%20asc", nil))
+		status, body, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/?orderBy=created_at%20asc", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -74,7 +74,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		// ----------------------------
 		// CREATED_AT DESC
 		// ----------------------------
-		status, body, err = assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/?orderBy=created_at%20desc", nil))
+		status, body, err = assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/?orderBy=created_at%20desc", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -99,7 +99,7 @@ func TestAssets_GetAssets(t *testing.T) {
 			pagination.PerPageQueryParam: {"10"},
 		}
 
-		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/?"+params.Encode(), nil))
+		status, body, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/?"+params.Encode(), nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -119,7 +119,7 @@ func TestAssets_GetAssets(t *testing.T) {
 			pagination.PerPageQueryParam: {"10"},
 		}
 
-		status, body, err = assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/?"+params.Encode(), nil))
+		status, body, err = assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/?"+params.Encode(), nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -138,7 +138,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
-		status, _, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
+		status, _, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
@@ -152,7 +152,7 @@ func TestAssets_GetAsset(t *testing.T) {
 
 		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(5).Attachments(2).Build()
 
-		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[1].Assets[3].ID, nil))
+		status, body, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[1].Assets[3].ID, nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -169,7 +169,7 @@ func TestAssets_GetAsset(t *testing.T) {
 	t.Run("404 (not found)", func(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
-		status, _, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/test", nil))
+		status, _, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/test", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
 	})
@@ -181,7 +181,7 @@ func TestAssets_GetAsset(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
-		status, _, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/test", nil))
+		status, _, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/test", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
@@ -210,7 +210,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPut, "/api/assets/"+testData[0].Assets[0].ID, strings.NewReader(string(data)))
 		req.Header.Set("Content-Type", "application/json")
 
-		status, body, err := assetsRequestHelper(t, appFs, db, req)
+		status, body, err := assetsRequestHelper(appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -234,7 +234,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		req = httptest.NewRequest(http.MethodPut, "/api/assets/"+testData[0].Assets[0].ID, strings.NewReader(string(data)))
 		req.Header.Set("Content-Type", "application/json")
 
-		status, body, err = assetsRequestHelper(t, appFs, db, req)
+		status, body, err = assetsRequestHelper(appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -259,7 +259,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		req = httptest.NewRequest(http.MethodPut, "/api/assets/"+testData[0].Assets[0].ID, strings.NewReader(string(data)))
 		req.Header.Set("Content-Type", "application/json")
 
-		status, body, err = assetsRequestHelper(t, appFs, db, req)
+		status, body, err = assetsRequestHelper(appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -278,7 +278,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPut, "/api/assets/test", strings.NewReader(`bob`))
 		req.Header.Set("Content-Type", "application/json")
 
-		status, _, err := assetsRequestHelper(t, appFs, db, req)
+		status, _, err := assetsRequestHelper(appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 	})
@@ -289,7 +289,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPut, "/api/assets/test", strings.NewReader(`{"id": "1234567"}`))
 		req.Header.Set("Content-Type", "application/json")
 
-		status, _, err := assetsRequestHelper(t, appFs, db, req)
+		status, _, err := assetsRequestHelper(appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
 	})
@@ -307,7 +307,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPut, "/api/assets/test", strings.NewReader(`{"id": "1234567"}`))
 		req.Header.Set("Content-Type", "application/json")
 
-		status, _, err := assetsRequestHelper(t, appFs, db, req)
+		status, _, err := assetsRequestHelper(appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
@@ -325,7 +325,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(testData[0].Assets[1].Path), os.ModePerm))
 		require.Nil(t, afero.WriteFile(appFs.Fs, testData[0].Assets[1].Path, []byte("video"), os.ModePerm))
 
-		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[0].Assets[1].ID+"/serve", nil))
+		status, body, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[0].Assets[1].ID+"/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 		assert.Equal(t, "video", string(body))
@@ -343,7 +343,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[0].Assets[1].ID+"/serve", nil)
 		req.Header.Add("Range", "bytes=0-")
 
-		status, body, err := assetsRequestHelper(t, appFs, db, req)
+		status, body, err := assetsRequestHelper(appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusPartialContent, status)
 		assert.Equal(t, "video", string(body))
@@ -370,7 +370,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[0].Assets[0].ID+"/serve", nil)
 
-		status, body, err := assetsRequestHelper(t, appFs, db, req)
+		status, body, err := assetsRequestHelper(appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 		assert.Equal(t, "html", string(body))
@@ -381,7 +381,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 
 		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Assets(2).Build()
 
-		status, body, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[0].Assets[1].ID+"/serve", nil))
+		status, body, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[0].Assets[1].ID+"/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		assert.Contains(t, string(body), "asset does not exist")
@@ -399,7 +399,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[0].Assets[1].ID+"/serve", nil)
 		req.Header.Add("Range", "bytes=10-1")
 
-		status, body, err := assetsRequestHelper(t, appFs, db, req)
+		status, body, err := assetsRequestHelper(appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		assert.Contains(t, string(body), "range start cannot be greater than end")
@@ -408,7 +408,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 	t.Run("404 (not found)", func(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
-		status, _, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/test/serve", nil))
+		status, _, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/test/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
 	})
@@ -422,7 +422,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
-		status, _, err := assetsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/test/serve", nil))
+		status, _, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/test/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
@@ -432,7 +432,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 // HELPERS
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func assetsRequestHelper(t *testing.T, appFs *appFs.AppFs, db database.Database, req *http.Request) (int, []byte, error) {
+func assetsRequestHelper(appFs *appFs.AppFs, db database.Database, req *http.Request) (int, []byte, error) {
 	f := fiber.New()
 	bindAssetsApi(f.Group("/api"), appFs, db)
 
