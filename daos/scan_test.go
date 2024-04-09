@@ -28,8 +28,8 @@ func TestScan_Create(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, dao, db := scanSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 0, 0)
-		s := newTestScan(t, nil, workingData[0].Course.ID)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
+		s := &models.Scan{CourseID: testData[0].Course.ID}
 
 		err := dao.Create(s)
 		require.Nil(t, err, "Failed to create scan")
@@ -46,8 +46,8 @@ func TestScan_Create(t *testing.T) {
 	t.Run("duplicate course id", func(t *testing.T) {
 		_, dao, db := scanSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 0, 0)
-		s := newTestScan(t, nil, workingData[0].Course.ID)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
+		s := &models.Scan{CourseID: testData[0].Course.ID}
 
 		err := dao.Create(s)
 		require.Nil(t, err)
@@ -59,7 +59,7 @@ func TestScan_Create(t *testing.T) {
 	t.Run("constraint errors", func(t *testing.T) {
 		_, dao, db := scanSetup(t)
 
-		course := NewTestData(t, db, 1, false, 0, 0)[0]
+		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		// Missing course ID
 		s := &models.Scan{}
@@ -70,7 +70,7 @@ func TestScan_Create(t *testing.T) {
 
 		// Invalid Course ID
 		require.ErrorContains(t, dao.Create(s), "FOREIGN KEY constraint failed")
-		s.CourseID = course.ID
+		s.CourseID = testData[0].Course.ID
 
 		// Success
 		require.Nil(t, dao.Create(s))
@@ -83,12 +83,12 @@ func TestScan_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		_, dao, db := scanSetup(t)
 
-		workingData := NewTestData(t, db, 1, true, 0, 0)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
-		s, err := dao.Get(workingData[0].Course.ID)
+		s, err := dao.Get(testData[0].Course.ID)
 		require.Nil(t, err)
-		assert.Equal(t, workingData[0].Scan.ID, s.ID)
-		assert.Equal(t, workingData[0].Course.Path, s.CoursePath)
+		assert.Equal(t, testData[0].Scan.ID, s.ID)
+		assert.Equal(t, testData[0].Course.Path, s.CoursePath)
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -124,16 +124,16 @@ func TestScan_Update(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, dao, db := scanSetup(t)
 
-		workingData := NewTestData(t, db, 1, true, 0, 0)
-		require.True(t, workingData[0].Scan.Status.IsWaiting())
+		testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
+		require.True(t, testData[0].Scan.Status.IsWaiting())
 
 		// ----------------------------
 		// Set to Processing
 		// ----------------------------
-		workingData[0].Scan.Status = types.NewScanStatus(types.ScanStatusProcessing)
-		require.Nil(t, dao.Update(workingData[0].Scan))
+		testData[0].Scan.Status = types.NewScanStatus(types.ScanStatusProcessing)
+		require.Nil(t, dao.Update(testData[0].Scan))
 
-		updatedScan, err := dao.Get(workingData[0].Course.ID)
+		updatedScan, err := dao.Get(testData[0].Course.ID)
 		require.Nil(t, err)
 		require.False(t, updatedScan.Status.IsWaiting())
 
@@ -141,10 +141,10 @@ func TestScan_Update(t *testing.T) {
 		// Set to waiting
 		// ----------------------------
 		time.Sleep(1 * time.Millisecond)
-		workingData[0].Scan.Status = types.NewScanStatus(types.ScanStatusWaiting)
-		require.Nil(t, dao.Update(workingData[0].Scan))
+		testData[0].Scan.Status = types.NewScanStatus(types.ScanStatusWaiting)
+		require.Nil(t, dao.Update(testData[0].Scan))
 
-		updatedScan, err = dao.Get(workingData[0].Course.ID)
+		updatedScan, err = dao.Get(testData[0].Course.ID)
 		require.Nil(t, err)
 		require.True(t, updatedScan.Status.IsWaiting())
 	})
@@ -159,10 +159,10 @@ func TestScan_Update(t *testing.T) {
 	t.Run("invalid id", func(t *testing.T) {
 		_, dao, db := scanSetup(t)
 
-		workingData := NewTestData(t, db, 1, true, 0, 0)
-		workingData[0].Scan.ID = "1234"
+		testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
+		testData[0].Scan.ID = "1234"
 
-		err := dao.Update(workingData[0].Scan)
+		err := dao.Update(testData[0].Scan)
 		assert.Nil(t, err)
 	})
 
@@ -172,8 +172,8 @@ func TestScan_Update(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
 		require.Nil(t, err)
 
-		workingData := NewTestData(t, nil, 1, true, 0, 0)
-		err = dao.Update(workingData[0].Scan)
+		testData := NewTestBuilder(t).Courses(1).Scan().Build()
+		err = dao.Update(testData[0].Scan)
 		require.ErrorContains(t, err, "no such table: "+dao.table)
 	})
 }
@@ -184,8 +184,8 @@ func TestScan_Delete(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, dao, db := scanSetup(t)
 
-		workingData := NewTestData(t, db, 1, true, 0, 0)
-		err := dao.Delete(workingData[0].ID)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
+		err := dao.Delete(testData[0].ID)
 		require.Nil(t, err)
 	})
 
@@ -219,15 +219,15 @@ func TestScan_Delete(t *testing.T) {
 func TestScan_DeleteCascade(t *testing.T) {
 	_, dao, db := scanSetup(t)
 
-	workingData := NewTestData(t, db, 1, true, 0, 0)
+	testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
 	// Delete the course
 	courseDao := NewCourseDao(db)
-	err := courseDao.Delete(workingData[0].ID)
+	err := courseDao.Delete(testData[0].ID)
 	require.Nil(t, err)
 
 	// Check the scan was deleted
-	s, err := dao.Get(workingData[0].ID)
+	s, err := dao.Get(testData[0].ID)
 	require.ErrorIs(t, err, sql.ErrNoRows)
 	assert.Nil(t, s)
 }
@@ -238,27 +238,27 @@ func TestScan_NextScan(t *testing.T) {
 	t.Run("first", func(t *testing.T) {
 		_, dao, db := scanSetup(t)
 
-		workingData := NewTestData(t, db, 1, true, 0, 0)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
 		s, err := dao.Next()
 		require.Nil(t, err)
-		assert.Equal(t, workingData[0].Scan.ID, s.ID)
-		assert.Equal(t, workingData[0].Path, s.CoursePath)
+		assert.Equal(t, testData[0].Scan.ID, s.ID)
+		assert.Equal(t, testData[0].Path, s.CoursePath)
 	})
 
 	t.Run("next", func(t *testing.T) {
 		_, dao, db := scanSetup(t)
 
-		workingData := NewTestData(t, db, 3, true, 0, 0)
+		testData := NewTestBuilder(t).Db(db).Courses(3).Scan().Build()
 
 		// Update the the first scan to processing
-		workingData[0].Scan.Status = types.NewScanStatus(types.ScanStatusProcessing)
-		require.Nil(t, dao.Update(workingData[0].Scan))
+		testData[0].Scan.Status = types.NewScanStatus(types.ScanStatusProcessing)
+		require.Nil(t, dao.Update(testData[0].Scan))
 
 		s, err := dao.Next()
 		require.Nil(t, err)
-		assert.Equal(t, workingData[1].Scan.ID, s.ID)
-		assert.Equal(t, workingData[1].Path, s.CoursePath)
+		assert.Equal(t, testData[1].Scan.ID, s.ID)
+		assert.Equal(t, testData[1].Path, s.CoursePath)
 
 	})
 

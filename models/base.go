@@ -7,12 +7,6 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// type countFn = func(database.DatabaseExecer, *database.DatabaseParams) (int, error)
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // BaseModel defines the base model for all models
 type BaseModel struct {
 	ID        string
@@ -47,5 +41,3 @@ func (b *BaseModel) RefreshCreatedAt() {
 func (b *BaseModel) RefreshUpdatedAt() {
 	b.UpdatedAt = types.NowDateTime()
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -24,9 +24,9 @@ func TestScans_GetScan(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 5, true, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(5).Scan().Build()
 
-		req := httptest.NewRequest(http.MethodGet, "/api/scans/"+workingData[2].ID, nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/scans/"+testData[2].ID, nil)
 		status, body, err := scansRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -34,9 +34,9 @@ func TestScans_GetScan(t *testing.T) {
 		var respData scanResponse
 		err = json.Unmarshal(body, &respData)
 		require.Nil(t, err)
-		assert.Equal(t, workingData[2].Scan.ID, respData.ID)
-		assert.Equal(t, workingData[2].Scan.CourseID, respData.CourseID)
-		assert.Equal(t, workingData[2].Scan.Status, respData.Status)
+		assert.Equal(t, testData[2].Scan.ID, respData.ID)
+		assert.Equal(t, testData[2].Scan.CourseID, respData.CourseID)
+		assert.Equal(t, testData[2].Scan.Status, respData.Status)
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
@@ -70,9 +70,9 @@ func TestScans_CreateScan(t *testing.T) {
 	t.Run("201 (created)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
-		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(fmt.Sprintf(`{"courseID": "%s"}`, workingData[0].ID)))
+		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(fmt.Sprintf(`{"courseID": "%s"}`, testData[0].ID)))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
 		status, body, err := scansRequestHelper(t, appFs, db, cs, req)
@@ -82,7 +82,7 @@ func TestScans_CreateScan(t *testing.T) {
 		var respData scanResponse
 		err = json.Unmarshal(body, &respData)
 		require.Nil(t, err)
-		assert.Equal(t, workingData[0].ID, respData.CourseID)
+		assert.Equal(t, testData[0].ID, respData.CourseID)
 	})
 
 	t.Run("400 (bind error)", func(t *testing.T) {

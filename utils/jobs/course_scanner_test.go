@@ -24,24 +24,24 @@ func Test_Add(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
-		scan, err := scanner.Add(workingData[0].ID)
+		scan, err := scanner.Add(testData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, workingData[0].ID, scan.CourseID)
+		assert.Equal(t, testData[0].ID, scan.CourseID)
 	})
 
 	t.Run("duplicate", func(t *testing.T) {
 		scanner, db, lh := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
-		scan, err := scanner.Add(workingData[0].ID)
+		scan, err := scanner.Add(testData[0].ID)
 		assert.Nil(t, err)
-		assert.Equal(t, workingData[0].ID, scan.CourseID)
+		assert.Equal(t, testData[0].ID, scan.CourseID)
 
 		// Add the same course again
-		scan, err = scanner.Add(workingData[0].ID)
+		scan, err = scanner.Add(testData[0].ID)
 		require.Nil(t, err)
 		require.NotNil(t, lh.LastEntry())
 		require.Nil(t, scan)
@@ -60,26 +60,26 @@ func Test_Add(t *testing.T) {
 	t.Run("not blocked", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Build()
 
-		scan1, err := scanner.Add(workingData[0].ID)
+		scan1, err := scanner.Add(testData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, workingData[0].ID, scan1.CourseID)
+		assert.Equal(t, testData[0].ID, scan1.CourseID)
 
-		scan2, err := scanner.Add(workingData[1].ID)
+		scan2, err := scanner.Add(testData[1].ID)
 		require.Nil(t, err)
-		assert.Equal(t, workingData[1].ID, scan2.CourseID)
+		assert.Equal(t, testData[1].ID, scan2.CourseID)
 	})
 
 	t.Run("db error", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableScans())
 		require.Nil(t, err)
 
-		scan, err := scanner.Add(workingData[0].ID)
+		scan, err := scanner.Add(testData[0].ID)
 		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", daos.TableScans()))
 		assert.Nil(t, scan)
 	})
@@ -91,7 +91,7 @@ func Test_Worker(t *testing.T) {
 	t.Run("single job", func(t *testing.T) {
 		scanner, db, lh := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		// Start the worker
 		go scanner.Worker(func(*CourseScanner, *models.Scan) error {
@@ -99,22 +99,22 @@ func Test_Worker(t *testing.T) {
 		})
 
 		// Add the job
-		scan, err := scanner.Add(workingData[0].ID)
+		scan, err := scanner.Add(testData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, scan.CourseID, workingData[0].ID)
+		assert.Equal(t, scan.CourseID, testData[0].ID)
 
 		// Give time for the worker to finish
-		time.Sleep(time.Millisecond * 3)
+		time.Sleep(time.Millisecond * 5)
 
 		// Assert the scan job was deleted from the DB
-		s, err := scanner.scanDao.Get(workingData[0].ID)
+		s, err := scanner.scanDao.Get(testData[0].ID)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, s)
 
 		// Validate the logs
 		require.NotNil(t, lh.LastEntry())
 		lh.Entries().Get()[lh.Len()-2].ExpMsg("finished processing scan job")
-		lh.Entries().Get()[lh.Len()-2].ExpStr("path", workingData[0].Path)
+		lh.Entries().Get()[lh.Len()-2].ExpStr("path", testData[0].Path)
 		lh.LastEntry().ExpLevel(zerolog.InfoLevel)
 		lh.LastEntry().ExpMsg("finished processing all scan jobs")
 	})
@@ -122,9 +122,9 @@ func Test_Worker(t *testing.T) {
 	t.Run("several jobs", func(t *testing.T) {
 		scanner, db, lh := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 3, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(3).Build()
 
-		for _, course := range workingData {
+		for _, course := range testData {
 			_, err := scanner.Add(course.ID)
 			require.Nil(t, err)
 		}
@@ -138,7 +138,7 @@ func Test_Worker(t *testing.T) {
 		time.Sleep(time.Millisecond * 5)
 
 		// Assert the scan job was deleted from the DB
-		for _, course := range workingData {
+		for _, course := range testData {
 			s, err := scanner.scanDao.Get(course.ID)
 			require.ErrorIs(t, err, sql.ErrNoRows)
 			assert.Nil(t, s)
@@ -147,7 +147,7 @@ func Test_Worker(t *testing.T) {
 		// Validate the logs
 		require.NotNil(t, lh.LastEntry())
 		lh.Entries().Get()[lh.Len()-2].ExpMsg("finished processing scan job")
-		lh.Entries().Get()[lh.Len()-2].ExpStr("path", workingData[2].Path)
+		lh.Entries().Get()[lh.Len()-2].ExpStr("path", testData[2].Path)
 		lh.LastEntry().ExpLevel(zerolog.InfoLevel)
 		lh.LastEntry().ExpMsg("finished processing all scan jobs")
 	})
@@ -155,19 +155,19 @@ func Test_Worker(t *testing.T) {
 	t.Run("error processing", func(t *testing.T) {
 		scanner, db, lh := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		// Start the worker
 		go scanner.Worker(func(*CourseScanner, *models.Scan) error {
 			return errors.New("processing error")
 		})
 
-		scan, err := scanner.Add(workingData[0].ID)
+		scan, err := scanner.Add(testData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, scan.CourseID, workingData[0].ID)
+		assert.Equal(t, scan.CourseID, testData[0].ID)
 
 		// Give time for the worker to finish
-		time.Sleep(time.Millisecond * 3)
+		time.Sleep(time.Millisecond * 5)
 
 		// Validate the logs
 		require.NotNil(t, lh.LastEntry())
@@ -181,12 +181,12 @@ func Test_Worker(t *testing.T) {
 	t.Run("scan error", func(t *testing.T) {
 		scanner, db, lh := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		// Add the job
-		scan, err := scanner.Add(workingData[0].ID)
+		scan, err := scanner.Add(testData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, scan.CourseID, workingData[0].ID)
+		assert.Equal(t, scan.CourseID, testData[0].ID)
 
 		// Drop the DB
 		_, err = db.Exec("DROP TABLE IF EXISTS " + daos.TableScans())
@@ -198,7 +198,7 @@ func Test_Worker(t *testing.T) {
 		})
 
 		// Give time for the worker to finish
-		time.Sleep(time.Millisecond * 3)
+		time.Sleep(time.Millisecond * 5)
 
 		// Validate the logs
 		require.NotNil(t, lh.LastEntry())
@@ -220,27 +220,27 @@ func Test_CourseProcessor(t *testing.T) {
 	t.Run("error getting course", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
 		// Drop the table
 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
 		require.Nil(t, err)
 
-		err = CourseProcessor(scanner, workingData[0].Scan)
+		err = CourseProcessor(scanner, testData[0].Scan)
 		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", daos.TableCourses()))
 	})
 
 	t.Run("course unavailable", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
 		// Mark the course as available
-		workingData[0].Available = true
-		err := scanner.courseDao.Update(workingData[0].Course)
+		testData[0].Available = true
+		err := scanner.courseDao.Update(testData[0].Course)
 		require.Nil(t, err)
 
-		err = CourseProcessor(scanner, workingData[0].Scan)
+		err = CourseProcessor(scanner, testData[0].Scan)
 		require.EqualError(t, err, "course unavailable")
 	})
 
@@ -250,93 +250,93 @@ func Test_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Found card
 		// ----------------------------
-		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
-		require.Empty(t, workingData[0].CardPath)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
+		require.Empty(t, testData[0].CardPath)
 
-		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", workingData[0].Path))
+		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", testData[0].Path))
 
-		err := CourseProcessor(scanner, workingData[0].Scan)
+		err := CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
-		c, err := scanner.courseDao.Get(workingData[0].ID)
+		c, err := scanner.courseDao.Get(testData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, fmt.Sprintf("%s/card.jpg", workingData[0].Path), c.CardPath)
+		assert.Equal(t, fmt.Sprintf("%s/card.jpg", testData[0].Path), c.CardPath)
 
 		// ----------------------------
 		// Ignore card in chapter
 		// ----------------------------
-		workingData = daos.NewTestData(t, db, 1, true, 0, 0)
-		require.Empty(t, workingData[0].CardPath)
+		testData = daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
+		require.Empty(t, testData[0].CardPath)
 
-		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/chapter 1/card.jpg", workingData[0].Path))
+		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/chapter 1/card.jpg", testData[0].Path))
 
-		err = CourseProcessor(scanner, workingData[0].Scan)
+		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
-		c, err = scanner.courseDao.Get(workingData[0].ID)
+		c, err = scanner.courseDao.Get(testData[0].ID)
 		require.Nil(t, err)
 		assert.Empty(t, c.CardPath)
-		assert.Empty(t, workingData[0].CardPath)
+		assert.Empty(t, testData[0].CardPath)
 
 		// ----------------------------
 		// Multiple cards types
 		// ----------------------------
-		workingData = daos.NewTestData(t, db, 1, true, 0, 0)
-		require.Empty(t, workingData[0].CardPath)
+		testData = daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
+		require.Empty(t, testData[0].CardPath)
 
-		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.png", workingData[0].Path))
+		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.png", testData[0].Path))
 
-		err = CourseProcessor(scanner, workingData[0].Scan)
+		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
-		c, err = scanner.courseDao.Get(workingData[0].ID)
+		c, err = scanner.courseDao.Get(testData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, fmt.Sprintf("%s/card.jpg", workingData[0].Path), c.CardPath)
+		assert.Equal(t, fmt.Sprintf("%s/card.jpg", testData[0].Path), c.CardPath)
 	})
 
 	t.Run("card error", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
-		require.Empty(t, workingData[0].CardPath)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
+		require.Empty(t, testData[0].CardPath)
 
-		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", workingData[0].Path))
+		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", testData[0].Path))
 
 		// Rename the card_path column
 		_, err := db.Exec(fmt.Sprintf("ALTER TABLE %s RENAME COLUMN card_path TO ignore_card_path", daos.TableCourses()))
 		require.Nil(t, err)
 
-		err = CourseProcessor(scanner, workingData[0].Scan)
+		err = CourseProcessor(scanner, testData[0].Scan)
 		require.ErrorContains(t, err, "no such column: card_path")
 	})
 
 	t.Run("ignore files", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
-		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file 1", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file.file", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file.avi", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/ - file.avi", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/- - file.avi", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/.avi", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/-1 - file.avi", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/a - file.avi", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/1.1 - file.avi", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/2.3-file.avi", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/1file.avi", workingData[0].Path))
+		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file 1", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file.file", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/file.avi", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/ - file.avi", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/- - file.avi", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/.avi", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/-1 - file.avi", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/a - file.avi", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/1.1 - file.avi", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/2.3-file.avi", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/1file.avi", testData[0].Path))
 
-		err := CourseProcessor(scanner, workingData[0].Scan)
+		err := CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
-		assets, err := scanner.assetDao.List(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": workingData[0].ID}})
+		assets, err := scanner.assetDao.List(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": testData[0].ID}})
 		require.Nil(t, err)
 		require.Len(t, assets, 0)
 	})
@@ -344,22 +344,22 @@ func Test_CourseProcessor(t *testing.T) {
 	t.Run("assets", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
 		dbParams := &database.DatabaseParams{
 			OrderBy: []string{daos.TableAssets() + ".chapter asc", daos.TableAssets() + ".prefix asc"},
-			Where:   squirrel.Eq{daos.TableAssets() + ".course_id": workingData[0].ID},
+			Where:   squirrel.Eq{daos.TableAssets() + ".course_id": testData[0].ID},
 		}
 
 		// ----------------------------
 		// Add 2 assets
 		// ----------------------------
-		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 file 1.mkv", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/02 file 2.html", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/should ignore", workingData[0].Path))
+		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 file 1.mkv", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/02 file 2.html", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/should ignore", testData[0].Path))
 
-		err := CourseProcessor(scanner, workingData[0].Scan)
+		err := CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err := scanner.assetDao.List(dbParams)
@@ -367,13 +367,13 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Len(t, assets, 2)
 
 		assert.Equal(t, "file 1", assets[0].Title)
-		assert.Equal(t, workingData[0].ID, assets[0].CourseID)
+		assert.Equal(t, testData[0].ID, assets[0].CourseID)
 		assert.Equal(t, 1, int(assets[0].Prefix.Int16))
 		assert.Empty(t, assets[0].Chapter)
 		assert.True(t, assets[0].Type.IsVideo())
 
 		assert.Equal(t, "file 2", assets[1].Title)
-		assert.Equal(t, workingData[0].ID, assets[1].CourseID)
+		assert.Equal(t, testData[0].ID, assets[1].CourseID)
 		assert.Equal(t, 2, int(assets[1].Prefix.Int16))
 		assert.Empty(t, assets[1].Chapter)
 		assert.True(t, assets[1].Type.IsHTML())
@@ -381,9 +381,9 @@ func Test_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Delete asset
 		// ----------------------------
-		scanner.appFs.Fs.Remove(fmt.Sprintf("%s/01 file 1.mkv", workingData[0].Path))
+		scanner.appFs.Fs.Remove(fmt.Sprintf("%s/01 file 1.mkv", testData[0].Path))
 
-		err = CourseProcessor(scanner, workingData[0].Scan)
+		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err = scanner.assetDao.List(dbParams)
@@ -391,7 +391,7 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Len(t, assets, 1)
 
 		assert.Equal(t, "file 2", assets[0].Title)
-		assert.Equal(t, workingData[0].ID, assets[0].CourseID)
+		assert.Equal(t, testData[0].ID, assets[0].CourseID)
 		assert.Equal(t, 2, int(assets[0].Prefix.Int16))
 		assert.Empty(t, assets[0].Chapter)
 		assert.True(t, assets[0].Type.IsHTML())
@@ -399,9 +399,9 @@ func Test_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Add chapter asset
 		// ----------------------------
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 Chapter 1/03 file 3.pdf", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 Chapter 1/03 file 3.pdf", testData[0].Path))
 
-		err = CourseProcessor(scanner, workingData[0].Scan)
+		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err = scanner.assetDao.List(dbParams)
@@ -409,13 +409,13 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Len(t, assets, 2)
 
 		assert.Equal(t, "file 2", assets[0].Title)
-		assert.Equal(t, workingData[0].ID, assets[0].CourseID)
+		assert.Equal(t, testData[0].ID, assets[0].CourseID)
 		assert.Equal(t, 2, int(assets[0].Prefix.Int16))
 		assert.Empty(t, assets[0].Chapter)
 		assert.True(t, assets[0].Type.IsHTML())
 
 		assert.Equal(t, "file 3", assets[1].Title)
-		assert.Equal(t, workingData[0].ID, assets[1].CourseID)
+		assert.Equal(t, testData[0].ID, assets[1].CourseID)
 		assert.Equal(t, 3, int(assets[1].Prefix.Int16))
 		assert.Equal(t, "01 Chapter 1", assets[1].Chapter)
 		assert.True(t, assets[1].Type.IsPDF())
@@ -424,61 +424,61 @@ func Test_CourseProcessor(t *testing.T) {
 	t.Run("assets error", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
-		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mkv", workingData[0].Path))
+		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mkv", testData[0].Path))
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
-		err = CourseProcessor(scanner, workingData[0].Scan)
+		err = CourseProcessor(scanner, testData[0].Scan)
 		require.ErrorContains(t, err, "no such table: "+daos.TableAssets())
 	})
 
 	t.Run("attachments", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
-		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
 
-		assetDbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": workingData[0].ID}}
+		assetDbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": testData[0].ID}}
 		attachmentDbParams := &database.DatabaseParams{
 			OrderBy: []string{"created_at asc"},
-			Where:   squirrel.Eq{daos.TableAttachments() + ".course_id": workingData[0].ID},
+			Where:   squirrel.Eq{daos.TableAttachments() + ".course_id": testData[0].ID},
 		}
 
 		// ----------------------------
 		// Add 1 asset with 1 attachment
 		// ----------------------------
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mp4", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 info.txt", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mp4", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 info.txt", testData[0].Path))
 
-		err := CourseProcessor(scanner, workingData[0].Scan)
+		err := CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err := scanner.assetDao.List(assetDbParams)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 		assert.Equal(t, "video", assets[0].Title)
-		assert.Equal(t, workingData[0].ID, assets[0].CourseID)
+		assert.Equal(t, testData[0].ID, assets[0].CourseID)
 		assert.Equal(t, 1, int(assets[0].Prefix.Int16))
-		assert.Equal(t, fmt.Sprintf("%s/01 video.mp4", workingData[0].Path), assets[0].Path)
+		assert.Equal(t, fmt.Sprintf("%s/01 video.mp4", testData[0].Path), assets[0].Path)
 		assert.True(t, assets[0].Type.IsVideo())
 
 		attachments, err := scanner.attachmentDao.List(attachmentDbParams)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
 		assert.Equal(t, "info.txt", attachments[0].Title)
-		assert.Equal(t, fmt.Sprintf("%s/01 info.txt", workingData[0].Path), attachments[0].Path)
+		assert.Equal(t, fmt.Sprintf("%s/01 info.txt", testData[0].Path), attachments[0].Path)
 
 		// ----------------------------
 		// Add another attachment
 		// ----------------------------
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 code.zip", workingData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 code.zip", testData[0].Path))
 
-		err = CourseProcessor(scanner, workingData[0].Scan)
+		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
 		// Assert the asset
@@ -491,16 +491,16 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, attachments, 2)
 		assert.Equal(t, "info.txt", attachments[0].Title)
-		assert.Equal(t, fmt.Sprintf("%s/01 info.txt", workingData[0].Path), attachments[0].Path)
+		assert.Equal(t, fmt.Sprintf("%s/01 info.txt", testData[0].Path), attachments[0].Path)
 		assert.Equal(t, "code.zip", attachments[1].Title)
-		assert.Equal(t, fmt.Sprintf("%s/01 code.zip", workingData[0].Path), attachments[1].Path)
+		assert.Equal(t, fmt.Sprintf("%s/01 code.zip", testData[0].Path), attachments[1].Path)
 
 		// ----------------------------
 		// Delete first attachment
 		// ----------------------------
-		scanner.appFs.Fs.Remove(fmt.Sprintf("%s/01 info.txt", workingData[0].Path))
+		scanner.appFs.Fs.Remove(fmt.Sprintf("%s/01 info.txt", testData[0].Path))
 
-		err = CourseProcessor(scanner, workingData[0].Scan)
+		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
 		// Assert the asset
@@ -514,23 +514,23 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
 		assert.Equal(t, "code.zip", attachments[0].Title)
-		assert.Equal(t, fmt.Sprintf("%s/01 code.zip", workingData[0].Path), attachments[0].Path)
+		assert.Equal(t, fmt.Sprintf("%s/01 code.zip", testData[0].Path), attachments[0].Path)
 	})
 
 	t.Run("attachments error", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
-		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mkv", workingData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 info", workingData[0].Path))
+		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mkv", testData[0].Path))
+		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 info", testData[0].Path))
 
 		// Drop the attachments table
 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAttachments())
 		require.Nil(t, err)
 
-		err = CourseProcessor(scanner, workingData[0].Scan)
+		err = CourseProcessor(scanner, testData[0].Scan)
 		require.ErrorContains(t, err, "no such table: "+daos.TableAttachments())
 	})
 
@@ -541,23 +541,23 @@ func Test_CourseProcessor(t *testing.T) {
 		// Priority is VIDEO -> HTML -> PDF
 		// ----------------------------
 
-		workingData := daos.NewTestData(t, db, 1, true, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
-		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
 
-		assetDbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": workingData[0].ID}}
+		assetDbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": testData[0].ID}}
 		attachmentDbParams := &database.DatabaseParams{
 			OrderBy: []string{"created_at asc"},
-			Where:   squirrel.Eq{daos.TableAttachments() + ".course_id": workingData[0].ID},
+			Where:   squirrel.Eq{daos.TableAttachments() + ".course_id": testData[0].ID},
 		}
 
 		// ----------------------------
 		// Add PDF (asset)
 		// ----------------------------
-		pdfFile := fmt.Sprintf("%s/01 doc 1.pdf", workingData[0].Path)
+		pdfFile := fmt.Sprintf("%s/01 doc 1.pdf", testData[0].Path)
 		scanner.appFs.Fs.Create(pdfFile)
 
-		err := CourseProcessor(scanner, workingData[0].Scan)
+		err := CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err := scanner.assetDao.List(assetDbParams)
@@ -570,10 +570,10 @@ func Test_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Add HTML (asset)
 		// ----------------------------
-		htmlFile := fmt.Sprintf("%s/01 example.html", workingData[0].Path)
+		htmlFile := fmt.Sprintf("%s/01 example.html", testData[0].Path)
 		scanner.appFs.Fs.Create(htmlFile)
 
-		err = CourseProcessor(scanner, workingData[0].Scan)
+		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err = scanner.assetDao.List(assetDbParams)
@@ -591,10 +591,10 @@ func Test_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Add VIDEO (asset)
 		// ----------------------------
-		videoFile := fmt.Sprintf("%s/01 video.mp4", workingData[0].Path)
+		videoFile := fmt.Sprintf("%s/01 video.mp4", testData[0].Path)
 		scanner.appFs.Fs.Create(videoFile)
 
-		err = CourseProcessor(scanner, workingData[0].Scan)
+		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err = scanner.assetDao.List(assetDbParams)
@@ -613,10 +613,10 @@ func Test_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Add PDF file (attachment)
 		// ----------------------------
-		pdfFile2 := fmt.Sprintf("%s/01 - e.pdf", workingData[0].Path)
+		pdfFile2 := fmt.Sprintf("%s/01 - e.pdf", testData[0].Path)
 		scanner.appFs.Fs.Create(pdfFile2)
 
-		err = CourseProcessor(scanner, workingData[0].Scan)
+		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
 		assets, err = scanner.assetDao.List(assetDbParams)
@@ -637,16 +637,16 @@ func Test_CourseProcessor(t *testing.T) {
 	t.Run("course updated", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 1, 10)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
-		scanner.appFs.Fs.Mkdir(workingData[0].Path, os.ModePerm)
+		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
 
-		err := CourseProcessor(scanner, workingData[0].Scan)
+		err := CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
-		updatedCourse, err := scanner.courseDao.Get(workingData[0].ID)
+		updatedCourse, err := scanner.courseDao.Get(testData[0].ID)
 		require.Nil(t, err)
-		assert.NotEqual(t, workingData[0].UpdatedAt, updatedCourse.UpdatedAt)
+		assert.NotEqual(t, testData[0].UpdatedAt, updatedCourse.UpdatedAt)
 	})
 }
 
@@ -769,12 +769,12 @@ func Test_UpdateAssets(t *testing.T) {
 	t.Run("nothing added or deleted", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 10, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Assets(10).Build()
 
-		err := updateAssets(scanner.assetDao, workingData[0].ID, workingData[0].Assets)
+		err := updateAssets(scanner.assetDao, testData[0].ID, testData[0].Assets)
 		require.Nil(t, err)
 
-		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": workingData[0].ID}}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": testData[0].ID}}
 		count, err := scanner.assetDao.Count(dbParams)
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
@@ -783,19 +783,19 @@ func Test_UpdateAssets(t *testing.T) {
 	t.Run("add", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 12, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Assets(12).Build()
 
 		// Delete the assets (so we can add them again)
-		for _, a := range workingData[0].Assets {
+		for _, a := range testData[0].Assets {
 			require.Nil(t, scanner.assetDao.Delete(a.ID))
 		}
 
-		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": workingData[0].ID}}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": testData[0].ID}}
 
 		// ----------------------------
 		// Add 10 assets
 		// ----------------------------
-		err := updateAssets(scanner.assetDao, workingData[0].ID, workingData[0].Assets[:10])
+		err := updateAssets(scanner.assetDao, testData[0].ID, testData[0].Assets[:10])
 		require.Nil(t, err)
 
 		count, err := scanner.assetDao.Count(dbParams)
@@ -805,10 +805,10 @@ func Test_UpdateAssets(t *testing.T) {
 		// ----------------------------
 		// Add another 2 assets
 		// ----------------------------
-		workingData[0].Assets[10].ID = ""
-		workingData[0].Assets[11].ID = ""
+		testData[0].Assets[10].ID = ""
+		testData[0].Assets[11].ID = ""
 
-		err = updateAssets(scanner.assetDao, workingData[0].ID, workingData[0].Assets)
+		err = updateAssets(scanner.assetDao, testData[0].ID, testData[0].Assets)
 		require.Nil(t, err)
 
 		count, err = scanner.assetDao.Count(dbParams)
@@ -816,7 +816,7 @@ func Test_UpdateAssets(t *testing.T) {
 		require.Equal(t, 12, count)
 
 		// Ensure all assets have an ID
-		for _, a := range workingData[0].Assets {
+		for _, a := range testData[0].Assets {
 			assert.NotEmpty(t, a.ID)
 		}
 	})
@@ -824,16 +824,16 @@ func Test_UpdateAssets(t *testing.T) {
 	t.Run("delete", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 12, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Assets(12).Build()
 
-		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": workingData[0].ID}}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": testData[0].ID}}
 
 		// ----------------------------
 		// Remove 2 assets
 		// ----------------------------
-		workingData[0].Assets = workingData[0].Assets[2:]
+		testData[0].Assets = testData[0].Assets[2:]
 
-		err := updateAssets(scanner.assetDao, workingData[0].ID, workingData[0].Assets)
+		err := updateAssets(scanner.assetDao, testData[0].ID, testData[0].Assets)
 		require.Nil(t, err)
 
 		count, err := scanner.assetDao.Count(dbParams)
@@ -843,9 +843,9 @@ func Test_UpdateAssets(t *testing.T) {
 		// ----------------------------
 		// Remove another 2 assets
 		// ----------------------------
-		workingData[0].Assets = workingData[0].Assets[2:]
+		testData[0].Assets = testData[0].Assets[2:]
 
-		err = updateAssets(scanner.assetDao, workingData[0].ID, workingData[0].Assets)
+		err = updateAssets(scanner.assetDao, testData[0].ID, testData[0].Assets)
 		require.Nil(t, err)
 
 		count, err = scanner.assetDao.Count(dbParams)
@@ -871,12 +871,12 @@ func Test_UpdateAttachments(t *testing.T) {
 	t.Run("nothing added or delete)", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 1, 10)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Assets(1).Attachments(10).Build()
 
-		err := updateAttachments(scanner.attachmentDao, workingData[0].ID, workingData[0].Assets[0].Attachments)
+		err := updateAttachments(scanner.attachmentDao, testData[0].ID, testData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
-		count, err := scanner.attachmentDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": workingData[0].ID}})
+		count, err := scanner.attachmentDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": testData[0].ID}})
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 	})
@@ -884,19 +884,19 @@ func Test_UpdateAttachments(t *testing.T) {
 	t.Run("add", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 1, 12)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Assets(1).Attachments(12).Build()
 
 		// Delete the attachments (so we can add them again)
-		for _, a := range workingData[0].Assets[0].Attachments {
+		for _, a := range testData[0].Assets[0].Attachments {
 			require.Nil(t, scanner.attachmentDao.Delete(a.ID))
 		}
 
-		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": workingData[0].ID}}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": testData[0].ID}}
 
 		// ----------------------------
 		// Add 10 attachments
 		// ----------------------------
-		err := updateAttachments(scanner.attachmentDao, workingData[0].ID, workingData[0].Assets[0].Attachments[:10])
+		err := updateAttachments(scanner.attachmentDao, testData[0].ID, testData[0].Assets[0].Attachments[:10])
 		require.Nil(t, err)
 
 		count, err := scanner.attachmentDao.Count(dbParams)
@@ -906,7 +906,7 @@ func Test_UpdateAttachments(t *testing.T) {
 		// ----------------------------
 		// Add another 2 attachments
 		// ----------------------------
-		err = updateAttachments(scanner.attachmentDao, workingData[0].ID, workingData[0].Assets[0].Attachments)
+		err = updateAttachments(scanner.attachmentDao, testData[0].ID, testData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
 		count, err = scanner.attachmentDao.Count(dbParams)
@@ -917,16 +917,16 @@ func Test_UpdateAttachments(t *testing.T) {
 	t.Run("delete", func(t *testing.T) {
 		scanner, db, _ := setupCourseScanner(t)
 
-		workingData := daos.NewTestData(t, db, 1, true, 1, 12)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Assets(1).Attachments(12).Build()
 
-		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": workingData[0].ID}}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": testData[0].ID}}
 
 		// ----------------------------
 		// Remove 2 attachments
 		// ----------------------------
-		workingData[0].Assets[0].Attachments = workingData[0].Assets[0].Attachments[2:]
+		testData[0].Assets[0].Attachments = testData[0].Assets[0].Attachments[2:]
 
-		err := updateAttachments(scanner.attachmentDao, workingData[0].ID, workingData[0].Assets[0].Attachments)
+		err := updateAttachments(scanner.attachmentDao, testData[0].ID, testData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
 		count, err := scanner.attachmentDao.Count(dbParams)
@@ -936,9 +936,9 @@ func Test_UpdateAttachments(t *testing.T) {
 		// ----------------------------
 		// Remove another 2 attachments
 		// ----------------------------
-		workingData[0].Assets[0].Attachments = workingData[0].Assets[0].Attachments[2:]
+		testData[0].Assets[0].Attachments = testData[0].Assets[0].Attachments[2:]
 
-		err = updateAttachments(scanner.attachmentDao, workingData[0].ID, workingData[0].Assets[0].Attachments)
+		err = updateAttachments(scanner.attachmentDao, testData[0].ID, testData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
 		count, err = scanner.attachmentDao.Count(dbParams)

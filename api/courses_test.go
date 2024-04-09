@@ -43,7 +43,7 @@ func TestCourses_GetCourses(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		daos.NewTestData(t, db, 5, false, 0, 0)
+		daos.NewTestBuilder(t).Db(db).Courses(5).Build()
 
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
 		require.NoError(t, err)
@@ -57,7 +57,7 @@ func TestCourses_GetCourses(t *testing.T) {
 	t.Run("200 (availability)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 3, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(3).Build()
 		courseDao := daos.NewCourseDao(db)
 
 		// ----------------------------
@@ -78,11 +78,11 @@ func TestCourses_GetCourses(t *testing.T) {
 		// ----------------------------
 		// Several available
 		// ----------------------------
-		workingData[0].Available = true
-		require.Nil(t, courseDao.Update(workingData[0].Course))
+		testData[0].Available = true
+		require.Nil(t, courseDao.Update(testData[0].Course))
 
-		workingData[2].Available = true
-		require.Nil(t, courseDao.Update(workingData[2].Course))
+		testData[2].Available = true
+		require.Nil(t, courseDao.Update(testData[2].Course))
 
 		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?orderBy=created_at%20asc", nil))
 		require.NoError(t, err)
@@ -100,7 +100,7 @@ func TestCourses_GetCourses(t *testing.T) {
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 5, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(5).Build()
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -112,7 +112,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
 		require.Equal(t, 5, int(paginationResp.TotalItems))
 		require.Len(t, coursesResp, 5)
-		assert.Equal(t, workingData[0].ID, coursesResp[0].ID)
+		assert.Equal(t, testData[0].ID, coursesResp[0].ID)
 
 		// ----------------------------
 		// CREATED_AT DESC
@@ -124,13 +124,13 @@ func TestCourses_GetCourses(t *testing.T) {
 		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
 		require.Equal(t, 5, int(paginationResp.TotalItems))
 		require.Len(t, coursesResp, 5)
-		assert.Equal(t, workingData[4].ID, coursesResp[0].ID)
+		assert.Equal(t, testData[4].ID, coursesResp[0].ID)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 17, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(17).Build()
 
 		// ----------------------------
 		// Get the first page (10 courses)
@@ -150,7 +150,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		assert.Len(t, paginationResp.Items, 10)
 
 		// Check the last asset in the paginated response
-		assert.Equal(t, workingData[9].ID, coursesResp[9].ID)
+		assert.Equal(t, testData[9].ID, coursesResp[9].ID)
 
 		// ----------------------------
 		// Get the second page (7 courses)
@@ -169,18 +169,18 @@ func TestCourses_GetCourses(t *testing.T) {
 		assert.Len(t, paginationResp.Items, 7)
 
 		// Check the last asset in the paginated response
-		assert.Equal(t, workingData[16].ID, coursesResp[6].ID)
+		assert.Equal(t, testData[16].ID, coursesResp[6].ID)
 	})
 
 	t.Run("200 (started)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 2, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(2).Build()
 
 		// Set the first course as started (by marking the first asset as started)
 		apDao := daos.NewAssetProgressDao(db)
 		ap := &models.AssetProgress{
-			AssetID:  workingData[0].Assets[0].ID,
+			AssetID:  testData[0].Assets[0].ID,
 			VideoPos: 10,
 		}
 		require.Nil(t, apDao.Update(ap))
@@ -206,7 +206,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
 		require.Equal(t, 1, int(paginationResp.TotalItems))
 		require.Len(t, paginationResp.Items, 1)
-		assert.Equal(t, workingData[0].ID, coursesResp[0].ID)
+		assert.Equal(t, testData[0].ID, coursesResp[0].ID)
 
 		// ------------------
 		// `started` is false
@@ -218,17 +218,17 @@ func TestCourses_GetCourses(t *testing.T) {
 		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
 		require.Equal(t, 1, int(paginationResp.TotalItems))
 		require.Len(t, paginationResp.Items, 1)
-		assert.Equal(t, workingData[1].ID, coursesResp[0].ID)
+		assert.Equal(t, testData[1].ID, coursesResp[0].ID)
 	})
 
 	t.Run("200 (completed)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 2, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(2).Build()
 
 		// Set the first course as completed by marking the assets as completed
 		apDao := daos.NewAssetProgressDao(db)
-		for _, a := range workingData[0].Assets {
+		for _, a := range testData[0].Assets {
 			ap := &models.AssetProgress{
 				AssetID:   a.ID,
 				Completed: true,
@@ -257,7 +257,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
 		require.Equal(t, 1, int(paginationResp.TotalItems))
 		require.Len(t, paginationResp.Items, 1)
-		assert.Equal(t, workingData[0].ID, coursesResp[0].ID)
+		assert.Equal(t, testData[0].ID, coursesResp[0].ID)
 
 		// ------------------
 		// `completed` is false
@@ -269,7 +269,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
 		require.Equal(t, 1, int(paginationResp.TotalItems))
 		require.Len(t, paginationResp.Items, 1)
-		assert.Equal(t, workingData[1].ID, coursesResp[0].ID)
+		assert.Equal(t, testData[1].ID, coursesResp[0].ID)
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
@@ -291,50 +291,50 @@ func TestCourses_GetCourse(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 3, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(3).Build()
 
-		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[2].ID, nil))
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[2].ID, nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
 		var courseResp courseResponse
 		err = json.Unmarshal(body, &courseResp)
 		require.Nil(t, err)
-		assert.Equal(t, workingData[2].ID, courseResp.ID)
+		assert.Equal(t, testData[2].ID, courseResp.ID)
 	})
 
 	t.Run("200 (availability)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 3, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(3).Build()
 
 		// ----------------------------
 		// Unavailable
 		// ----------------------------
-		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[2].ID, nil))
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[2].ID, nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
 		var courseResp courseResponse
 		err = json.Unmarshal(body, &courseResp)
 		require.Nil(t, err)
-		assert.Equal(t, workingData[2].ID, courseResp.ID)
+		assert.Equal(t, testData[2].ID, courseResp.ID)
 		assert.False(t, courseResp.Available)
 
 		// ----------------------------
 		// Available
 		// ----------------------------
 		courseDao := daos.NewCourseDao(db)
-		workingData[2].Available = true
-		require.Nil(t, courseDao.Update(workingData[2].Course))
+		testData[2].Available = true
+		require.Nil(t, courseDao.Update(testData[2].Course))
 
-		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[2].ID, nil))
+		status, body, err = coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[2].ID, nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
 		err = json.Unmarshal(body, &courseResp)
 		require.Nil(t, err)
-		assert.Equal(t, workingData[2].ID, courseResp.ID)
+		assert.Equal(t, testData[2].ID, courseResp.ID)
 		assert.True(t, courseResp.Available)
 	})
 
@@ -364,10 +364,10 @@ func TestCourses_Create(t *testing.T) {
 	t.Run("201 (created)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, nil, 1, false, 0, 0)
-		appFs.Fs.MkdirAll(workingData[0].Path, os.ModePerm)
+		testData := daos.NewTestBuilder(t).Courses(1).Build()
+		appFs.Fs.MkdirAll(testData[0].Path, os.ModePerm)
 
-		postData := fmt.Sprintf(`{"title": "%s", "path": "%s" }`, workingData[0].Title, workingData[0].Path)
+		postData := fmt.Sprintf(`{"title": "%s", "path": "%s" }`, testData[0].Title, testData[0].Path)
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(postData))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
@@ -379,8 +379,8 @@ func TestCourses_Create(t *testing.T) {
 		err = json.Unmarshal(body, &courseResp)
 		require.Nil(t, err)
 		assert.NotNil(t, courseResp.ID)
-		assert.Equal(t, workingData[0].Title, courseResp.Title)
-		assert.Equal(t, workingData[0].Path, courseResp.Path)
+		assert.Equal(t, testData[0].Title, courseResp.Title)
+		assert.Equal(t, testData[0].Path, courseResp.Path)
 		assert.True(t, courseResp.Available)
 	})
 
@@ -501,7 +501,7 @@ func TestCourses_DeleteCourse(t *testing.T) {
 	t.Run("204 (deleted)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 3, true, 3, 3)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(3).Assets(3).Attachments(3).Build()
 
 		courseDao := daos.NewCourseDao(db)
 		scanDao := daos.NewScanDao(db)
@@ -511,11 +511,11 @@ func TestCourses_DeleteCourse(t *testing.T) {
 		// ----------------------------
 		// Delete course 3
 		// ----------------------------
-		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodDelete, "/api/courses/"+workingData[2].ID, nil))
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodDelete, "/api/courses/"+testData[2].ID, nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNoContent, status)
 
-		_, err = courseDao.Get(workingData[2].ID)
+		_, err = courseDao.Get(testData[2].ID)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 
 		// ----------------------------
@@ -523,16 +523,16 @@ func TestCourses_DeleteCourse(t *testing.T) {
 		// ----------------------------
 
 		// Scan
-		_, err = scanDao.Get(workingData[2].ID)
+		_, err = scanDao.Get(testData[2].ID)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 
 		// Assets
-		count, err := assetsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": workingData[2].ID}})
+		count, err := assetsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": testData[2].ID}})
 		require.Nil(t, err)
 		assert.Zero(t, count)
 
 		// Attachments
-		count, err = attachmentsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": workingData[2].ID}})
+		count, err = attachmentsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": testData[2].ID}})
 		require.Nil(t, err)
 		assert.Zero(t, count)
 	})
@@ -564,18 +564,18 @@ func TestCourses_Card(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 		courseDao := daos.NewCourseDao(db)
 
 		// Update card path
-		workingData[0].CardPath = "/" + workingData[0].Path + "/card.png"
-		require.Nil(t, courseDao.Update(workingData[0].Course))
+		testData[0].CardPath = "/" + testData[0].Path + "/card.png"
+		require.Nil(t, courseDao.Update(testData[0].Course))
 
 		// Create
-		appFs.Fs.MkdirAll("/"+workingData[0].Path, os.ModePerm)
-		require.Nil(t, afero.WriteFile(appFs.Fs, workingData[0].CardPath, []byte("test"), os.ModePerm))
+		appFs.Fs.MkdirAll("/"+testData[0].Path, os.ModePerm)
+		require.Nil(t, afero.WriteFile(appFs.Fs, testData[0].CardPath, []byte("test"), os.ModePerm))
 
-		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/card", nil))
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/card", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 		assert.Equal(t, "test", string(body))
@@ -593,9 +593,9 @@ func TestCourses_Card(t *testing.T) {
 	t.Run("404 (no card)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
-		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/card", nil))
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/card", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
 		assert.Equal(t, "Course has no card", string(body))
@@ -604,14 +604,14 @@ func TestCourses_Card(t *testing.T) {
 	t.Run("404 (card not found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 		courseDao := daos.NewCourseDao(db)
 
 		// Update card path
-		workingData[0].CardPath = "/" + workingData[0].Path + "/card.png"
-		require.Nil(t, courseDao.Update(workingData[0].Course))
+		testData[0].CardPath = "/" + testData[0].Path + "/card.png"
+		require.Nil(t, courseDao.Update(testData[0].Course))
 
-		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/card", nil))
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/card", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
 		assert.Equal(t, "Course card not found", string(body))
@@ -636,9 +636,9 @@ func TestCourses_GetAssets(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Build()
 
-		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets", nil))
+		status, body, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -650,9 +650,9 @@ func TestCourses_GetAssets(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 3, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(3).Build()
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/?orderBy=created_at%20asc", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/?orderBy=created_at%20asc", nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -661,20 +661,20 @@ func TestCourses_GetAssets(t *testing.T) {
 		assert.Equal(t, 3, int(paginationResp.TotalItems))
 		assert.Len(t, paginationResp.Items, 3)
 
-		assert.Equal(t, workingData[1].Assets[0].ID, assetsResp[0].ID)
-		assert.Equal(t, workingData[1].Assets[1].ID, assetsResp[1].ID)
-		assert.Equal(t, workingData[1].Assets[2].ID, assetsResp[2].ID)
+		assert.Equal(t, testData[1].Assets[0].ID, assetsResp[0].ID)
+		assert.Equal(t, testData[1].Assets[1].ID, assetsResp[1].ID)
+		assert.Equal(t, testData[1].Assets[2].ID, assetsResp[2].ID)
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 3, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(3).Build()
 
 		// ----------------------------
 		// CREATED_AT ASC
 		// ----------------------------
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/?orderBy=created_at%20asc", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/?orderBy=created_at%20asc", nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -683,14 +683,14 @@ func TestCourses_GetAssets(t *testing.T) {
 		assert.Equal(t, 3, int(paginationResp.TotalItems))
 		assert.Len(t, paginationResp.Items, 3)
 
-		assert.Equal(t, workingData[1].Assets[0].ID, assetsResp[0].ID)
-		assert.Equal(t, workingData[1].Assets[1].ID, assetsResp[1].ID)
-		assert.Equal(t, workingData[1].Assets[2].ID, assetsResp[2].ID)
+		assert.Equal(t, testData[1].Assets[0].ID, assetsResp[0].ID)
+		assert.Equal(t, testData[1].Assets[1].ID, assetsResp[1].ID)
+		assert.Equal(t, testData[1].Assets[2].ID, assetsResp[2].ID)
 
 		// ----------------------------
 		// CREATED_AT DESC
 		// ----------------------------
-		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/?orderBy=created_at%20desc", nil)
+		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/?orderBy=created_at%20desc", nil)
 		status, body, err = coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -699,15 +699,15 @@ func TestCourses_GetAssets(t *testing.T) {
 		assert.Equal(t, 3, int(paginationResp.TotalItems))
 		assert.Len(t, paginationResp.Items, 3)
 
-		assert.Equal(t, workingData[1].Assets[2].ID, assetsResp[0].ID)
-		assert.Equal(t, workingData[1].Assets[1].ID, assetsResp[1].ID)
-		assert.Equal(t, workingData[1].Assets[0].ID, assetsResp[2].ID)
+		assert.Equal(t, testData[1].Assets[2].ID, assetsResp[0].ID)
+		assert.Equal(t, testData[1].Assets[1].ID, assetsResp[1].ID)
+		assert.Equal(t, testData[1].Assets[0].ID, assetsResp[2].ID)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 17, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Assets(17).Build()
 
 		// ------------------------
 		// Get the first page (10 assets)
@@ -718,7 +718,7 @@ func TestCourses_GetAssets(t *testing.T) {
 			pagination.PerPageQueryParam: {"10"},
 		}
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/?"+params.Encode(), nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/?"+params.Encode(), nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -728,7 +728,7 @@ func TestCourses_GetAssets(t *testing.T) {
 		assert.Len(t, paginationResp.Items, 10)
 
 		// Check the last asset in the paginated response
-		assert.Equal(t, workingData[0].Assets[9].ID, assetsResp[9].ID)
+		assert.Equal(t, testData[0].Assets[9].ID, assetsResp[9].ID)
 
 		// ------------------------
 		// Get the second page (7 assets)
@@ -739,7 +739,7 @@ func TestCourses_GetAssets(t *testing.T) {
 			pagination.PerPageQueryParam: {"10"},
 		}
 
-		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/?"+params.Encode(), nil)
+		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/?"+params.Encode(), nil)
 		status, body, err = coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -749,7 +749,7 @@ func TestCourses_GetAssets(t *testing.T) {
 		assert.Len(t, paginationResp.Items, 7)
 
 		// Check the last asset in the paginated response
-		assert.Equal(t, workingData[0].Assets[16].ID, assetsResp[6].ID)
+		assert.Equal(t, testData[0].Assets[16].ID, assetsResp[6].ID)
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
@@ -774,12 +774,12 @@ func TestCourses_GetAssets(t *testing.T) {
 	t.Run("500 (asset internal error)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
-		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/", nil))
+		status, _, err := coursesRequestHelper(t, appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
@@ -791,9 +791,9 @@ func TestCourses_GetAsset(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 3, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(3).Build()
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[1].ID, nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[1].ID, nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -802,18 +802,18 @@ func TestCourses_GetAsset(t *testing.T) {
 		err = json.Unmarshal(body, &assetResp)
 		require.Nil(t, err)
 
-		assert.Equal(t, workingData[0].Assets[1].ID, assetResp.ID)
-		assert.Equal(t, workingData[0].Assets[1].Title, assetResp.Title)
-		assert.Equal(t, workingData[0].Assets[1].Path, assetResp.Path)
+		assert.Equal(t, testData[0].Assets[1].ID, assetResp.ID)
+		assert.Equal(t, testData[0].Assets[1].Title, assetResp.Title)
+		assert.Equal(t, testData[0].Assets[1].Path, assetResp.Path)
 	})
 
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 3, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(3).Build()
 
 		// Request an asset that does not belong to the course
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[1].Assets[0].ID, nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[1].Assets[0].ID, nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
@@ -831,9 +831,9 @@ func TestCourses_GetAsset(t *testing.T) {
 	t.Run("404 (asset not found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Build()
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/test_asset", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/test_asset", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
@@ -855,13 +855,13 @@ func TestCourses_GetAsset(t *testing.T) {
 	t.Run("500 (asset internal error)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		// Drop the assets table
 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/test_asset", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/test_asset", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
@@ -874,9 +874,9 @@ func TestCourses_GetAttachments(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 2, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(2).Build()
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/"+workingData[1].Assets[1].ID+"/attachments", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/"+testData[1].Assets[1].ID+"/attachments", nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -889,9 +889,9 @@ func TestCourses_GetAttachments(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 2, 3)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(2).Attachments(3).Build()
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/"+workingData[1].Assets[0].ID+"/attachments?orderBy=created_at%20asc", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/"+testData[1].Assets[0].ID+"/attachments?orderBy=created_at%20asc", nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -900,20 +900,20 @@ func TestCourses_GetAttachments(t *testing.T) {
 		assert.Equal(t, 3, int(paginationResp.TotalItems))
 		assert.Len(t, paginationResp.Items, 3)
 
-		assert.Equal(t, workingData[1].Assets[0].Attachments[0].ID, attachmentResp[0].ID)
-		assert.Equal(t, workingData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
-		assert.Equal(t, workingData[1].Assets[0].Attachments[2].ID, attachmentResp[2].ID)
+		assert.Equal(t, testData[1].Assets[0].Attachments[0].ID, attachmentResp[0].ID)
+		assert.Equal(t, testData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
+		assert.Equal(t, testData[1].Assets[0].Attachments[2].ID, attachmentResp[2].ID)
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 2, 3)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(2).Attachments(3).Build()
 
 		// ----------------------------
 		// CREATED_AT ASC
 		// ----------------------------
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/"+workingData[1].Assets[0].ID+"/attachments?orderBy=created_at%20asc", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/"+testData[1].Assets[0].ID+"/attachments?orderBy=created_at%20asc", nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -922,14 +922,14 @@ func TestCourses_GetAttachments(t *testing.T) {
 		assert.Equal(t, 3, int(paginationResp.TotalItems))
 		assert.Len(t, paginationResp.Items, 3)
 
-		assert.Equal(t, workingData[1].Assets[0].Attachments[0].ID, attachmentResp[0].ID)
-		assert.Equal(t, workingData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
-		assert.Equal(t, workingData[1].Assets[0].Attachments[2].ID, attachmentResp[2].ID)
+		assert.Equal(t, testData[1].Assets[0].Attachments[0].ID, attachmentResp[0].ID)
+		assert.Equal(t, testData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
+		assert.Equal(t, testData[1].Assets[0].Attachments[2].ID, attachmentResp[2].ID)
 
 		// ----------------------------
 		// CREATED_AT ASC
 		// ----------------------------
-		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[1].ID+"/assets/"+workingData[1].Assets[0].ID+"/attachments?orderBy=created_at%20desc", nil)
+		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/"+testData[1].Assets[0].ID+"/attachments?orderBy=created_at%20desc", nil)
 		status, body, err = coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -938,15 +938,15 @@ func TestCourses_GetAttachments(t *testing.T) {
 		assert.Equal(t, 3, int(paginationResp.TotalItems))
 		assert.Len(t, paginationResp.Items, 3)
 
-		assert.Equal(t, workingData[1].Assets[0].Attachments[2].ID, attachmentResp[0].ID)
-		assert.Equal(t, workingData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
-		assert.Equal(t, workingData[1].Assets[0].Attachments[0].ID, attachmentResp[2].ID)
+		assert.Equal(t, testData[1].Assets[0].Attachments[2].ID, attachmentResp[0].ID)
+		assert.Equal(t, testData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
+		assert.Equal(t, testData[1].Assets[0].Attachments[0].ID, attachmentResp[2].ID)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 1, 17)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Assets(1).Attachments(17).Build()
 
 		// ----------------------------
 		// Get the first page (10 attachments)
@@ -957,7 +957,7 @@ func TestCourses_GetAttachments(t *testing.T) {
 			pagination.PerPageQueryParam: {"10"},
 		}
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments?"+params.Encode(), nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[0].ID+"/attachments?"+params.Encode(), nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -967,7 +967,7 @@ func TestCourses_GetAttachments(t *testing.T) {
 		assert.Len(t, paginationResp.Items, 10)
 
 		// Check the last attachment in the paginated response
-		assert.Equal(t, workingData[0].Assets[0].Attachments[9].ID, attachmentResp[9].ID)
+		assert.Equal(t, testData[0].Assets[0].Attachments[9].ID, attachmentResp[9].ID)
 
 		// ----------------------------
 		// Get the second page (7 attachments)
@@ -977,7 +977,7 @@ func TestCourses_GetAttachments(t *testing.T) {
 			pagination.PageQueryParam:    {"2"},
 			pagination.PerPageQueryParam: {"10"},
 		}
-		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments?"+params.Encode(), nil)
+		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[0].ID+"/attachments?"+params.Encode(), nil)
 		status, body, err = coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -987,7 +987,7 @@ func TestCourses_GetAttachments(t *testing.T) {
 		assert.Len(t, paginationResp.Items, 7)
 
 		// Check the last attachment in the paginated response
-		assert.Equal(t, workingData[0].Assets[0].Attachments[16].ID, attachmentResp[6].ID)
+		assert.Equal(t, testData[0].Assets[0].Attachments[16].ID, attachmentResp[6].ID)
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
@@ -1017,9 +1017,9 @@ func TestCourses_GetAttachments(t *testing.T) {
 	t.Run("404 (asset not found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/1234/attachments", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/1234/attachments", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
@@ -1029,13 +1029,13 @@ func TestCourses_GetAttachments(t *testing.T) {
 	t.Run("500 (asset lookup internal error)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		// Drop the assets table
 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/1234/attachments", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/1234/attachments", nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
@@ -1045,9 +1045,9 @@ func TestCourses_GetAttachments(t *testing.T) {
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 2, 5)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(2).Attachments(5).Build()
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[1].Assets[0].ID+"/attachments", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[1].Assets[0].ID+"/attachments", nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
@@ -1057,13 +1057,13 @@ func TestCourses_GetAttachments(t *testing.T) {
 	t.Run("500 (attachments lookup internal error)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 1, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
 		// Drop the attachments table
 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAttachments())
 		require.Nil(t, err)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[0].ID+"/attachments", nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
@@ -1077,9 +1077,9 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 5, 3)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(5).Attachments(3).Build()
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments/"+workingData[0].Assets[0].Attachments[2].ID, nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[0].ID+"/attachments/"+testData[0].Assets[0].Attachments[2].ID, nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -1088,15 +1088,15 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 		err = json.Unmarshal(body, &respData)
 		require.Nil(t, err)
 
-		assert.Equal(t, workingData[0].Assets[0].Attachments[2].ID, respData.ID)
+		assert.Equal(t, testData[0].Assets[0].Attachments[2].ID, respData.ID)
 	})
 
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 5, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(5).Build()
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[1].Assets[0].ID+"/attachments/test_attachment", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[1].Assets[0].ID+"/attachments/test_attachment", nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
@@ -1106,9 +1106,9 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("400 (invalid attachment for course)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 5, 3)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(5).Attachments(3).Build()
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments/"+workingData[0].Assets[1].Attachments[2].ID, nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[0].ID+"/attachments/"+testData[0].Assets[1].Attachments[2].ID, nil)
 		status, body, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
@@ -1127,9 +1127,9 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("404 (asset not found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Build()
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
@@ -1138,9 +1138,9 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("404 (attachment not found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 5, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(5).Build()
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[2].ID+"/attachments/test_attachment", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[2].ID+"/attachments/test_attachment", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
@@ -1149,13 +1149,13 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("500 (course internal error)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		// Drop the courses table
 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
 		require.Nil(t, err)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
@@ -1164,13 +1164,13 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("500 (asset internal error)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 0, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		// Drop the assets table
 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
 		require.Nil(t, err)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
@@ -1179,13 +1179,13 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("500 (attachments internal error)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 1, false, 1, 0)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
 		// Drop the attachments table
 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAttachments())
 		require.Nil(t, err)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+workingData[0].ID+"/assets/"+workingData[0].Assets[0].ID+"/attachments/test_attachment", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[0].ID+"/attachments/test_attachment", nil)
 		status, _, err := coursesRequestHelper(t, appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)

@@ -20,26 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// import (
-// 	"encoding/json"
-// 	"io"
-// 	"net/http"
-// 	"net/http/httptest"
-// 	"net/url"
-// 	"os"
-// 	"path/filepath"
-// 	"testing"
-
-// 	"github.com/geerew/off-course/database"
-// 	"github.com/geerew/off-course/models"
-// 	"github.com/geerew/off-course/utils/appFs"
-// 	"github.com/geerew/off-course/utils/pagination"
-// 	"github.com/gofiber/fiber/v2"
-// 	"github.com/spf13/afero"
-// 	"github.com/stretchr/testify/assert"
-// 	"github.com/stretchr/testify/require"
-// )
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestAttachments_GetAttachments(t *testing.T) {
@@ -58,7 +38,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
-		daos.NewTestData(t, db, 2, false, 2, 2)
+		daos.NewTestBuilder(t).Db(db).Courses(2).Assets(2).Attachments(2).Build()
 
 		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
 		require.NoError(t, err)
@@ -72,7 +52,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 2, 4)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(2).Attachments(4).Build()
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -85,9 +65,9 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		paginationResp, attachmentsResp := attachmentsUnmarshalHelper(t, body)
 		require.Equal(t, 16, int(paginationResp.TotalItems))
 		require.Len(t, attachmentsResp, 16)
-		assert.Equal(t, workingData[0].Assets[0].Attachments[0].ID, attachmentsResp[0].ID)
-		assert.Equal(t, workingData[0].Assets[0].Attachments[0].Title, attachmentsResp[0].Title)
-		assert.Equal(t, workingData[0].Assets[0].Attachments[0].Path, attachmentsResp[0].Path)
+		assert.Equal(t, testData[0].Assets[0].Attachments[0].ID, attachmentsResp[0].ID)
+		assert.Equal(t, testData[0].Assets[0].Attachments[0].Title, attachmentsResp[0].Title)
+		assert.Equal(t, testData[0].Assets[0].Attachments[0].Path, attachmentsResp[0].Path)
 
 		// ----------------------------
 		// CREATED_AT DESC
@@ -100,15 +80,15 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		paginationResp, attachmentsResp = attachmentsUnmarshalHelper(t, body)
 		require.Equal(t, 16, int(paginationResp.TotalItems))
 		require.Len(t, attachmentsResp, 16)
-		assert.Equal(t, workingData[1].Assets[1].Attachments[3].ID, attachmentsResp[0].ID)
-		assert.Equal(t, workingData[1].Assets[1].Attachments[3].Title, attachmentsResp[0].Title)
-		assert.Equal(t, workingData[1].Assets[1].Attachments[3].Path, attachmentsResp[0].Path)
+		assert.Equal(t, testData[1].Assets[1].Attachments[3].ID, attachmentsResp[0].ID)
+		assert.Equal(t, testData[1].Assets[1].Attachments[3].Title, attachmentsResp[0].Title)
+		assert.Equal(t, testData[1].Assets[1].Attachments[3].Path, attachmentsResp[0].Path)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 2, 4)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(2).Attachments(4).Build()
 
 		// ----------------------------
 		// Get the first page (10 attachments)
@@ -128,7 +108,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		assert.Len(t, paginationResp.Items, 10)
 
 		// Check the last attachment in the paginated response
-		assert.Equal(t, workingData[1].Assets[0].Attachments[1].ID, attachmentsResp[9].ID)
+		assert.Equal(t, testData[1].Assets[0].Attachments[1].ID, attachmentsResp[9].ID)
 
 		// ----------------------------
 		// Get the next page (6 attachments)
@@ -148,7 +128,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		assert.Len(t, paginationResp.Items, 6)
 
 		// Check the last attachment in the paginated response
-		assert.Equal(t, workingData[1].Assets[1].Attachments[3].ID, attachmentsResp[5].ID)
+		assert.Equal(t, testData[1].Assets[1].Attachments[3].ID, attachmentsResp[5].ID)
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
@@ -170,9 +150,9 @@ func TestAttachments_GetAttachment(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 2, 2)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(2).Attachments(2).Build()
 
-		req := httptest.NewRequest(http.MethodGet, "/api/attachments/"+workingData[1].Assets[1].Attachments[0].ID, nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/attachments/"+testData[1].Assets[1].Attachments[0].ID, nil)
 		status, body, err := attachmentsRequestHelper(t, appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -180,9 +160,9 @@ func TestAttachments_GetAttachment(t *testing.T) {
 		var attachmentResp attachmentResponse
 		err = json.Unmarshal(body, &attachmentResp)
 		require.Nil(t, err)
-		assert.Equal(t, workingData[1].Assets[1].Attachments[0].ID, attachmentResp.ID)
-		assert.Equal(t, workingData[1].Assets[1].Attachments[0].Title, attachmentResp.Title)
-		assert.Equal(t, workingData[1].Assets[1].Attachments[0].Path, attachmentResp.Path)
+		assert.Equal(t, testData[1].Assets[1].Attachments[0].ID, attachmentResp.ID)
+		assert.Equal(t, testData[1].Assets[1].Attachments[0].Title, attachmentResp.Title)
+		assert.Equal(t, testData[1].Assets[1].Attachments[0].Path, attachmentResp.Path)
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
@@ -212,13 +192,13 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 	t.Run("200 (ok)", func(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 2, 2)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(2).Attachments(2).Build()
 
 		// Create attachment file
-		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(workingData[1].Assets[0].Attachments[0].Path), os.ModePerm))
-		require.Nil(t, afero.WriteFile(appFs.Fs, workingData[1].Assets[0].Attachments[0].Path, []byte("hello"), os.ModePerm))
+		require.Nil(t, appFs.Fs.MkdirAll(filepath.Dir(testData[1].Assets[0].Attachments[0].Path), os.ModePerm))
+		require.Nil(t, afero.WriteFile(appFs.Fs, testData[1].Assets[0].Attachments[0].Path, []byte("hello"), os.ModePerm))
 
-		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/"+workingData[1].Assets[0].Attachments[0].ID+"/serve", nil))
+		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/"+testData[1].Assets[0].Attachments[0].ID+"/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 		assert.Equal(t, "hello", string(body))
@@ -227,9 +207,9 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 	t.Run("400 (invalid path)", func(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
-		workingData := daos.NewTestData(t, db, 2, false, 2, 2)
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(2).Attachments(2).Build()
 
-		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/"+workingData[1].Assets[0].Attachments[0].ID+"/serve", nil))
+		status, body, err := attachmentsRequestHelper(t, appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/"+testData[1].Assets[0].Attachments[0].ID+"/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		assert.Contains(t, string(body), "attachment does not exist")

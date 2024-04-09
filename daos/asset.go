@@ -243,6 +243,8 @@ func (dao *AssetDao) get(id string, dbParams *database.DatabaseParams, QueryRowF
 	return asset, nil
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // baseSelect returns the default select builder
 //
 // It performs 1 left join

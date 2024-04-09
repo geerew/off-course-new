@@ -26,14 +26,17 @@ func TestAssetProgress_Create(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, dao, db := AssetProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 1, 0)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
-		ap := newTestAssetsProgress(t, nil, workingData[0].Assets[0].ID, workingData[0].ID)
+		ap := &models.AssetProgress{
+			AssetID:  testData[0].Assets[0].ID,
+			CourseID: testData[0].ID,
+		}
 
 		err := dao.Create(ap)
 		require.Nil(t, err)
 		assert.NotEmpty(t, ap.ID)
-		assert.Equal(t, workingData[0].Assets[0].ID, ap.AssetID)
+		assert.Equal(t, testData[0].Assets[0].ID, ap.AssetID)
 		assert.Zero(t, ap.VideoPos)
 		assert.False(t, ap.Completed)
 		assert.True(t, ap.CompletedAt.IsZero())
@@ -44,18 +47,24 @@ func TestAssetProgress_Create(t *testing.T) {
 	t.Run("duplicate asset id", func(t *testing.T) {
 		_, dao, db := AssetProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 1, 0)
-		ap := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
+
+		ap := &models.AssetProgress{
+			AssetID:  testData[0].Assets[0].ID,
+			CourseID: testData[0].ID,
+		}
+
+		// Create
+		require.Nil(t, dao.Create(ap))
 
 		// Create (again)
-		err := dao.Create(ap)
-		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.asset_id", dao.table))
+		require.ErrorContains(t, dao.Create(ap), fmt.Sprintf("UNIQUE constraint failed: %s.asset_id", dao.table))
 	})
 
 	t.Run("constraint errors", func(t *testing.T) {
 		_, dao, db := AssetProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 1, 0)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
 		// Asset ID
 		ap := &models.AssetProgress{}
@@ -72,11 +81,11 @@ func TestAssetProgress_Create(t *testing.T) {
 
 		// Invalid asset ID
 		require.ErrorContains(t, dao.Create(ap), "FOREIGN KEY constraint failed")
-		ap.AssetID = workingData[0].Assets[0].ID
+		ap.AssetID = testData[0].Assets[0].ID
 
 		// Invalid course ID
 		require.ErrorContains(t, dao.Create(ap), "FOREIGN KEY constraint failed")
-		ap.CourseID = workingData[0].ID
+		ap.CourseID = testData[0].ID
 
 		// Success
 		require.Nil(t, dao.Create(ap))
@@ -89,14 +98,18 @@ func TestAssetProgress_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		_, dao, db := AssetProgressSetup(t)
 
-		workingData := NewTestData(t, db, 3, true, 1, 0)
-		for _, tc := range workingData {
-			newTestAssetsProgress(t, db, tc.Assets[0].ID, tc.ID)
+		testData := NewTestBuilder(t).Db(db).Courses(3).Assets(1).Build()
+
+		for _, tc := range testData {
+			require.Nil(t, dao.Create(&models.AssetProgress{
+				AssetID:  tc.Assets[0].ID,
+				CourseID: tc.ID,
+			}))
 		}
 
-		ap, err := dao.Get(workingData[1].Assets[0].ID)
+		ap, err := dao.Get(testData[1].Assets[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, workingData[1].Assets[0].ID, ap.AssetID)
+		assert.Equal(t, testData[1].Assets[0].ID, ap.AssetID)
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -132,25 +145,31 @@ func TestAssetProgress_Update(t *testing.T) {
 	t.Run("update", func(t *testing.T) {
 		_, dao, db := AssetProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 1, 0)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
-		origAp := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
-		require.Zero(t, origAp.VideoPos)
+		// Create the asset progress
+		originalAp := &models.AssetProgress{
+			AssetID:  testData[0].Assets[0].ID,
+			CourseID: testData[0].ID,
+		}
+		require.Nil(t, dao.Create(originalAp))
+
+		require.Zero(t, originalAp.VideoPos)
 
 		cpDao := NewCourseProgressDao(db)
 
 		// ----------------------------
 		// Set to 50
 		// ----------------------------
-		origAp.VideoPos = 50
-		require.Nil(t, dao.Update(origAp))
+		originalAp.VideoPos = 50
+		require.Nil(t, dao.Update(originalAp))
 
-		updatedAp1, err := dao.Get(origAp.AssetID)
+		updatedAp1, err := dao.Get(originalAp.AssetID)
 		require.Nil(t, err)
 		require.Equal(t, 50, updatedAp1.VideoPos)
 
 		// Ensure the course was set to started
-		cp1, err := cpDao.Get(workingData[0].ID)
+		cp1, err := cpDao.Get(testData[0].ID)
 		require.Nil(t, err)
 		assert.True(t, cp1.Started)
 		assert.False(t, cp1.StartedAt.IsZero())
@@ -166,7 +185,7 @@ func TestAssetProgress_Update(t *testing.T) {
 		require.Zero(t, updatedAp2.VideoPos)
 
 		// Ensure the course is not started
-		cp2, err := cpDao.Get(workingData[0].ID)
+		cp2, err := cpDao.Get(testData[0].ID)
 		require.Nil(t, err)
 		assert.False(t, cp2.Started)
 		assert.True(t, cp2.StartedAt.IsZero())
@@ -184,7 +203,7 @@ func TestAssetProgress_Update(t *testing.T) {
 		require.False(t, updatedAp3.CompletedAt.IsZero())
 
 		// Ensure the course is started and completed
-		cp3, err := cpDao.Get(workingData[0].ID)
+		cp3, err := cpDao.Get(testData[0].ID)
 		require.Nil(t, err)
 		assert.True(t, cp3.Started)
 		assert.False(t, cp3.StartedAt.IsZero())
@@ -195,8 +214,14 @@ func TestAssetProgress_Update(t *testing.T) {
 	t.Run("empty id", func(t *testing.T) {
 		_, dao, db := AssetProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 1, 0)
-		ap := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
+
+		// Create the asset progress
+		ap := &models.AssetProgress{
+			AssetID:  testData[0].Assets[0].ID,
+			CourseID: testData[0].ID,
+		}
+		require.Nil(t, dao.Create(ap))
 
 		ap.AssetID = ""
 
@@ -207,8 +232,14 @@ func TestAssetProgress_Update(t *testing.T) {
 	t.Run("invalid asset id", func(t *testing.T) {
 		_, dao, db := AssetProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 1, 0)
-		ap := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
+
+		// Create the asset progress
+		ap := &models.AssetProgress{
+			AssetID:  testData[0].Assets[0].ID,
+			CourseID: testData[0].ID,
+		}
+		require.Nil(t, dao.Create(ap))
 
 		ap.AssetID = "1234"
 
@@ -219,8 +250,14 @@ func TestAssetProgress_Update(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := AssetProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 1, 0)
-		ap := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
+
+		// Create the asset progress
+		ap := &models.AssetProgress{
+			AssetID:  testData[0].Assets[0].ID,
+			CourseID: testData[0].ID,
+		}
+		require.Nil(t, dao.Create(ap))
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
 		require.Nil(t, err)
@@ -236,12 +273,18 @@ func TestAssetProgress_DeleteCascade(t *testing.T) {
 	t.Run("course", func(t *testing.T) {
 		_, dao, db := AssetProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 1, 0)
-		ap := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
+
+		// Create the asset progress
+		ap := &models.AssetProgress{
+			AssetID:  testData[0].Assets[0].ID,
+			CourseID: testData[0].ID,
+		}
+		require.Nil(t, dao.Create(ap))
 
 		// Delete the course
 		courseDao := NewCourseDao(db)
-		err := courseDao.Delete(workingData[0].ID)
+		err := courseDao.Delete(testData[0].ID)
 		require.Nil(t, err)
 
 		// Check the asset progress was deleted
@@ -252,12 +295,18 @@ func TestAssetProgress_DeleteCascade(t *testing.T) {
 	t.Run("asset", func(t *testing.T) {
 		_, dao, db := AssetProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 1, 0)
-		ap := newTestAssetsProgress(t, db, workingData[0].Assets[0].ID, workingData[0].ID)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
+
+		// Create the asset progress
+		ap := &models.AssetProgress{
+			AssetID:  testData[0].Assets[0].ID,
+			CourseID: testData[0].ID,
+		}
+		require.Nil(t, dao.Create(ap))
 
 		// Delete the asset
 		assetDao := NewAssetDao(db)
-		err := assetDao.Delete(workingData[0].Assets[0].ID)
+		err := assetDao.Delete(testData[0].Assets[0].ID)
 		require.Nil(t, err)
 
 		// Check the asset progress was deleted

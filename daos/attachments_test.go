@@ -36,7 +36,7 @@ func TestAttachment_Count(t *testing.T) {
 	t.Run("entries", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		NewTestData(t, db, 5, false, 1, 1)
+		NewTestBuilder(t).Db(db).Courses(5).Assets(1).Attachments(1).Build()
 
 		count, err := dao.Count(nil)
 		require.Nil(t, err)
@@ -46,26 +46,26 @@ func TestAttachment_Count(t *testing.T) {
 	t.Run("where", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		workingData := NewTestData(t, db, 3, false, 1, 2)
+		testData := NewTestBuilder(t).Db(db).Courses(3).Assets(1).Attachments(2).Build()
 
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{TableAttachments() + ".id": workingData[1].Assets[0].Attachments[1].ID}})
+		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{TableAttachments() + ".id": testData[1].Assets[0].Attachments[1].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 
 		// ----------------------------
 		// NOT EQUALS ID
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{TableAttachments() + ".id": workingData[1].Assets[0].Attachments[1].ID}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{TableAttachments() + ".id": testData[1].Assets[0].Attachments[1].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 5, count)
 
 		// ----------------------------
 		// EQUALS ASSET_ID
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{TableAttachments() + ".asset_id": workingData[1].Assets[0].ID}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{TableAttachments() + ".asset_id": testData[1].Assets[0].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 2, count)
 
@@ -94,28 +94,28 @@ func TestAttachment_Create(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		workingData := NewTestData(t, nil, 1, false, 1, 1)
+		testData := NewTestBuilder(t).Courses(1).Assets(1).Attachments(1).Build()
 
 		// Create the course
 		courseDao := NewCourseDao(db)
-		require.Nil(t, courseDao.Create(workingData[0].Course))
+		require.Nil(t, courseDao.Create(testData[0].Course))
 
 		// Create the asset
 		assetDao := NewAssetDao(db)
-		err := assetDao.Create(workingData[0].Assets[0])
+		err := assetDao.Create(testData[0].Assets[0])
 		require.Nil(t, err)
 
 		// Create the attachment
-		err = dao.Create(workingData[0].Assets[0].Attachments[0])
+		err = dao.Create(testData[0].Assets[0].Attachments[0])
 		require.Nil(t, err)
 
-		newA, err := dao.Get(workingData[0].Assets[0].Attachments[0].ID)
+		newA, err := dao.Get(testData[0].Assets[0].Attachments[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, workingData[0].Assets[0].Attachments[0].ID, newA.ID)
-		assert.Equal(t, workingData[0].Assets[0].Attachments[0].CourseID, newA.CourseID)
-		assert.Equal(t, workingData[0].Assets[0].Attachments[0].AssetID, newA.AssetID)
-		assert.Equal(t, workingData[0].Assets[0].Attachments[0].Title, newA.Title)
-		assert.Equal(t, workingData[0].Assets[0].Attachments[0].Path, newA.Path)
+		assert.Equal(t, testData[0].Assets[0].Attachments[0].ID, newA.ID)
+		assert.Equal(t, testData[0].Assets[0].Attachments[0].CourseID, newA.CourseID)
+		assert.Equal(t, testData[0].Assets[0].Attachments[0].AssetID, newA.AssetID)
+		assert.Equal(t, testData[0].Assets[0].Attachments[0].Title, newA.Title)
+		assert.Equal(t, testData[0].Assets[0].Attachments[0].Path, newA.Path)
 		assert.False(t, newA.CreatedAt.IsZero())
 		assert.False(t, newA.UpdatedAt.IsZero())
 	})
@@ -123,17 +123,17 @@ func TestAttachment_Create(t *testing.T) {
 	t.Run("duplicate paths", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 1, 1)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Attachments(1).Build()
 
 		// Create the attachment (again)
-		err := dao.Create(workingData[0].Assets[0].Attachments[0])
+		err := dao.Create(testData[0].Assets[0].Attachments[0])
 		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.path", dao.table))
 	})
 
 	t.Run("constraints", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 1, 0)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
 		// No course ID
 		attachment := &models.Attachment{}
@@ -162,11 +162,11 @@ func TestAttachment_Create(t *testing.T) {
 
 		// Invalid course ID
 		assert.ErrorContains(t, dao.Create(attachment), "FOREIGN KEY constraint failed")
-		attachment.CourseID = workingData[0].ID
+		attachment.CourseID = testData[0].ID
 
 		// Invalid asset ID
 		assert.ErrorContains(t, dao.Create(attachment), "FOREIGN KEY constraint failed")
-		attachment.AssetID = workingData[0].Assets[0].ID
+		attachment.AssetID = testData[0].Assets[0].ID
 
 		// Success
 		assert.Nil(t, dao.Create(attachment))
@@ -179,11 +179,11 @@ func TestAttachment_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		workingData := NewTestData(t, db, 2, false, 1, 1)
+		testData := NewTestBuilder(t).Db(db).Courses(2).Assets(1).Attachments(1).Build()
 
-		a, err := dao.Get(workingData[1].Assets[0].Attachments[0].ID)
+		a, err := dao.Get(testData[1].Assets[0].Attachments[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, workingData[1].Assets[0].Attachments[0].ID, a.ID)
+		assert.Equal(t, testData[1].Assets[0].Attachments[0].ID, a.ID)
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -227,7 +227,7 @@ func TestAttachment_List(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		NewTestData(t, db, 5, false, 1, 1)
+		NewTestBuilder(t).Db(db).Courses(5).Assets(1).Attachments(1).Build()
 
 		result, err := dao.List(nil)
 		require.Nil(t, err)
@@ -238,7 +238,7 @@ func TestAttachment_List(t *testing.T) {
 	t.Run("orderby", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		workingData := NewTestData(t, db, 3, false, 1, 1)
+		testData := NewTestBuilder(t).Db(db).Courses(3).Assets(1).Attachments(1).Build()
 
 		// ----------------------------
 		// CREATED_AT DESC
@@ -246,9 +246,9 @@ func TestAttachment_List(t *testing.T) {
 		result, err := dao.List(&database.DatabaseParams{OrderBy: []string{"created_at desc"}})
 		require.Nil(t, err)
 		require.Len(t, result, 3)
-		assert.Equal(t, workingData[2].Assets[0].Attachments[0].ID, result[0].ID)
-		assert.Equal(t, workingData[1].Assets[0].Attachments[0].ID, result[1].ID)
-		assert.Equal(t, workingData[0].Assets[0].Attachments[0].ID, result[2].ID)
+		assert.Equal(t, testData[2].Assets[0].Attachments[0].ID, result[0].ID)
+		assert.Equal(t, testData[1].Assets[0].Attachments[0].ID, result[1].ID)
+		assert.Equal(t, testData[0].Assets[0].Attachments[0].ID, result[2].ID)
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -256,9 +256,9 @@ func TestAttachment_List(t *testing.T) {
 		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"created_at asc"}})
 		require.Nil(t, err)
 		require.Len(t, result, 3)
-		assert.Equal(t, workingData[0].Assets[0].Attachments[0].ID, result[0].ID)
-		assert.Equal(t, workingData[1].Assets[0].Attachments[0].ID, result[1].ID)
-		assert.Equal(t, workingData[2].Assets[0].Attachments[0].ID, result[2].ID)
+		assert.Equal(t, testData[0].Assets[0].Attachments[0].ID, result[0].ID)
+		assert.Equal(t, testData[1].Assets[0].Attachments[0].ID, result[1].ID)
+		assert.Equal(t, testData[2].Assets[0].Attachments[0].ID, result[2].ID)
 
 		// ----------------------------
 		// Error
@@ -271,23 +271,23 @@ func TestAttachment_List(t *testing.T) {
 	t.Run("where", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		workingData := NewTestData(t, db, 3, false, 2, 2)
+		testData := NewTestBuilder(t).Db(db).Courses(3).Assets(2).Attachments(2).Build()
 
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{TableAttachments() + ".id": workingData[1].Assets[1].Attachments[0].ID}})
+		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{TableAttachments() + ".id": testData[1].Assets[1].Attachments[0].ID}})
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, workingData[1].Assets[1].Attachments[0].ID, result[0].ID)
+		assert.Equal(t, testData[1].Assets[1].Attachments[0].ID, result[0].ID)
 
 		// ----------------------------
 		// EQUALS ID OR ID
 		// ----------------------------
 		dbParams := &database.DatabaseParams{
 			Where: squirrel.Or{
-				squirrel.Eq{TableAttachments() + ".id": workingData[1].Assets[1].Attachments[0].ID},
-				squirrel.Eq{TableAttachments() + ".id": workingData[2].Assets[0].Attachments[1].ID},
+				squirrel.Eq{TableAttachments() + ".id": testData[1].Assets[1].Attachments[0].ID},
+				squirrel.Eq{TableAttachments() + ".id": testData[2].Assets[0].Attachments[1].ID},
 			},
 			OrderBy: []string{"created_at asc"},
 		}
@@ -295,8 +295,8 @@ func TestAttachment_List(t *testing.T) {
 		result, err = dao.List(dbParams)
 		require.Nil(t, err)
 		require.Len(t, result, 2)
-		assert.Equal(t, workingData[1].Assets[1].Attachments[0].ID, result[0].ID)
-		assert.Equal(t, workingData[2].Assets[0].Attachments[1].ID, result[1].ID)
+		assert.Equal(t, testData[1].Assets[1].Attachments[0].ID, result[0].ID)
+		assert.Equal(t, testData[2].Assets[0].Attachments[1].ID, result[1].ID)
 
 		// ----------------------------
 		// ERROR
@@ -309,7 +309,7 @@ func TestAttachment_List(t *testing.T) {
 	t.Run("pagination", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 1, 17)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Attachments(17).Build()
 
 		// ----------------------------
 		// Page 1 with 10 items
@@ -320,8 +320,8 @@ func TestAttachment_List(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, 17, p.TotalItems())
-		assert.Equal(t, workingData[0].Assets[0].Attachments[0].ID, result[0].ID)
-		assert.Equal(t, workingData[0].Assets[0].Attachments[9].ID, result[9].ID)
+		assert.Equal(t, testData[0].Assets[0].Attachments[0].ID, result[0].ID)
+		assert.Equal(t, testData[0].Assets[0].Attachments[9].ID, result[9].ID)
 
 		// ----------------------------
 		// Page 2 with 7 items
@@ -332,8 +332,8 @@ func TestAttachment_List(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 7)
 		require.Equal(t, 17, p.TotalItems())
-		assert.Equal(t, workingData[0].Assets[0].Attachments[10].ID, result[0].ID)
-		assert.Equal(t, workingData[0].Assets[0].Attachments[16].ID, result[6].ID)
+		assert.Equal(t, testData[0].Assets[0].Attachments[10].ID, result[0].ID)
+		assert.Equal(t, testData[0].Assets[0].Attachments[16].ID, result[6].ID)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -353,8 +353,8 @@ func TestAttachment_Delete(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 1, 1)
-		err := dao.Delete(workingData[0].Assets[0].Attachments[0].ID)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Attachments(1).Build()
+		err := dao.Delete(testData[0].Assets[0].Attachments[0].ID)
 		require.Nil(t, err)
 	})
 
@@ -389,30 +389,30 @@ func TestAttachment_DeleteCascade(t *testing.T) {
 	t.Run("delete course", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		workingData := NewTestData(t, db, 2, false, 1, 1)
+		testData := NewTestBuilder(t).Db(db).Courses(2).Assets(1).Attachments(1).Build()
 
 		// Delete the course
 		courseDao := NewCourseDao(db)
-		err := courseDao.Delete(workingData[0].ID)
+		err := courseDao.Delete(testData[0].ID)
 		require.Nil(t, err)
 
 		// Check the asset was deleted
-		s, err := dao.Get(workingData[0].Assets[0].Attachments[0].ID)
+		s, err := dao.Get(testData[0].Assets[0].Attachments[0].ID)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, s)
 	})
 
 	t.Run("delete asset", func(t *testing.T) {
-		_, dao, db := scanSetup(t)
+		_, dao, db := attachmentSetup(t)
 
-		workingData := NewTestData(t, db, 2, false, 1, 1)
+		testData := NewTestBuilder(t).Db(db).Courses(2).Assets(1).Attachments(1).Build()
 
 		// Delete the asset
 		assetDao := NewAssetDao(db)
-		err := assetDao.Delete(workingData[0].Assets[0].ID)
+		err := assetDao.Delete(testData[0].Assets[0].ID)
 		require.Nil(t, err)
 
-		_, err = dao.Get(workingData[0].Assets[0].Attachments[0].ID)
+		_, err = dao.Get(testData[0].Assets[0].Attachments[0].ID)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 	})
 }

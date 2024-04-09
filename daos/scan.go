@@ -42,6 +42,10 @@ func (dao *ScanDao) Create(s *models.Scan) error {
 		s.RefreshId()
 	}
 
+	if s.Status.String() == "" {
+		s.Status = types.NewScanStatus(types.ScanStatusWaiting)
+	}
+
 	s.RefreshCreatedAt()
 	s.RefreshUpdatedAt()
 

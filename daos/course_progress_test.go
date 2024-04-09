@@ -28,9 +28,9 @@ func TestCourseProgress_Create(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, dao, db := CourseProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 0, 0)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
-		cp, err := dao.Get(workingData[0].ID)
+		cp, err := dao.Get(testData[0].ID)
 		require.Nil(t, err)
 		assert.False(t, cp.Started)
 		assert.True(t, cp.StartedAt.IsZero())
@@ -43,9 +43,9 @@ func TestCourseProgress_Create(t *testing.T) {
 	t.Run("duplicate course id", func(t *testing.T) {
 		_, dao, db := CourseProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 0, 0)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
-		cp, err := dao.Get(workingData[0].ID)
+		cp, err := dao.Get(testData[0].ID)
 		require.Nil(t, err)
 
 		err = dao.Create(cp)
@@ -55,10 +55,10 @@ func TestCourseProgress_Create(t *testing.T) {
 	t.Run("constraint errors", func(t *testing.T) {
 		_, dao, db := CourseProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 0, 0)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		// Delete the courses_progress row using squirrel
-		query, args, _ := squirrel.StatementBuilder.Delete(dao.table).Where(squirrel.Eq{"course_id": workingData[0].ID}).ToSql()
+		query, args, _ := squirrel.StatementBuilder.Delete(dao.table).Where(squirrel.Eq{"course_id": testData[0].ID}).ToSql()
 		_, err := db.Exec(query, args...)
 		require.Nil(t, err)
 
@@ -71,7 +71,7 @@ func TestCourseProgress_Create(t *testing.T) {
 
 		// Invalid Course ID
 		require.ErrorContains(t, dao.Create(cp), "FOREIGN KEY constraint failed")
-		cp.CourseID = workingData[0].ID
+		cp.CourseID = testData[0].ID
 
 		// Success
 		require.Nil(t, dao.Create(cp))
@@ -84,11 +84,11 @@ func TestCourseProgress_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		_, dao, db := CourseProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, true, 0, 0)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
-		cp, err := dao.Get(workingData[0].ID)
+		cp, err := dao.Get(testData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, workingData[0].ID, cp.CourseID)
+		assert.Equal(t, testData[0].ID, cp.CourseID)
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -126,19 +126,18 @@ func TestCourseProgress_Update(t *testing.T) {
 
 		apDao := NewAssetProgressDao(db)
 
-		workingData := NewTestData(t, db, 1, false, 2, 0)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(2).Build()
 
-		// There are 2 assets. Create an asset progress for the first asset
-		aps := []*models.AssetProgress{}
-		for _, a := range workingData[0].Assets {
-			if a.ID != workingData[0].Assets[1].ID {
-				ap := newTestAssetsProgress(t, db, a.ID, workingData[0].ID)
-				aps = append(aps, ap)
-			}
+		// Create an asset progress for the first asset
+		assetProgressDao := NewAssetProgressDao(db)
+		ap1 := &models.AssetProgress{
+			AssetID:  testData[0].Assets[0].ID,
+			CourseID: testData[0].ID,
 		}
+		require.Nil(t, assetProgressDao.Create(ap1))
 
 		// Ensure the percent is 0, started is false, and the started_at and completed_at are not set
-		origCp, err := dao.Get(workingData[0].ID)
+		origCp, err := dao.Get(testData[0].ID)
 		require.Nil(t, err)
 		assert.False(t, origCp.Started)
 		assert.True(t, origCp.StartedAt.IsZero())
@@ -149,8 +148,8 @@ func TestCourseProgress_Update(t *testing.T) {
 		// Set the first asset to completed
 		// ----------------------------
 		time.Sleep(1 * time.Millisecond)
-		aps[0].Completed = true
-		require.Nil(t, apDao.Update(aps[0]))
+		ap1.Completed = true
+		require.Nil(t, apDao.Update(ap1))
 
 		// Check the percent is 50, started is true, started_at is set and completed_at is not set
 		updatedCp1, err := dao.Get(origCp.CourseID)
@@ -163,7 +162,12 @@ func TestCourseProgress_Update(t *testing.T) {
 		// ----------------------------
 		// Set the second asset to completed
 		// ----------------------------
-		ap2 := newTestAssetsProgress(t, db, workingData[0].Assets[1].ID, workingData[0].ID)
+		ap2 := &models.AssetProgress{
+			AssetID:  testData[0].Assets[1].ID,
+			CourseID: testData[0].ID,
+		}
+		require.Nil(t, assetProgressDao.Create(ap2))
+
 		ap2.Completed = true
 		require.Nil(t, apDao.Update(ap2))
 
@@ -195,8 +199,8 @@ func TestCourseProgress_Update(t *testing.T) {
 		// Set the first asset as uncompleted
 		// ----------------------------
 		time.Sleep(1 * time.Millisecond)
-		aps[0].Completed = false
-		require.Nil(t, apDao.Update(aps[0]))
+		ap1.Completed = false
+		require.Nil(t, apDao.Update(ap1))
 
 		// Check the percent is 0, started is false and started_at and completed_at are not set
 		updatedCp4, err := dao.Get(origCp.CourseID)
@@ -210,8 +214,8 @@ func TestCourseProgress_Update(t *testing.T) {
 	t.Run("empty id", func(t *testing.T) {
 		_, dao, db := CourseProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 0, 0)
-		origCp, err := dao.Get(workingData[0].ID)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
+		origCp, err := dao.Get(testData[0].ID)
 		require.Nil(t, err)
 
 		origCp.CourseID = ""
@@ -223,8 +227,8 @@ func TestCourseProgress_Update(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := CourseProgressSetup(t)
 
-		workingData := NewTestData(t, db, 1, false, 0, 0)
-		origCp, err := dao.Get(workingData[0].ID)
+		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
+		origCp, err := dao.Get(testData[0].ID)
 		require.Nil(t, err)
 
 		_, err = db.Exec("DROP TABLE IF EXISTS " + dao.table)
@@ -240,15 +244,15 @@ func TestCourseProgress_Update(t *testing.T) {
 func TestCourseProgress_DeleteCascade(t *testing.T) {
 	_, dao, db := CourseProgressSetup(t)
 
-	workingData := NewTestData(t, db, 1, true, 0, 0)
+	testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
 	// Delete the course
 	courseDao := NewCourseDao(db)
-	err := courseDao.Delete(workingData[0].ID)
+	err := courseDao.Delete(testData[0].ID)
 	require.Nil(t, err)
 
 	// Check the course progress was deleted
-	cp, err := dao.Get(workingData[0].ID)
+	cp, err := dao.Get(testData[0].ID)
 	require.ErrorIs(t, err, sql.ErrNoRows)
 	assert.Nil(t, cp)
 }
