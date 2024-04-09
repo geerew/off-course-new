@@ -124,7 +124,7 @@ func updateCourseAvailability(db database.Database) error {
 		paginationParams := &database.DatabaseParams{Pagination: p}
 
 		// Fetch a batch of courses
-		courses, err := courseDao.List(paginationParams)
+		courses, err := courseDao.List(paginationParams, nil)
 		if err != nil {
 			return err
 		}
