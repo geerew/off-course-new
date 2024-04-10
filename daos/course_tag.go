@@ -30,8 +30,8 @@ func NewCourseTagDao(db database.Database) *CourseTagDao {
 
 // Count returns the number of course-tags
 func (dao *CourseTagDao) Count(dbParams *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao.Table)
-	return generic.Count(dao.baseSelect(), dbParams, nil)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	return generic.Count(dbParams, nil)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -56,7 +56,7 @@ func (dao *CourseTagDao) Create(ct *models.CourseTag, tagValue string, tx *sql.T
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *CourseTagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.CourseTag, error) {
-	generic := NewGenericDao(dao.db, dao.Table)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
@@ -70,7 +70,7 @@ func (dao *CourseTagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]
 		dbParams.Columns = dao.columns()
 	}
 
-	rows, err := generic.List(dao.baseSelect(), dbParams, tx)
+	rows, err := generic.List(dbParams, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (dao *CourseTagDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) e
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 	return generic.Delete(dbParams, tx)
 }
 

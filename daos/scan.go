@@ -60,14 +60,14 @@ func (dao *ScanDao) Create(s *models.Scan) error {
 
 // Get selects a scan with the given course ID
 func (dao *ScanDao) Get(courseId string) (*models.Scan, error) {
-	generic := NewGenericDao(dao.db, dao.Table)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table + ".course_id": courseId},
 	}
 
-	row, err := generic.Get(dao.baseSelect(), dbParams, nil)
+	row, err := generic.Get(dbParams, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error 
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 	return generic.Delete(dbParams, tx)
 }
 
@@ -122,7 +122,7 @@ func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error 
 
 // Next returns the next scan whose status is `waiting“
 func (dao *ScanDao) Next() (*models.Scan, error) {
-	generic := NewGenericDao(dao.db, dao.Table)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
@@ -130,7 +130,7 @@ func (dao *ScanDao) Next() (*models.Scan, error) {
 		OrderBy: []string{"created_at ASC"},
 	}
 
-	row, err := generic.Get(dao.baseSelect(), dbParams, nil)
+	row, err := generic.Get(dbParams, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -30,8 +30,8 @@ func NewAssetDao(db database.Database) *AssetDao {
 
 // Count returns the number of assets
 func (dao *AssetDao) Count(params *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao.Table)
-	return generic.Count(dao.baseSelect(), params, nil)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	return generic.Count(params, nil)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -68,14 +68,14 @@ func (dao *AssetDao) Create(a *models.Asset) error {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Asset, error) {
-	generic := NewGenericDao(dao.db, dao.Table)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 
 	assetDbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table + ".id": id},
 	}
 
-	row, err := generic.Get(dao.baseSelect(), assetDbParams, tx)
+	row, err := generic.Get(assetDbParams, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.T
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Asset, error) {
-	generic := NewGenericDao(dao.db, dao.Table)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
@@ -133,7 +133,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mod
 		dbParams.Columns = dao.columns()
 	}
 
-	rows, err := generic.List(dao.baseSelect(), dbParams, tx)
+	rows, err := generic.List(dbParams, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 	return generic.Delete(dbParams, tx)
 }
 

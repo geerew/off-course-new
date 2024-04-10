@@ -11,15 +11,20 @@ import (
 
 // GenericDao is the data access object for generic queries
 type GenericDao struct {
-	db    database.Database
-	table string
+	db         database.Database
+	table      string
+	baseSelect squirrel.SelectBuilder
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // NewGenericDao returns a new GenericDao
-func NewGenericDao(db database.Database, table string) *GenericDao {
-	return &GenericDao{db: db, table: table}
+func NewGenericDao(db database.Database, table string, baseSelect squirrel.SelectBuilder) *GenericDao {
+	return &GenericDao{
+		db:         db,
+		table:      table,
+		baseSelect: baseSelect,
+	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -27,13 +32,13 @@ func NewGenericDao(db database.Database, table string) *GenericDao {
 // Count returns the number of rows in a table
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *GenericDao) Count(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams, tx *sql.Tx) (int, error) {
+func (dao *GenericDao) Count(dbParams *database.DatabaseParams, tx *sql.Tx) (int, error) {
 	queryRowFn := dao.db.QueryRow
 	if tx != nil {
 		queryRowFn = tx.QueryRow
 	}
 
-	builder := baseSelect.
+	builder := dao.baseSelect.
 		Columns("COUNT(DISTINCT " + dao.table + ".id)")
 
 	// if dbParams == nil || dbParams.Columns == nil {
@@ -59,7 +64,7 @@ func (dao *GenericDao) Count(baseSelect squirrel.SelectBuilder, dbParams *databa
 // Get returns a row from a table
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *GenericDao) Get(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams, tx *sql.Tx) (*sql.Row, error) {
+func (dao *GenericDao) Get(dbParams *database.DatabaseParams, tx *sql.Tx) (*sql.Row, error) {
 	queryRowFn := dao.db.QueryRow
 	if tx != nil {
 		queryRowFn = tx.QueryRow
@@ -69,7 +74,7 @@ func (dao *GenericDao) Get(baseSelect squirrel.SelectBuilder, dbParams *database
 		return nil, ErrMissingWhere
 	}
 
-	builder := baseSelect
+	builder := dao.baseSelect
 
 	if dbParams.Columns == nil {
 		builder = builder.Columns(dao.table + ".*")
@@ -98,13 +103,13 @@ func (dao *GenericDao) Get(baseSelect squirrel.SelectBuilder, dbParams *database
 // List returns rows from a table
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *GenericDao) List(baseSelect squirrel.SelectBuilder, dbParams *database.DatabaseParams, tx *sql.Tx) (*sql.Rows, error) {
+func (dao *GenericDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) (*sql.Rows, error) {
 	queryFn := dao.db.Query
 	if tx != nil {
 		queryFn = tx.Query
 	}
 
-	builder := baseSelect
+	builder := dao.baseSelect
 
 	if dbParams != nil {
 		if dbParams.Columns == nil {
@@ -122,7 +127,7 @@ func (dao *GenericDao) List(baseSelect squirrel.SelectBuilder, dbParams *databas
 		}
 
 		if dbParams.Pagination != nil {
-			if count, err := dao.Count(baseSelect, dbParams, tx); err != nil {
+			if count, err := dao.Count(dbParams, tx); err != nil {
 				return nil, err
 			} else {
 				dbParams.Pagination.SetCount(count)

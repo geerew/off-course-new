@@ -49,14 +49,14 @@ func (dao *AssetProgressDao) Create(ap *models.AssetProgress, tx *sql.Tx) error 
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AssetProgressDao) Get(assetId string, tx *sql.Tx) (*models.AssetProgress, error) {
-	generic := NewGenericDao(dao.db, dao.Table)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table + ".asset_id": assetId},
 	}
 
-	row, err := generic.Get(dao.baseSelect(), dbParams, tx)
+	row, err := generic.Get(dbParams, tx)
 	if err != nil {
 		return nil, err
 	}

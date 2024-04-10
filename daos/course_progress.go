@@ -63,14 +63,14 @@ func (dao *CourseProgressDao) Create(cp *models.CourseProgress, tx *sql.Tx) erro
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *CourseProgressDao) Get(courseId string, tx *sql.Tx) (*models.CourseProgress, error) {
-	generic := NewGenericDao(dao.db, dao.Table)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table + ".course_id": courseId},
 	}
 
-	row, err := generic.Get(dao.baseSelect(), dbParams, tx)
+	row, err := generic.Get(dbParams, tx)
 	if err != nil {
 		return nil, err
 	}

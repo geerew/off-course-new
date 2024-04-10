@@ -30,8 +30,8 @@ func NewTagDao(db database.Database) *TagDao {
 
 // Count returns the number of tags
 func (dao *TagDao) Count(params *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao.Table)
-	return generic.Count(dao.baseSelect(), params, nil)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	return generic.Count(params, nil)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -69,7 +69,7 @@ func (dao *TagDao) Create(t *models.Tag, tx *sql.Tx) error {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Tag, error) {
-	generic := NewGenericDao(dao.db, dao.Table)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
@@ -82,7 +82,7 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*model
 		dbParams.Columns = dao.columns()
 	}
 
-	rows, err := generic.List(dao.baseSelect(), dbParams, tx)
+	rows, err := generic.List(dbParams, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (dao *TagDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table)
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 	return generic.Delete(dbParams, tx)
 }
 
