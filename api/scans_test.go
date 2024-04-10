@@ -54,7 +54,7 @@ func TestScans_GetScan(t *testing.T) {
 		f := fiber.New()
 		bindScansApi(f.Group("/api"), appFs, db, cs)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableScans())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewScanDao(db).Table)
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/scans/test", nil)
@@ -124,7 +124,7 @@ func TestScans_CreateScan(t *testing.T) {
 	t.Run("500 (internal error)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableScans())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewScanDao(db).Table)
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(`{"courseID": "test"}`))

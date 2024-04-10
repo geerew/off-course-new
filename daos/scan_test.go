@@ -54,7 +54,7 @@ func TestScan_Create(t *testing.T) {
 		require.Nil(t, err)
 
 		err = dao.Create(s)
-		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.course_id", dao.table))
+		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.course_id", dao.Table))
 	})
 
 	t.Run("constraint errors", func(t *testing.T) {
@@ -64,9 +64,9 @@ func TestScan_Create(t *testing.T) {
 
 		// Missing course ID
 		s := &models.Scan{}
-		require.ErrorContains(t, dao.Create(s), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.table))
+		require.ErrorContains(t, dao.Create(s), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table))
 		s.CourseID = ""
-		require.ErrorContains(t, dao.Create(s), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.table))
+		require.ErrorContains(t, dao.Create(s), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table))
 		s.CourseID = "1234"
 
 		// Invalid Course ID
@@ -111,11 +111,11 @@ func TestScan_Get(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := scanSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
 		require.Nil(t, err)
 
 		_, err = dao.Get("1234")
-		require.ErrorContains(t, err, "no such table: "+dao.table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table)
 	})
 }
 
@@ -170,12 +170,12 @@ func TestScan_Update(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := scanSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
 		require.Nil(t, err)
 
 		testData := NewTestBuilder(t).Courses(1).Scan().Build()
 		err = dao.Update(testData[0].Scan)
-		require.ErrorContains(t, err, "no such table: "+dao.table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table)
 	})
 }
 
@@ -200,11 +200,11 @@ func TestScan_Delete(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := scanSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
 		require.Nil(t, err)
 
 		err = dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": "1234"}}, nil)
-		require.ErrorContains(t, err, "no such table: "+dao.table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table)
 	})
 }
 
@@ -267,10 +267,10 @@ func TestScan_NextScan(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := scanSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
 		require.Nil(t, err)
 
 		_, err = dao.Next()
-		require.ErrorContains(t, err, "no such table: "+dao.table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table)
 	})
 }

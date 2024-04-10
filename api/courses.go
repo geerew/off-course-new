@@ -22,11 +22,12 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type courses struct {
-	appFs         *appFs.AppFs
-	courseScanner *jobs.CourseScanner
-	courseDao     *daos.CourseDao
-	assetDao      *daos.AssetDao
-	attachmentDao *daos.AttachmentDao
+	appFs             *appFs.AppFs
+	courseScanner     *jobs.CourseScanner
+	courseDao         *daos.CourseDao
+	courseProgressDao *daos.CourseProgressDao
+	assetDao          *daos.AssetDao
+	attachmentDao     *daos.AttachmentDao
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -54,11 +55,12 @@ type courseResponse struct {
 
 func bindCoursesApi(router fiber.Router, appFs *appFs.AppFs, db database.Database, courseScanner *jobs.CourseScanner) {
 	api := courses{
-		appFs:         appFs,
-		courseScanner: courseScanner,
-		courseDao:     daos.NewCourseDao(db),
-		assetDao:      daos.NewAssetDao(db),
-		attachmentDao: daos.NewAttachmentDao(db),
+		appFs:             appFs,
+		courseScanner:     courseScanner,
+		courseDao:         daos.NewCourseDao(db),
+		courseProgressDao: daos.NewCourseProgressDao(db),
+		assetDao:          daos.NewAssetDao(db),
+		attachmentDao:     daos.NewAttachmentDao(db),
 	}
 
 	subGroup := router.Group("/courses")
@@ -97,21 +99,21 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 	if started != "undefined" {
 		if started == "true" {
 			dbParams.Where = squirrel.And{
-				squirrel.Eq{daos.TableCoursesProgress() + ".started": true},
-				squirrel.NotEq{daos.TableCoursesProgress() + ".percent": 100},
+				squirrel.Eq{api.courseProgressDao.Table + ".started": true},
+				squirrel.NotEq{api.courseProgressDao.Table + ".percent": 100},
 			}
 		} else {
-			dbParams.Where = squirrel.NotEq{daos.TableCoursesProgress() + ".started": true}
+			dbParams.Where = squirrel.NotEq{api.courseProgressDao.Table + ".started": true}
 		}
 	}
 
 	// Filter on completed (if defined)
 	if completed != "undefined" {
 		if completed == "true" {
-			dbParams.Where = squirrel.Eq{daos.TableCoursesProgress() + ".percent": 100}
+			dbParams.Where = squirrel.Eq{api.courseProgressDao.Table + ".percent": 100}
 
 		} else {
-			dbParams.Where = squirrel.Lt{daos.TableCoursesProgress() + ".percent": 100}
+			dbParams.Where = squirrel.Lt{api.courseProgressDao.Table + ".percent": 100}
 		}
 	}
 
@@ -280,7 +282,7 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 
 	dbParams := &database.DatabaseParams{
 		OrderBy:    []string{c.Query("orderBy", []string{"chapter asc", "prefix asc"}...)},
-		Where:      squirrel.Eq{daos.TableAssets() + ".course_id": id},
+		Where:      squirrel.Eq{api.assetDao.Table + ".course_id": id},
 		Pagination: pagination.NewFromApi(c),
 	}
 
@@ -379,7 +381,7 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 
 	dbParams := &database.DatabaseParams{
 		OrderBy:    []string{c.Query("orderBy", []string{"title asc"}...)},
-		Where:      squirrel.Eq{daos.TableAttachments() + ".asset_id": assetId},
+		Where:      squirrel.Eq{api.attachmentDao.Table + ".asset_id": assetId},
 		Pagination: pagination.NewFromApi(c),
 	}
 

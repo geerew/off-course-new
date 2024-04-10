@@ -14,7 +14,7 @@ import (
 // CourseDao is the data access object for courses
 type CourseDao struct {
 	db    database.Database
-	table string
+	Table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -23,22 +23,15 @@ type CourseDao struct {
 func NewCourseDao(db database.Database) *CourseDao {
 	return &CourseDao{
 		db:    db,
-		table: TableCourses(),
+		Table: "courses",
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// TableCourses returns the name of the courses table
-func TableCourses() string {
-	return "courses"
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of courses
 func (dao *CourseDao) Count(params *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao.table)
+	generic := NewGenericDao(dao.db, dao.Table)
 	return generic.Count(dao.baseSelect(), params, nil)
 }
 
@@ -58,7 +51,7 @@ func (dao *CourseDao) Create(c *models.Course) error {
 
 	query, args, _ := squirrel.
 		StatementBuilder.
-		Insert(dao.table).
+		Insert(dao.Table).
 		SetMap(dao.data(c)).
 		ToSql()
 
@@ -84,11 +77,11 @@ func (dao *CourseDao) Create(c *models.Course) error {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *CourseDao) Get(id string, tx *sql.Tx) (*models.Course, error) {
-	generic := NewGenericDao(dao.db, dao.table)
+	generic := NewGenericDao(dao.db, dao.Table)
 
 	dbParams := &database.DatabaseParams{
-		Columns: dao.selectColumns(),
-		Where:   squirrel.Eq{generic.table + ".id": id},
+		Columns: dao.columns(),
+		Where:   squirrel.Eq{dao.Table + ".id": id},
 	}
 
 	row, err := generic.Get(dao.baseSelect(), dbParams, tx)
@@ -110,7 +103,7 @@ func (dao *CourseDao) Get(id string, tx *sql.Tx) (*models.Course, error) {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Course, error) {
-	generic := NewGenericDao(dao.db, dao.table)
+	generic := NewGenericDao(dao.db, dao.Table)
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
@@ -121,7 +114,7 @@ func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mo
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
-		dbParams.Columns = dao.selectColumns()
+		dbParams.Columns = dao.columns()
 	}
 
 	rows, err := generic.List(dao.baseSelect(), dbParams, tx)
@@ -162,7 +155,7 @@ func (dao *CourseDao) Update(course *models.Course) error {
 
 	query, args, _ := squirrel.
 		StatementBuilder.
-		Update(dao.table).
+		Update(dao.Table).
 		Set("card_path", NilStr(course.CardPath)).
 		Set("available", course.Available).
 		Set("updated_at", course.UpdatedAt).
@@ -175,7 +168,7 @@ func (dao *CourseDao) Update(course *models.Course) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Delete deletes a course with the given ID
+// Delete deletes a course based upon the where clause
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *CourseDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
@@ -183,7 +176,7 @@ func (dao *CourseDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) erro
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.table)
+	generic := NewGenericDao(dao.db, dao.Table)
 	return generic.Delete(dbParams, tx)
 }
 
@@ -200,28 +193,34 @@ func (dao *CourseDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) erro
 // Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
 // this select builder
 func (dao *CourseDao) baseSelect() squirrel.SelectBuilder {
+	sDao := NewScanDao(dao.db)
+	cpDao := NewCourseProgressDao(dao.db)
+
 	return squirrel.
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
 		Select("").
-		From(dao.table).
-		LeftJoin(TableScans() + " ON " + dao.table + ".id = " + TableScans() + ".course_id").
-		LeftJoin(TableCoursesProgress() + " ON " + dao.table + ".id = " + TableCoursesProgress() + ".course_id").
+		From(dao.Table).
+		LeftJoin(sDao.Table + " ON " + dao.Table + ".id = " + sDao.Table + ".course_id").
+		LeftJoin(cpDao.Table + " ON " + dao.Table + ".id = " + cpDao.Table + ".course_id").
 		RemoveColumns()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// selectColumns returns the columns to select
-func (dao *CourseDao) selectColumns() []string {
+// columns returns the columns to select
+func (dao *CourseDao) columns() []string {
+	sDao := NewScanDao(dao.db)
+	cpDao := NewCourseProgressDao(dao.db)
+
 	return []string{
-		dao.table + ".*",
-		TableScans() + ".status as scan_status",
-		TableCoursesProgress() + ".started",
-		TableCoursesProgress() + ".started_at",
-		TableCoursesProgress() + ".percent",
-		TableCoursesProgress() + ".completed_at",
-		TableCoursesProgress() + ".updated_at as progress_updated_at",
+		dao.Table + ".*",
+		sDao.Table + ".status as scan_status",
+		cpDao.Table + ".started",
+		cpDao.Table + ".started_at",
+		cpDao.Table + ".percent",
+		cpDao.Table + ".completed_at",
+		cpDao.Table + ".updated_at as progress_updated_at",
 	}
 }
 
@@ -245,7 +244,7 @@ func (dao *CourseDao) data(c *models.Course) map[string]any {
 // processOrderBy takes an array of strings representing orderBy clauses and returns a processed
 // version of this array
 //
-// It will creates a new list of valid table columns based upon selectColumns() for the current
+// It will creates a new list of valid table columns based upon columns() for the current
 // DAO. Additionally, it handles the special case of 'scan_status' column, which requires custom
 // sorting logic, via a CASE statement.
 //
@@ -258,15 +257,17 @@ func (dao *CourseDao) processOrderBy(orderBy []string) []string {
 		return orderBy
 	}
 
-	validTableColumns := dao.selectColumns()
+	validTableColumns := dao.columns()
 	var processedOrderBy []string
+
+	scanDao := NewScanDao(dao.db)
 
 	for _, ob := range orderBy {
 		table, column := extractTableColumn(ob)
 
 		if isValidOrderBy(table, column, validTableColumns) {
 			// When the column is 'scan_status', apply the custom sorting logic
-			if column == "scan_status" || table+"."+column == TableScans()+".status" {
+			if column == "scan_status" || table+"."+column == scanDao.Table+".status" {
 				// Determine the sort direction, defaulting to ASC if not specified
 				parts := strings.Fields(ob)
 				sortDirection := "ASC"

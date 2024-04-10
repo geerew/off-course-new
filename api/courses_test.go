@@ -276,7 +276,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
 		// Drop the courses table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(db).Table)
 		require.Nil(t, err)
 
 		status, _, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
@@ -349,7 +349,7 @@ func TestCourses_GetCourse(t *testing.T) {
 	t.Run("500 (internal error)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(db).Table)
 		require.Nil(t, err)
 
 		status, _, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test", nil))
@@ -458,7 +458,7 @@ func TestCourses_Create(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
 		// Drop the courses table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(db).Table)
 		require.Nil(t, err)
 
 		coursePath := "/course 1/"
@@ -478,7 +478,7 @@ func TestCourses_Create(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
 		// Drop scan table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableScans())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewScanDao(db).Table)
 		require.Nil(t, err)
 
 		coursePath := "/course 1/"
@@ -527,12 +527,12 @@ func TestCourses_DeleteCourse(t *testing.T) {
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 
 		// Assets
-		count, err := assetsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": testData[2].ID}})
+		count, err := assetsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.NewAssetDao(db).Table + ".course_id": testData[2].ID}})
 		require.Nil(t, err)
 		assert.Zero(t, count)
 
 		// Attachments
-		count, err = attachmentsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": testData[2].ID}})
+		count, err = attachmentsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.NewAttachmentDao(db).Table + ".course_id": testData[2].ID}})
 		require.Nil(t, err)
 		assert.Zero(t, count)
 	})
@@ -549,7 +549,7 @@ func TestCourses_DeleteCourse(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
 		// Drop the table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(db).Table)
 		require.Nil(t, err)
 
 		status, _, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodDelete, "/api/courses/test", nil))
@@ -621,7 +621,7 @@ func TestCourses_Card(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
 		// Drop the table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(db).Table)
 		require.Nil(t, err)
 
 		status, _, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test/card", nil))
@@ -763,7 +763,7 @@ func TestCourses_GetAssets(t *testing.T) {
 	t.Run("500 (course internal error)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(db).Table)
 		require.Nil(t, err)
 
 		status, _, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test/assets", nil))
@@ -776,7 +776,7 @@ func TestCourses_GetAssets(t *testing.T) {
 
 		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(db).Table)
 		require.Nil(t, err)
 
 		status, _, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/", nil))
@@ -843,7 +843,7 @@ func TestCourses_GetAsset(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
 		// Drop the courses table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(db).Table)
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/test_course/assets/test_asset", nil)
@@ -858,7 +858,7 @@ func TestCourses_GetAsset(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		// Drop the assets table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(db).Table)
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/test_asset", nil)
@@ -1004,7 +1004,7 @@ func TestCourses_GetAttachments(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
 		// Drop the courses table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(db).Table)
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/test_course/assets/test_asset/attachments", nil)
@@ -1032,7 +1032,7 @@ func TestCourses_GetAttachments(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		// Drop the assets table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(db).Table)
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/1234/attachments", nil)
@@ -1060,7 +1060,7 @@ func TestCourses_GetAttachments(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
 		// Drop the attachments table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAttachments())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(db).Table)
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[0].ID+"/attachments", nil)
@@ -1152,7 +1152,7 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		// Drop the courses table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableCourses())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(db).Table)
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
@@ -1167,7 +1167,7 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		// Drop the assets table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAssets())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(db).Table)
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
@@ -1182,7 +1182,7 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
 		// Drop the attachments table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableAttachments())
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(db).Table)
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[0].ID+"/attachments/test_attachment", nil)

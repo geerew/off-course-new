@@ -17,14 +17,27 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Slice of 20 tags for testing (programming languages)
+var test_tags = []string{
+	"JavaScript", "Python", "Java", "Ruby", "PHP",
+	"TypeScript", "C#", "C++", "C", "Swift",
+	"Kotlin", "Rust", "Go", "Perl", "Scala",
+	"R", "Objective-C", "Shell", "PowerShell", "Haskell",
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 type TestBuilder struct {
 	t                   *testing.T
 	db                  database.Database
 	numberOfCourses     int
 	scan                bool
-	tagsPerCourse       int
 	assetsPerCourse     int
 	attachmentsPerAsset int
+
+	//
+	tagsPerCourse          int
+	specifiedTagsPerCourse []string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -33,6 +46,7 @@ type TestCourse struct {
 	*models.Course
 	Scan   *models.Scan
 	Assets []*models.Asset
+	Tags   []*models.CourseTag
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -69,7 +83,7 @@ func (builder *TestBuilder) Scan() *TestBuilder {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// NumberOfAssets sets the number of assets per course
+// Assets sets the number of assets per course
 func (builder *TestBuilder) Assets(assetsPerCourse int) *TestBuilder {
 	builder.assetsPerCourse = assetsPerCourse
 	return builder
@@ -77,9 +91,22 @@ func (builder *TestBuilder) Assets(assetsPerCourse int) *TestBuilder {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// NumberOfAttachments sets the number of attachments per asset
+// Attachments sets the number of attachments per asset
 func (builder *TestBuilder) Attachments(attachmentsPerAsset int) *TestBuilder {
 	builder.attachmentsPerAsset = attachmentsPerAsset
+	return builder
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Tags sets either a random number of tags per course or a specific set of tags
+func (builder *TestBuilder) Tags(tags any) *TestBuilder {
+	switch t := tags.(type) {
+	case int:
+		builder.tagsPerCourse = t
+	case []string:
+		builder.specifiedTagsPerCourse = t
+	}
 	return builder
 }
 
@@ -99,6 +126,10 @@ func (builder *TestBuilder) Build() []*TestCourse {
 
 		if builder.assetsPerCourse > 0 {
 			tc.Assets = builder.newTestAssets(tc.Course)
+		}
+
+		if (builder.tagsPerCourse > 0 || len(builder.specifiedTagsPerCourse) > 0) && builder.db != nil {
+			tc.Tags = builder.newTestTags(tc.Course)
 		}
 
 		testCourses = append(testCourses, tc)
@@ -224,4 +255,50 @@ func (builder *TestBuilder) newTestAttachments(asset *models.Asset) []*models.At
 	}
 
 	return attachments
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (builder *TestBuilder) newTestTags(course *models.Course) []*models.CourseTag {
+	if builder.db == nil {
+		return nil
+	}
+
+	tags := []*models.CourseTag{}
+	chosenTags := map[string]bool{}
+
+	count := builder.tagsPerCourse
+	if len(builder.specifiedTagsPerCourse) > 0 {
+		count = len(builder.specifiedTagsPerCourse)
+	}
+
+	for i := 0; i < count; i++ {
+		tag := &models.Tag{}
+
+		if len(builder.specifiedTagsPerCourse) > 0 {
+			tag.Tag = builder.specifiedTagsPerCourse[i]
+		} else {
+			for {
+				randomTag := test_tags[rand.Intn(len(test_tags))]
+				if !chosenTags[randomTag] {
+					tag = &models.Tag{
+						Tag: randomTag,
+					}
+					chosenTags[randomTag] = true
+					break
+				}
+			}
+		}
+
+		ct := &models.CourseTag{
+			CourseId: course.ID,
+		}
+
+		dao := NewCourseTagDao(builder.db)
+		require.Nil(builder.t, dao.Create(ct, tag.Tag, nil))
+
+		tags = append(tags, ct)
+	}
+
+	return tags
 }

@@ -10,91 +10,71 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// AttachmentDao is the data access object for attachments
-type AttachmentDao struct {
+// TagDao is the data access object for tags
+type TagDao struct {
 	db    database.Database
 	Table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// NewAttachmentDao returns a new AttachmentDao
-func NewAttachmentDao(db database.Database) *AttachmentDao {
-	return &AttachmentDao{
+// NewTagDao returns a new TagDao
+func NewTagDao(db database.Database) *TagDao {
+	return &TagDao{
 		db:    db,
-		Table: "attachments",
+		Table: "tags",
 	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Count returns the number of attachments
-func (dao *AttachmentDao) Count(params *database.DatabaseParams) (int, error) {
+// Count returns the number of tags
+func (dao *TagDao) Count(params *database.DatabaseParams) (int, error) {
 	generic := NewGenericDao(dao.db, dao.Table)
 	return generic.Count(dao.baseSelect(), params, nil)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Create inserts a new attachment
-func (dao *AttachmentDao) Create(a *models.Attachment) error {
-	if a.ID == "" {
-		a.RefreshId()
+// Create inserts a new tag
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *TagDao) Create(t *models.Tag, tx *sql.Tx) error {
+	execFn := dao.db.Exec
+	if tx != nil {
+		execFn = tx.Exec
 	}
 
-	a.RefreshCreatedAt()
-	a.RefreshUpdatedAt()
+	if t.ID == "" {
+		t.RefreshId()
+	}
+
+	t.RefreshCreatedAt()
+	t.RefreshUpdatedAt()
 
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.Table).
-		SetMap(dao.data(a)).
+		SetMap(dao.data(t)).
 		ToSql()
 
-	_, err := dao.db.Exec(query, args...)
+	_, err := execFn(query, args...)
 
 	return err
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get selects an attachment with the given ID
+// List selects tags
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *AttachmentDao) Get(id string, tx *sql.Tx) (*models.Attachment, error) {
-	generic := NewGenericDao(dao.db, dao.Table)
-
-	dbParams := &database.DatabaseParams{
-		Columns: dao.columns(),
-		Where:   squirrel.Eq{dao.Table + ".id": id},
-	}
-
-	row, err := generic.Get(dao.baseSelect(), dbParams, tx)
-	if err != nil {
-		return nil, err
-	}
-
-	attachment, err := dao.scanRow(row)
-	if err != nil {
-		return nil, err
-	}
-
-	return attachment, nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// List selects attachments
-//
-// `tx` allows for the function to be run within a transaction
-func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Attachment, error) {
+func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Tag, error) {
 	generic := NewGenericDao(dao.db, dao.Table)
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
 	}
 
-	// Process the order by clauses
 	dbParams.OrderBy = dao.processOrderBy(dbParams.OrderBy)
 
 	// Default the columns if not specified
@@ -108,30 +88,30 @@ func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([
 	}
 	defer rows.Close()
 
-	var attachments []*models.Attachment
+	var tags []*models.Tag
 
 	for rows.Next() {
-		a, err := dao.scanRow(rows)
+		t, err := dao.scanRow(rows)
 		if err != nil {
 			return nil, err
 		}
 
-		attachments = append(attachments, a)
+		tags = append(tags, t)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return attachments, nil
+	return tags, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Delete deletes an attachment based upon the where clause
+// Delete deletes a tag based upon the where clause
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *AttachmentDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
+func (dao *TagDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere
 	}
@@ -144,11 +124,13 @@ func (dao *AttachmentDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) 
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // baseSelect returns the default select builder
 //
 // Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
 // this select builder
-func (dao *AttachmentDao) baseSelect() squirrel.SelectBuilder {
+func (dao *TagDao) baseSelect() squirrel.SelectBuilder {
 	return squirrel.
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
@@ -160,7 +142,7 @@ func (dao *AttachmentDao) baseSelect() squirrel.SelectBuilder {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // columns returns the columns to select
-func (dao *AttachmentDao) columns() []string {
+func (dao *TagDao) columns() []string {
 	return []string{
 		dao.Table + ".*",
 	}
@@ -168,16 +150,13 @@ func (dao *AttachmentDao) columns() []string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// data generates a map of key/values for an attachment
-func (dao *AttachmentDao) data(a *models.Attachment) map[string]any {
+// data generates a map of key/values for a tag
+func (dao *TagDao) data(t *models.Tag) map[string]any {
 	return map[string]any{
-		"id":         a.ID,
-		"course_id":  NilStr(a.CourseID),
-		"asset_id":   NilStr(a.AssetID),
-		"title":      NilStr(a.Title),
-		"path":       NilStr(a.Path),
-		"created_at": a.CreatedAt,
-		"updated_at": a.UpdatedAt,
+		"id":         t.ID,
+		"tag":        NilStr(t.Tag),
+		"created_at": t.CreatedAt,
+		"updated_at": t.UpdatedAt,
 	}
 }
 
@@ -186,9 +165,9 @@ func (dao *AttachmentDao) data(a *models.Attachment) map[string]any {
 // processOrderBy takes an array of strings representing orderBy clauses and returns a processed
 // version of this array
 //
-// It will creates a new list of valid Table columns based upon columns() for the current
+// It will creates a new list of valid table columns based upon columns() for the current
 // DAO
-func (dao *AttachmentDao) processOrderBy(orderBy []string) []string {
+func (dao *TagDao) processOrderBy(orderBy []string) []string {
 	if len(orderBy) == 0 {
 		return orderBy
 	}
@@ -197,9 +176,9 @@ func (dao *AttachmentDao) processOrderBy(orderBy []string) []string {
 	var processedOrderBy []string
 
 	for _, ob := range orderBy {
-		Table, column := extractTableColumn(ob)
+		table, column := extractTableColumn(ob)
 
-		if isValidOrderBy(Table, column, validTableColumns) {
+		if isValidOrderBy(table, column, validTableColumns) {
 			processedOrderBy = append(processedOrderBy, ob)
 		}
 	}
@@ -209,23 +188,20 @@ func (dao *AttachmentDao) processOrderBy(orderBy []string) []string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// scanRow scans an attachment row
-func (dao *AttachmentDao) scanRow(scannable Scannable) (*models.Attachment, error) {
-	var a models.Attachment
+// scanRow scans an tag row
+func (dao *TagDao) scanRow(scannable Scannable) (*models.Tag, error) {
+	var t models.Tag
 
 	err := scannable.Scan(
-		&a.ID,
-		&a.CourseID,
-		&a.AssetID,
-		&a.Title,
-		&a.Path,
-		&a.CreatedAt,
-		&a.UpdatedAt,
+		&t.ID,
+		&t.Tag,
+		&t.CreatedAt,
+		&t.UpdatedAt,
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &a, nil
+	return &t, nil
 }

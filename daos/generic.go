@@ -36,6 +36,12 @@ func (dao *GenericDao) Count(baseSelect squirrel.SelectBuilder, dbParams *databa
 	builder := baseSelect.
 		Columns("COUNT(DISTINCT " + dao.table + ".id)")
 
+	// if dbParams == nil || dbParams.Columns == nil {
+	// 	builder = builder.Columns(dao.table + ".*")
+	// } else {
+	// 	builder = builder.Columns(dbParams.Columns...)
+	// }
+
 	if dbParams != nil && dbParams.Where != nil {
 		builder = builder.Where(dbParams.Where)
 	}
@@ -43,9 +49,9 @@ func (dao *GenericDao) Count(baseSelect squirrel.SelectBuilder, dbParams *databa
 	query, args, _ := builder.ToSql()
 
 	var count int
-	row := queryRowFn(query, args...).Scan(&count)
+	err := queryRowFn(query, args...).Scan(&count)
 
-	return count, row
+	return count, err
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -66,7 +72,7 @@ func (dao *GenericDao) Get(baseSelect squirrel.SelectBuilder, dbParams *database
 	builder := baseSelect
 
 	if dbParams.Columns == nil {
-		builder = builder.Columns(dao.table + "*")
+		builder = builder.Columns(dao.table + ".*")
 	} else {
 		builder = builder.Columns(dbParams.Columns...)
 	}
@@ -101,7 +107,9 @@ func (dao *GenericDao) List(baseSelect squirrel.SelectBuilder, dbParams *databas
 	builder := baseSelect
 
 	if dbParams != nil {
-		if dbParams.Columns != nil {
+		if dbParams.Columns == nil {
+			builder = builder.Columns(dao.table + ".*")
+		} else {
 			builder = builder.Columns(dbParams.Columns...)
 		}
 

@@ -13,7 +13,7 @@ import (
 // AssetDao is the data access object for assets
 type AssetDao struct {
 	db    database.Database
-	table string
+	Table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -22,22 +22,15 @@ type AssetDao struct {
 func NewAssetDao(db database.Database) *AssetDao {
 	return &AssetDao{
 		db:    db,
-		table: TableAssets(),
+		Table: "assets",
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// TableAssets returns the name of the assets table
-func TableAssets() string {
-	return "assets"
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of assets
 func (dao *AssetDao) Count(params *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao.table)
+	generic := NewGenericDao(dao.db, dao.Table)
 	return generic.Count(dao.baseSelect(), params, nil)
 }
 
@@ -58,7 +51,7 @@ func (dao *AssetDao) Create(a *models.Asset) error {
 
 	query, args, _ := squirrel.
 		StatementBuilder.
-		Insert(dao.table).
+		Insert(dao.Table).
 		SetMap(dao.data(a)).
 		ToSql()
 
@@ -75,11 +68,11 @@ func (dao *AssetDao) Create(a *models.Asset) error {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Asset, error) {
-	generic := NewGenericDao(dao.db, dao.table)
+	generic := NewGenericDao(dao.db, dao.Table)
 
 	assetDbParams := &database.DatabaseParams{
-		Columns: dao.selectColumns(),
-		Where:   squirrel.Eq{generic.table + ".id": id},
+		Columns: dao.columns(),
+		Where:   squirrel.Eq{dao.Table + ".id": id},
 	}
 
 	row, err := generic.Get(dao.baseSelect(), assetDbParams, tx)
@@ -125,7 +118,7 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.T
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Asset, error) {
-	generic := NewGenericDao(dao.db, dao.table)
+	generic := NewGenericDao(dao.db, dao.Table)
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
@@ -137,7 +130,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mod
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
-		dbParams.Columns = dao.selectColumns()
+		dbParams.Columns = dao.columns()
 	}
 
 	rows, err := generic.List(dao.baseSelect(), dbParams, tx)
@@ -176,7 +169,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mod
 		for _, ob := range origOrderBy {
 			table, _ := extractTableColumn(ob)
 
-			if table == attachmentDao.table {
+			if table == attachmentDao.Table {
 				reducedOrderBy = append(reducedOrderBy, ob)
 			}
 		}
@@ -209,7 +202,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mod
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Delete deletes an asset with the given ID
+// Delete deletes an asset based upon the where clause
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
@@ -217,7 +210,7 @@ func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.table)
+	generic := NewGenericDao(dao.db, dao.Table)
 	return generic.Delete(dbParams, tx)
 }
 
@@ -233,24 +226,28 @@ func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error
 // Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
 // this select builder
 func (dao *AssetDao) baseSelect() squirrel.SelectBuilder {
+	apDao := NewAssetProgressDao(dao.db)
+
 	return squirrel.
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
 		Select("").
-		From(dao.table).
-		LeftJoin(TableAssetsProgress() + " ON " + TableAssets() + ".id = " + TableAssetsProgress() + ".asset_id").
+		From(dao.Table).
+		LeftJoin(apDao.Table + " ON " + dao.Table + ".id = " + apDao.Table + ".asset_id").
 		RemoveColumns()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// selectColumns returns the columns to select
-func (dao *AssetDao) selectColumns() []string {
+// columns returns the columns to select
+func (dao *AssetDao) columns() []string {
+	apDao := NewAssetProgressDao(dao.db)
+
 	return []string{
-		dao.table + ".*",
-		TableAssetsProgress() + ".video_pos",
-		TableAssetsProgress() + ".completed",
-		TableAssetsProgress() + ".completed_at",
+		dao.Table + ".*",
+		apDao.Table + ".video_pos",
+		apDao.Table + ".completed",
+		apDao.Table + ".completed_at",
 	}
 }
 
@@ -276,14 +273,14 @@ func (dao *AssetDao) data(a *models.Asset) map[string]any {
 // processOrderBy takes an array of strings representing orderBy clauses and returns a processed
 // version of this array
 //
-// It will creates a new list of valid table columns based upon selectColumns() for the current
+// It will creates a new list of valid table columns based upon columns() for the current
 // DAO
 func (dao *AssetDao) processOrderBy(orderBy []string) []string {
 	if len(orderBy) == 0 {
 		return orderBy
 	}
 
-	validTableColumns := dao.selectColumns()
+	validTableColumns := dao.columns()
 	var processedOrderBy []string
 
 	for _, ob := range orderBy {

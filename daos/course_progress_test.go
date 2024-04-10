@@ -49,7 +49,7 @@ func TestCourseProgress_Create(t *testing.T) {
 		require.Nil(t, err)
 
 		err = dao.Create(cp, nil)
-		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.course_id", dao.table))
+		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.course_id", dao.Table))
 	})
 
 	t.Run("constraint errors", func(t *testing.T) {
@@ -58,15 +58,15 @@ func TestCourseProgress_Create(t *testing.T) {
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		// Delete the courses_progress row using squirrel
-		query, args, _ := squirrel.StatementBuilder.Delete(dao.table).Where(squirrel.Eq{"course_id": testData[0].ID}).ToSql()
+		query, args, _ := squirrel.StatementBuilder.Delete(dao.Table).Where(squirrel.Eq{"course_id": testData[0].ID}).ToSql()
 		_, err := db.Exec(query, args...)
 		require.Nil(t, err)
 
 		// Course ID
 		cp := &models.CourseProgress{}
-		require.ErrorContains(t, dao.Create(cp, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.table))
+		require.ErrorContains(t, dao.Create(cp, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table))
 		cp.CourseID = ""
-		require.ErrorContains(t, dao.Create(cp, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.table))
+		require.ErrorContains(t, dao.Create(cp, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table))
 		cp.CourseID = "1234"
 
 		// Invalid Course ID
@@ -110,11 +110,11 @@ func TestCourseProgress_Get(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := CourseProgressSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
 		require.Nil(t, err)
 
 		_, err = dao.Get("1234", nil)
-		require.ErrorContains(t, err, "no such table: "+dao.table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table)
 	})
 }
 
@@ -231,11 +231,11 @@ func TestCourseProgress_Update(t *testing.T) {
 		origCp, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
 
-		_, err = db.Exec("DROP TABLE IF EXISTS " + dao.table)
+		_, err = db.Exec("DROP TABLE IF EXISTS " + dao.Table)
 		require.Nil(t, err)
 
 		err = dao.Refresh(origCp.CourseID, nil)
-		require.ErrorContains(t, err, "no such table: "+dao.table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table)
 	})
 }
 

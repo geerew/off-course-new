@@ -51,21 +51,21 @@ func TestAttachment_Count(t *testing.T) {
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{TableAttachments() + ".id": testData[1].Assets[0].Attachments[1].ID}})
+		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table + ".id": testData[1].Assets[0].Attachments[1].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 1, count)
 
 		// ----------------------------
 		// NOT EQUALS ID
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{TableAttachments() + ".id": testData[1].Assets[0].Attachments[1].ID}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table + ".id": testData[1].Assets[0].Attachments[1].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 5, count)
 
 		// ----------------------------
 		// EQUALS ASSET_ID
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{TableAttachments() + ".asset_id": testData[1].Assets[0].ID}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table + ".asset_id": testData[1].Assets[0].ID}})
 		require.Nil(t, err)
 		assert.Equal(t, 2, count)
 
@@ -80,11 +80,11 @@ func TestAttachment_Count(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
 		require.Nil(t, err)
 
 		_, err = dao.Count(nil)
-		require.ErrorContains(t, err, "no such table: "+dao.table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table)
 	})
 }
 
@@ -127,7 +127,7 @@ func TestAttachment_Create(t *testing.T) {
 
 		// Create the attachment (again)
 		err := dao.Create(testData[0].Assets[0].Attachments[0])
-		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.path", dao.table))
+		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.path", dao.Table))
 	})
 
 	t.Run("constraints", func(t *testing.T) {
@@ -137,21 +137,21 @@ func TestAttachment_Create(t *testing.T) {
 
 		// No course ID
 		attachment := &models.Attachment{}
-		assert.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", TableAttachments()))
+		assert.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table))
 		attachment.CourseID = ""
-		assert.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", TableAttachments()))
+		assert.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table))
 		attachment.CourseID = "1234"
 
 		// No asset ID
-		assert.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", TableAttachments()))
+		assert.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", dao.Table))
 		attachment.AssetID = ""
-		assert.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", TableAttachments()))
+		assert.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", dao.Table))
 		attachment.AssetID = "1234"
 
 		// No title
-		assert.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.title", TableAttachments()))
+		assert.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table))
 		attachment.Title = ""
-		assert.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.title", TableAttachments()))
+		assert.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table))
 		attachment.Title = "Course 1"
 
 		// No path
@@ -205,11 +205,11 @@ func TestAttachment_Get(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
 		require.Nil(t, err)
 
 		_, err = dao.Get("1234", nil)
-		require.ErrorContains(t, err, "no such table: "+dao.table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table)
 	})
 }
 
@@ -276,7 +276,7 @@ func TestAttachment_List(t *testing.T) {
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{TableAttachments() + ".id": testData[1].Assets[1].Attachments[0].ID}}, nil)
+		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{dao.Table + ".id": testData[1].Assets[1].Attachments[0].ID}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		assert.Equal(t, testData[1].Assets[1].Attachments[0].ID, result[0].ID)
@@ -286,8 +286,8 @@ func TestAttachment_List(t *testing.T) {
 		// ----------------------------
 		dbParams := &database.DatabaseParams{
 			Where: squirrel.Or{
-				squirrel.Eq{TableAttachments() + ".id": testData[1].Assets[1].Attachments[0].ID},
-				squirrel.Eq{TableAttachments() + ".id": testData[2].Assets[0].Attachments[1].ID},
+				squirrel.Eq{dao.Table + ".id": testData[1].Assets[1].Attachments[0].ID},
+				squirrel.Eq{dao.Table + ".id": testData[2].Assets[0].Attachments[1].ID},
 			},
 			OrderBy: []string{"created_at asc"},
 		}
@@ -339,11 +339,11 @@ func TestAttachment_List(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
 		require.Nil(t, err)
 
 		_, err = dao.List(nil, nil)
-		require.ErrorContains(t, err, "no such table: "+dao.table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table)
 	})
 }
 
@@ -368,11 +368,11 @@ func TestAttachment_Delete(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := attachmentSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
 		require.Nil(t, err)
 
 		err = dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": "1234"}}, nil)
-		require.ErrorContains(t, err, "no such table: "+dao.table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table)
 	})
 }
 

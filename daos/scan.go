@@ -14,7 +14,7 @@ import (
 // ScanDao is the data access object for scans
 type ScanDao struct {
 	db    database.Database
-	table string
+	Table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -23,15 +23,8 @@ type ScanDao struct {
 func NewScanDao(db database.Database) *ScanDao {
 	return &ScanDao{
 		db:    db,
-		table: TableScans(),
+		Table: "scans",
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// TableScans returns the name of the scans table
-func TableScans() string {
-	return "scans"
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -54,7 +47,7 @@ func (dao *ScanDao) Create(s *models.Scan) error {
 
 	query, args, _ := squirrel.
 		StatementBuilder.
-		Insert(dao.table).
+		Insert(dao.Table).
 		SetMap(dao.data(s)).
 		ToSql()
 
@@ -67,11 +60,11 @@ func (dao *ScanDao) Create(s *models.Scan) error {
 
 // Get selects a scan with the given course ID
 func (dao *ScanDao) Get(courseId string) (*models.Scan, error) {
-	generic := NewGenericDao(dao.db, dao.table)
+	generic := NewGenericDao(dao.db, dao.Table)
 
 	dbParams := &database.DatabaseParams{
-		Columns: dao.selectColumns(),
-		Where:   squirrel.Eq{generic.table + ".course_id": courseId},
+		Columns: dao.columns(),
+		Where:   squirrel.Eq{dao.Table + ".course_id": courseId},
 	}
 
 	row, err := generic.Get(dao.baseSelect(), dbParams, nil)
@@ -101,7 +94,7 @@ func (dao *ScanDao) Update(scan *models.Scan) error {
 
 	query, args, _ := squirrel.
 		StatementBuilder.
-		Update(dao.table).
+		Update(dao.Table).
 		Set("status", NilStr(scan.Status.String())).
 		Set("updated_at", scan.UpdatedAt).
 		Where("id = ?", scan.ID).
@@ -113,7 +106,7 @@ func (dao *ScanDao) Update(scan *models.Scan) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Delete deletes a scan with the given ID
+// Delete deletes a scan based upon the where clause
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
@@ -121,7 +114,7 @@ func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error 
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.table)
+	generic := NewGenericDao(dao.db, dao.Table)
 	return generic.Delete(dbParams, tx)
 }
 
@@ -129,11 +122,11 @@ func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error 
 
 // Next returns the next scan whose status is `waiting“
 func (dao *ScanDao) Next() (*models.Scan, error) {
-	generic := NewGenericDao(dao.db, dao.table)
+	generic := NewGenericDao(dao.db, dao.Table)
 
 	dbParams := &database.DatabaseParams{
-		Columns: dao.selectColumns(),
-		Where:   squirrel.Eq{generic.table + ".status": types.ScanStatusWaiting},
+		Columns: dao.columns(),
+		Where:   squirrel.Eq{dao.Table + ".status": types.ScanStatusWaiting},
 		OrderBy: []string{"created_at ASC"},
 	}
 
@@ -167,21 +160,25 @@ func (dao *ScanDao) Next() (*models.Scan, error) {
 // Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
 // this select builder
 func (dao *ScanDao) baseSelect() squirrel.SelectBuilder {
+	courseDao := NewCourseDao(dao.db)
+
 	return squirrel.StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
 		Select("").
-		From(dao.table).
-		LeftJoin(TableCourses() + " ON " + dao.table + ".course_id = " + TableCourses() + ".id").
+		From(dao.Table).
+		LeftJoin(courseDao.Table + " ON " + dao.Table + ".course_id = " + courseDao.Table + ".id").
 		RemoveColumns()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// selectColumns returns the columns to select
-func (dao *ScanDao) selectColumns() []string {
+// columns returns the columns to select
+func (dao *ScanDao) columns() []string {
+	courseDao := NewCourseDao(dao.db)
+
 	return []string{
-		dao.table + ".*",
-		TableCourses() + ".path AS course_path",
+		dao.Table + ".*",
+		courseDao.Table + ".path AS course_path",
 	}
 }
 

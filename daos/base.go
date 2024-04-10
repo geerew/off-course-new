@@ -16,10 +16,11 @@ type Scannable interface {
 
 // Errors
 var (
-	ErrEmptyId        = errors.New("id cannot be empty")
-	ErrMissingWhere   = errors.New("where clause cannot be empty")
-	ErrInvalidPrefix  = errors.New("prefix must be greater than 0")
-	ErrNilTransaction = errors.New("transaction cannot be nil")
+	ErrEmptyId         = errors.New("id cannot be empty")
+	ErrMissingCourseId = errors.New("course id cannot be empty")
+	ErrMissingWhere    = errors.New("where clause cannot be empty")
+	ErrInvalidPrefix   = errors.New("prefix must be greater than 0")
+	ErrNilTransaction  = errors.New("transaction cannot be nil")
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

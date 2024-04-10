@@ -99,6 +99,7 @@ func initRouter(config *RouterConfig) *fiber.App {
 	bindAssetsApi(api, config.AppFs, config.Db)
 	bindAttachmentsApi(api, config.AppFs, config.Db)
 	bindScansApi(api, config.AppFs, config.Db, config.CourseScanner)
+	bindTagsApi(api, config.Db)
 
 	return router
 }

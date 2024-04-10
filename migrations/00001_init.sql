@@ -44,7 +44,7 @@ CREATE TABLE assets (
 CREATE TABLE assets_progress (
 	id           TEXT PRIMARY KEY NOT NULL,
 	asset_id     TEXT NOT NULL UNIQUE,
-	course_id     TEXT NOT NULL,
+	course_id    TEXT NOT NULL,
 	video_pos    INTEGER NOT NULL DEFAULT -1,
 	completed	 BOOLEAN NOT NULL DEFAULT FALSE,
 	completed_at TEXT,
@@ -79,4 +79,26 @@ CREATE TABLE scans (
 	updated_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
 	---
 	FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE
+);
+
+--- Tag information
+CREATE TABLE tags (
+	id          TEXT PRIMARY KEY NOT NULL,
+	tag         TEXT NOT NULL UNIQUE,
+	created_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
+	updated_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'))
+);
+
+--- Course tags information
+CREATE TABLE courses_tags (
+	id          TEXT PRIMARY KEY NOT NULL,
+	tag_id      TEXT NOT NULL,
+	course_id   TEXT NOT NULL,
+	created_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
+	updated_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
+	---
+	FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE,
+	FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
+	---
+	CONSTRAINT unique_course_tag UNIQUE (tag_id, course_id)
 );

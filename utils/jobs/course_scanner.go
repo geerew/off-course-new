@@ -460,7 +460,7 @@ func updateAssets(assetDao *daos.AssetDao, courseId string, assets []*models.Ass
 
 	// Get existing assets
 	dbParams := &database.DatabaseParams{
-		Where: sq.Eq{daos.TableAssets() + ".course_id": courseId},
+		Where: sq.Eq{assetDao.Table + ".course_id": courseId},
 	}
 
 	existingAssets, err := assetDao.List(dbParams, nil)
@@ -513,9 +513,10 @@ func updateAssets(assetDao *daos.AssetDao, courseId string, assets []*models.Ass
 // to the attachments found in the DB. It will insert new attachments and delete attachments which
 // no longer exist
 func updateAttachments(attachmentDao *daos.AttachmentDao, courseId string, attachments []*models.Attachment) error {
+
 	// Get existing attachments
 	dbParams := &database.DatabaseParams{
-		Where: sq.Eq{daos.TableAttachments() + ".course_id": courseId},
+		Where: sq.Eq{attachmentDao.Table + ".course_id": courseId},
 	}
 
 	existingAttachments, err := attachmentDao.List(dbParams, nil)
