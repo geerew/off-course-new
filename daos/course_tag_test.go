@@ -99,10 +99,11 @@ func TestCourseTag_Create(t *testing.T) {
 
 		ct := &models.CourseTag{
 			CourseId: testData[0].Course.ID,
+			Tag:      test_tags[0],
 		}
 
 		// Create the course-tag. This will also create the tag
-		err := dao.Create(ct, test_tags[0], nil)
+		err := dao.Create(ct, nil)
 		require.Nil(t, err)
 	})
 
@@ -122,9 +123,10 @@ func TestCourseTag_Create(t *testing.T) {
 		ct := &models.CourseTag{
 			TagId:    tag.ID,
 			CourseId: testData[0].Course.ID,
+			Tag:      tag.Tag,
 		}
 
-		err := dao.Create(ct, test_tags[0], nil)
+		err := dao.Create(ct, nil)
 		require.Nil(t, err)
 	})
 
@@ -135,30 +137,35 @@ func TestCourseTag_Create(t *testing.T) {
 
 		ct := &models.CourseTag{
 			CourseId: testData[0].Course.ID,
+			Tag:      test_tags[0],
 		}
 
 		// Create the course-tag. This will also create the tag
-		require.Nil(t, dao.Create(ct, test_tags[0], nil))
+		require.Nil(t, dao.Create(ct, nil))
 
 		// Create the course-tag (again)
-		require.ErrorContains(t, dao.Create(ct, test_tags[0], nil), fmt.Sprintf("UNIQUE constraint failed: %s.tag_id, %s.course_id", dao.Table, dao.Table))
+		require.ErrorContains(t, dao.Create(ct, nil), fmt.Sprintf("UNIQUE constraint failed: %s.tag_id, %s.course_id", dao.Table, dao.Table))
 	})
 
 	t.Run("constraints", func(t *testing.T) {
 		dao, db := courseTagSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
-		tag := "test"
+		// tag := "test"
+
+		// Tag
+		ct := &models.CourseTag{}
+		require.ErrorIs(t, dao.Create(ct, nil), ErrMissingTag)
+		ct.Tag = "test"
 
 		// Course ID
-		ct := &models.CourseTag{}
-		require.ErrorContains(t, dao.Create(ct, tag, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table))
+		require.ErrorIs(t, dao.Create(ct, nil), ErrMissingCourseId)
 		ct.CourseId = "1234"
-		require.ErrorContains(t, dao.Create(ct, tag, nil), "constraint failed: FOREIGN KEY constraint failed")
+		require.ErrorContains(t, dao.Create(ct, nil), "constraint failed: FOREIGN KEY constraint failed")
 		ct.CourseId = testData[0].Course.ID
 
 		// Success
-		assert.Nil(t, dao.Create(ct, tag, nil))
+		assert.Nil(t, dao.Create(ct, nil))
 	})
 }
 

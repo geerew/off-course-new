@@ -273,17 +273,15 @@ func (builder *TestBuilder) newTestTags(course *models.Course) []*models.CourseT
 	}
 
 	for i := 0; i < count; i++ {
-		tag := &models.Tag{}
+		var tag string
 
 		if len(builder.specifiedTagsPerCourse) > 0 {
-			tag.Tag = builder.specifiedTagsPerCourse[i]
+			tag = builder.specifiedTagsPerCourse[i]
 		} else {
 			for {
 				randomTag := test_tags[rand.Intn(len(test_tags))]
 				if !chosenTags[randomTag] {
-					tag = &models.Tag{
-						Tag: randomTag,
-					}
+					tag = randomTag
 					chosenTags[randomTag] = true
 					break
 				}
@@ -292,10 +290,11 @@ func (builder *TestBuilder) newTestTags(course *models.Course) []*models.CourseT
 
 		ct := &models.CourseTag{
 			CourseId: course.ID,
+			Tag:      tag,
 		}
 
 		dao := NewCourseTagDao(builder.db)
-		require.Nil(builder.t, dao.Create(ct, tag.Tag, nil))
+		require.Nil(builder.t, dao.Create(ct, nil))
 
 		tags = append(tags, ct)
 	}

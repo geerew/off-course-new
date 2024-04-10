@@ -21,6 +21,7 @@ var (
 	ErrMissingWhere    = errors.New("where clause cannot be empty")
 	ErrInvalidPrefix   = errors.New("prefix must be greater than 0")
 	ErrNilTransaction  = errors.New("transaction cannot be nil")
+	ErrMissingTag      = errors.New("tag cannot be empty")
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

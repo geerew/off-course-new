@@ -360,7 +360,7 @@ func TestCourses_GetCourse(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestCourses_Create(t *testing.T) {
+func TestCourses_CreateCourse(t *testing.T) {
 	t.Run("201 (created)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
@@ -560,7 +560,7 @@ func TestCourses_DeleteCourse(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestCourses_Card(t *testing.T) {
+func TestCourses_GetCard(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
@@ -870,7 +870,7 @@ func TestCourses_GetAsset(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestCourses_GetAttachments(t *testing.T) {
+func TestCourses_GetAssetAttachments(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
@@ -1193,6 +1193,233 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestCourses_GetTags(t *testing.T) {
+	t.Run("200 (empty)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Build()
+
+		status, body, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/tags", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var tags []courseTagResponse
+		err = json.Unmarshal(body, &tags)
+		require.Nil(t, err)
+
+		assert.Len(t, tags, 0)
+	})
+
+	t.Run("200 (found)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Tags([]string{"Go", "C", "JavaScript", "TypeScript", "Java", "Python"}).Build()
+
+		status, body, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/tags", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var tags []courseTagResponse
+		err = json.Unmarshal(body, &tags)
+		require.Nil(t, err)
+
+		assert.Len(t, tags, 6)
+		assert.Equal(t, "C", tags[0].Tag)
+		assert.Equal(t, "TypeScript", tags[5].Tag)
+	})
+
+	t.Run("404 (course not found)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		status, _, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test/tags", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
+	})
+
+	t.Run("500 (course internal error)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(db).Table)
+		require.Nil(t, err)
+
+		status, _, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test/tags", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
+	})
+
+	t.Run("500 (courses_tags internal error)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
+
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseTagDao(db).Table)
+		require.Nil(t, err)
+
+		status, _, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/tags/", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestCourses_CreateTag(t *testing.T) {
+	t.Run("201 (created)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
+
+		req := httptest.NewRequest(http.MethodPost, "/api/courses/"+testData[0].ID+"/tags", strings.NewReader(`{"tag": "Go" }`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := coursesRequestHelper(appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
+
+		var courseTagResp courseTagResponse
+		err = json.Unmarshal(body, &courseTagResp)
+		require.Nil(t, err)
+		assert.NotNil(t, courseTagResp.ID)
+		assert.Equal(t, "Go", courseTagResp.Tag)
+	})
+
+	t.Run("400 (bind error)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
+
+		req := httptest.NewRequest(http.MethodPost, "/api/courses/"+testData[0].ID+"/tags", strings.NewReader(`{`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := coursesRequestHelper(appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		assert.Contains(t, string(body), "error parsing data")
+	})
+
+	t.Run("400 (invalid data)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
+
+		req := httptest.NewRequest(http.MethodPost, "/api/courses/"+testData[0].ID+"/tags", strings.NewReader(`{"tag": ""}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := coursesRequestHelper(appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		assert.Contains(t, string(body), "a tag is required")
+	})
+
+	t.Run("400 (existing tag)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
+
+		req := httptest.NewRequest(http.MethodPost, "/api/courses/"+testData[0].ID+"/tags", strings.NewReader(`{"tag": "Go"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, _, err := coursesRequestHelper(appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
+
+		// Create the tag again
+		status, body, err := coursesRequestHelper(appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		assert.Contains(t, string(body), "a tag for this course already exists")
+	})
+
+	t.Run("500 (internal error)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
+
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseTagDao(db).Table)
+		require.Nil(t, err)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/courses/"+testData[0].ID+"/tags", strings.NewReader(`{"tag": "Go"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := coursesRequestHelper(appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
+		assert.Contains(t, string(body), "error creating course tag")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestCourses_DeleteTag(t *testing.T) {
+	t.Run("204 (deleted)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		testData := daos.NewTestBuilder(t).Db(db).Courses(3).Tags([]string{"Go", "C", "JavaScript", "TypeScript", "Java", "Python"}).Build()
+
+		courseTagDao := daos.NewCourseTagDao(db)
+
+		// Delete the third tag from the second course
+		status, _, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodDelete, "/api/courses/"+testData[1].ID+"/tags/"+testData[1].Tags[2].ID, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNoContent, status)
+
+		// Asset the tag has been deleted
+		tags, err := courseTagDao.List(&database.DatabaseParams{Where: squirrel.Eq{"course_id": testData[1].ID}}, nil)
+		require.Nil(t, err)
+		assert.Len(t, tags, 5)
+	})
+
+	t.Run("204 (not found)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		status, _, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodDelete, "/api/courses/test/tags/1234", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNoContent, status)
+	})
+
+	t.Run("204 (invalid tag for course)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		course1 := daos.NewTestBuilder(t).Db(db).Courses(1).Tags([]string{"Go"}).Build()
+		course2 := daos.NewTestBuilder(t).Db(db).Courses(1).Tags([]string{"C"}).Build()
+
+		courseTagDao := daos.NewCourseTagDao(db)
+
+		// Delete the course2 tag from course1
+		status, _, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodDelete, "/api/courses/"+course1[0].ID+"/tags/"+course2[0].Tags[0].ID, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNoContent, status)
+
+		// Asset the tag for course 1 has not been deleted
+		tags, err := courseTagDao.List(&database.DatabaseParams{Where: squirrel.Eq{"course_id": course1[0].ID}}, nil)
+		require.Nil(t, err)
+		assert.Len(t, tags, 1)
+		assert.Equal(t, "Go", tags[0].Tag)
+
+		// Asset the tag for course 2 has not been deleted
+		tags, err = courseTagDao.List(&database.DatabaseParams{Where: squirrel.Eq{"course_id": course2[0].ID}}, nil)
+		assert.Nil(t, err)
+		assert.Len(t, tags, 1)
+		assert.Equal(t, "C", tags[0].Tag)
+	})
+
+	t.Run("500 (internal error)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		// Drop the table
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseTagDao(db).Table)
+		require.Nil(t, err)
+		_, err = db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(db).Table)
+		require.Nil(t, err)
+
+		status, _, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodDelete, "/api/courses/test/tags/test", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // HELPERS
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1225,3 +1452,17 @@ func coursesUnmarshalHelper(t *testing.T, body []byte) (pagination.PaginationRes
 
 	return respData, coursesResponse
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// func courseTagsUnmarshalHelper(t *testing.T, body []byte) ([]courseTagResponse) {
+
+// 	var coursesResponse []courseResponse
+// 	for _, item := range respData.Items {
+// 		var course courseResponse
+// 		require.Nil(t, json.Unmarshal(item, &course))
+// 		coursesResponse = append(coursesResponse, course)
+// 	}
+
+// 	return respData, coursesResponse
+// }

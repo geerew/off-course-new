@@ -28,9 +28,12 @@ type courses struct {
 	courseProgressDao *daos.CourseProgressDao
 	assetDao          *daos.AssetDao
 	attachmentDao     *daos.AttachmentDao
+	tagDao            *daos.TagDao
+	courseTagDao      *daos.CourseTagDao
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 type courseResponse struct {
 	ID        string         `json:"id"`
 	Title     string         `json:"title"`
@@ -53,6 +56,13 @@ type courseResponse struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+type courseTagResponse struct {
+	ID  string `json:"id"`
+	Tag string `json:"tag"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func bindCoursesApi(router fiber.Router, appFs *appFs.AppFs, db database.Database, courseScanner *jobs.CourseScanner) {
 	api := courses{
 		appFs:             appFs,
@@ -61,6 +71,8 @@ func bindCoursesApi(router fiber.Router, appFs *appFs.AppFs, db database.Databas
 		courseProgressDao: daos.NewCourseProgressDao(db),
 		assetDao:          daos.NewAssetDao(db),
 		attachmentDao:     daos.NewAttachmentDao(db),
+		tagDao:            daos.NewTagDao(db),
+		courseTagDao:      daos.NewCourseTagDao(db),
 	}
 
 	subGroup := router.Group("/courses")
@@ -79,9 +91,14 @@ func bindCoursesApi(router fiber.Router, appFs *appFs.AppFs, db database.Databas
 	subGroup.Get("/:id/assets", api.getAssets)
 	subGroup.Get("/:id/assets/:asset", api.getAsset)
 
-	// // Attachments
+	// Attachments
 	subGroup.Get("/:id/assets/:asset/attachments", api.getAssetAttachments)
 	subGroup.Get("/:id/assets/:asset/attachments/:attachment", api.getAssetAttachment)
+
+	// Tags
+	subGroup.Get("/:id/tags", api.getTags)
+	subGroup.Post("/:id/tags", api.createTag)
+	subGroup.Delete("/:id/tags/:tagId", api.deleteTag)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -175,6 +192,9 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 			"message": "a title and path are required",
 		})
 	}
+
+	// Empty stuff that should not be set
+	course.ID = ""
 
 	// Validate the path
 	if exists, err := afero.DirExists(api.appFs.Fs, course.Path); err != nil || !exists {
@@ -462,6 +482,100 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (api *courses) getTags(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	// Get the course
+	_, err := api.courseDao.Get(id, nil)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).SendString("Not found")
+		}
+
+		log.Err(err).Msg("error looking up course")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error looking up course - " + err.Error(),
+		})
+	}
+
+	dbParams := &database.DatabaseParams{
+		OrderBy: []string{api.tagDao.Table + ".tag asc"},
+		Where:   squirrel.Eq{api.courseTagDao.Table + ".course_id": id},
+	}
+
+	tags, err := api.courseTagDao.List(dbParams, nil)
+	if err != nil {
+		log.Err(err).Msg("error looking up course tags")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error looking up course tags - " + err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(courseTagResponseHelper(tags))
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (api *courses) createTag(c *fiber.Ctx) error {
+	courseId := c.Params("id")
+	courseTag := new(models.CourseTag)
+
+	if err := c.BodyParser(courseTag); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "error parsing data - " + err.Error(),
+		})
+	}
+
+	// Empty stuff that should not be set
+	courseTag.ID = ""
+	courseTag.TagId = ""
+
+	// Ensure there is a tag
+	if courseTag.Tag == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "a tag is required",
+		})
+	}
+
+	// Set the course ID
+	courseTag.CourseId = courseId
+
+	if err := api.courseTagDao.Create(courseTag, nil); err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"message": "a tag for this course already exists - " + err.Error(),
+			})
+		}
+
+		log.Err(err).Msg("error creating course tag")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error creating course tag - " + err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(courseTagResponseHelper([]*models.CourseTag{courseTag})[0])
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (api *courses) deleteTag(c *fiber.Ctx) error {
+	courseId := c.Params("id")
+	tagId := c.Params("tagId")
+
+	err := api.courseTagDao.Delete(&database.DatabaseParams{Where: squirrel.And{squirrel.Eq{"course_id": courseId}, squirrel.Eq{"id": tagId}}}, nil)
+	if err != nil {
+		log.Err(err).Msg("error deleting course tag")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error deleting course tag - " + err.Error(),
+		})
+
+	}
+
+	return c.Status(fiber.StatusNoContent).Send(nil)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // HELPER
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -486,6 +600,20 @@ func courseResponseHelper(courses []*models.Course) []*courseResponse {
 			Percent:           course.Percent,
 			CompletedAt:       course.CompletedAt,
 			ProgressUpdatedAt: course.ProgressUpdatedAt,
+		})
+	}
+
+	return responses
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func courseTagResponseHelper(courseTags []*models.CourseTag) []*courseTagResponse {
+	responses := []*courseTagResponse{}
+	for _, tag := range courseTags {
+		responses = append(responses, &courseTagResponse{
+			ID:  tag.ID,
+			Tag: tag.Tag,
 		})
 	}
 

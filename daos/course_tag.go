@@ -40,13 +40,13 @@ func (dao *CourseTagDao) Count(dbParams *database.DatabaseParams) (int, error) {
 //
 // If `tx` is nil, the function will create a new transaction, else it will use the current
 // transaction
-func (dao *CourseTagDao) Create(ct *models.CourseTag, tagValue string, tx *sql.Tx) error {
+func (dao *CourseTagDao) Create(ct *models.CourseTag, tx *sql.Tx) error {
 	if tx == nil {
 		return dao.db.RunInTransaction(func(tx *sql.Tx) error {
-			return dao.create(ct, tagValue, tx)
+			return dao.create(ct, tx)
 		})
 	} else {
-		return dao.create(ct, tagValue, tx)
+		return dao.create(ct, tx)
 	}
 }
 
@@ -115,9 +115,17 @@ func (dao *CourseTagDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) e
 // create inserts a new course-tag and tag if it does not exist
 //
 // This function is used by Create() and always runs within a transaction
-func (dao *CourseTagDao) create(ct *models.CourseTag, tagValue string, tx *sql.Tx) error {
+func (dao *CourseTagDao) create(ct *models.CourseTag, tx *sql.Tx) error {
 	if tx == nil {
 		return ErrNilTransaction
+	}
+
+	if ct.Tag == "" {
+		return ErrMissingTag
+	}
+
+	if ct.CourseId == "" {
+		return ErrMissingCourseId
 	}
 
 	if ct.ID == "" {
@@ -130,7 +138,7 @@ func (dao *CourseTagDao) create(ct *models.CourseTag, tagValue string, tx *sql.T
 	// Check if the tag exists. This should return 0 or 1 tags as tags are unique
 	tagDao := NewTagDao(dao.db)
 
-	tags, err := tagDao.List(&database.DatabaseParams{Where: squirrel.Eq{"tag": tagValue}}, tx)
+	tags, err := tagDao.List(&database.DatabaseParams{Where: squirrel.Eq{"tag": ct.Tag}}, tx)
 	if err != nil {
 		return err
 	}
@@ -138,7 +146,7 @@ func (dao *CourseTagDao) create(ct *models.CourseTag, tagValue string, tx *sql.T
 	// Create the tag if it doesn't exist
 	if len(tags) == 0 {
 		tag := &models.Tag{
-			Tag: tagValue,
+			Tag: ct.Tag,
 		}
 
 		if err := tagDao.Create(tag, tx); err != nil {
