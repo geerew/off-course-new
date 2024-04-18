@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { Error, Loading } from '$components';
+	import { Err, Loading } from '$components';
 	import Badge from '$components/ui/badge/badge.svelte';
 	import { Button } from '$components/ui/button';
 	import { Separator } from '$components/ui/separator';
 	import * as Sheet from '$components/ui/sheet';
-	import { AddCourse, ErrorMessage, GetAllCourses, GetFileSystem } from '$lib/api';
-	import { addToast } from '$lib/stores/addToast';
+	import { AddCourse, GetAllCourses, GetFileSystem } from '$lib/api';
 	import type { FileInfo, FileSystem } from '$lib/types/fileSystem';
 	import { cn } from '$lib/utils';
 	import { BookPlus, CornerUpLeft, RefreshCw } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
 	// ----------------------
 	// Variables
@@ -122,96 +122,75 @@
 		// Pull the existing courses so we can identify already added courses. This is used to stop
 		// the user for selecting/unselecting existing courses
 		if (getExistingCourses) {
-			const success = await GetAllCourses({})
-				.then((courses) => {
-					existingCourses.push(...courses.map((c) => c.path));
-					getExistingCourses = false;
-					return true;
-				})
-				.catch((err) => {
-					const errMsg = ErrorMessage(err);
+			try {
+				const courses = await GetAllCourses({});
+				existingCourses.push(...courses.map((c) => c.path));
+				getExistingCourses = false;
+			} catch (error) {
+				toast.error(error instanceof Error ? error.message : (error as string));
+				gotError = true;
+				loadingDrives = false;
 
-					gotError = true;
-					loadingDrives = false;
-					console.error(errMsg);
-
-					$addToast({
-						data: {
-							message: errMsg,
-							status: 'error'
-						}
-					});
-
-					return false;
-				});
-
-			if (!success) return;
+				return;
+			}
 		}
 
 		// Pull the filesystem information for this path. When the path is empty it will load
 		// drive information
-		await GetFileSystem(path)
-			.then((resp) => {
-				if (body) body.scrollTop = 0;
+		try {
+			const response = await GetFileSystem(path);
+			if (body) body.scrollTop = 0;
 
-				if (resp) {
-					const selectedKeys = Object.keys(selectedCourses);
-					const allPaths = selectedKeys.concat(existingCourses);
+			if (!response) throw new Error('No filesystem found');
 
-					resp.directories?.forEach((d) => {
-						// Mark any existing courses
-						if (existingCourses.find((c) => c === d.path)) d.isExistingCourse = true;
+			const selectedKeys = Object.keys(selectedCourses);
+			const allPaths = selectedKeys.concat(existingCourses);
 
-						// Mark parents. These are courses that contain a selected course
-						if (isParent(d.path, allPaths)) d.isParent = true;
+			response.directories?.forEach((d) => {
+				// Mark any existing courses
+				if (existingCourses.find((c) => c === d.path)) d.isExistingCourse = true;
 
-						// Mark selected courses
-						if (selectedKeys.find((c) => c === d.path)) d.isSelected = true;
-					});
+				// Mark parents. These are courses that contain a selected course
+				if (isParent(d.path, allPaths)) d.isParent = true;
 
-					// Set the selectable courses. This will be a list of directories that are not
-					// existing courses, selected courses, or parents.
-					selectableCourses = resp?.directories.filter(
-						({ isSelected, isExistingCourse, isParent }) =>
-							!isExistingCourse && !isSelected && !isParent
-					);
-
-					pathInfo = resp;
-
-					// Set the loading state to false
-					path ? (loadingPath = false) : (loadingDrives = false);
-
-					// When not part of a refresh, manipulate the paths array
-					if (!refresh) {
-						if (movingBack) {
-							// Pop the last path as we are moving up a directory
-							paths.pop();
-							paths = [...paths];
-						} else if (path) {
-							// Add the path to the array as we are moving into a directory
-							paths = [...paths, path];
-						}
-					}
-				}
-			})
-			.catch((err) => {
-				const errMsg = ErrorMessage(err);
-				if (path) {
-					console.error(errMsg);
-					loadingPath = false;
-					// TODO: Go back to previous path
-				} else {
-					gotError = true;
-					loadingDrives = false;
-				}
-
-				$addToast({
-					data: {
-						message: errMsg,
-						status: 'error'
-					}
-				});
+				// Mark selected courses
+				if (selectedKeys.find((c) => c === d.path)) d.isSelected = true;
 			});
+
+			// Set the selectable courses. This will be a list of directories that are not
+			// existing courses, selected courses, or parents.
+			selectableCourses = response?.directories.filter(
+				({ isSelected, isExistingCourse, isParent }) =>
+					!isExistingCourse && !isSelected && !isParent
+			);
+
+			pathInfo = response;
+
+			// Set the loading state to false
+			path ? (loadingPath = false) : (loadingDrives = false);
+
+			// When not part of a refresh, manipulate the paths array
+			if (!refresh) {
+				if (movingBack) {
+					// Pop the last path as we are moving up a directory
+					paths.pop();
+					paths = [...paths];
+				} else if (path) {
+					// Add the path to the array as we are moving into a directory
+					paths = [...paths, path];
+				}
+			}
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : (error as string));
+
+			if (path) {
+				loadingPath = false;
+				// TODO: Go back to previous path
+			} else {
+				gotError = true;
+				loadingDrives = false;
+			}
+		}
 	};
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -320,23 +299,18 @@
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+	// Add selected courses
 	async function add() {
-		let sawError = false;
 		const keys = Object.keys(selectedCourses);
-		for (let i = 0; i < keys.length; i++) {
-			await AddCourse(selectedCourses[keys[i]], keys[i]).catch((err) => {
-				console.error(err);
-				sawError = true;
-			});
-		}
 
-		!sawError &&
-			$addToast({
-				data: {
-					message: `Course${keys.length > 1 ? 's' : ''} added`,
-					status: 'success'
-				}
-			});
+		for (let i = 0; i < keys.length; i++) {
+			try {
+				await AddCourse(selectedCourses[keys[i]], keys[i]);
+				toast.success(`Course added: ${selectedCourses[keys[i]]}`);
+			} catch (error) {
+				toast.error(`Error adding course: ${selectedCourses[keys[i]]}`);
+			}
+		}
 
 		dispatch('added');
 	}
@@ -386,7 +360,7 @@
 					<Loading />
 				</div>
 			{:else if gotError}
-				<Error class="min-h-max" />
+				<Err class="min-h-max" />
 			{:else}
 				<div class="flex flex-col">
 					<!-- Back button -->

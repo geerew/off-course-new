@@ -2,9 +2,9 @@
 	import { Button } from '$components/ui/button';
 	import * as Dialog from '$components/ui/dialog';
 	import { DeleteCourse } from '$lib/api';
-	import { addToast } from '$lib/stores/addToast';
 	import { AlertOctagon } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
 	// ----------------------
 	// Exports
@@ -16,6 +16,21 @@
 	// Variables
 	// ----------------------
 	const dispatch = createEventDispatcher();
+
+	// ----------------------
+	// Functions
+	// ----------------------
+
+	async function deleteCourse() {
+		try {
+			await DeleteCourse(courseId);
+			toast.success('Deleted course');
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : (error as string));
+		} finally {
+			open = false;
+		}
+	}
 </script>
 
 <Dialog.Root bind:open>
@@ -27,31 +42,7 @@
 
 		<Dialog.Footer>
 			<Button variant="outline" class="px-6" on:click={() => (open = false)}>No</Button>
-			<Button
-				variant="destructive"
-				class="px-6"
-				on:click={async () => {
-					await DeleteCourse(courseId)
-						.then(() => {
-							$addToast({
-								data: {
-									message: `Deleted course`,
-									status: 'success'
-								}
-							});
-
-							dispatch('courseDeleted');
-						})
-						.catch((err) => {
-							console.error(err);
-						})
-						.finally(() => {
-							open = false;
-						});
-				}}
-			>
-				Yes
-			</Button>
+			<Button variant="destructive" class="px-6" on:click={deleteCourse}>Yes</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

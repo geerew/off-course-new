@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { Error, Loading } from '$components';
+	import { Err, Loading } from '$components';
 	import { CourseContent, CourseMenu } from '$components/course';
-	import { ErrorMessage, GetAllCourseAssets, UpdateAsset } from '$lib/api';
-	import { addToast } from '$lib/stores/addToast';
+	import { GetAllCourseAssets, GetCourseFromParams, UpdateAsset } from '$lib/api';
 	import type { Asset, Course, CourseChapters } from '$lib/types/models';
-	import { GetCourseFromParams, NO_CHAPTER, buildChapterStructure, isBrowser } from '$lib/utils';
+	import { NO_CHAPTER, buildChapterStructure, isBrowser } from '$lib/utils';
 	import { onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
 	// ----------------------
 	// Variables
@@ -46,22 +46,13 @@
 	const getCourse = async () => {
 		if (!isBrowser) return false;
 
-		return await GetCourseFromParams($page.url.searchParams)
-			.then((resp) => {
-				course = resp;
-				return true;
-			})
-			.catch((err) => {
-				const errMsg = ErrorMessage(err);
-				console.error(errMsg);
-				$addToast({
-					data: {
-						message: errMsg,
-						status: 'error'
-					}
-				});
-				return false;
-			});
+		try {
+			course = await GetCourseFromParams($page.url.searchParams);
+			return true;
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : (error as string));
+			return false;
+		}
 	};
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,34 +65,25 @@
 
 		const params = $page.url.searchParams;
 
-		return await GetAllCourseAssets(courseId, { orderBy: 'chapter asc, prefix asc' })
-			.then(async (resp) => {
-				if (!resp) return false;
+		try {
+			const response = await GetAllCourseAssets(courseId, { orderBy: 'chapter asc, prefix asc' });
+			if (!response) return false;
 
-				chapters = buildChapterStructure(resp);
+			chapters = buildChapterStructure(response);
 
-				// Set ?a=xxx as the selected asset
-				const assetId = params && params.get('a');
-				if (assetId) selectedAsset = findAsset(assetId, chapters);
+			// Set ?a=xxx as the selected asset
+			const assetId = params && params.get('a');
+			if (assetId) selectedAsset = findAsset(assetId, chapters);
 
-				// If there is no selected asset, set it as the first unfinished asset
-				if (!selectedAsset) selectedAsset = findFirstUnfinishedAsset(course, chapters);
+			// If there is no selected asset, set it as the first unfinished asset
+			if (!selectedAsset) selectedAsset = findFirstUnfinishedAsset(course, chapters);
 
-				assets = resp;
-				return true;
-			})
-			.catch((err) => {
-				const errMsg = ErrorMessage(err);
-				console.error(errMsg);
-				$addToast({
-					data: {
-						message: errMsg,
-						status: 'error'
-					}
-				});
-
-				return false;
-			});
+			assets = response;
+			return true;
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : (error as string));
+			return false;
+		}
 	};
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -134,19 +116,11 @@
 	async function updateAsset(asset: Asset) {
 		if (!assets) return;
 
-		// Update the asset
-		await UpdateAsset(asset).catch((err) => {
-			const errMsg = ErrorMessage(err);
-			console.error(errMsg);
-			$addToast({
-				data: {
-					message: errMsg,
-					status: 'error'
-				}
-			});
-
-			return;
-		});
+		try {
+			await UpdateAsset(asset);
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : (error as string));
+		}
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -247,7 +221,7 @@
 			<Loading />
 		</div>
 	{:else if invalidCourseId || assets.length === 0}
-		<Error />
+		<Err />
 	{:else}
 		<div class="flex h-full flex-row">
 			<CourseMenu title={course.title} id={course.id} {chapters} bind:selectedAsset />

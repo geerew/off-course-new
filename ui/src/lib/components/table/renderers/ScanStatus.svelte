@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { ErrorMessage, GetCourse } from '$lib/api';
-	import { addToast } from '$lib/stores/addToast';
+	import { GetCourse } from '$lib/api';
 	import type { ClassName } from '$lib/types/general';
 	import type { Course } from '$lib/types/models';
 	import { cn } from '$lib/utils';
-	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
 	let className: ClassName = undefined;
 
@@ -37,58 +37,53 @@
 	// When the scan finishes, we clear the interval and set the status to an empty string.
 	const startPolling = () => {
 		scanPoll = setInterval(async () => {
-			await GetCourse(courseId)
-				.then((resp) => {
-					if (resp) {
-						if (resp.scanStatus !== scanStatus) {
-							// Scan status changed
-							scanStatus = resp.scanStatus;
-							dispatch('change', resp);
+			try {
+				const response = await GetCourse(courseId);
 
-							if (scanStatus === '') {
-								// Scan finished
-								clearInterval(scanPoll);
-								scanPoll = -1;
-							}
-						}
+				if (!response) throw new Error('Course not found');
+
+				if (response.scanStatus !== scanStatus) {
+					// Scan status changed
+					scanStatus = response.scanStatus;
+					dispatch('change', response);
+
+					if (scanStatus === '') {
+						// Scan finished
+						clearInterval(scanPoll);
+						scanPoll = -1;
 					}
-				})
-				.catch((err) => {
-					const errMsg = ErrorMessage(err);
-					console.error(errMsg);
-					$addToast({
-						data: {
-							message: errMsg,
-							status: 'error'
-						}
-					});
+				}
+			} catch (error) {
+				toast.error(error instanceof Error ? error.message : (error as string));
 
-					scanStatus = '';
-					clearInterval(scanPoll);
-					scanPoll = -1;
-				});
+				scanStatus = '';
+				clearInterval(scanPoll);
+				scanPoll = -1;
+			}
 		}, 1500);
 	};
 
 	// ----------------------
 	// Reactive
 	// ----------------------
+
 	$: scanStatus && scanPoll === -1 && startPolling();
 
 	// ----------------------
 	// Lifecycle
 	// ----------------------
+
 	onMount(() => {
 		if (scanStatus && scanPoll === -1) {
 			startPolling();
 		}
-	});
 
-	onDestroy(() => {
-		if (scanPoll !== -1) {
-			clearInterval(scanPoll);
-			scanPoll = -1;
-		}
+		return () => {
+			if (scanPoll !== -1) {
+				clearInterval(scanPoll);
+				scanPoll = -1;
+			}
+		};
 	});
 </script>
 

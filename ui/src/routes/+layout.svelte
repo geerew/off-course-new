@@ -12,12 +12,12 @@
 
 	import { TailwindIndicator } from '$components';
 	import { Header } from '$components/header';
-	import { Toaster } from '$components/toaster';
+	import { Toaster } from '$lib/components/ui/sonner';
 </script>
 
 <ModeWatcher />
 
-<Toaster />
+<Toaster richColors />
 
 <div class="flex min-h-screen flex-col">
 	<Header />

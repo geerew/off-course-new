@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Error, Loading } from '$components';
+	import { Err, Loading } from '$components';
 	import { DeleteCourse } from '$components/dialogs';
 	import { AddCourses } from '$components/sheets';
 	import { Columns, Sort } from '$components/table/controllers';
@@ -11,8 +11,7 @@
 		NiceDate,
 		ScanStatus
 	} from '$components/table/renderers';
-	import { AddScan, ErrorMessage, GetCourses } from '$lib/api';
-	import { addToast } from '$lib/stores/addToast';
+	import { AddScan, GetCourses } from '$lib/api';
 	import type { Course } from '$lib/types/models';
 	import type { PaginationParams } from '$lib/types/pagination';
 	import { cn, flattenOrderBy } from '$lib/utils';
@@ -20,6 +19,7 @@
 	import { onMount } from 'svelte';
 	import { Render, Subscribe, createRender, createTable } from 'svelte-headless-table';
 	import { addHiddenColumns, addSortBy } from 'svelte-headless-table/plugins';
+	import { toast } from 'svelte-sonner';
 	import { writable } from 'svelte/store';
 
 	// ----------------------
@@ -162,43 +162,37 @@
 
 		const orderBy = flattenOrderBy($sortKeys);
 
-		return await GetCourses({
-			orderBy: orderBy,
-			page: pagination.page,
-			perPage: pagination.perPage
-		})
-			.then((resp) => {
-				if (!resp) {
-					courses.set([]);
-					pagination = { ...pagination, totalItems: 0, totalPages: 0 };
-				} else {
-					courses.set(resp.items as Course[]);
-
-					pagination = {
-						...pagination,
-						totalItems: resp.totalItems,
-						totalPages: resp.totalPages
-					};
-				}
-
-				loadingCourses = false;
-				return true;
-			})
-			.catch((err) => {
-				const errMsg = ErrorMessage(err);
-				console.error(errMsg);
-				$addToast({
-					data: {
-						message: errMsg,
-						status: 'error'
-					}
-				});
-
-				loadingCourses = false;
-				gotError = true;
-
-				return false;
+		try {
+			const response = await GetCourses({
+				orderBy: orderBy,
+				page: pagination.page,
+				perPage: pagination.perPage
 			});
+
+			if (!response) {
+				courses.set([]);
+				pagination = { ...pagination, totalItems: 0, totalPages: 0 };
+				return;
+			}
+
+			courses.set(response.items as Course[]);
+
+			pagination = {
+				...pagination,
+				totalItems: response.totalItems,
+				totalPages: response.totalPages
+			};
+
+			loadingCourses = false;
+			return true;
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : (error as string));
+
+			loadingCourses = false;
+			gotError = true;
+
+			return false;
+		}
 	};
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -218,16 +212,15 @@
 
 	// Start a scan for a course
 	const startScan = async (course: Course) => {
-		await AddScan(course.id)
-			.then(() => {
-				// Manually update the course scan status to 'waiting' and then update the courses
-				// array
-				course.scanStatus = 'waiting';
-				updateCourseInCourses(course);
-			})
-			.catch((err) => {
-				console.error(err);
-			});
+		try {
+			const response = await AddScan(course.id);
+			if (!response) throw new Error('Failed to start scan');
+
+			course.scanStatus = 'waiting';
+			updateCourseInCourses(course);
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : (error as string));
+		}
 	};
 
 	// ----------------------
@@ -276,7 +269,7 @@
 				<Loading />
 			</div>
 		{:else if gotError}
-			<Error />
+			<Err />
 		{:else}
 			<div class="flex w-full overflow-x-auto">
 				<table {...$tableAttrs}>

@@ -14,7 +14,7 @@ import {
 	type Tag
 } from '$lib/types/models';
 import { PaginationSchema, type Pagination } from '$lib/types/pagination';
-import axios, { AxiosError, type AxiosResponse } from 'axios';
+import axios from 'axios';
 import { safeParse } from 'valibot';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -47,26 +47,19 @@ export const ErrorMessage = (error: Error) => {
 //
 // When the path is empty, the available drives are returned. When the path is populated, the
 // directories and files for this path are returned
-export const GetFileSystem = async (path?: string): Promise<FileSystem | undefined> => {
-	let fsInfo: FileSystem | undefined = undefined;
-	let query = FS_API;
+export const GetFileSystem = async (path?: string): Promise<FileSystem> => {
+	try {
+		let query = FS_API;
+		if (path) query += `/${window.btoa(encodeURIComponent(path))}`;
 
-	if (path) {
-		query += `/${window.btoa(encodeURIComponent(path))}`;
+		const response = await axios.get<FileSystem>(query);
+		const result = safeParse(FileSystemSchema, response.data);
+
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		throw new Error(`Failed to retrieve file system: ${error}`);
 	}
-
-	await axios
-		.get(query)
-		.then((response: AxiosResponse) => {
-			const result = safeParse(FileSystemSchema, response.data);
-			if (!result.success) throw new Error('Invalid response from server');
-			fsInfo = result.output;
-		})
-		.catch((error: Error) => {
-			throw error;
-		});
-
-	return fsInfo;
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -76,22 +69,15 @@ export const GetFileSystem = async (path?: string): Promise<FileSystem | undefin
 // GET - Get a paginated list of courses. Use `GetAllCourses()` to get an unpaginated list of
 // courses
 export const GetCourses = async (params?: CoursesGetParams): Promise<Pagination> => {
-	let resp: Pagination | undefined = undefined;
+	try {
+		const response = await axios.get<Pagination>(COURSE_API, { params });
+		const result = safeParse(PaginationSchema, response.data);
 
-	await axios
-		.get(COURSE_API, { params })
-		.then((response: AxiosResponse) => {
-			const result = safeParse(PaginationSchema, response.data);
-			if (!result.success) throw new Error('Invalid response from server');
-			resp = result.output;
-		})
-		.catch((error: Error) => {
-			throw error;
-		});
-
-	if (!resp) throw new Error('Courses were not found');
-
-	return resp;
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		throw new Error(`Failed to retrieve courses: ${error}`);
+	}
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -99,67 +85,60 @@ export const GetCourses = async (params?: CoursesGetParams): Promise<Pagination>
 // GET - Get all courses (not paginated). This calls GetCourses(...) until all courses are
 // are returned
 export const GetAllCourses = async (params?: CoursesGetParams): Promise<Course[]> => {
-	let resp: Course[] = [];
-
+	let allCourses: Course[] = [];
 	let page = 1;
-	let getMore = true;
+	let totalPages = 1;
 
-	while (getMore) {
-		await GetCourses({ ...params, page: page, perPage: 100 })
-			.then((data) => {
-				if (data && data.totalItems > 0) {
-					const result = safeParse(PaginationSchema, data);
-					if (!result.success) throw new Error('Invalid response');
+	do {
+		try {
+			const data = await GetCourses({ ...params, page, perPage: 100 });
 
-					resp = resp.concat(result.output.items as Course[]);
+			if (data.totalItems > 0) {
+				allCourses = [...allCourses, ...(data.items as Course[])];
+				totalPages = data.totalPages;
+				page++;
+			} else {
+				break;
+			}
+		} catch (error) {
+			throw new Error(`Failed to fetch all courses: ${error}`);
+		}
+	} while (page <= totalPages);
 
-					if (data.page !== data.totalPages) {
-						page++;
-					} else {
-						getMore = false;
-					}
-				} else {
-					getMore = false;
-				}
-			})
-			.catch((error) => {
-				throw error;
-			});
-	}
-
-	return resp;
+	return allCourses;
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GET - Get a course by ID
 export const GetCourse = async (id: string): Promise<Course> => {
-	let course: Course | undefined = undefined;
+	try {
+		const response = await axios.get<Course>(`${COURSE_API}/${id}`);
+		const result = safeParse(CourseSchema, response.data);
 
-	await axios
-		.get(`${COURSE_API}/${id}`)
-		.then((response: AxiosResponse) => {
-			const result = safeParse(CourseSchema, response.data);
-			if (!result.success) throw new Error('Invalid response from server');
-			course = result.output;
-		})
-		.catch((error: Error) => {
-			throw error;
-		});
-
-	if (!course) throw new Error('Course was not found');
-
-	return course;
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		throw new Error(`Failed to retrieve course: ${error}`);
+	}
 };
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Gets the course id from the search params and queries the api for the course
+export async function GetCourseFromParams(params: URLSearchParams): Promise<Course> {
+	const id = params && params.get('id');
+	if (!id) throw new Error('Missing course ID');
+
+	return GetCourse(id);
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // POST - Create a course
 export const AddCourse = async (title: string, path: string): Promise<Course> => {
-	let course: Course | undefined = undefined;
-
-	await axios
-		.post(
+	try {
+		const response = await axios.post<Course>(
 			COURSE_API,
 			{ title, path },
 			{
@@ -167,52 +146,45 @@ export const AddCourse = async (title: string, path: string): Promise<Course> =>
 					'content-type': 'application/json'
 				}
 			}
-		)
-		.then((response: AxiosResponse) => {
-			const result = safeParse(CourseSchema, response.data);
-			if (!result.success) throw new Error('Invalid response from server');
-			course = result.output;
-		})
-		.catch((error: Error) => {
-			throw error;
-		});
+		);
+		const result = safeParse(CourseSchema, response.data);
 
-	if (!course) throw new Error('Course was not created');
-
-	return course;
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		throw new Error(`Failed to create course: ${error}`);
+	}
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // PUT - Update a course
-export const UpdateCourse = async (course: Course): Promise<boolean> => {
-	const res = await axios
-		.put(`${COURSE_API}/${course.id}`, course, {
+export const UpdateCourse = async (course: Course): Promise<Course> => {
+	try {
+		const response = await axios.put<Course>(`${COURSE_API}/${course.id}`, course, {
 			headers: {
 				'content-type': 'application/json'
 			}
-		})
-		.then((response: AxiosResponse) => {
-			if (!safeParse(CourseSchema, response.data).success)
-				throw new Error('Invalid response from server');
-			return true;
-		})
-		.catch((error: Error) => {
-			throw error;
 		});
+		const result = safeParse(CourseSchema, response.data);
 
-	return res;
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		throw new Error(`Failed to update course: ${error}`);
+	}
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // DELETE - Delete a course
 export const DeleteCourse = async (id: string): Promise<boolean> => {
-	await axios.delete(`${COURSE_API}/${id}`).catch((error: Error) => {
-		throw error;
-	});
-
-	return true;
+	try {
+		await axios.delete(`${COURSE_API}/${id}`);
+		return true;
+	} catch (error) {
+		throw new Error(`Failed to delete course: ${error}`);
+	}
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -220,37 +192,24 @@ export const DeleteCourse = async (id: string): Promise<boolean> => {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GET - Get a list of tags for a course
-//
-// Requires a course ID
 export const GetCourseTags = async (courseId: string): Promise<Tag[]> => {
-	let resp: Tag[] | undefined = undefined;
+	try {
+		const response = await axios.get<Tag[]>(`${COURSE_API}/${courseId}/tags`);
+		const result = safeParse(TagArraySchema, response.data);
 
-	await axios
-		.get(`${COURSE_API}/${courseId}/tags`)
-		.then((response: AxiosResponse) => {
-			const result = safeParse(TagArraySchema, response.data);
-			if (!result.success) throw new Error('Invalid response from server');
-			resp = result.output;
-		})
-		.catch((error: Error) => {
-			throw error;
-		});
-
-	if (!resp) throw new Error('Course tags were not found');
-
-	return resp;
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		throw new Error(`Failed to retrieve course tags: ${error}`);
+	}
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // POST - Create a tag for a course
-//
-// Requires a course ID
 export const AddCourseTag = async (courseId: string, tag: string): Promise<Tag> => {
-	let resp: Tag | undefined = undefined;
-
-	await axios
-		.post(
+	try {
+		const response = await axios.post<Tag>(
 			`${COURSE_API}/${courseId}/tags/`,
 			{ tag },
 			{
@@ -258,30 +217,26 @@ export const AddCourseTag = async (courseId: string, tag: string): Promise<Tag> 
 					'content-type': 'application/json'
 				}
 			}
-		)
-		.then((response: AxiosResponse) => {
-			const result = safeParse(TagSchema, response.data);
-			if (!result.success) throw new Error('Invalid response from server');
-			resp = result.output;
-		})
-		.catch((error: Error) => {
-			throw error;
-		});
+		);
+		const result = safeParse(TagSchema, response.data);
 
-	if (!resp) throw new Error('Course tag was not added');
-
-	return resp;
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		throw new Error(`Failed to add course tag: ${error}`);
+	}
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // DELETE - Delete a course tag
 export const DeleteCourseTag = async (courseId: string, tagId: string): Promise<boolean> => {
-	await axios.delete(`${COURSE_API}/${courseId}/tags/${tagId}`).catch((error: Error) => {
-		throw error;
-	});
-
-	return true;
+	try {
+		await axios.delete(`${COURSE_API}/${courseId}/tags/${tagId}`);
+		return true;
+	} catch (error) {
+		throw new Error(`Failed to delete course tag: ${error}`);
+	}
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -296,85 +251,69 @@ export const GetCourseAssets = async (
 	courseId: string,
 	params?: AssetsGetParams
 ): Promise<Pagination> => {
-	let resp: Pagination | undefined = undefined;
+	try {
+		const response = await axios.get<Pagination>(`${COURSE_API}/${courseId}/assets`, { params });
+		const result = safeParse(PaginationSchema, response.data);
 
-	await axios
-		.get(`${COURSE_API}/${courseId}/assets`, { params })
-		.then((response: AxiosResponse) => {
-			const result = safeParse(PaginationSchema, response.data);
-			if (!result.success) throw new Error('Invalid response from server');
-			resp = result.output;
-		})
-		.catch((error: Error) => {
-			throw error;
-		});
-
-	if (!resp) throw new Error('Assets were not found');
-
-	return resp;
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		throw new Error(`Failed to get course assets: ${error}`);
+	}
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GET - Get all assets (not paginated) for a course. This calls GetAssets(...) until all assets
 // are returned
-//
-// Requires a course ID
 export const GetAllCourseAssets = async (
 	courseId: string,
 	params?: AssetsGetParams
 ): Promise<Asset[]> => {
-	let resp: Asset[] = [];
-
+	let allAssets: Asset[] = [];
 	let page = 1;
-	let getMore = true;
+	let totalPages = 1;
 
-	while (getMore) {
-		await GetCourseAssets(courseId, { ...params, page: page, perPage: 100 })
-			.then((data) => {
-				if (data && data.totalItems > 0) {
-					const result = safeParse(PaginationSchema, data);
-					if (!result.success) throw new Error('Invalid response');
+	do {
+		try {
+			const response = await GetCourseAssets(courseId, { ...params, page, perPage: 100 });
 
-					resp = resp.concat(result.output.items as Asset[]);
+			if (response.totalItems > 0) {
+				const result = safeParse(PaginationSchema, response);
+				if (!result.success) throw new Error('Invalid response');
 
-					if (data.page !== data.totalPages) {
-						page++;
-					} else {
-						getMore = false;
-					}
-				} else {
-					getMore = false;
-				}
-			})
-			.catch((error) => {
-				throw error;
-			});
-	}
+				allAssets = [...allAssets, ...(response.items as Asset[])];
+				totalPages = response.totalPages;
+				page++;
+			} else {
+				break;
+			}
+		} catch (error) {
+			throw new Error(`Failed to get all course assets: ${error}`);
+		}
+	} while (page <= totalPages);
 
-	return resp;
+	return allAssets;
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // PUT - Update an asset
-export const UpdateAsset = async (asset: Asset): Promise<boolean> => {
-	const res = await axios
-		.put(`${ASSET_API}/${asset.id}`, asset, {
+export const UpdateAsset = async (asset: Asset): Promise<Asset> => {
+	try {
+		const response = await axios.put<Asset>(`${ASSET_API}/${asset.id}`, asset, {
 			headers: {
 				'content-type': 'application/json'
 			}
-		})
-		.then((response: AxiosResponse) => {
-			if (!safeParse(AssetSchema, response.data).success)
-				throw new Error('Invalid response from server');
-			return true;
-		})
-		.catch((error: Error) => {
-			throw error;
 		});
 
-	return res;
+		const parseResult = safeParse(AssetSchema, response.data);
+
+		if (!parseResult.success) throw new Error('Invalid response from server');
+		return parseResult.output;
+	} catch (error) {
+		throw new Error(`Failed to update asset: ${error}`);
+	}
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -382,37 +321,24 @@ export const UpdateAsset = async (asset: Asset): Promise<boolean> => {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GET - Get a scan by course ID
-//
-// Requires a course ID
 export const GetScan = async (courseId: string): Promise<Scan> => {
-	let scan: Scan | undefined = undefined;
+	try {
+		const response = await axios.get<Scan>(`${SCAN_API}/${courseId}`);
+		const result = safeParse(ScanSchema, response.data);
 
-	await axios
-		.get(`${SCAN_API}/${courseId}`)
-		.then((response: AxiosResponse) => {
-			const result = safeParse(ScanSchema, response.data);
-			if (!result.success) throw new Error('Invalid response from server');
-			scan = result.output;
-		})
-		.catch((error: AxiosError) => {
-			throw error;
-		});
-
-	if (!scan) throw new Error('Scan was not found');
-
-	return scan;
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		throw new Error(`Failed to get scan: ${error}`);
+	}
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // POST - Create a scan for a course
-//
-// Requires a course ID
 export const AddScan = async (courseId: string): Promise<Scan> => {
-	let scan: Scan | undefined = undefined;
-
-	await axios
-		.post(
+	try {
+		const response = await axios.post<Scan>(
 			SCAN_API,
 			{ courseId },
 			{
@@ -420,17 +346,13 @@ export const AddScan = async (courseId: string): Promise<Scan> => {
 					'content-type': 'application/json'
 				}
 			}
-		)
-		.then((response: AxiosResponse) => {
-			const result = safeParse(ScanSchema, response.data);
-			if (!result.success) throw Error('Invalid response from server');
-			scan = result.output;
-		})
-		.catch((error: Error) => {
-			throw error;
-		});
+		);
 
-	if (!scan) throw new Error('Scan was not started');
+		const result = safeParse(ScanSchema, response.data);
 
-	return scan;
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		throw new Error(`Failed to add scan job: ${error}`);
+	}
 };

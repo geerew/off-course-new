@@ -1,14 +1,12 @@
 <script lang="ts">
-	import { CourseCard, Error, Loading } from '$components';
+	import { CourseCard, Err, Loading } from '$components';
 	import { Button } from '$components/ui/button';
-	import { ErrorMessage, GetCourses } from '$lib/api';
+	import { GetCourses } from '$lib/api';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Carousel from '$lib/components/ui/carousel';
-	import { addToast } from '$lib/stores/addToast';
 	import type { Course, CoursesGetParams } from '$lib/types/models';
-	import { isBrowser } from '$lib/utils';
 	import { ArrowLeft, ArrowRight } from 'lucide-svelte';
-	import { onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
 	import { writable } from 'svelte/store';
 	import theme from 'tailwindcss/defaultTheme';
 	import { NiceDate } from './table/renderers';
@@ -21,53 +19,14 @@
 	export let variant: 'ongoing' | 'latest';
 
 	// ----------------------
-	// Variables
-	// ----------------------
-
-	// True while the page is loading
-	let loadingCourses = true;
-
-	// True when an error occurred
-	let loadingCoursesError = false;
-
-	// Holds the courses
-	let courses: Course[] = [];
-
-	// The current page
-	let currentPage = 1;
-
-	// True when there are more courses to get
-	let moreToGet = false;
-
-	// Carousel API
-	let api: CarouselAPI;
-
-	// True when the user can scroll to the previous/next
-	let canScrollPrev = writable(false);
-	let canScrollNext = writable(false);
-
-	// How many slides to scroll by
-	let scrollBy: number;
-
-	// The currently selected slide
-	let currentSlide = 0;
-
-	// Screen sizes
-	const mdPx = +theme.screens.md.replace('px', '');
-	const lgPx = +theme.screens.lg.replace('px', '');
-	const xlPx = +theme.screens.xl.replace('px', '');
-
-	// ----------------------
 	// Functions
 	// ----------------------
 
 	// Get courses (paginated)
-	async function getCourses(page: number) {
-		if (!isBrowser) return false;
-
+	async function getCourses(page: number, numCoursesToFetch: number): Promise<Course[]> {
 		const params: CoursesGetParams = {
 			page,
-			perPage: 8
+			perPage: numCoursesToFetch
 		};
 
 		if (variant === 'ongoing') {
@@ -75,33 +34,24 @@
 			params.orderBy = 'progress_updated_at desc';
 		}
 
-		return await GetCourses(params)
-			.then((resp) => {
-				if (!resp) return false;
+		try {
+			const response = await GetCourses(params);
+			if (!response) throw new Error('Failed to get courses');
 
-				// If the current page is 1, then we can just set the courses to the response, or
-				// else append the response to the current courses
-				courses.length === 0
-					? (courses = resp.items as Course[])
-					: (courses = [...courses, ...(resp.items as Course[])]);
+			// If the current page is 1, then we can just set the courses to the response, or
+			// else append the response to the current courses
+			fetchedCourses.length === 0
+				? (fetchedCourses = response.items as Course[])
+				: (fetchedCourses = [...fetchedCourses, ...(response.items as Course[])]);
 
-				// Are there more courses to get?
-				moreToGet = courses.length < resp.totalItems;
+			// Are there more courses to get?
+			moreToGet = fetchedCourses.length < response.totalItems;
 
-				return true;
-			})
-			.catch((err) => {
-				const errMsg = ErrorMessage(err);
-				console.error(errMsg);
-				$addToast({
-					data: {
-						message: errMsg,
-						status: 'error'
-					}
-				});
-
-				return false;
-			});
+			return fetchedCourses;
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : (error as string));
+			throw error;
+		}
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -109,13 +59,8 @@
 	// Load more courses
 	async function loadMoreCourses() {
 		if (!moreToGet) return;
-
 		currentPage++;
-
-		if (!(await getCourses(currentPage))) {
-			loadingCoursesError = true;
-			return;
-		}
+		await getCourses(currentPage, numCoursesToFetch);
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -199,24 +144,48 @@
 	}
 
 	// ----------------------
-	// Lifecycle
+	// Variables
 	// ----------------------
-	onMount(async () => {
-		if (!(await getCourses(currentPage))) {
-			loadingCourses = false;
-			loadingCoursesError = true;
-		}
 
-		loadingCourses = false;
-		return;
-	});
+	// The current page
+	let currentPage = 1;
+
+	// The current fetched courses
+	let fetchedCourses: Course[] = [];
+
+	// The number of courses to fetch
+	let numCoursesToFetch = 8;
+
+	// Holds the courses
+	let courses = getCourses(currentPage, numCoursesToFetch);
+
+	// True when there are more courses to get
+	let moreToGet = false;
+
+	// Carousel API
+	let api: CarouselAPI;
+
+	// True when the user can scroll to the previous/next
+	let canScrollPrev = writable(false);
+	let canScrollNext = writable(false);
+
+	// How many slides to scroll by
+	let scrollBy: number;
+
+	// The currently selected slide
+	let currentSlide = 0;
+
+	// Screen sizes
+	const mdPx = +theme.screens.md.replace('px', '');
+	const lgPx = +theme.screens.lg.replace('px', '');
+	const xlPx = +theme.screens.xl.replace('px', '');
 </script>
 
 <div class="flex flex-col">
 	<div class="flex flex-row items-center justify-between pb-5">
 		<h2 class="text-lg font-bold">{variant === 'latest' ? 'New Courses' : 'Ongoing Courses'}</h2>
 		<div class="flex gap-1">
-			{#if !loadingCourses && !loadingCoursesError && courses.length > 0}
+			{#await courses then _}
 				<Button
 					variant="ghost"
 					disabled={!$canScrollPrev}
@@ -240,72 +209,78 @@
 				>
 					<ArrowRight class="h-6 w-6" />
 				</Button>
-			{/if}
+			{/await}
 		</div>
 	</div>
-	{#if loadingCourses}
+	{#await courses}
 		<div class="flex min-h-[6rem] w-full flex-grow flex-col place-content-center items-center p-10">
 			<Loading />
 		</div>
-	{:else if loadingCoursesError}
-		<Error class="text-muted min-h-[6rem] p-5 text-sm" imgClass="h-6 w-6" />
-	{:else if courses.length === 0}
-		<div class="flex min-h-[6rem] w-full flex-grow flex-col place-content-center items-center p-10">
-			<span class="text-muted-foreground">
-				{randomEmptyMessage()}
-			</span>
-		</div>
-	{:else}
-		<Carousel.Root bind:api opts={{ watchSlides: true, align: 'start' }}>
-			<Carousel.Content class="flex select-none">
-				<!-- Courses -->
-				{#each courses as course}
-					<Carousel.Item class="group basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
-						<Card.Root class="relative h-full">
-							{#if !course.available}
-								<span
-									class="bg-destructive absolute right-0 top-0 z-10 flex h-1 w-1 items-center justify-center rounded-bl-lg rounded-tr-lg p-3 text-center text-sm"
-								>
-									!
-								</span>
-							{/if}
+	{:then _}
+		{#if fetchedCourses.length === 0}
+			<div
+				class="flex min-h-[6rem] w-full flex-grow flex-col place-content-center items-center p-10"
+			>
+				<span class="text-muted-foreground">
+					{randomEmptyMessage()}
+				</span>
+			</div>
+		{:else}
+			<Carousel.Root bind:api opts={{ watchSlides: true, align: 'start' }}>
+				<Carousel.Content class="flex select-none">
+					<!-- Courses -->
+					{#each fetchedCourses as course}
+						<Carousel.Item class="group basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
+							<Card.Root class="relative h-full">
+								{#if !course.available}
+									<span
+										class="bg-destructive absolute right-0 top-0 z-10 flex h-1 w-1 items-center justify-center rounded-bl-lg rounded-tr-lg p-3 text-center text-sm"
+									>
+										!
+									</span>
+								{/if}
 
-							<a href="/course?id={course.id}">
-								<Card.Content class="bg-muted flex h-full flex-col overflow-hidden rounded-lg p-0">
-									<CourseCard {course} />
+								<a href="/course?id={course.id}">
+									<Card.Content
+										class="bg-muted flex h-full flex-col overflow-hidden rounded-lg p-0"
+									>
+										<CourseCard {course} />
 
-									<div class="flex h-full flex-col justify-between p-3 text-sm md:p-3">
-										<h3 class="group-hover:text-secondary font-semibold">
-											{course.title}
-										</h3>
+										<div class="flex h-full flex-col justify-between p-3 text-sm md:p-3">
+											<h3 class="group-hover:text-secondary font-semibold">
+												{course.title}
+											</h3>
 
-										<div class="flex flex-row justify-between">
-											<NiceDate
-												date={variant === 'latest' ? course.createdAt : course.progressUpdatedAt}
-												prefix={variant === 'latest' ? 'Added:' : 'Last Viewed:'}
-												class="shrink-0 pt-3 text-xs"
-											/>
+											<div class="flex flex-row justify-between">
+												<NiceDate
+													date={variant === 'latest' ? course.createdAt : course.progressUpdatedAt}
+													prefix={variant === 'latest' ? 'Added:' : 'Last Viewed:'}
+													class="shrink-0 pt-3 text-xs"
+												/>
 
-											<span class="flex w-full justify-end pt-3 text-xs">{course.percent}%</span>
+												<span class="flex w-full justify-end pt-3 text-xs">{course.percent}%</span>
+											</div>
 										</div>
-									</div>
-								</Card.Content>
-							</a>
-						</Card.Root>
-					</Carousel.Item>
-				{/each}
+									</Card.Content>
+								</a>
+							</Card.Root>
+						</Carousel.Item>
+					{/each}
 
-				<!-- Load more -->
-				{#if moreToGet}
-					<Carousel.Item class="basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
-						<Button
-							variant="outline"
-							class="hover:text-primary h-full w-full rounded-lg text-lg"
-							on:click={loadMoreCourses}>Load More</Button
-						>
-					</Carousel.Item>
-				{/if}
-			</Carousel.Content>
-		</Carousel.Root>
-	{/if}
+					<!-- Load more -->
+					{#if moreToGet}
+						<Carousel.Item class="basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
+							<Button
+								variant="outline"
+								class="hover:text-primary h-full w-full rounded-lg text-lg"
+								on:click={loadMoreCourses}>Load More</Button
+							>
+						</Carousel.Item>
+					{/if}
+				</Carousel.Content>
+			</Carousel.Root>
+		{/if}
+	{:catch _}
+		<Err class="text-muted min-h-[6rem] p-5 text-sm" imgClass="h-6 w-6" />
+	{/await}
 </div>
