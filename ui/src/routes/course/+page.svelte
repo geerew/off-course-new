@@ -257,7 +257,6 @@
 				bind:prevAsset
 				bind:nextAsset
 				on:update={() => {
-					console.log('updated asset');
 					if (!selectedAsset) return;
 
 					updateAsset(selectedAsset);
