@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Error, Loading } from '$components';
+	import { CourseDetailsTags } from '$components/course_details';
 	import { DeleteCourse } from '$components/dialogs';
 	import { NiceDate, ScanStatus } from '$components/table/renderers';
 	import * as Accordion from '$components/ui/accordion';
@@ -258,7 +259,7 @@
 								<!-- % completed -->
 								{#if !course.started}
 									<Badge
-										class="bg-muted-foreground hover:bg-muted-foreground items-center gap-1.5 rounded-sm text-white dark:text-black"
+										class="bg-alt-1 hover:bg-alt-1 text-foreground items-center gap-1.5 rounded-sm"
 									>
 										<Circle class="h-4 w-4" />
 										Not Started
@@ -318,6 +319,8 @@
 								Delete
 							</Button>
 						</div>
+
+						<CourseDetailsTags courseId={course.id} />
 					</div>
 
 					<!-- Card -->

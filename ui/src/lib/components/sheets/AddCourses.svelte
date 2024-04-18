@@ -249,12 +249,12 @@
 
 	// Checks if the course is in the selectedCourses array. If it is, it will be removed, making
 	// it unselected. If it is not, it will be added, making it selected.
-	function FlipSelected(path: string) {
+	function FlipSelected(path: string, title: string) {
 		// If the course is already selected, remove it
 		if (path in selectedCourses) {
 			delete selectedCourses[path];
 		} else {
-			selectedCourses[path] = path;
+			selectedCourses[path] = title;
 		}
 
 		// Set the course in pathInfo to be selected/unselected
@@ -469,7 +469,7 @@
 											disabled={loadingPath || (dirInfo.isParent ?? false)}
 											class="hover:bg-background group h-full w-14 shrink-0 place-content-center items-center rounded-none duration-200 disabled:opacity-100 sm:w-20"
 											on:click={() => {
-												FlipSelected(dirInfo.path);
+												FlipSelected(dirInfo.path, dirInfo.title);
 											}}
 										>
 											<input

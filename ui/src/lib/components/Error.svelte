@@ -19,5 +19,5 @@
 	)}
 >
 	<CircleOff class={cn('text-destructive h-12 w-12', imgClass)} />
-	<span>Oh no! An error occurred</span>
+	<span class="text-destructive-foreground">Oh no! An error occurred</span>
 </div>

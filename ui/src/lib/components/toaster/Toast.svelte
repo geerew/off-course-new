@@ -35,7 +35,7 @@
 		data && data.status === 'info' && 'bg-primary',
 		data && data.status === 'success' && 'bg-success',
 		data && data.status === 'warning' && 'bg-orange-500',
-		data && data.status === 'error' && 'bg-error'
+		data && data.status === 'error' && 'bg-destructive'
 	);
 
 	// ----------------------
@@ -70,7 +70,7 @@
 			{:else if data.status === 'warning'}
 				<AlertCircle class="mr-2 h-6 w-6 text-orange-500" />
 			{:else if data.status === 'error'}
-				<XCircle class="text-error mr-2 h-6 w-6" />
+				<XCircle class="text-destructive mr-2 h-6 w-6" />
 			{/if}
 		</div>
 

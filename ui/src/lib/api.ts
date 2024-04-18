@@ -4,11 +4,14 @@ import {
 	AssetSchema,
 	CourseSchema,
 	ScanSchema,
+	TagArraySchema,
+	TagSchema,
 	type Asset,
 	type AssetsGetParams,
 	type Course,
 	type CoursesGetParams,
-	type Scan
+	type Scan,
+	type Tag
 } from '$lib/types/models';
 import { PaginationSchema, type Pagination } from '$lib/types/pagination';
 import axios, { AxiosError, type AxiosResponse } from 'axios';
@@ -206,6 +209,75 @@ export const UpdateCourse = async (course: Course): Promise<boolean> => {
 // DELETE - Delete a course
 export const DeleteCourse = async (id: string): Promise<boolean> => {
 	await axios.delete(`${COURSE_API}/${id}`).catch((error: Error) => {
+		throw error;
+	});
+
+	return true;
+};
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Course Tags
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GET - Get a list of tags for a course
+//
+// Requires a course ID
+export const GetCourseTags = async (courseId: string): Promise<Tag[]> => {
+	let resp: Tag[] | undefined = undefined;
+
+	await axios
+		.get(`${COURSE_API}/${courseId}/tags`)
+		.then((response: AxiosResponse) => {
+			const result = safeParse(TagArraySchema, response.data);
+			if (!result.success) throw new Error('Invalid response from server');
+			resp = result.output;
+		})
+		.catch((error: Error) => {
+			throw error;
+		});
+
+	if (!resp) throw new Error('Course tags were not found');
+
+	return resp;
+};
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// POST - Create a tag for a course
+//
+// Requires a course ID
+export const AddCourseTag = async (courseId: string, tag: string): Promise<Tag> => {
+	let resp: Tag | undefined = undefined;
+
+	await axios
+		.post(
+			`${COURSE_API}/${courseId}/tags/`,
+			{ tag },
+			{
+				headers: {
+					'content-type': 'application/json'
+				}
+			}
+		)
+		.then((response: AxiosResponse) => {
+			const result = safeParse(TagSchema, response.data);
+			if (!result.success) throw new Error('Invalid response from server');
+			resp = result.output;
+		})
+		.catch((error: Error) => {
+			throw error;
+		});
+
+	if (!resp) throw new Error('Course tag was not added');
+
+	return resp;
+};
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// DELETE - Delete a course tag
+export const DeleteCourseTag = async (courseId: string, tagId: string): Promise<boolean> => {
+	await axios.delete(`${COURSE_API}/${courseId}/tags/${tagId}`).catch((error: Error) => {
 		throw error;
 	});
 

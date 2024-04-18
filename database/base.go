@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/geerew/off-course/migrations"
 	"github.com/geerew/off-course/utils/appFs"
@@ -112,10 +111,9 @@ func (s *SqliteDb) Bootstrap() error {
 		return err
 	}
 
-	// Set the max open connections to 4x the number of CPUs
-	maxOpenConns := 4 * runtime.GOMAXPROCS(0)
-	db.SetMaxIdleConns(maxOpenConns)
-	db.SetMaxOpenConns(maxOpenConns)
+	// TODO: make this better (use semaphore to block/continue)
+	db.SetMaxIdleConns(1)
+	db.SetMaxOpenConns(1)
 
 	// Setup the default DB connection
 	//
@@ -126,7 +124,6 @@ func (s *SqliteDb) Bootstrap() error {
 		PRAGMA journal_size_limit = 200000000;
 		PRAGMA synchronous        = NORMAL;
 		PRAGMA foreign_keys       = ON;
-		PRAGMA temp_store         = MEMORY;
 		PRAGMA cache_size         = -16000;
 	`)
 

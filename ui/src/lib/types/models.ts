@@ -127,6 +127,20 @@ export type CoursePostParams = {
 export type CourseChapters = Record<string, Asset[]>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Tags
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+export const TagSchema = object({
+	id: string(),
+	tag: string(),
+	course: optional(string())
+});
+
+export const TagArraySchema = array(TagSchema);
+
+export type Tag = Output<typeof TagSchema>;
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Scan
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
