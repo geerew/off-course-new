@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import Theme from '$components/Theme.svelte';
+	import Theme from '$components/generic/theme.svelte';
 	import { Github } from '$components/icons';
 	import Button from '$components/ui/button/button.svelte';
 	import { Separator } from '$components/ui/separator';
@@ -10,7 +10,7 @@
 	import { createCollapsible } from '@melt-ui/svelte';
 	import { useClickOutside } from '@melt-ui/svelte/internal/actions';
 	import { slide } from 'svelte/transition';
-	import Burger from './Burger.svelte';
+	import Burger from './burger.svelte';
 
 	// ----------------------
 	// Variables

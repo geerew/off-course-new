@@ -1,3 +1,2 @@
-export { default as Columns } from './Columns.svelte';
-export { default as Sort } from './Sort.svelte';
-
+export { default as TableColumnsController } from './columns.svelte';
+export { default as TableSortController } from './sort.svelte';

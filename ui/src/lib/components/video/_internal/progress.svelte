@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { Button } from '$components/ui/button';
 	import { Play } from 'lucide-svelte';
 	import { createEventDispatcher, onMount } from 'svelte';
-	import Button from './ui/button/button.svelte';
 
 	// ----------------------
 	// Exports

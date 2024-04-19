@@ -2,8 +2,8 @@
 	import { page } from '$app/stores';
 	import { site } from '$lib/config/site';
 	import { Hexagon } from 'lucide-svelte';
-	import HeaderMenu from './HeaderMenu.svelte';
-	import SettingsMenu from './SettingsMenu.svelte';
+	import Menu from './_internal/menu.svelte';
+	import SettingsMenu from './_internal/settings-menu.svelte';
 </script>
 
 <header class="bg-background sticky top-0 z-50 w-full border-b">
@@ -16,7 +16,7 @@
 		</div>
 
 		<div class="flex items-center justify-between">
-			<HeaderMenu />
+			<Menu />
 		</div>
 	</div>
 

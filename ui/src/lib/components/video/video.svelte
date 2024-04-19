@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Progress from '$components/video/_internal/progress.svelte';
+	import { ASSET_API } from '$lib/api';
+	import type { Asset } from '$lib/types/models';
 	import { Throttle } from '$lib/utils';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import {
@@ -7,16 +10,12 @@
 		type MediaTimeUpdateEvent
 	} from 'vidstack';
 	import type { MediaPlayerElement } from 'vidstack/elements';
-	import Controls from './controls.svelte';
-	import Gestures from './gestures.svelte';
-
-	import Progress from '$components/Progress.svelte';
-	import { ASSET_API } from '$lib/api';
-	import type { Asset } from '$lib/types/models';
 	import 'vidstack/player';
 	import 'vidstack/player/styles/base.css';
 	import 'vidstack/player/ui';
 	import { getCtx, setCtx } from './_internal/context';
+	import Controls from './_internal/controls.svelte';
+	import Gestures from './_internal/gestures.svelte';
 
 	// ----------------------
 	// Exports

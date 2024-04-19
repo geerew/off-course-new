@@ -10,7 +10,7 @@
 	// Css
 	import '../app.pcss';
 
-	import { TailwindIndicator } from '$components';
+	import { TailwindIndicator } from '$components/generic';
 	import { Header } from '$components/header';
 	import { Toaster } from '$lib/components/ui/sonner';
 </script>

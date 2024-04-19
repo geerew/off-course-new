@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CourseCard, Err, Loading } from '$components';
+	import { Err, Loading, NiceDate } from '$components/generic';
 	import { Button } from '$components/ui/button';
 	import { GetCourses } from '$lib/api';
 	import * as Card from '$lib/components/ui/card/index.js';
@@ -9,8 +9,8 @@
 	import { toast } from 'svelte-sonner';
 	import { writable } from 'svelte/store';
 	import theme from 'tailwindcss/defaultTheme';
-	import { NiceDate } from './table/renderers';
-	import type { CarouselAPI } from './ui/carousel/context';
+	import type { CarouselAPI } from '../../ui/carousel/context';
+	import CourseCard from './_internal/course-card.svelte';
 
 	// ----------------------
 	// Exports

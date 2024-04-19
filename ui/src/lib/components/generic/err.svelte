@@ -10,6 +10,8 @@
 	// ----------------------
 	export { className as class };
 	export let imgClass: ClassName = undefined;
+	export let textClass: ClassName = undefined;
+	export let errorMessage = 'Oh no! An error occurred.';
 </script>
 
 <div
@@ -19,5 +21,5 @@
 	)}
 >
 	<CircleOff class={cn('text-destructive h-12 w-12', imgClass)} />
-	<span class="text-destructive-foreground">Oh no! An error occurred</span>
+	<span class={cn('text-destructive-foreground', textClass)}>{errorMessage}</span>
 </div>

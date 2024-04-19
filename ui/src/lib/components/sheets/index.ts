@@ -1,1 +1,1 @@
-export { default as AddCourses } from '../sheets/AddCourses.svelte';
+export { default as AddCoursesSheet } from './add-courses.svelte';

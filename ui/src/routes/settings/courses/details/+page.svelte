@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { Err, Loading } from '$components';
+	import { DeleteCourseDialog } from '$components/dialogs';
+	import { Err, Loading, NiceDate, ScanStatus } from '$components/generic';
 	import {
 		CourseDetailsCard,
-		CourseDetailsContent,
+		CourseDetailsChapters,
 		CourseDetailsTags
-	} from '$components/course_details';
-	import { DeleteCourse } from '$components/dialogs';
-	import { NiceDate, ScanStatus } from '$components/table/renderers';
+	} from '$components/pages/settings_course_details';
 	import Badge from '$components/ui/badge/badge.svelte';
 	import Button from '$components/ui/button/button.svelte';
 	import { AddScan, GetCourseFromParams } from '$lib/api';
@@ -231,17 +230,17 @@
 		</div>
 
 		<!-- Course content -->
-		<CourseDetailsContent courseId={data.id} bind:assetRefresh />
+		<CourseDetailsChapters courseId={data.id} bind:assetRefresh />
 
 		<!-- Delete dialog -->
-		<DeleteCourse
+		<DeleteCourseDialog
 			courseId={data.id}
 			bind:open={openDeleteDialog}
 			on:courseDeleted={() => {
 				goto('/settings/courses');
 			}}
 		/>
-	{:catch error}
+	{:catch _}
 		<Err />
 	{/await}
 </div>

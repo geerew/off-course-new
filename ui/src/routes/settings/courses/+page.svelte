@@ -1,16 +1,14 @@
 <script lang="ts">
-	import { Err, Loading } from '$components';
-	import { DeleteCourse } from '$components/dialogs';
-	import { AddCourses } from '$components/sheets';
-	import { Columns, Sort } from '$components/table/controllers';
-	import { Pagination } from '$components/table/pagination';
+	import { DeleteCourseDialog } from '$components/dialogs';
+	import { Err, Loading, NiceDate, ScanStatus } from '$components/generic';
 	import {
-		CourseAction,
-		CourseAvailability,
-		CourseProgress,
-		NiceDate,
-		ScanStatus
-	} from '$components/table/renderers';
+		CoursesRowAction,
+		CoursesRowAvailability,
+		CoursesRowProgress
+	} from '$components/pages/settings_courses';
+	import { AddCoursesSheet } from '$components/sheets';
+	import { TableColumnsController, TableSortController } from '$components/table/controllers';
+	import { Pagination } from '$components/table/pagination';
 	import { AddScan, GetCourses } from '$lib/api';
 	import type { Course } from '$lib/types/models';
 	import type { PaginationParams } from '$lib/types/pagination';
@@ -70,14 +68,14 @@
 			header: 'Availability',
 			accessor: 'available',
 			cell: ({ value }) => {
-				return createRender(CourseAvailability, { available: value });
+				return createRender(CoursesRowAvailability, { available: value });
 			}
 		}),
 		table.column({
 			header: 'Progress',
 			accessor: 'percent',
 			cell: ({ value }) => {
-				return createRender(CourseProgress, { percent: value });
+				return createRender(CoursesRowProgress, { percent: value });
 			}
 		}),
 		table.column({
@@ -118,7 +116,7 @@
 				}
 			},
 			cell: ({ value }) => {
-				return createRender(CourseAction, { course: value })
+				return createRender(CoursesRowAction, { course: value })
 					.on('delete', () => {
 						deleteCourseId = value.id;
 						openDeleteDialog = true;
@@ -236,7 +234,7 @@
 	<div class="w-full border-b">
 		<div class="container flex items-center gap-2.5 py-2 md:py-4">
 			<span class="grow text-lg font-semibold md:text-2xl">Courses</span>
-			<AddCourses
+			<AddCoursesSheet
 				on:added={() => {
 					pagination.page = 1;
 					getCourses();
@@ -248,13 +246,13 @@
 	<div class="container flex flex-col gap-4">
 		<div class="flex w-full flex-row">
 			<div class="flex w-full justify-end gap-2.5">
-				<Sort
+				<TableSortController
 					columns={availableSortColumns}
 					sortedColumn={sortKeys}
 					on:changed={getCourses}
 					disabled={gotError || $courses.length === 0}
 				/>
-				<Columns
+				<TableColumnsController
 					columns={availableHiddenColumns}
 					columnStore={hiddenColumnIds}
 					disabled={gotError || $courses.length === 0}
@@ -360,7 +358,7 @@
 </div>
 
 <!-- Delete dialog -->
-<DeleteCourse
+<DeleteCourseDialog
 	courseId={deleteCourseId}
 	bind:open={openDeleteDialog}
 	on:courseDeleted={() => {

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-	import Loading from '$components/Loading.svelte';
+	import { Loading } from '$components/generic';
 	import { MediaRemoteControl } from 'vidstack';
-	import { getCtx } from './_internal/context';
-	import Fullscreen from './_internal/fullscreen.svelte';
-	import Play from './_internal/play.svelte';
-	import Time from './_internal/time.svelte';
-	import Volume from './_internal/volume.svelte';
+	import { getCtx } from './context';
+	import Fullscreen from './fullscreen.svelte';
+	import Play from './play.svelte';
+	import Time from './time.svelte';
+	import Volume from './volume.svelte';
 
 	// ----------------------
 	// Variables

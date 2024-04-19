@@ -1,1 +1,1 @@
-export { default as DeleteCourse } from './DeleteCourse.svelte';
+export { default as DeleteCourseDialog } from './delete-course.svelte';

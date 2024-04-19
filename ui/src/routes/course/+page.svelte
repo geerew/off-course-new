@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { Err, Loading } from '$components';
-	import { CourseContent, CourseMenu } from '$components/course';
+	import { Err, Loading } from '$components/generic';
+	import { CourseContent, CourseMenu } from '$components/pages/course';
 	import { GetAllCourseAssets, GetCourseFromParams, UpdateAsset } from '$lib/api';
 	import type { Asset, Course, CourseChapters } from '$lib/types/models';
 	import { NO_CHAPTER, buildChapterStructure, isBrowser } from '$lib/utils';

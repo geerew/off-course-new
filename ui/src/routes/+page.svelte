@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { CoursesCarousel } from '$components';
+	import { Carousel } from '$lib/components/pages/home';
 </script>
 
 <div class="container flex flex-col gap-6 py-6">
-	<CoursesCarousel variant="ongoing" />
-	<CoursesCarousel variant="latest" />
+	<Carousel variant="ongoing" />
+	<Carousel variant="latest" />
 </div>
