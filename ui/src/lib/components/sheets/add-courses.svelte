@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Err, Loading } from '$components';
+	import { Err, Loading } from '$components/generic';
 	import Badge from '$components/ui/badge/badge.svelte';
 	import { Button } from '$components/ui/button';
 	import { Separator } from '$components/ui/separator';
@@ -356,9 +356,7 @@
 		<!-- Body -->
 		<div bind:this={body} class="flex min-h-[15rem] grow flex-col overflow-y-scroll" tabindex="-1">
 			{#if loadingDrives || refreshing}
-				<div class="flex w-full flex-grow flex-col place-content-center items-center p-10">
-					<Loading />
-				</div>
+				<Loading />
 			{:else if gotError}
 				<Err class="min-h-max" />
 			{:else}
@@ -366,41 +364,44 @@
 					<!-- Back button -->
 					{#if paths.length > 0}
 						{#key paths[paths.length - 1]}
-							<Button
-								variant="ghost"
-								disabled={loadingPath}
-								class="flex h-14 flex-grow flex-row items-center justify-start rounded-none border-b pr-0"
-								on:click={async (el) => {
-									// find this buttons child element and show the loader by removing the hidden and adding the flex
-									if (!el.target || !(el.target instanceof Element)) return;
+							<div class="flex h-14 flex-row items-center border-b">
+								<Button
+									variant="ghost"
+									disabled={loadingPath}
+									class="flex h-14 flex-grow flex-row items-center justify-start rounded-none border-b pr-0"
+									on:click={async (el) => {
+										// find this buttons child element and show the loader by removing the hidden and adding the flex
+										if (!el.target || !(el.target instanceof Element)) return;
 
-									const buttonElement = el.target.closest('button');
-									if (!buttonElement) return;
+										const buttonElement = el.target.closest('button');
+										if (!buttonElement) return;
 
-									const loader = buttonElement.querySelector('#back-loader');
+										const loader = buttonElement.nextElementSibling;
+										if (loader) {
+											loader.classList.remove('hidden');
+											loader.classList.add('flex');
+										}
 
-									if (loader) {
-										loader.classList.remove('hidden');
-										loader.classList.add('flex');
-									}
-
-									// Determine the new back path. If we are only 1 level
-									// deep, load the drives, or else load the path before
-									await load(paths.length > 1 ? paths[paths.length - 2] : '', true, false);
-								}}
-							>
-								<div class="flex grow gap-2 text-sm">
-									<CornerUpLeft class="text-muted-foreground group-hover:text-foreground h-4 w-4" />
-									<span>Back</span>
-								</div>
+										// Determine the new back path. If we are only 1 level
+										// deep, load the drives, or else load the path before
+										await load(paths.length > 1 ? paths[paths.length - 2] : '', true, false);
+									}}
+								>
+									<div class="flex grow gap-2 text-sm">
+										<CornerUpLeft
+											class="text-muted-foreground group-hover:text-foreground h-4 w-4"
+										/>
+										<span>Back</span>
+									</div>
+								</Button>
 
 								<div
-									class="hidden h-full min-w-20 shrink-0 place-content-center items-center"
+									class="hidden h-full min-w-20 shrink-0 place-content-center items-center opacity-100"
 									id="back-loader"
 								>
-									<Loading class="h-5 w-5" />
+									<Loading class="px-0 py-0" loaderClass="h-5 w-5" />
 								</div>
-							</Button>
+							</div>
 						{/key}
 					{/if}
 
@@ -435,7 +436,7 @@
 
 								<div class="flex h-full min-w-20 shrink-0 place-content-center items-center">
 									{#if loadingPath && selectedPath === dirInfo.path}
-										<Loading class="h-5 w-5" />
+										<Loading class="px-0 py-0" loaderClass="h-5 w-5" />
 									{:else}
 										<Button
 											variant="ghost"

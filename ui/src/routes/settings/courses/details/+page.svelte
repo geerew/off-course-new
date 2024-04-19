@@ -34,6 +34,7 @@
 		try {
 			const response = await GetCourseFromParams($page.url.searchParams);
 			if (!response) throw new Error('Course not found');
+
 			return response;
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : (error as string));
@@ -75,11 +76,7 @@
 
 <div class="bg-background flex w-full flex-col gap-4 pb-10">
 	{#await course}
-		<div
-			class="flex min-h-[20rem] w-full flex-grow flex-col place-content-center items-center p-10"
-		>
-			<Loading class="border-primary" />
-		</div>
+		<Loading />
 	{:then data}
 		<!-- Course Details -->
 		<div class="bg-muted">

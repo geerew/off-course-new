@@ -213,9 +213,7 @@
 		</div>
 	</div>
 	{#await courses}
-		<div class="flex min-h-[6rem] w-full flex-grow flex-col place-content-center items-center p-10">
-			<Loading />
-		</div>
+		<Loading />
 	{:then _}
 		{#if fetchedCourses.length === 0}
 			<div

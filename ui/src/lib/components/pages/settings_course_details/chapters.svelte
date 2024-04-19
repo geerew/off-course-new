@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Err, Loading } from '$components';
+	import { Err, Loading } from '$components/generic';
 	import * as Accordion from '$components/ui/accordion';
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
@@ -28,8 +28,8 @@
 
 		try {
 			const response = await GetAllCourseAssets(courseId, { orderBy: 'chapter asc, prefix asc' });
-
 			if (!response) return {};
+
 			return buildChapterStructure(response);
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : (error as string));
@@ -67,9 +67,7 @@
 	</div>
 
 	{#await courseChapters}
-		<div class="flex min-h-[5rem] w-full flex-grow flex-col place-content-center items-center p-10">
-			<Loading class="border-primary" />
-		</div>
+		<Loading class="min-h-24" />
 	{:then data}
 		<!-- n chapters / n assets -->
 		<div class="flex flex-row items-center pb-4 pl-2.5">

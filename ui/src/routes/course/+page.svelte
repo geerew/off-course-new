@@ -4,23 +4,12 @@
 	import { CourseContent, CourseMenu } from '$components/pages/course';
 	import { GetAllCourseAssets, GetCourseFromParams, UpdateAsset } from '$lib/api';
 	import type { Asset, Course, CourseChapters } from '$lib/types/models';
-	import { NO_CHAPTER, buildChapterStructure, isBrowser } from '$lib/utils';
-	import { onMount } from 'svelte';
+	import { NO_CHAPTER, buildChapterStructure } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 
 	// ----------------------
 	// Variables
 	// ----------------------
-
-	// True while the page is loading
-	let loadingPage = true;
-
-	// True if the course id search param missing or not a valid course id
-	let invalidCourseId = false;
-
-	// Holds the information about the course being viewed
-	let course: Course;
-
 	// Hold the assets + attachments for this course
 	let assets: Asset[];
 
@@ -29,14 +18,9 @@
 	let chapters: CourseChapters = {};
 
 	// When an asset is selected, these will be populated
-	let selectedChapter: string[] = [];
 	let selectedAsset: Asset | null;
 	let prevAsset: Asset | null;
 	let nextAsset: Asset | null;
-
-	// scrollY and innerWidth are bound to the window scroll and resize events
-	let scrollY: number;
-	let innerWidth: number;
 
 	// ----------------------
 	// Functions
@@ -44,45 +28,27 @@
 
 	// Lookup the course based upon the search params
 	const getCourse = async () => {
-		if (!isBrowser) return false;
-
 		try {
-			course = await GetCourseFromParams($page.url.searchParams);
-			return true;
-		} catch (error) {
-			toast.error(error instanceof Error ? error.message : (error as string));
-			return false;
-		}
-	};
+			const course = await GetCourseFromParams($page.url.searchParams);
+			if (!course) throw new Error('Course not found');
 
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			// Get the assets
+			assets = await GetAllCourseAssets(course.id, { orderBy: 'chapter asc, prefix asc' });
+			if (!assets) throw new Error('Failed to get course assets');
 
-	// Gets the assets + attachments for the given course. It will build a chapter structure and
-	// set the selected asset based upon the query params. If there is no asset query param, it
-	// will set the first unfinished asset as the selected asset
-	const getAssets = async (courseId: string) => {
-		if (!isBrowser) return false;
-
-		const params = $page.url.searchParams;
-
-		try {
-			const response = await GetAllCourseAssets(courseId, { orderBy: 'chapter asc, prefix asc' });
-			if (!response) return false;
-
-			chapters = buildChapterStructure(response);
+			chapters = buildChapterStructure(assets);
 
 			// Set ?a=xxx as the selected asset
-			const assetId = params && params.get('a');
+			const assetId = $page.url.searchParams && $page.url.searchParams.get('a');
 			if (assetId) selectedAsset = findAsset(assetId, chapters);
 
 			// If there is no selected asset, set it as the first unfinished asset
 			if (!selectedAsset) selectedAsset = findFirstUnfinishedAsset(course, chapters);
 
-			assets = response;
-			return true;
+			return course;
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : (error as string));
-			return false;
+			throw error;
 		}
 	};
 
@@ -178,53 +144,26 @@
 		const { prev, next } = findAdjacentAssets(selectedAsset, chapters);
 		prevAsset = prev;
 		nextAsset = next;
-
-		selectedChapter = [assetChapter];
 	}
 
 	// ----------------------
 	// Reactive
 	// ----------------------
+
 	// When the selected asset changes, call updateSelectedAsset()
 	$: {
 		if (selectedAsset) {
 			updateSelectedAsset();
 		}
 	}
-
-	// ----------------------
-	// Lifecycle
-	// ----------------------
-	onMount(async () => {
-		if (!(await getCourse())) {
-			loadingPage = false;
-			invalidCourseId = true;
-			return;
-		}
-
-		if (!(await getAssets(course.id))) {
-			loadingPage = false;
-			return;
-		}
-
-		loadingPage = false;
-	});
 </script>
 
-<svelte:window bind:scrollY bind:innerWidth />
-
 <div class="flex w-full flex-col">
-	{#if loadingPage}
-		<div
-			class="flex min-h-[20rem] w-full flex-grow flex-col place-content-center items-center p-10"
-		>
-			<Loading />
-		</div>
-	{:else if invalidCourseId || assets.length === 0}
-		<Err />
-	{:else}
+	{#await getCourse()}
+		<Loading />
+	{:then data}
 		<div class="flex h-full flex-row">
-			<CourseMenu title={course.title} id={course.id} {chapters} bind:selectedAsset />
+			<CourseMenu title={data.title} id={data.id} {chapters} bind:selectedAsset />
 
 			<CourseContent
 				bind:selectedAsset
@@ -238,5 +177,7 @@
 				}}
 			/>
 		</div>
-	{/if}
+	{:catch}
+		<Err />
+	{/await}
 </div>

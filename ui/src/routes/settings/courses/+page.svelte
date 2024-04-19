@@ -261,11 +261,7 @@
 		</div>
 
 		{#if loadingCourses}
-			<div
-				class="flex min-h-[10rem] w-full flex-grow flex-col place-content-center items-center p-10"
-			>
-				<Loading />
-			</div>
+			<Loading />
 		{:else if gotError}
 			<Err />
 		{:else}

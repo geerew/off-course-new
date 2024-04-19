@@ -9,8 +9,21 @@
 	// Exports
 	// ----------------------
 	export { className as class };
+	export let loaderClass: ClassName = undefined;
 </script>
 
-<div class="flex w-full place-content-center items-center">
-	<Loader2 class={cn('text-primary h-12 w-16 animate-spin', className)} />
+<!-- <div
+	class={cn(
+		'flex min-h-[20rem] w-full flex-grow flex-col place-content-center items-center gap-5 p-10',
+		className
+	)}>
+</div> -->
+
+<div
+	class={cn(
+		'flex min-h-40 w-full flex-grow flex-col place-content-center items-center gap-5 p-10',
+		className
+	)}
+>
+	<Loader2 class={cn('text-primary h-12 w-16 animate-spin', loaderClass)} />
 </div>

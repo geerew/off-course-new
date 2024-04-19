@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Loading } from '$components';
+	import { Loading } from '$components/generic';
 	import { Badge } from '$components/ui/badge';
 	import Button from '$components/ui/button/button.svelte';
 	import * as Tooltip from '$components/ui/tooltip';
@@ -174,7 +174,7 @@
 	</div>
 
 	{#await tags}
-		<Loading class="h-6 w-6" />
+		<Loading class="min-h-5 w-full p-1 py-2" loaderClass="h-6 w-6" />
 	{:then data}
 		<!-- Tags -->
 		<div class="flex flex-row flex-wrap gap-2.5">
@@ -302,7 +302,7 @@
 							}}
 						>
 							{#if processingTags}
-								<Loading class="h-6 w-6" />
+								<Loading class="w-full p-1 py-2" loaderClass="h-6 w-6 text-success-foreground" />
 							{:else}
 								Save
 							{/if}
