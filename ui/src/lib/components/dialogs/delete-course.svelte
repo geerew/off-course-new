@@ -24,6 +24,7 @@
 	async function deleteCourse() {
 		try {
 			await DeleteCourse(courseId);
+			dispatch('deleted');
 			toast.success('Deleted course');
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : (error as string));

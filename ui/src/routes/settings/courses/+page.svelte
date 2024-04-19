@@ -14,7 +14,6 @@
 	import type { PaginationParams } from '$lib/types/pagination';
 	import { cn, flattenOrderBy } from '$lib/utils';
 	import { ChevronDown, ChevronUp } from 'lucide-svelte';
-	import { onMount } from 'svelte';
 	import { Render, Subscribe, createRender, createTable } from 'svelte-headless-table';
 	import { addHiddenColumns, addSortBy } from 'svelte-headless-table/plugins';
 	import { toast } from 'svelte-sonner';
@@ -23,14 +22,7 @@
 	// ----------------------
 	// Variables
 	// ----------------------
-
-	const courses = writable<Course[]>([]);
-
-	// True when loading the courses
-	let loadingCourses = true;
-
-	// True when an error occurs
-	let gotError = false;
+	const fetchedCourses = writable<Course[]>([]);
 
 	// Set when a course is selected for delete
 	let deleteCourseId = '';
@@ -47,7 +39,7 @@
 	};
 
 	// Create the table
-	const table = createTable(courses, {
+	const table = createTable(fetchedCourses, {
 		sort: addSortBy({
 			initialSortKeys: [{ id: 'createdAt', order: 'desc' }],
 			toggleOrder: ['desc', 'asc'],
@@ -156,8 +148,6 @@
 
 	// GET all courses from the backend. The response is paginated
 	const getCourses = async () => {
-		loadingCourses = true;
-
 		const orderBy = flattenOrderBy($sortKeys);
 
 		try {
@@ -168,12 +158,12 @@
 			});
 
 			if (!response) {
-				courses.set([]);
+				fetchedCourses.set([]);
 				pagination = { ...pagination, totalItems: 0, totalPages: 0 };
-				return;
+				return true;
 			}
 
-			courses.set(response.items as Course[]);
+			fetchedCourses.set(response.items as Course[]);
 
 			pagination = {
 				...pagination,
@@ -181,15 +171,10 @@
 				totalPages: response.totalPages
 			};
 
-			loadingCourses = false;
 			return true;
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : (error as string));
-
-			loadingCourses = false;
-			gotError = true;
-
-			return false;
+			throw error;
 		}
 	};
 
@@ -197,7 +182,7 @@
 
 	// Update a course in the courses array
 	const updateCourseInCourses = (updatedCourse: Course) => {
-		courses.update((currentCourses) => {
+		fetchedCourses.update((currentCourses) => {
 			const index = currentCourses.findIndex((course) => course.id === updatedCourse.id);
 			if (index !== -1) {
 				currentCourses[index] = updatedCourse;
@@ -222,11 +207,10 @@
 	};
 
 	// ----------------------
-	// Lifecycle
+	// Variables
 	// ----------------------
-	onMount(async () => {
-		if (!(await getCourses())) return;
-	});
+
+	let doCourses = getCourses();
 </script>
 
 <div class="bg-background flex w-full flex-col gap-4 pb-10">
@@ -237,34 +221,32 @@
 			<AddCoursesSheet
 				on:added={() => {
 					pagination.page = 1;
-					getCourses();
+					doCourses = getCourses();
 				}}
 			/>
 		</div>
 	</div>
 
 	<div class="container flex flex-col gap-4">
-		<div class="flex w-full flex-row">
-			<div class="flex w-full justify-end gap-2.5">
-				<TableSortController
-					columns={availableSortColumns}
-					sortedColumn={sortKeys}
-					on:changed={getCourses}
-					disabled={gotError || $courses.length === 0}
-				/>
-				<TableColumnsController
-					columns={availableHiddenColumns}
-					columnStore={hiddenColumnIds}
-					disabled={gotError || $courses.length === 0}
-				/>
-			</div>
-		</div>
-
-		{#if loadingCourses}
+		{#await doCourses}
 			<Loading />
-		{:else if gotError}
-			<Err />
-		{:else}
+		{:then _}
+			<div class="flex w-full flex-row">
+				<div class="flex w-full justify-end gap-2.5">
+					<TableSortController
+						columns={availableSortColumns}
+						sortedColumn={sortKeys}
+						on:changed={getCourses}
+						disabled={$fetchedCourses.length === 0}
+					/>
+					<TableColumnsController
+						columns={availableHiddenColumns}
+						columnStore={hiddenColumnIds}
+						disabled={$fetchedCourses.length === 0}
+					/>
+				</div>
+			</div>
+
 			<div class="flex w-full overflow-x-auto">
 				<table {...$tableAttrs}>
 					<thead>
@@ -341,15 +323,17 @@
 				{pagination}
 				on:pageChange={(ev) => {
 					pagination.page = ev.detail;
-					getCourses();
+					doCourses = getCourses();
 				}}
 				on:perPageChange={(ev) => {
 					pagination.perPage = ev.detail;
 					pagination.page = 1;
-					getCourses();
+					doCourses = getCourses();
 				}}
 			/>
-		{/if}
+		{:catch error}
+			<Err errorMessage={error} />
+		{/await}
 	</div>
 </div>
 
@@ -357,13 +341,13 @@
 <DeleteCourseDialog
 	courseId={deleteCourseId}
 	bind:open={openDeleteDialog}
-	on:courseDeleted={() => {
+	on:deleted={() => {
 		// It is possible that the user deleted the last course on this page,
 		// therefore we need to set the page to the previous one
 		if (pagination.page > 1 && (pagination.totalItems - 1) % pagination.perPage === 0)
 			pagination.page = pagination.page - 1;
 
-		getCourses();
+		doCourses = getCourses();
 	}}
 />
 
