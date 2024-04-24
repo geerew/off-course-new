@@ -189,6 +189,7 @@ func TestAsset_Get(t *testing.T) {
 		a, err := dao.Get(testData[0].Assets[0].ID, nil, nil)
 		require.Nil(t, err)
 		assert.Equal(t, testData[0].Assets[0].ID, a.ID)
+		require.Nil(t, a.Attachments)
 
 		// ----------------------------
 		// Progress
@@ -227,6 +228,10 @@ func TestAsset_Get(t *testing.T) {
 		// ----------------------------
 		// Attachments
 		// ----------------------------
+		a, err = dao.Get(testData[0].Assets[0].ID, &database.DatabaseParams{IncludeRelations: []string{NewAttachmentDao(dao.db).Table}}, nil)
+		require.Nil(t, err)
+		assert.Equal(t, testData[0].Assets[0].ID, a.ID)
+
 		require.Len(t, a.Attachments, 2)
 		assert.Equal(t, testData[0].Assets[0].Attachments[0].ID, a.Attachments[0].ID)
 		assert.Equal(t, testData[0].Assets[0].Attachments[1].ID, a.Attachments[1].ID)
@@ -242,16 +247,26 @@ func TestAsset_Get(t *testing.T) {
 		// ----------------------------
 		// ATTACHMENTS.CREATED_AT DESC
 		// ----------------------------
-		result, err := dao.Get(testData[0].Assets[0].ID, &database.DatabaseParams{OrderBy: []string{attDao.Table + ".created_at desc"}}, nil)
+		dbParams := &database.DatabaseParams{
+			OrderBy:          []string{attDao.Table + ".created_at desc"},
+			IncludeRelations: []string{attDao.Table},
+		}
+
+		result, err := dao.Get(testData[0].Assets[0].ID, dbParams, nil)
 		require.Nil(t, err)
 		require.Equal(t, testData[0].Assets[0].ID, result.ID)
 		assert.Equal(t, testData[0].Assets[0].Attachments[0].ID, result.Attachments[1].ID)
 		assert.Equal(t, testData[0].Assets[0].Attachments[1].ID, result.Attachments[0].ID)
 
 		// ----------------------------
-		// CREATED_AT ASC
+		// ATTACHMENTS.CREATED_AT ASC
 		// ----------------------------
-		result, err = dao.Get(testData[0].Assets[0].ID, &database.DatabaseParams{OrderBy: []string{attDao.Table + ".created_at asc"}}, nil)
+		dbParams = &database.DatabaseParams{
+			OrderBy:          []string{attDao.Table + ".created_at asc"},
+			IncludeRelations: []string{attDao.Table},
+		}
+
+		result, err = dao.Get(testData[0].Assets[0].ID, dbParams, nil)
 		require.Nil(t, err)
 		require.Equal(t, testData[0].Assets[0].ID, result.ID)
 		assert.Equal(t, testData[0].Assets[0].Attachments[0].ID, result.Attachments[0].ID)
@@ -260,7 +275,12 @@ func TestAsset_Get(t *testing.T) {
 		// ----------------------------
 		// Error
 		// ----------------------------
-		result, err = dao.Get(testData[0].Assets[0].ID, &database.DatabaseParams{OrderBy: []string{"unit_test asc"}}, nil)
+		dbParams = &database.DatabaseParams{
+			OrderBy:          []string{attDao.Table + ".unit_test desc"},
+			IncludeRelations: []string{attDao.Table},
+		}
+
+		result, err = dao.Get(testData[0].Assets[0].ID, dbParams, nil)
 		require.ErrorContains(t, err, "no such column")
 		assert.Nil(t, result)
 	})

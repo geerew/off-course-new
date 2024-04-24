@@ -88,27 +88,28 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.T
 
 	// Get the attachments
 	attachmentDao := NewAttachmentDao(dao.db)
+	if dbParams != nil && slices.Contains(dbParams.IncludeRelations, attachmentDao.Table) {
+		// Set the DB params
+		var attachmentDbParams *database.DatabaseParams
 
-	// Set the DB params
-	var attachmentDbParams *database.DatabaseParams
-
-	if dbParams == nil {
-		attachmentDbParams = &database.DatabaseParams{
-			Where: squirrel.Eq{"asset_id": asset.ID},
+		if dbParams == nil {
+			attachmentDbParams = &database.DatabaseParams{
+				Where: squirrel.Eq{"asset_id": asset.ID},
+			}
+		} else {
+			attachmentDbParams = &database.DatabaseParams{
+				OrderBy: dbParams.OrderBy,
+				Where:   squirrel.Eq{"asset_id": asset.ID},
+			}
 		}
-	} else {
-		attachmentDbParams = &database.DatabaseParams{
-			OrderBy: dbParams.OrderBy,
-			Where:   squirrel.Eq{"asset_id": asset.ID},
+
+		attachments, err := attachmentDao.List(attachmentDbParams, tx)
+		if err != nil {
+			return nil, err
 		}
-	}
 
-	attachments, err := attachmentDao.List(attachmentDbParams, tx)
-	if err != nil {
-		return nil, err
+		asset.Attachments = attachments
 	}
-
-	asset.Attachments = attachments
 
 	return asset, nil
 }
