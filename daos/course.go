@@ -110,7 +110,7 @@ func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mo
 	}
 
 	// Process the order by clauses
-	dbParams.OrderBy = dao.processOrderBy(dbParams.OrderBy)
+	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
@@ -181,6 +181,58 @@ func (dao *CourseDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) erro
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ProcessOrderBy takes an array of strings representing orderBy clauses and returns a processed
+// version of this array
+//
+// It will creates a new list of valid table columns based upon columns() for the current
+// DAO. Additionally, it handles the special case of 'scan_status' column, which requires custom
+// sorting logic, via a CASE statement.
+//
+// The custom sorting logic is defined as follows:
+//   - NULL values are treated as the lowest value (sorted first in ASC, last in DESC)
+//   - 'waiting' status is treated as the second value
+//   - 'processing' status is treated as the third value
+func (dao *CourseDao) ProcessOrderBy(orderBy []string) []string {
+	if len(orderBy) == 0 {
+		return orderBy
+	}
+
+	validTableColumns := dao.columns()
+	var processedOrderBy []string
+
+	scanDao := NewScanDao(dao.db)
+
+	for _, ob := range orderBy {
+		table, column := extractTableColumn(ob)
+
+		if isValidOrderBy(table, column, validTableColumns) {
+			// When the column is 'scan_status', apply the custom sorting logic
+			if column == "scan_status" || table+"."+column == scanDao.Table+".status" {
+				// Determine the sort direction, defaulting to ASC if not specified
+				parts := strings.Fields(ob)
+				sortDirection := "ASC"
+				if len(parts) > 1 {
+					sortDirection = strings.ToUpper(parts[1])
+				}
+
+				caseStmt := "CASE " +
+					"WHEN scan_status IS NULL THEN 1 " +
+					"WHEN scan_status = 'waiting' THEN 2 " +
+					"WHEN scan_status = 'processing' THEN 3 " +
+					"END " + sortDirection
+
+				processedOrderBy = append(processedOrderBy, caseStmt)
+			} else {
+				processedOrderBy = append(processedOrderBy, ob)
+			}
+		}
+	}
+
+	return processedOrderBy
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -237,58 +289,6 @@ func (dao *CourseDao) data(c *models.Course) map[string]any {
 		"created_at": c.CreatedAt,
 		"updated_at": c.UpdatedAt,
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// processOrderBy takes an array of strings representing orderBy clauses and returns a processed
-// version of this array
-//
-// It will creates a new list of valid table columns based upon columns() for the current
-// DAO. Additionally, it handles the special case of 'scan_status' column, which requires custom
-// sorting logic, via a CASE statement.
-//
-// The custom sorting logic is defined as follows:
-//   - NULL values are treated as the lowest value (sorted first in ASC, last in DESC)
-//   - 'waiting' status is treated as the second value
-//   - 'processing' status is treated as the third value
-func (dao *CourseDao) processOrderBy(orderBy []string) []string {
-	if len(orderBy) == 0 {
-		return orderBy
-	}
-
-	validTableColumns := dao.columns()
-	var processedOrderBy []string
-
-	scanDao := NewScanDao(dao.db)
-
-	for _, ob := range orderBy {
-		table, column := extractTableColumn(ob)
-
-		if isValidOrderBy(table, column, validTableColumns) {
-			// When the column is 'scan_status', apply the custom sorting logic
-			if column == "scan_status" || table+"."+column == scanDao.Table+".status" {
-				// Determine the sort direction, defaulting to ASC if not specified
-				parts := strings.Fields(ob)
-				sortDirection := "ASC"
-				if len(parts) > 1 {
-					sortDirection = strings.ToUpper(parts[1])
-				}
-
-				caseStmt := "CASE " +
-					"WHEN scan_status IS NULL THEN 1 " +
-					"WHEN scan_status = 'waiting' THEN 2 " +
-					"WHEN scan_status = 'processing' THEN 3 " +
-					"END " + sortDirection
-
-				processedOrderBy = append(processedOrderBy, caseStmt)
-			} else {
-				processedOrderBy = append(processedOrderBy, ob)
-			}
-		}
-	}
-
-	return processedOrderBy
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

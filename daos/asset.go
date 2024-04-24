@@ -125,8 +125,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mod
 	}
 
 	origOrderBy := dbParams.OrderBy
-
-	dbParams.OrderBy = dao.processOrderBy(dbParams.OrderBy)
+	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
@@ -140,6 +139,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mod
 	defer rows.Close()
 
 	var assets []*models.Asset
+	assetIds := []string{}
 
 	for rows.Next() {
 		a, err := dao.scanRow(rows)
@@ -148,6 +148,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mod
 		}
 
 		assets = append(assets, a)
+		assetIds = append(assetIds, a.ID)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -158,21 +159,8 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mod
 	if len(assets) > 0 {
 		attachmentDao := NewAttachmentDao(dao.db)
 
-		// Get the asset IDs
-		assetIds := []string{}
-		for _, a := range assets {
-			assetIds = append(assetIds, a.ID)
-		}
-
 		// Reduce the order by clause to only include columns specific to the attachments table
-		var reducedOrderBy []string
-		for _, ob := range origOrderBy {
-			table, _ := extractTableColumn(ob)
-
-			if table == attachmentDao.Table {
-				reducedOrderBy = append(reducedOrderBy, ob)
-			}
-		}
+		reducedOrderBy := attachmentDao.ProcessOrderBy(origOrderBy)
 
 		dbParams = &database.DatabaseParams{
 			OrderBy: reducedOrderBy,
@@ -212,6 +200,22 @@ func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error
 
 	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 	return generic.Delete(dbParams, tx)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ProcessOrderBy takes an array of strings representing orderBy clauses and returns a processed
+// version of this array
+//
+// It will creates a new list of valid table columns based upon columns() for the current
+// DAO
+func (dao *AssetDao) ProcessOrderBy(orderBy []string) []string {
+	if len(orderBy) == 0 {
+		return orderBy
+	}
+
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	return generic.ProcessOrderBy(orderBy, dao.columns())
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -266,32 +270,6 @@ func (dao *AssetDao) data(a *models.Asset) map[string]any {
 		"created_at": a.CreatedAt,
 		"updated_at": a.UpdatedAt,
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// processOrderBy takes an array of strings representing orderBy clauses and returns a processed
-// version of this array
-//
-// It will creates a new list of valid table columns based upon columns() for the current
-// DAO
-func (dao *AssetDao) processOrderBy(orderBy []string) []string {
-	if len(orderBy) == 0 {
-		return orderBy
-	}
-
-	validTableColumns := dao.columns()
-	var processedOrderBy []string
-
-	for _, ob := range orderBy {
-		table, column := extractTableColumn(ob)
-
-		if isValidOrderBy(table, column, validTableColumns) {
-			processedOrderBy = append(processedOrderBy, ob)
-		}
-	}
-
-	return processedOrderBy
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

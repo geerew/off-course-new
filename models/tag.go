@@ -9,4 +9,11 @@ type Tag struct {
 	BaseModel
 
 	Tag string
+
+	// --------------------------------
+	// Not in this table, but added via a join
+	// --------------------------------
+
+	// Courses
+	CourseTags []*CourseTag
 }

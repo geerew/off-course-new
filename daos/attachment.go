@@ -95,7 +95,7 @@ func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([
 	}
 
 	// Process the order by clauses
-	dbParams.OrderBy = dao.processOrderBy(dbParams.OrderBy)
+	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
@@ -141,6 +141,22 @@ func (dao *AttachmentDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) 
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// processOrderBy takes an array of strings representing orderBy clauses and returns a processed
+// version of this array
+//
+// It will creates a new list of valid table columns based upon columns() for the current
+// DAO
+func (dao *AttachmentDao) ProcessOrderBy(orderBy []string) []string {
+	if len(orderBy) == 0 {
+		return orderBy
+	}
+
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	return generic.ProcessOrderBy(orderBy, dao.columns())
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -179,32 +195,6 @@ func (dao *AttachmentDao) data(a *models.Attachment) map[string]any {
 		"created_at": a.CreatedAt,
 		"updated_at": a.UpdatedAt,
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// processOrderBy takes an array of strings representing orderBy clauses and returns a processed
-// version of this array
-//
-// It will creates a new list of valid Table columns based upon columns() for the current
-// DAO
-func (dao *AttachmentDao) processOrderBy(orderBy []string) []string {
-	if len(orderBy) == 0 {
-		return orderBy
-	}
-
-	validTableColumns := dao.columns()
-	var processedOrderBy []string
-
-	for _, ob := range orderBy {
-		Table, column := extractTableColumn(ob)
-
-		if isValidOrderBy(Table, column, validTableColumns) {
-			processedOrderBy = append(processedOrderBy, ob)
-		}
-	}
-
-	return processedOrderBy
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

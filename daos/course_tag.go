@@ -63,7 +63,7 @@ func (dao *CourseTagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]
 	}
 
 	// Process the order by clauses
-	dbParams.OrderBy = dao.processOrderBy(dbParams.OrderBy)
+	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
@@ -106,6 +106,22 @@ func (dao *CourseTagDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) e
 
 	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 	return generic.Delete(dbParams, tx)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// processOrderBy takes an array of strings representing orderBy clauses and returns a processed
+// version of this array
+//
+// It will creates a new list of valid table columns based upon columns() for the current
+// DAO
+func (dao *CourseTagDao) ProcessOrderBy(orderBy []string) []string {
+	if len(orderBy) == 0 {
+		return orderBy
+	}
+
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	return generic.ProcessOrderBy(orderBy, dao.columns())
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -219,32 +235,6 @@ func (dao *CourseTagDao) data(ct *models.CourseTag) map[string]any {
 		"created_at": ct.CreatedAt,
 		"updated_at": ct.UpdatedAt,
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// processOrderBy takes an array of strings representing orderBy clauses and returns a processed
-// version of this array
-//
-// It will creates a new list of valid table columns based upon columns() for the current
-// DAO
-func (dao *CourseTagDao) processOrderBy(orderBy []string) []string {
-	if len(orderBy) == 0 {
-		return orderBy
-	}
-
-	validTableColumns := dao.columns()
-	var processedOrderBy []string
-
-	for _, ob := range orderBy {
-		table, column := extractTableColumn(ob)
-
-		if isValidOrderBy(table, column, validTableColumns) {
-			processedOrderBy = append(processedOrderBy, ob)
-		}
-	}
-
-	return processedOrderBy
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

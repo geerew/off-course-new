@@ -75,7 +75,8 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*model
 		dbParams = &database.DatabaseParams{}
 	}
 
-	dbParams.OrderBy = dao.processOrderBy(dbParams.OrderBy)
+	origOrderBy := dbParams.OrderBy
+	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
@@ -89,6 +90,7 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*model
 	defer rows.Close()
 
 	var tags []*models.Tag
+	tagIds := []string{}
 
 	for rows.Next() {
 		t, err := dao.scanRow(rows)
@@ -97,10 +99,43 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*model
 		}
 
 		tags = append(tags, t)
+		tagIds = append(tagIds, t.ID)
+
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+
+	// Get the course_tags
+	if len(tags) > 0 {
+		courseTagDao := NewCourseTagDao(dao.db)
+
+		// Reduce the order by clause to only include columns specific to the course_tags table
+		reducedOrderBy := courseTagDao.ProcessOrderBy(origOrderBy)
+
+		dbParams = &database.DatabaseParams{
+			OrderBy: reducedOrderBy,
+			Where:   squirrel.Eq{"tag_id": tagIds},
+		}
+
+		// Get the course_tags
+		courseTags, err := courseTagDao.List(dbParams, tx)
+		if err != nil {
+			return nil, err
+		}
+
+		// Map the course_tags to the tags
+		tagMap := map[string][]*models.CourseTag{}
+		for _, ct := range courseTags {
+			tagMap[ct.TagId] = append(tagMap[ct.TagId], ct)
+		}
+
+		// Assign the course_tags to the tags
+		for _, t := range tags {
+			t.CourseTags = tagMap[t.ID]
+		}
+
 	}
 
 	return tags, nil
@@ -121,9 +156,23 @@ func (dao *TagDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Internal
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// ProcessOrderBy takes an array of strings representing orderBy clauses and returns a processed
+// version of this array
+//
+// It will creates a new list of valid table columns based upon columns() for the current
+// DAO
+func (dao *TagDao) ProcessOrderBy(orderBy []string) []string {
+	if len(orderBy) == 0 {
+		return orderBy
+	}
+
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	return generic.ProcessOrderBy(orderBy, dao.columns())
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // baseSelect returns the default select builder
@@ -158,32 +207,6 @@ func (dao *TagDao) data(t *models.Tag) map[string]any {
 		"created_at": t.CreatedAt,
 		"updated_at": t.UpdatedAt,
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// processOrderBy takes an array of strings representing orderBy clauses and returns a processed
-// version of this array
-//
-// It will creates a new list of valid table columns based upon columns() for the current
-// DAO
-func (dao *TagDao) processOrderBy(orderBy []string) []string {
-	if len(orderBy) == 0 {
-		return orderBy
-	}
-
-	validTableColumns := dao.columns()
-	var processedOrderBy []string
-
-	for _, ob := range orderBy {
-		table, column := extractTableColumn(ob)
-
-		if isValidOrderBy(table, column, validTableColumns) {
-			processedOrderBy = append(processedOrderBy, ob)
-		}
-	}
-
-	return processedOrderBy
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -393,6 +393,21 @@ func TestAsset_List(t *testing.T) {
 		assert.Equal(t, testData[0].Assets[0].ID, result[0].ID)
 
 		// ----------------------------
+		// CREATED_AT ASC + ATTACHMENTS.CREATED_AT DESC
+		// ----------------------------
+		attachmentsDao := NewAttachmentDao(db)
+
+		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{
+			dao.Table + ".created_at asc",
+			attachmentsDao.Table + ".created_at desc",
+		}}, nil)
+
+		require.Nil(t, err)
+		require.Len(t, result, 3)
+		assert.Equal(t, testData[0].Assets[0].ID, result[0].ID)
+		assert.Equal(t, testData[0].Assets[0].Attachments[1].ID, result[0].Attachments[0].ID)
+
+		// ----------------------------
 		// Error
 		// ----------------------------
 		dbParams = &database.DatabaseParams{OrderBy: []string{"unit_test asc"}}

@@ -28,16 +28,18 @@ var test_tags = []string{
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type TestBuilder struct {
-	t                   *testing.T
-	db                  database.Database
-	numberOfCourses     int
+	t  *testing.T
+	db database.Database
+
+	numberOfCourses int
+	courseTitles    []string
+
 	scan                bool
 	assetsPerCourse     int
 	attachmentsPerAsset int
 
-	//
-	tagsPerCourse          int
-	specifiedTagsPerCourse []string
+	tagsPerCourse int
+	tags          []string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -68,8 +70,14 @@ func (builder *TestBuilder) Db(db database.Database) *TestBuilder {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // NumberOfCourses sets the number of courses
-func (builder *TestBuilder) Courses(numberOfCourses int) *TestBuilder {
-	builder.numberOfCourses = numberOfCourses
+func (builder *TestBuilder) Courses(courses any) *TestBuilder {
+	switch c := courses.(type) {
+	case int:
+		builder.numberOfCourses = c
+	case []string:
+		builder.courseTitles = c
+		builder.numberOfCourses = len(c)
+	}
 	return builder
 }
 
@@ -105,7 +113,8 @@ func (builder *TestBuilder) Tags(tags any) *TestBuilder {
 	case int:
 		builder.tagsPerCourse = t
 	case []string:
-		builder.specifiedTagsPerCourse = t
+		builder.tags = t
+		builder.tagsPerCourse = len(t)
 	}
 	return builder
 }
@@ -118,7 +127,14 @@ func (builder *TestBuilder) Build() []*TestCourse {
 	for i := 0; i < builder.numberOfCourses; i++ {
 		tc := &TestCourse{}
 
-		tc.Course = builder.newTestCourse()
+		title := ""
+		if len(builder.courseTitles) > 0 {
+			title = builder.courseTitles[i]
+		} else {
+			title = fmt.Sprintf("Course %s", security.PseudorandomString(5))
+		}
+
+		tc.Course = builder.newTestCourse(title)
 
 		if builder.scan {
 			tc.Scan = builder.newTestScan(tc.Course.ID)
@@ -128,7 +144,7 @@ func (builder *TestBuilder) Build() []*TestCourse {
 			tc.Assets = builder.newTestAssets(tc.Course)
 		}
 
-		if (builder.tagsPerCourse > 0 || len(builder.specifiedTagsPerCourse) > 0) && builder.db != nil {
+		if builder.tagsPerCourse > 0 && builder.db != nil {
 			tc.Tags = builder.newTestTags(tc.Course)
 		}
 
@@ -140,14 +156,14 @@ func (builder *TestBuilder) Build() []*TestCourse {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (builder *TestBuilder) newTestCourse() *models.Course {
+func (builder *TestBuilder) newTestCourse(title string) *models.Course {
 	c := &models.Course{}
 
 	c.RefreshId()
 	c.RefreshCreatedAt()
 	c.RefreshUpdatedAt()
 
-	c.Title = fmt.Sprintf("Course %s", security.PseudorandomString(5))
+	c.Title = title
 	c.Path = fmt.Sprintf("/%s/%s", security.PseudorandomString(5), c.Title)
 
 	if builder.db != nil {
@@ -267,16 +283,11 @@ func (builder *TestBuilder) newTestTags(course *models.Course) []*models.CourseT
 	tags := []*models.CourseTag{}
 	chosenTags := map[string]bool{}
 
-	count := builder.tagsPerCourse
-	if len(builder.specifiedTagsPerCourse) > 0 {
-		count = len(builder.specifiedTagsPerCourse)
-	}
-
-	for i := 0; i < count; i++ {
+	for i := 0; i < builder.tagsPerCourse; i++ {
 		var tag string
 
-		if len(builder.specifiedTagsPerCourse) > 0 {
-			tag = builder.specifiedTagsPerCourse[i]
+		if len(builder.tags) > 0 {
+			tag = builder.tags[i]
 		} else {
 			for {
 				randomTag := test_tags[rand.Intn(len(test_tags))]

@@ -22,8 +22,16 @@ type tags struct {
 type tagResponse struct {
 	ID        string         `json:"id"`
 	Tag       string         `json:"tag"`
+	Courses   []*courseTag   `json:"courses,omitempty"`
 	CreatedAt types.DateTime `json:"createdAt"`
 	UpdatedAt types.DateTime `json:"updatedAt"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+type courseTag struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

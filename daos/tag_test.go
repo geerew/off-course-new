@@ -148,29 +148,38 @@ func TestTag_List(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		_, dao, _ := tagSetup(t)
 
-		for _, tag := range test_tags {
-			require.Nil(t, dao.Create(&models.Tag{Tag: tag}, nil))
-		}
+		NewTestBuilder(t).Db(dao.db).Courses(1).Tags([]string{"PHP", "Go"}).Build()
+		NewTestBuilder(t).Db(dao.db).Courses(1).Tags([]string{"Go", "C"}).Build()
+		NewTestBuilder(t).Db(dao.db).Courses(1).Tags([]string{"C", "TypeScript"}).Build()
 
 		result, err := dao.List(nil, nil)
 		require.Nil(t, err)
-		require.Len(t, result, len(test_tags))
+		require.Len(t, result, 4)
+
+		// ----------------------------
+		// Course tags
+		// ----------------------------
+		assert.Len(t, result[0].CourseTags, 1) // PHP
+		assert.Len(t, result[1].CourseTags, 2) // GO
+		assert.Len(t, result[2].CourseTags, 2) // C
+		assert.Len(t, result[3].CourseTags, 1) // TypeScript
 
 	})
 
 	t.Run("orderby", func(t *testing.T) {
 		_, dao, _ := tagSetup(t)
 
-		for _, tag := range test_tags {
-			require.Nil(t, dao.Create(&models.Tag{Tag: tag}, nil))
-		}
+		testData := NewTestBuilder(t).
+			Db(dao.db).
+			Courses([]string{"course 1", "course 2", "course 3"}).
+			Tags([]string{"PHP", "Go", "Java", "TypeScript", "C"}).Build()
 
 		// ----------------------------
 		// TAG DESC
 		// ----------------------------
 		result, err := dao.List(&database.DatabaseParams{OrderBy: []string{"tag desc"}}, nil)
 		require.Nil(t, err)
-		require.Len(t, result, len(test_tags))
+		require.Len(t, result, 5)
 		assert.Equal(t, "TypeScript", result[0].Tag)
 
 		// ----------------------------
@@ -178,8 +187,17 @@ func TestTag_List(t *testing.T) {
 		// ----------------------------
 		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"tag asc"}}, nil)
 		require.Nil(t, err)
-		require.Len(t, result, len(test_tags))
+		require.Len(t, result, 5)
 		assert.Equal(t, "C", result[0].Tag)
+
+		// ----------------------------
+		// CREATED_AT ASC + COURSES.TITLE DESC
+		// ----------------------------
+		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"tag asc", NewCourseDao(dao.db).Table + ".title desc"}}, nil)
+		require.Nil(t, err)
+		require.Len(t, result, 5)
+		assert.Equal(t, "C", result[0].Tag)
+		assert.Equal(t, testData[2].ID, result[0].CourseTags[0].CourseId)
 
 		// ----------------------------
 		// Error

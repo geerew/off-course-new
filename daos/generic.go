@@ -170,3 +170,28 @@ func (dao *GenericDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) err
 	_, err := execFn(query, args...)
 	return err
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ProcessOrderBy takes an array of strings representing orderBy clauses and returns a processed
+// version of this array
+//
+// It will creates a new list of valid Table columns based upon columns() for the current
+// DAO
+func (dao *GenericDao) ProcessOrderBy(orderBy []string, validColumns []string) []string {
+	if len(orderBy) == 0 {
+		return orderBy
+	}
+
+	var processedOrderBy []string
+
+	for _, ob := range orderBy {
+		Table, column := extractTableColumn(ob)
+
+		if isValidOrderBy(Table, column, validColumns) {
+			processedOrderBy = append(processedOrderBy, ob)
+		}
+	}
+
+	return processedOrderBy
+}
