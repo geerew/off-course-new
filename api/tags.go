@@ -1,6 +1,8 @@
 package api
 
 import (
+	"strings"
+
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
@@ -14,7 +16,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type tags struct {
-	tagDao *daos.TagDao
+	tagDao       *daos.TagDao
+	courseTagDao *daos.CourseTagDao
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -38,27 +41,32 @@ type courseTag struct {
 
 func bindTagsApi(router fiber.Router, db database.Database) {
 	api := tags{
-		tagDao: daos.NewTagDao(db),
+		tagDao:       daos.NewTagDao(db),
+		courseTagDao: daos.NewCourseTagDao(db),
 	}
 
 	subGroup := router.Group("/tags")
 
 	subGroup.Get("/", api.getTags)
 	subGroup.Delete("/:id", api.deleteTag)
-	// subGroup.Get("/:courseId", api.getScan)
-	// subGroup.Post("", api.createScan)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func (api *tags) getTags(c *fiber.Ctx) error {
+	expand := c.QueryBool("expand", false)
+	orderBy := c.Query("orderBy", "tag asc")
+
 	dbParams := &database.DatabaseParams{
-		OrderBy:    []string{c.Query("orderBy", []string{"tag asc"}...)},
+		OrderBy:    strings.Split(orderBy, ","),
 		Pagination: pagination.NewFromApi(c),
 	}
 
-	tags, err := api.tagDao.List(dbParams, nil)
+	if expand {
+		dbParams.IncludeRelations = []string{api.courseTagDao.Table}
+	}
 
+	tags, err := api.tagDao.List(dbParams, nil)
 	if err != nil {
 		log.Err(err).Msg("error looking up tags")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -100,13 +108,30 @@ func (api *tags) deleteTag(c *fiber.Ctx) error {
 
 func tagResponseHelper(tags []*models.Tag) []*tagResponse {
 	responses := []*tagResponse{}
+
 	for _, tag := range tags {
-		responses = append(responses, &tagResponse{
+		t := &tagResponse{
 			ID:        tag.ID,
 			Tag:       tag.Tag,
 			CreatedAt: tag.CreatedAt,
 			UpdatedAt: tag.UpdatedAt,
-		})
+		}
+
+		// Add the course tags
+		if len(tag.CourseTags) > 0 {
+			courses := []*courseTag{}
+
+			for _, ct := range tag.CourseTags {
+				courses = append(courses, &courseTag{
+					ID:    ct.ID,
+					Title: ct.Course,
+				})
+			}
+
+			t.Courses = courses
+		}
+
+		responses = append(responses, t)
 	}
 
 	return responses

@@ -106,9 +106,10 @@ func bindCoursesApi(router fiber.Router, appFs *appFs.AppFs, db database.Databas
 func (api *courses) getCourses(c *fiber.Ctx) error {
 	started := c.Query("started", "undefined")
 	completed := c.Query("completed", "undefined")
+	orderBy := c.Query("orderBy", "created_at desc")
 
 	dbParams := &database.DatabaseParams{
-		OrderBy:    []string{c.Query("orderBy", []string{"created_at desc"}...)},
+		OrderBy:    strings.Split(orderBy, ","),
 		Pagination: pagination.NewFromApi(c),
 	}
 
@@ -286,6 +287,7 @@ func (api *courses) getCard(c *fiber.Ctx) error {
 
 func (api *courses) getAssets(c *fiber.Ctx) error {
 	id := c.Params("id")
+	orderBy := c.Query("orderBy", "chapter asc,prefix asc")
 
 	// Get the course
 	_, err := api.courseDao.Get(id, nil)
@@ -301,7 +303,7 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 	}
 
 	dbParams := &database.DatabaseParams{
-		OrderBy:    []string{c.Query("orderBy", []string{"chapter asc", "prefix asc"}...)},
+		OrderBy:    strings.Split(orderBy, ","),
 		Where:      squirrel.Eq{api.assetDao.Table + ".course_id": id},
 		Pagination: pagination.NewFromApi(c),
 	}
@@ -368,6 +370,7 @@ func (api *courses) getAsset(c *fiber.Ctx) error {
 func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 	id := c.Params("id")
 	assetId := c.Params("asset")
+	orderBy := c.Query("orderBy", "title asc")
 
 	// Get the course
 	_, err := api.courseDao.Get(id, nil)
@@ -400,7 +403,7 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 	}
 
 	dbParams := &database.DatabaseParams{
-		OrderBy:    []string{c.Query("orderBy", []string{"title asc"}...)},
+		OrderBy:    strings.Split(orderBy, ","),
 		Where:      squirrel.Eq{api.attachmentDao.Table + ".asset_id": assetId},
 		Pagination: pagination.NewFromApi(c),
 	}

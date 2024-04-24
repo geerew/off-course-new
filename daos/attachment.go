@@ -95,7 +95,7 @@ func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([
 	}
 
 	// Process the order by clauses
-	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy)
+	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy, false)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
@@ -147,13 +147,13 @@ func (dao *AttachmentDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) 
 //
 // It will creates a new list of valid table columns based upon columns() for the current
 // DAO
-func (dao *AttachmentDao) ProcessOrderBy(orderBy []string) []string {
+func (dao *AttachmentDao) ProcessOrderBy(orderBy []string, explicit bool) []string {
 	if len(orderBy) == 0 {
 		return orderBy
 	}
 
 	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
-	return generic.ProcessOrderBy(orderBy, dao.columns())
+	return generic.ProcessOrderBy(orderBy, dao.columns(), explicit)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

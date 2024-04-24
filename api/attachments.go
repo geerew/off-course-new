@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"strings"
 
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
@@ -53,8 +54,10 @@ func bindAttachmentsApi(router fiber.Router, appFs *appFs.AppFs, db database.Dat
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func (api *attachments) getAttachments(c *fiber.Ctx) error {
+	orderBy := c.Query("orderBy", "created_at desc")
+
 	dbParams := &database.DatabaseParams{
-		OrderBy:    []string{c.Query("orderBy", []string{"created_at desc"}...)},
+		OrderBy:    strings.Split(orderBy, ","),
 		Pagination: pagination.NewFromApi(c),
 	}
 

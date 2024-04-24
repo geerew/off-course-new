@@ -42,7 +42,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
 		// Create 10 assets
-		daos.NewTestBuilder(t).Db(db).Courses(2).Assets(5).Build()
+		daos.NewTestBuilder(t).Db(db).Courses(2).Assets(5).Attachments(2).Build()
 
 		status, body, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
 		require.NoError(t, err)
@@ -51,13 +51,26 @@ func TestAssets_GetAssets(t *testing.T) {
 		paginationResp, assetsResp := assetsUnmarshalHelper(t, body)
 		require.Equal(t, 10, int(paginationResp.TotalItems))
 		require.Len(t, assetsResp, 10)
+		require.Nil(t, assetsResp[0].Attachments)
+
+		// ----------------------------
+		// Attachments
+		// ----------------------------
+		status, body, err = assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/?expand=true", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, assetsResp = assetsUnmarshalHelper(t, body)
+		require.Equal(t, 10, int(paginationResp.TotalItems))
+		require.Len(t, assetsResp, 10)
+		require.Len(t, assetsResp[0].Attachments, 2)
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
 		// Create 10 assets
-		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(5).Build()
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(5).Attachments(2).Build()
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -82,6 +95,22 @@ func TestAssets_GetAssets(t *testing.T) {
 		require.Equal(t, 10, int(paginationResp.TotalItems))
 		require.Len(t, assetsResp, 10)
 		assert.Equal(t, testData[1].Assets[4].ID, assetsResp[0].ID)
+
+		// ----------------------------
+		// CREATED_AT ASC + ATTACHMENTS.TITLE DESC
+		// ----------------------------
+		attDao := daos.NewAttachmentDao(db)
+
+		status, body, err = assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/?expand=true&orderBy=created_at%20asc,"+attDao.Table+".created_at%20desc", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, assetsResp = assetsUnmarshalHelper(t, body)
+		require.Equal(t, 10, int(paginationResp.TotalItems))
+		require.Len(t, assetsResp, 10)
+		assert.Equal(t, testData[0].Assets[0].ID, assetsResp[0].ID)
+		require.Len(t, assetsResp[0].Attachments, 2)
+		assert.Equal(t, testData[0].Assets[0].Attachments[1].ID, assetsResp[0].Attachments[0].ID)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
@@ -157,6 +186,21 @@ func TestAssets_GetAsset(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		var assetResp assetResponse
+		err = json.Unmarshal(body, &assetResp)
+		require.Nil(t, err)
+		assert.Equal(t, testData[1].Assets[3].ID, assetResp.ID)
+		assert.Equal(t, testData[1].Assets[3].Title, assetResp.Title)
+		assert.Equal(t, testData[1].Assets[3].Path, assetResp.Path)
+		assert.Equal(t, testData[1].Assets[3].CourseID, assetResp.CourseID)
+		assert.Nil(t, assetResp.Attachments)
+
+		// ----------------------------
+		// Attachments
+		// ----------------------------
+		status, body, err = assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[1].Assets[3].ID+"/?expand=true", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
 		err = json.Unmarshal(body, &assetResp)
 		require.Nil(t, err)
 		assert.Equal(t, testData[1].Assets[3].ID, assetResp.ID)

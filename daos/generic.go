@@ -178,7 +178,7 @@ func (dao *GenericDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) err
 //
 // It will creates a new list of valid Table columns based upon columns() for the current
 // DAO
-func (dao *GenericDao) ProcessOrderBy(orderBy []string, validColumns []string) []string {
+func (dao *GenericDao) ProcessOrderBy(orderBy []string, validColumns []string, explicit bool) []string {
 	if len(orderBy) == 0 {
 		return orderBy
 	}
@@ -187,6 +187,10 @@ func (dao *GenericDao) ProcessOrderBy(orderBy []string, validColumns []string) [
 
 	for _, ob := range orderBy {
 		Table, column := extractTableColumn(ob)
+
+		if explicit && Table == "" {
+			continue
+		}
 
 		if isValidOrderBy(Table, column, validColumns) {
 			processedOrderBy = append(processedOrderBy, ob)

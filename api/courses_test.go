@@ -1067,7 +1067,7 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
-		assert.Contains(t, string(body), "error looking up asset")
+		assert.Contains(t, string(body), "error looking up attachments")
 	})
 }
 

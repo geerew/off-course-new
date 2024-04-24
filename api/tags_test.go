@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
-	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/daos"
@@ -47,26 +46,39 @@ func TestTags_GetTags(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		_, db, _, _ := setup(t)
 
-		for _, tag := range test_tags {
-			require.Nil(t, daos.NewTagDao(db).Create(&models.Tag{Tag: tag}, nil))
-		}
+		daos.NewTestBuilder(t).Db(db).Courses(2).Tags([]string{"PHP", "Go", "Java", "TypeScript", "JavaScript"}).Build()
 
 		status, body, err := tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, tagsResp := tagsUnmarshalHelper(t, body)
-		assert.Equal(t, len(test_tags), int(paginationResp.TotalItems))
-		require.Len(t, tagsResp, len(test_tags))
+		assert.Equal(t, 5, int(paginationResp.TotalItems))
+		require.Len(t, tagsResp, 5)
+		require.Nil(t, tagsResp[0].Courses)
+
+		// ----------------------------
+		// Courses
+		// ----------------------------
+
+		status, body, err = tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/?expand=true", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, tagsResp = tagsUnmarshalHelper(t, body)
+		assert.Equal(t, 5, int(paginationResp.TotalItems))
+		require.Len(t, tagsResp, 5)
+		require.Len(t, tagsResp[0].Courses, 2)
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		_, db, _, _ := setup(t)
 
-		for _, tag := range test_tags {
-			require.Nil(t, daos.NewTagDao(db).Create(&models.Tag{Tag: tag}, nil))
-			time.Sleep(time.Millisecond * 1)
-		}
+		daos.NewTestBuilder(t).
+			Db(db).
+			Courses([]string{"course 1", "course 2"}).
+			Tags([]string{"PHP", "Go", "Java", "TypeScript", "JavaScript"}).
+			Build()
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -76,9 +88,9 @@ func TestTags_GetTags(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, tagsResp := tagsUnmarshalHelper(t, body)
-		require.Equal(t, len(test_tags), int(paginationResp.TotalItems))
-		require.Len(t, tagsResp, len(test_tags))
-		assert.Equal(t, test_tags[0], tagsResp[0].Tag)
+		require.Equal(t, 5, int(paginationResp.TotalItems))
+		require.Len(t, tagsResp, 5)
+		assert.Equal(t, "PHP", tagsResp[0].Tag)
 
 		// ----------------------------
 		// CREATED_AT DESC
@@ -88,9 +100,25 @@ func TestTags_GetTags(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, tagsResp = tagsUnmarshalHelper(t, body)
-		require.Equal(t, len(test_tags), int(paginationResp.TotalItems))
-		require.Len(t, tagsResp, len(test_tags))
-		assert.Equal(t, test_tags[len(test_tags)-1], tagsResp[0].Tag)
+		require.Equal(t, 5, int(paginationResp.TotalItems))
+		require.Len(t, tagsResp, 5)
+		assert.Equal(t, "JavaScript", tagsResp[0].Tag)
+
+		// ----------------------------
+		// CREATED_AT ASC + COURSES.TITLE DESC
+		// ----------------------------
+		courseDao := daos.NewCourseDao(db)
+
+		status, body, err = tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/?expand=true&orderBy=created_at%20asc,"+courseDao.Table+".title%20desc", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, tagsResp = tagsUnmarshalHelper(t, body)
+		require.Equal(t, 5, int(paginationResp.TotalItems))
+		require.Len(t, tagsResp, 5)
+		assert.Equal(t, "PHP", tagsResp[0].Tag)
+		require.Len(t, tagsResp[0].Courses, 2)
+		assert.Equal(t, "course 2", tagsResp[0].Courses[0].Title)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
@@ -152,216 +180,6 @@ func TestTags_GetTags(t *testing.T) {
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// func TestTags_GetCourse(t *testing.T) {
-// 	t.Run("200 (found)", func(t *testing.T) {
-// 		_, db, _, _ := setup(t)
-
-// 		testData := daos.NewTestBuilder(t).Db(db).Courses(3).Build()
-
-// 		status, body, err := tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/"+testData[2].ID, nil))
-// 		require.NoError(t, err)
-// 		require.Equal(t, http.StatusOK, status)
-
-// 		var courseResp courseResponse
-// 		err = json.Unmarshal(body, &courseResp)
-// 		require.Nil(t, err)
-// 		assert.Equal(t, testData[2].ID, courseResp.ID)
-// 	})
-
-// 	t.Run("200 (availability)", func(t *testing.T) {
-// 		_, db, _, _ := setup(t)
-
-// 		testData := daos.NewTestBuilder(t).Db(db).Courses(3).Build()
-
-// 		// ----------------------------
-// 		// Unavailable
-// 		// ----------------------------
-// 		status, body, err := tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/"+testData[2].ID, nil))
-// 		require.NoError(t, err)
-// 		require.Equal(t, http.StatusOK, status)
-
-// 		var courseResp courseResponse
-// 		err = json.Unmarshal(body, &courseResp)
-// 		require.Nil(t, err)
-// 		assert.Equal(t, testData[2].ID, courseResp.ID)
-// 		assert.False(t, courseResp.Available)
-
-// 		// ----------------------------
-// 		// Available
-// 		// ----------------------------
-// 		courseDao := daos.NewCourseDao(db)
-// 		testData[2].Available = true
-// 		require.Nil(t, courseDao.Update(testData[2].Course))
-
-// 		status, body, err = tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/"+testData[2].ID, nil))
-// 		require.NoError(t, err)
-// 		require.Equal(t, http.StatusOK, status)
-
-// 		err = json.Unmarshal(body, &courseResp)
-// 		require.Nil(t, err)
-// 		assert.Equal(t, testData[2].ID, courseResp.ID)
-// 		assert.True(t, courseResp.Available)
-// 	})
-
-// 	t.Run("404 (not found)", func(t *testing.T) {
-// 		_, db, _, _ := setup(t)
-
-// 		status, _, err := tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/test", nil))
-// 		require.NoError(t, err)
-// 		require.Equal(t, http.StatusNotFound, status)
-// 	})
-
-// 	t.Run("500 (internal error)", func(t *testing.T) {
-// 		_, db, _, _ := setup(t)
-
-// 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(db).Table)
-// 		require.Nil(t, err)
-
-// 		status, _, err := tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/test", nil))
-// 		require.NoError(t, err)
-// 		require.Equal(t, http.StatusInternalServerError, status)
-// 	})
-// }
-
-// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// func TestTags_Create(t *testing.T) {
-// 	t.Run("201 (created)", func(t *testing.T) {
-// 		_, db, _, _ := setup(t)
-
-// 		testData := daos.NewTestBuilder(t).Courses(1).Build()
-// 		appFs.Fs.MkdirAll(testData[0].Path, os.ModePerm)
-
-// 		postData := fmt.Sprintf(`{"title": "%s", "path": "%s" }`, testData[0].Title, testData[0].Path)
-// 		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(postData))
-// 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-
-// 		status, body, err := tagsRequestHelper(db, req)
-// 		require.NoError(t, err)
-// 		require.Equal(t, http.StatusCreated, status)
-
-// 		var courseResp courseResponse
-// 		err = json.Unmarshal(body, &courseResp)
-// 		require.Nil(t, err)
-// 		assert.NotNil(t, courseResp.ID)
-// 		assert.Equal(t, testData[0].Title, courseResp.Title)
-// 		assert.Equal(t, testData[0].Path, courseResp.Path)
-// 		assert.True(t, courseResp.Available)
-// 	})
-
-// 	t.Run("400 (bind error)", func(t *testing.T) {
-// 		_, db, _, _ := setup(t)
-
-// 		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{`))
-// 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-
-// 		status, body, err := tagsRequestHelper(db, req)
-// 		require.NoError(t, err)
-// 		require.Equal(t, http.StatusBadRequest, status)
-// 		assert.Contains(t, string(body), "error parsing data")
-// 	})
-
-// 	t.Run("400 (invalid data)", func(t *testing.T) {
-// 		_, db, _, _ := setup(t)
-
-// 		// ----------------------------
-// 		// Missing title
-// 		// ----------------------------
-// 		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{"title": ""}`))
-// 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-
-// 		status, body, err := tagsRequestHelper(db, req)
-// 		require.NoError(t, err)
-// 		require.Equal(t, http.StatusBadRequest, status)
-// 		assert.Contains(t, string(body), "a title and path are required")
-
-// 		// ----------------------------
-// 		// Missing path
-// 		// ----------------------------
-// 		req = httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{"title": "course 1", "path": ""}`))
-// 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-
-// 		status, body, err = tagsRequestHelper(db, req)
-// 		require.NoError(t, err)
-// 		require.Equal(t, http.StatusBadRequest, status)
-// 		assert.Contains(t, string(body), "a title and path are required")
-
-// 		// ----------------------------
-// 		// Invalid path
-// 		// ----------------------------
-// 		req = httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{"title": "course 1", "path": "/test"}`))
-// 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-
-// 		status, body, err = tagsRequestHelper(db, req)
-// 		require.NoError(t, err)
-// 		require.Equal(t, http.StatusBadRequest, status)
-// 		assert.Contains(t, string(body), "invalid course path")
-// 	})
-
-// 	t.Run("400 (existing course)", func(t *testing.T) {
-// 		_, db, _, _ := setup(t)
-
-// 		coursePath := "/course 1/"
-// 		appFs.Fs.MkdirAll(coursePath, os.ModePerm)
-
-// 		postData := fmt.Sprintf(`{"title": "course 1", "path": "%s" }`, coursePath)
-// 		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(postData))
-// 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-
-// 		status, _, err := tagsRequestHelper(db, req)
-// 		require.NoError(t, err)
-// 		require.Equal(t, http.StatusCreated, status)
-
-// 		// Create the course again
-// 		status, body, err := tagsRequestHelper(db, req)
-// 		require.NoError(t, err)
-// 		require.Equal(t, http.StatusBadRequest, status)
-// 		assert.Contains(t, string(body), "a course with this path already exists ")
-// 	})
-
-// 	t.Run("500 (internal error)", func(t *testing.T) {
-// 		_, db, _, _ := setup(t)
-
-// 		// Drop the courses table
-// 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(db).Table)
-// 		require.Nil(t, err)
-
-// 		coursePath := "/course 1/"
-// 		appFs.Fs.MkdirAll(coursePath, os.ModePerm)
-
-// 		postData := fmt.Sprintf(`{"title": "course 1", "path": "%s" }`, coursePath)
-// 		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(postData))
-// 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-
-// 		status, body, err := tagsRequestHelper(db, req)
-// 		require.NoError(t, err)
-// 		require.Equal(t, http.StatusInternalServerError, status)
-// 		assert.Contains(t, string(body), "error creating course")
-// 	})
-
-// 	t.Run("500 (scan error)", func(t *testing.T) {
-// 		_, db, _, _ := setup(t)
-
-// 		// Drop scan table
-// 		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.TableScans())
-// 		require.Nil(t, err)
-
-// 		coursePath := "/course 1/"
-// 		appFs.Fs.MkdirAll(coursePath, os.ModePerm)
-
-// 		postData := fmt.Sprintf(`{"title": "course 1", "path": "%s" }`, coursePath)
-// 		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(postData))
-// 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-
-// 		status, body, err := tagsRequestHelper(db, req)
-// 		require.NoError(t, err)
-// 		require.Equal(t, http.StatusInternalServerError, status)
-// 		assert.Contains(t, string(body), "error creating scan job")
-// 	})
-// }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

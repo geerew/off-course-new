@@ -308,6 +308,8 @@ func (builder *TestBuilder) newTestTags(course *models.Course) []*models.CourseT
 		require.Nil(builder.t, dao.Create(ct, nil))
 
 		tags = append(tags, ct)
+
+		time.Sleep(time.Millisecond * 1)
 	}
 
 	return tags

@@ -26,6 +26,7 @@ type assets struct {
 	appFs            *appFs.AppFs
 	assetDao         *daos.AssetDao
 	assetProgressDao *daos.AssetProgressDao
+	attachmentDao    *daos.AttachmentDao
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -62,6 +63,7 @@ func bindAssetsApi(router fiber.Router, appFs *appFs.AppFs, db database.Database
 		appFs:            appFs,
 		assetDao:         daos.NewAssetDao(db),
 		assetProgressDao: daos.NewAssetProgressDao(db),
+		attachmentDao:    daos.NewAttachmentDao(db),
 	}
 
 	subGroup := router.Group("/assets")
@@ -76,9 +78,16 @@ func bindAssetsApi(router fiber.Router, appFs *appFs.AppFs, db database.Database
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func (api *assets) getAssets(c *fiber.Ctx) error {
+	expand := c.QueryBool("expand", false)
+	orderBy := c.Query("orderBy", "created_at desc")
+
 	dbParams := &database.DatabaseParams{
-		OrderBy:    []string{c.Query("orderBy", []string{"created_at desc"}...)},
+		OrderBy:    strings.Split(orderBy, ","),
 		Pagination: pagination.NewFromApi(c),
+	}
+
+	if expand {
+		dbParams.IncludeRelations = []string{api.attachmentDao.Table}
 	}
 
 	assets, err := api.assetDao.List(dbParams, nil)
@@ -104,9 +113,15 @@ func (api *assets) getAssets(c *fiber.Ctx) error {
 
 func (api *assets) getAsset(c *fiber.Ctx) error {
 	id := c.Params("id")
+	expand := c.QueryBool("expand", false)
+
+	dbParams := &database.DatabaseParams{}
+	if expand {
+		dbParams.IncludeRelations = []string{api.attachmentDao.Table}
+	}
 
 	// TODO: support attachments orderby
-	asset, err := api.assetDao.Get(id, nil, nil)
+	asset, err := api.assetDao.Get(id, dbParams, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
