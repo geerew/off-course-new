@@ -36,8 +36,8 @@ func TestCourses_GetCourses(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, _ := coursesUnmarshalHelper(t, body)
-		assert.Zero(t, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 0)
+		require.Zero(t, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 0)
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
@@ -50,7 +50,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
-		assert.Equal(t, 5, int(paginationResp.TotalItems))
+		require.Equal(t, 5, int(paginationResp.TotalItems))
 		require.Len(t, coursesResp, 5)
 	})
 
@@ -72,7 +72,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		require.Len(t, coursesResp, 3)
 
 		for _, c := range coursesResp {
-			assert.False(t, c.Available)
+			require.False(t, c.Available)
 		}
 
 		// ----------------------------
@@ -92,9 +92,9 @@ func TestCourses_GetCourses(t *testing.T) {
 		require.Equal(t, 3, int(paginationResp.TotalItems))
 		require.Len(t, coursesResp, 3)
 
-		assert.True(t, coursesResp[0].Available)
-		assert.False(t, coursesResp[1].Available)
-		assert.True(t, coursesResp[2].Available)
+		require.True(t, coursesResp[0].Available)
+		require.False(t, coursesResp[1].Available)
+		require.True(t, coursesResp[2].Available)
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
@@ -112,7 +112,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
 		require.Equal(t, 5, int(paginationResp.TotalItems))
 		require.Len(t, coursesResp, 5)
-		assert.Equal(t, testData[0].ID, coursesResp[0].ID)
+		require.Equal(t, testData[0].ID, coursesResp[0].ID)
 
 		// ----------------------------
 		// CREATED_AT DESC
@@ -124,7 +124,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
 		require.Equal(t, 5, int(paginationResp.TotalItems))
 		require.Len(t, coursesResp, 5)
-		assert.Equal(t, testData[4].ID, coursesResp[0].ID)
+		require.Equal(t, testData[4].ID, coursesResp[0].ID)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
@@ -146,11 +146,11 @@ func TestCourses_GetCourses(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
-		assert.Equal(t, 17, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 10)
+		require.Equal(t, 17, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 10)
 
 		// Check the last asset in the paginated response
-		assert.Equal(t, testData[9].ID, coursesResp[9].ID)
+		require.Equal(t, testData[9].ID, coursesResp[9].ID)
 
 		// ----------------------------
 		// Get the second page (7 courses)
@@ -165,11 +165,11 @@ func TestCourses_GetCourses(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
-		assert.Equal(t, 17, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 7)
+		require.Equal(t, 17, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 7)
 
 		// Check the last asset in the paginated response
-		assert.Equal(t, testData[16].ID, coursesResp[6].ID)
+		require.Equal(t, testData[16].ID, coursesResp[6].ID)
 	})
 
 	t.Run("200 (started)", func(t *testing.T) {
@@ -193,8 +193,8 @@ func TestCourses_GetCourses(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, _ := coursesUnmarshalHelper(t, body)
-		assert.Equal(t, 2, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 2)
+		require.Equal(t, 2, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 2)
 
 		// ------------------
 		// `started` is true
@@ -206,7 +206,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
 		require.Equal(t, 1, int(paginationResp.TotalItems))
 		require.Len(t, paginationResp.Items, 1)
-		assert.Equal(t, testData[0].ID, coursesResp[0].ID)
+		require.Equal(t, testData[0].ID, coursesResp[0].ID)
 
 		// ------------------
 		// `started` is false
@@ -218,7 +218,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
 		require.Equal(t, 1, int(paginationResp.TotalItems))
 		require.Len(t, paginationResp.Items, 1)
-		assert.Equal(t, testData[1].ID, coursesResp[0].ID)
+		require.Equal(t, testData[1].ID, coursesResp[0].ID)
 	})
 
 	t.Run("200 (completed)", func(t *testing.T) {
@@ -244,8 +244,8 @@ func TestCourses_GetCourses(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, _ := coursesUnmarshalHelper(t, body)
-		assert.Equal(t, 2, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 2)
+		require.Equal(t, 2, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 2)
 
 		// ------------------
 		// `completed` is true
@@ -257,7 +257,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
 		require.Equal(t, 1, int(paginationResp.TotalItems))
 		require.Len(t, paginationResp.Items, 1)
-		assert.Equal(t, testData[0].ID, coursesResp[0].ID)
+		require.Equal(t, testData[0].ID, coursesResp[0].ID)
 
 		// ------------------
 		// `completed` is false
@@ -269,7 +269,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
 		require.Equal(t, 1, int(paginationResp.TotalItems))
 		require.Len(t, paginationResp.Items, 1)
-		assert.Equal(t, testData[1].ID, coursesResp[0].ID)
+		require.Equal(t, testData[1].ID, coursesResp[0].ID)
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
@@ -300,7 +300,7 @@ func TestCourses_GetCourse(t *testing.T) {
 		var courseResp courseResponse
 		err = json.Unmarshal(body, &courseResp)
 		require.Nil(t, err)
-		assert.Equal(t, testData[2].ID, courseResp.ID)
+		require.Equal(t, testData[2].ID, courseResp.ID)
 	})
 
 	t.Run("200 (availability)", func(t *testing.T) {
@@ -318,7 +318,7 @@ func TestCourses_GetCourse(t *testing.T) {
 		var courseResp courseResponse
 		err = json.Unmarshal(body, &courseResp)
 		require.Nil(t, err)
-		assert.Equal(t, testData[2].ID, courseResp.ID)
+		require.Equal(t, testData[2].ID, courseResp.ID)
 		assert.False(t, courseResp.Available)
 
 		// ----------------------------
@@ -643,14 +643,14 @@ func TestCourses_GetAssets(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, _ := assetsUnmarshalHelper(t, body)
-		assert.Zero(t, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 0)
+		require.Zero(t, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 0)
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(3).Build()
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(3).Attachments(2).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/?orderBy=created_at%20asc", nil)
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
@@ -658,18 +658,33 @@ func TestCourses_GetAssets(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, assetsResp := assetsUnmarshalHelper(t, body)
-		assert.Equal(t, 3, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 3)
+		require.Equal(t, 3, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 3)
+		require.Equal(t, testData[1].Assets[0].ID, assetsResp[0].ID)
+		require.Equal(t, testData[1].Assets[1].ID, assetsResp[1].ID)
+		require.Equal(t, testData[1].Assets[2].ID, assetsResp[2].ID)
+		require.Nil(t, assetsResp[0].Attachments)
 
-		assert.Equal(t, testData[1].Assets[0].ID, assetsResp[0].ID)
-		assert.Equal(t, testData[1].Assets[1].ID, assetsResp[1].ID)
-		assert.Equal(t, testData[1].Assets[2].ID, assetsResp[2].ID)
+		// ----------------------------
+		// Attachments
+		// ----------------------------
+
+		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/?expand=true&orderBy=created_at%20asc", nil)
+		status, body, err = coursesRequestHelper(appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, assetsResp = assetsUnmarshalHelper(t, body)
+		require.Equal(t, 3, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 3)
+		require.Len(t, assetsResp[0].Attachments, 2)
+
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(3).Build()
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(3).Attachments(2).Build()
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -680,12 +695,11 @@ func TestCourses_GetAssets(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, assetsResp := assetsUnmarshalHelper(t, body)
-		assert.Equal(t, 3, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 3)
-
-		assert.Equal(t, testData[1].Assets[0].ID, assetsResp[0].ID)
-		assert.Equal(t, testData[1].Assets[1].ID, assetsResp[1].ID)
-		assert.Equal(t, testData[1].Assets[2].ID, assetsResp[2].ID)
+		require.Equal(t, 3, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 3)
+		require.Equal(t, testData[1].Assets[0].ID, assetsResp[0].ID)
+		require.Equal(t, testData[1].Assets[1].ID, assetsResp[1].ID)
+		require.Equal(t, testData[1].Assets[2].ID, assetsResp[2].ID)
 
 		// ----------------------------
 		// CREATED_AT DESC
@@ -696,12 +710,28 @@ func TestCourses_GetAssets(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, assetsResp = assetsUnmarshalHelper(t, body)
-		assert.Equal(t, 3, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 3)
+		require.Equal(t, 3, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 3)
+		require.Equal(t, testData[1].Assets[2].ID, assetsResp[0].ID)
+		require.Equal(t, testData[1].Assets[1].ID, assetsResp[1].ID)
+		require.Equal(t, testData[1].Assets[0].ID, assetsResp[2].ID)
 
-		assert.Equal(t, testData[1].Assets[2].ID, assetsResp[0].ID)
-		assert.Equal(t, testData[1].Assets[1].ID, assetsResp[1].ID)
-		assert.Equal(t, testData[1].Assets[0].ID, assetsResp[2].ID)
+		// ----------------------------
+		// CREATED_AT ASC + ATTACHMENTS.TITLE DESC
+		// ----------------------------
+		attDao := daos.NewAttachmentDao(db)
+
+		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/?expand=true&orderBy=created_at%20asc,"+attDao.Table+".created_at%20desc", nil)
+		status, body, err = coursesRequestHelper(appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, assetsResp = assetsUnmarshalHelper(t, body)
+		require.Equal(t, 3, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 3)
+		require.Equal(t, testData[1].Assets[0].ID, assetsResp[0].ID)
+		require.Len(t, assetsResp[0].Attachments, 2)
+		require.Equal(t, testData[1].Assets[0].Attachments[1].ID, assetsResp[0].Attachments[0].ID)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
@@ -724,11 +754,11 @@ func TestCourses_GetAssets(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, assetsResp := assetsUnmarshalHelper(t, body)
-		assert.Equal(t, 17, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 10)
+		require.Equal(t, 17, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 10)
 
 		// Check the last asset in the paginated response
-		assert.Equal(t, testData[0].Assets[9].ID, assetsResp[9].ID)
+		require.Equal(t, testData[0].Assets[9].ID, assetsResp[9].ID)
 
 		// ------------------------
 		// Get the second page (7 assets)
@@ -745,11 +775,11 @@ func TestCourses_GetAssets(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, assetsResp = assetsUnmarshalHelper(t, body)
-		assert.Equal(t, 17, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 7)
+		require.Equal(t, 17, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 7)
 
 		// Check the last asset in the paginated response
-		assert.Equal(t, testData[0].Assets[16].ID, assetsResp[6].ID)
+		require.Equal(t, testData[0].Assets[16].ID, assetsResp[6].ID)
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
@@ -791,7 +821,7 @@ func TestCourses_GetAsset(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(3).Build()
+		testData := daos.NewTestBuilder(t).Db(db).Courses(2).Assets(3).Attachments(2).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[1].ID, nil)
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
@@ -801,10 +831,25 @@ func TestCourses_GetAsset(t *testing.T) {
 		var assetResp assetResponse
 		err = json.Unmarshal(body, &assetResp)
 		require.Nil(t, err)
+		require.Equal(t, testData[0].Assets[1].ID, assetResp.ID)
+		require.Equal(t, testData[0].Assets[1].Title, assetResp.Title)
+		require.Equal(t, testData[0].Assets[1].Path, assetResp.Path)
+		assert.Nil(t, assetResp.Attachments)
 
-		assert.Equal(t, testData[0].Assets[1].ID, assetResp.ID)
-		assert.Equal(t, testData[0].Assets[1].Title, assetResp.Title)
-		assert.Equal(t, testData[0].Assets[1].Path, assetResp.Path)
+		// ----------------------------
+		// Attachments
+		// ----------------------------
+		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[1].ID+"/?expand=true", nil)
+		status, body, err = coursesRequestHelper(appFs, db, cs, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		err = json.Unmarshal(body, &assetResp)
+		require.Nil(t, err)
+		require.Equal(t, testData[0].Assets[1].ID, assetResp.ID)
+		require.Equal(t, testData[0].Assets[1].Title, assetResp.Title)
+		require.Equal(t, testData[0].Assets[1].Path, assetResp.Path)
+		require.Len(t, assetResp.Attachments, 2)
 	})
 
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
@@ -817,7 +862,7 @@ func TestCourses_GetAsset(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Equal(t, "Asset does not belong to course", string(body))
+		require.Equal(t, "Asset does not belong to course", string(body))
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
@@ -882,8 +927,8 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, _ := attachmentsUnmarshalHelper(t, body)
-		assert.Zero(t, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 0)
+		require.Zero(t, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 0)
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
@@ -897,12 +942,12 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, attachmentResp := attachmentsUnmarshalHelper(t, body)
-		assert.Equal(t, 3, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 3)
+		require.Equal(t, 3, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 3)
 
-		assert.Equal(t, testData[1].Assets[0].Attachments[0].ID, attachmentResp[0].ID)
-		assert.Equal(t, testData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
-		assert.Equal(t, testData[1].Assets[0].Attachments[2].ID, attachmentResp[2].ID)
+		require.Equal(t, testData[1].Assets[0].Attachments[0].ID, attachmentResp[0].ID)
+		require.Equal(t, testData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
+		require.Equal(t, testData[1].Assets[0].Attachments[2].ID, attachmentResp[2].ID)
 	})
 
 	t.Run("200 (orderBy)", func(t *testing.T) {
@@ -919,12 +964,12 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, attachmentResp := attachmentsUnmarshalHelper(t, body)
-		assert.Equal(t, 3, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 3)
+		require.Equal(t, 3, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 3)
 
-		assert.Equal(t, testData[1].Assets[0].Attachments[0].ID, attachmentResp[0].ID)
-		assert.Equal(t, testData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
-		assert.Equal(t, testData[1].Assets[0].Attachments[2].ID, attachmentResp[2].ID)
+		require.Equal(t, testData[1].Assets[0].Attachments[0].ID, attachmentResp[0].ID)
+		require.Equal(t, testData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
+		require.Equal(t, testData[1].Assets[0].Attachments[2].ID, attachmentResp[2].ID)
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -935,12 +980,12 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, attachmentResp = attachmentsUnmarshalHelper(t, body)
-		assert.Equal(t, 3, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 3)
+		require.Equal(t, 3, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 3)
 
-		assert.Equal(t, testData[1].Assets[0].Attachments[2].ID, attachmentResp[0].ID)
-		assert.Equal(t, testData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
-		assert.Equal(t, testData[1].Assets[0].Attachments[0].ID, attachmentResp[2].ID)
+		require.Equal(t, testData[1].Assets[0].Attachments[2].ID, attachmentResp[0].ID)
+		require.Equal(t, testData[1].Assets[0].Attachments[1].ID, attachmentResp[1].ID)
+		require.Equal(t, testData[1].Assets[0].Attachments[0].ID, attachmentResp[2].ID)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
@@ -963,11 +1008,11 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, attachmentResp := attachmentsUnmarshalHelper(t, body)
-		assert.Equal(t, 17, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 10)
+		require.Equal(t, 17, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 10)
 
 		// Check the last attachment in the paginated response
-		assert.Equal(t, testData[0].Assets[0].Attachments[9].ID, attachmentResp[9].ID)
+		require.Equal(t, testData[0].Assets[0].Attachments[9].ID, attachmentResp[9].ID)
 
 		// ----------------------------
 		// Get the second page (7 attachments)
@@ -983,11 +1028,11 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, attachmentResp = attachmentsUnmarshalHelper(t, body)
-		assert.Equal(t, 17, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 7)
+		require.Equal(t, 17, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 7)
 
 		// Check the last attachment in the paginated response
-		assert.Equal(t, testData[0].Assets[0].Attachments[16].ID, attachmentResp[6].ID)
+		require.Equal(t, testData[0].Assets[0].Attachments[16].ID, attachmentResp[6].ID)
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
@@ -1011,7 +1056,7 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
-		assert.Contains(t, string(body), "error looking up course")
+		require.Contains(t, string(body), "error looking up course")
 	})
 
 	t.Run("404 (asset not found)", func(t *testing.T) {
@@ -1039,7 +1084,7 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
-		assert.Contains(t, string(body), "error looking up asset")
+		require.Contains(t, string(body), "error looking up asset")
 	})
 
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
@@ -1051,7 +1096,7 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Equal(t, "Asset does not belong to course", string(body))
+		require.Equal(t, "Asset does not belong to course", string(body))
 	})
 
 	t.Run("500 (attachments lookup internal error)", func(t *testing.T) {
@@ -1067,7 +1112,7 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
-		assert.Contains(t, string(body), "error looking up attachments")
+		require.Contains(t, string(body), "error looking up attachments")
 	})
 }
 
@@ -1088,7 +1133,7 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 		err = json.Unmarshal(body, &respData)
 		require.Nil(t, err)
 
-		assert.Equal(t, testData[0].Assets[0].Attachments[2].ID, respData.ID)
+		require.Equal(t, testData[0].Assets[0].Attachments[2].ID, respData.ID)
 	})
 
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
@@ -1100,7 +1145,7 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Equal(t, "Asset does not belong to course", string(body))
+		require.Equal(t, "Asset does not belong to course", string(body))
 	})
 
 	t.Run("400 (invalid attachment for course)", func(t *testing.T) {
@@ -1112,7 +1157,7 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Equal(t, "Attachment does not belong to asset", string(body))
+		require.Equal(t, "Attachment does not belong to asset", string(body))
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
@@ -1208,7 +1253,7 @@ func TestCourses_GetTags(t *testing.T) {
 		err = json.Unmarshal(body, &tags)
 		require.Nil(t, err)
 
-		assert.Len(t, tags, 0)
+		require.Len(t, tags, 0)
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
@@ -1224,9 +1269,9 @@ func TestCourses_GetTags(t *testing.T) {
 		err = json.Unmarshal(body, &tags)
 		require.Nil(t, err)
 
-		assert.Len(t, tags, 6)
-		assert.Equal(t, "C", tags[0].Tag)
-		assert.Equal(t, "TypeScript", tags[5].Tag)
+		require.Len(t, tags, 6)
+		require.Equal(t, "C", tags[0].Tag)
+		require.Equal(t, "TypeScript", tags[5].Tag)
 	})
 
 	t.Run("404 (course not found)", func(t *testing.T) {
@@ -1280,8 +1325,8 @@ func TestCourses_CreateTag(t *testing.T) {
 		var courseTagResp courseTagResponse
 		err = json.Unmarshal(body, &courseTagResp)
 		require.Nil(t, err)
-		assert.NotNil(t, courseTagResp.ID)
-		assert.Equal(t, "Go", courseTagResp.Tag)
+		require.NotNil(t, courseTagResp.ID)
+		require.Equal(t, "Go", courseTagResp.Tag)
 	})
 
 	t.Run("400 (bind error)", func(t *testing.T) {
@@ -1295,7 +1340,7 @@ func TestCourses_CreateTag(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "error parsing data")
+		require.Contains(t, string(body), "error parsing data")
 	})
 
 	t.Run("400 (invalid data)", func(t *testing.T) {
@@ -1309,7 +1354,7 @@ func TestCourses_CreateTag(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "a tag is required")
+		require.Contains(t, string(body), "a tag is required")
 	})
 
 	t.Run("400 (existing tag)", func(t *testing.T) {
@@ -1328,7 +1373,7 @@ func TestCourses_CreateTag(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "a tag for this course already exists")
+		require.Contains(t, string(body), "a tag for this course already exists")
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
@@ -1345,7 +1390,7 @@ func TestCourses_CreateTag(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
-		assert.Contains(t, string(body), "error creating course tag")
+		require.Contains(t, string(body), "error creating course tag")
 	})
 }
 
@@ -1367,7 +1412,7 @@ func TestCourses_DeleteTag(t *testing.T) {
 		// Asset the tag has been deleted
 		tags, err := courseTagDao.List(&database.DatabaseParams{Where: squirrel.Eq{"course_id": testData[1].ID}}, nil)
 		require.Nil(t, err)
-		assert.Len(t, tags, 5)
+		require.Len(t, tags, 5)
 	})
 
 	t.Run("204 (not found)", func(t *testing.T) {
@@ -1394,14 +1439,14 @@ func TestCourses_DeleteTag(t *testing.T) {
 		// Asset the tag for course 1 has not been deleted
 		tags, err := courseTagDao.List(&database.DatabaseParams{Where: squirrel.Eq{"course_id": course1[0].ID}}, nil)
 		require.Nil(t, err)
-		assert.Len(t, tags, 1)
-		assert.Equal(t, "Go", tags[0].Tag)
+		require.Len(t, tags, 1)
+		require.Equal(t, "Go", tags[0].Tag)
 
 		// Asset the tag for course 2 has not been deleted
 		tags, err = courseTagDao.List(&database.DatabaseParams{Where: squirrel.Eq{"course_id": course2[0].ID}}, nil)
-		assert.Nil(t, err)
-		assert.Len(t, tags, 1)
-		assert.Equal(t, "C", tags[0].Tag)
+		require.Nil(t, err)
+		require.Len(t, tags, 1)
+		require.Equal(t, "C", tags[0].Tag)
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {

@@ -288,6 +288,7 @@ func (api *courses) getCard(c *fiber.Ctx) error {
 func (api *courses) getAssets(c *fiber.Ctx) error {
 	id := c.Params("id")
 	orderBy := c.Query("orderBy", "chapter asc,prefix asc")
+	expand := c.QueryBool("expand", false)
 
 	// Get the course
 	_, err := api.courseDao.Get(id, nil)
@@ -306,6 +307,10 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 		OrderBy:    strings.Split(orderBy, ","),
 		Where:      squirrel.Eq{api.assetDao.Table + ".course_id": id},
 		Pagination: pagination.NewFromApi(c),
+	}
+
+	if expand {
+		dbParams.IncludeRelations = []string{api.attachmentDao.Table}
 	}
 
 	assets, err := api.assetDao.List(dbParams, nil)
@@ -332,6 +337,7 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 func (api *courses) getAsset(c *fiber.Ctx) error {
 	id := c.Params("id")
 	assetId := c.Params("asset")
+	expand := c.QueryBool("expand", false)
 
 	_, err := api.courseDao.Get(id, nil)
 	if err != nil {
@@ -345,7 +351,13 @@ func (api *courses) getAsset(c *fiber.Ctx) error {
 		})
 	}
 
-	asset, err := api.assetDao.Get(assetId, nil, nil)
+	// TODO: support attachments orderby
+	dbParams := &database.DatabaseParams{}
+	if expand {
+		dbParams.IncludeRelations = []string{api.attachmentDao.Table}
+	}
+
+	asset, err := api.assetDao.Get(assetId, dbParams, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
