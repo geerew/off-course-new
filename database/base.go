@@ -40,10 +40,11 @@ type DatabaseParams struct {
 	// A slice of columns to order by (ex ["id DESC", "title ASC"])
 	OrderBy []string
 
-	// A slice of columns to select (ex ["id", "title", table.col])
+	// A slice of columns to select (ex ["id", "title", "courses.col"])
 	Columns []string
 
 	// Any valid squirrel WHERE expression
+	//
 	//
 	// Examples:
 	//
@@ -57,6 +58,9 @@ type DatabaseParams struct {
 
 	// Used to paginate the results
 	Pagination *pagination.Pagination
+
+	// Control which related entities to fetch
+	IncludeRelations []string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

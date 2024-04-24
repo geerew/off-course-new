@@ -2,6 +2,7 @@ package daos
 
 import (
 	"database/sql"
+	"slices"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
@@ -156,8 +157,8 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mod
 	}
 
 	// Get the attachments
-	if len(assets) > 0 {
-		attachmentDao := NewAttachmentDao(dao.db)
+	attachmentDao := NewAttachmentDao(dao.db)
+	if len(assets) > 0 && slices.Contains(dbParams.IncludeRelations, attachmentDao.Table) {
 
 		// Reduce the order by clause to only include columns specific to the attachments table
 		reducedOrderBy := attachmentDao.ProcessOrderBy(origOrderBy)

@@ -155,10 +155,15 @@ func TestTag_List(t *testing.T) {
 		result, err := dao.List(nil, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 4)
+		require.Nil(t, result[0].CourseTags)
 
 		// ----------------------------
 		// Course tags
 		// ----------------------------
+		result, err = dao.List(&database.DatabaseParams{IncludeRelations: []string{NewCourseTagDao(dao.db).Table}}, nil)
+		require.Nil(t, err)
+		require.Len(t, result, 4)
+
 		assert.Len(t, result[0].CourseTags, 1) // PHP
 		assert.Len(t, result[1].CourseTags, 2) // GO
 		assert.Len(t, result[2].CourseTags, 2) // C
@@ -193,7 +198,12 @@ func TestTag_List(t *testing.T) {
 		// ----------------------------
 		// CREATED_AT ASC + COURSES.TITLE DESC
 		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"tag asc", NewCourseDao(dao.db).Table + ".title desc"}}, nil)
+		dbParams := &database.DatabaseParams{
+			OrderBy:          []string{"tag asc", NewCourseDao(dao.db).Table + ".title desc"},
+			IncludeRelations: []string{NewCourseTagDao(dao.db).Table},
+		}
+
+		result, err = dao.List(dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 5)
 		assert.Equal(t, "C", result[0].Tag)

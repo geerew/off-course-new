@@ -311,6 +311,7 @@ func TestAsset_List(t *testing.T) {
 		result, err := dao.List(nil, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 10)
+		require.Nil(t, result[0].Attachments)
 
 		// ----------------------------
 		// Progress
@@ -365,6 +366,10 @@ func TestAsset_List(t *testing.T) {
 		// ----------------------------
 		// Attachments
 		// ----------------------------
+		result, err = dao.List(&database.DatabaseParams{IncludeRelations: []string{NewAttachmentDao(dao.db).Table}}, nil)
+		require.Nil(t, err)
+		require.Len(t, result, 10)
+
 		for _, a := range result {
 			require.Len(t, a.Attachments, 3)
 		}
@@ -397,10 +402,13 @@ func TestAsset_List(t *testing.T) {
 		// ----------------------------
 		attachmentsDao := NewAttachmentDao(db)
 
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{
-			dao.Table + ".created_at asc",
-			attachmentsDao.Table + ".created_at desc",
-		}}, nil)
+		result, err = dao.List(&database.DatabaseParams{
+			OrderBy: []string{
+				dao.Table + ".created_at asc",
+				attachmentsDao.Table + ".created_at desc",
+			},
+			IncludeRelations: []string{attachmentsDao.Table},
+		}, nil)
 
 		require.Nil(t, err)
 		require.Len(t, result, 3)

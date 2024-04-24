@@ -2,6 +2,7 @@ package daos
 
 import (
 	"database/sql"
+	"slices"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
@@ -100,7 +101,6 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*model
 
 		tags = append(tags, t)
 		tagIds = append(tagIds, t.ID)
-
 	}
 
 	if err := rows.Err(); err != nil {
@@ -108,8 +108,8 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*model
 	}
 
 	// Get the course_tags
-	if len(tags) > 0 {
-		courseTagDao := NewCourseTagDao(dao.db)
+	courseTagDao := NewCourseTagDao(dao.db)
+	if len(tags) > 0 && slices.Contains(dbParams.IncludeRelations, courseTagDao.Table) {
 
 		// Reduce the order by clause to only include columns specific to the course_tags table
 		reducedOrderBy := courseTagDao.ProcessOrderBy(origOrderBy)
