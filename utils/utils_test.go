@@ -32,65 +32,6 @@ func Test_TrimQuotes(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func Test_Contains(t *testing.T) {
-	stringTests := []struct {
-		arr         []string
-		in          string
-		insensitive bool
-		expected    bool
-	}{
-		// String - Insensitive false
-		{[]string{}, "", false, false},
-		{[]string{}, "a", false, false},
-		{[]string{"a"}, "b", false, false},
-		{[]string{"a", "b"}, "a", false, true},
-		// String Insensitive true
-		{[]string{}, "", true, false},
-		{[]string{}, "a", true, false},
-		{[]string{"a"}, "b", true, false},
-		{[]string{"a"}, "a", true, true},
-		{[]string{"A", "B"}, "b", true, true},
-	}
-
-	for _, tt := range stringTests {
-		assert.Equal(t, tt.expected, Contains(tt.arr, tt.in, tt.insensitive))
-	}
-
-	intTests := []struct {
-		arr         []int
-		in          int
-		insensitive bool
-		expected    bool
-	}{
-		// Int - Insensitive false
-		{[]int{}, -1, false, false},
-		{[]int{}, 1, false, false},
-		{[]int{1}, 2, false, false},
-		{[]int{1, 2}, 1, false, true},
-	}
-
-	for _, tt := range intTests {
-		assert.Equal(t, tt.expected, Contains(tt.arr, tt.in, tt.insensitive))
-	}
-	boolTests := []struct {
-		arr         []bool
-		in          bool
-		insensitive bool
-		expected    bool
-	}{
-		// Int - Insensitive false
-		{[]bool{}, true, false, false},
-		{[]bool{true}, false, false, false},
-		{[]bool{true, false}, true, false, true},
-	}
-
-	for _, tt := range boolTests {
-		assert.Equal(t, tt.expected, Contains(tt.arr, tt.in, tt.insensitive))
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 func Test_DecodeString(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		res, err := DecodeString("")
@@ -128,18 +69,6 @@ func Test_EncodeString(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		res := EncodeString("/test/data")
 		assert.Equal(t, "JTJGdGVzdCUyRmRhdGE=", res)
-	})
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func Test_RemoveDuplicates(t *testing.T) {
-	t.Run("string", func(t *testing.T) {
-		assert.Equal(t, []string{"a", "b", "c", "d"}, RemoveDuplicates([]string{"a", "a", "b", "c", "d", "c"}))
-	})
-
-	t.Run("int", func(t *testing.T) {
-		assert.Equal(t, []int{1, 2, 4, 3}, RemoveDuplicates([]int{1, 2, 1, 2, 4, 4, 2, 4, 3}))
 	})
 }
 

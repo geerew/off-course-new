@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -52,27 +51,6 @@ func TrimQuotes(s string) string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Contains checks if the element is present in the slice.
-// If T is a string and caseInsensitive is true, the comparison is case-insensitive.
-func Contains[T comparable](slice []T, elem T, caseInsensitive bool) bool {
-	for _, v := range slice {
-		switch vs := any(v).(type) {
-		case string:
-			es, _ := any(elem).(string)
-			if caseInsensitive && strings.EqualFold(vs, es) {
-				return true
-			}
-		}
-
-		if v == elem {
-			return true
-		}
-	}
-	return false
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // DecodeString is a function that receives a Base64-encoded string and first decodes
 // it from Base64 and then URL-decodes it. The function returns the decoded string, or
 // an error if either of the decoding operations fails. It uses standard library
@@ -103,24 +81,6 @@ func EncodeString(p string) string {
 	res := base64.StdEncoding.EncodeToString([]byte(encodedPath))
 
 	return res
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// RemoveDuplicates is a generic function that receives a slice of strings or integers,
-// and returns a new slice that contains the same elements but with any duplicates removed.
-//
-// The function uses a map for efficient lookup of previously seen elements.
-func RemoveDuplicates[T string | int](s []T) []T {
-	allKeys := make(map[T]bool)
-	list := []T{}
-	for _, item := range s {
-		if _, value := allKeys[item]; !value {
-			allKeys[item] = true
-			list = append(list, item)
-		}
-	}
-	return list
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
