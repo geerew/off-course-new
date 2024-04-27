@@ -143,7 +143,12 @@ func TestTag_Get(t *testing.T) {
 		testData := NewTestBuilder(t).Db(db).Courses(2).Tags([]string{"Go", "TypeScript"}).Build()
 
 		// Get the first tag
-		tag, err := dao.Get(testData[0].Tags[0].TagId, nil, nil)
+		tag, err := dao.Get(testData[0].Tags[0].TagId, false, nil, nil)
+		require.Nil(t, err)
+		require.Equal(t, testData[0].Tags[0].TagId, tag.ID)
+
+		// By Name (Go)
+		tag, err = dao.Get("Go", true, nil, nil)
 		require.Nil(t, err)
 		require.Equal(t, testData[0].Tags[0].TagId, tag.ID)
 
@@ -151,7 +156,7 @@ func TestTag_Get(t *testing.T) {
 		// Course tags
 		// ----------------------------
 		dbParams := &database.DatabaseParams{IncludeRelations: []string{NewCourseTagDao(dao.db).Table}}
-		tag, err = dao.Get(testData[0].Tags[0].TagId, dbParams, nil)
+		tag, err = dao.Get(testData[0].Tags[0].TagId, false, dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, tag.CourseTags, 2)
 		require.Equal(t, testData[0].ID, tag.CourseTags[1].CourseId)
@@ -161,7 +166,7 @@ func TestTag_Get(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		_, dao, _ := tagSetup(t)
 
-		c, err := dao.Get("1234", nil, nil)
+		c, err := dao.Get("1234", false, nil, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		require.Nil(t, c)
 	})
@@ -169,7 +174,7 @@ func TestTag_Get(t *testing.T) {
 	t.Run("empty id", func(t *testing.T) {
 		_, dao, _ := tagSetup(t)
 
-		c, err := dao.Get("", nil, nil)
+		c, err := dao.Get("", false, nil, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		require.Nil(t, c)
 	})
@@ -180,7 +185,7 @@ func TestTag_Get(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
 		require.Nil(t, err)
 
-		_, err = dao.Get("1234", nil, nil)
+		_, err = dao.Get("1234", false, nil, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.Table)
 	})
 }

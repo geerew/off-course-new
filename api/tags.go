@@ -93,13 +93,14 @@ func (api *tags) getTags(c *fiber.Ctx) error {
 func (api *tags) getTag(c *fiber.Ctx) error {
 	id := c.Params("id")
 	expand := c.QueryBool("expand", false)
+	byName := c.QueryBool("byName", false)
 
 	dbParams := &database.DatabaseParams{}
 	if expand {
 		dbParams.IncludeRelations = []string{api.courseTagDao.Table}
 	}
 
-	tag, err := api.tagDao.Get(id, dbParams, nil)
+	tag, err := api.tagDao.Get(id, byName, dbParams, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {

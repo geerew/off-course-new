@@ -66,17 +66,20 @@ func (dao *TagDao) Create(t *models.Tag, tx *sql.Tx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get selects a tag with the given ID.
-//
-// `dbparams` can be used to order the attachments
+// Get selects a tag with the given ID or name
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *TagDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Tag, error) {
+func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Tag, error) {
 	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
 
 	tagDbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
-		Where:   squirrel.Eq{dao.Table + ".id": id},
+	}
+
+	if byName {
+		tagDbParams.Where = squirrel.Eq{dao.Table + ".tag": id}
+	} else {
+		tagDbParams.Where = squirrel.Eq{dao.Table + ".id": id}
 	}
 
 	row, err := generic.Get(tagDbParams, tx)
@@ -89,7 +92,7 @@ func (dao *TagDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.Tx)
 		return nil, err
 	}
 
-	// Get the attachments
+	// Get the course tags
 	courseTagDao := NewCourseTagDao(dao.db)
 	if dbParams != nil && slices.Contains(dbParams.IncludeRelations, courseTagDao.Table) {
 		courseTagDbParams := &database.DatabaseParams{

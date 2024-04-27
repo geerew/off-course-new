@@ -189,6 +189,7 @@ func TestTags_GetTag(t *testing.T) {
 
 		testData := daos.NewTestBuilder(t).Db(db).Courses(3).Tags([]string{"Go", "PHP"}).Build()
 
+		// By ID
 		status, body, err := tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/"+testData[1].Tags[1].TagId, nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -197,6 +198,16 @@ func TestTags_GetTag(t *testing.T) {
 		err = json.Unmarshal(body, &tagResp)
 		require.Nil(t, err)
 		require.Equal(t, testData[1].Tags[1].TagId, tagResp.ID)
+		require.Zero(t, tagResp.Courses)
+
+		// By Name
+		status, body, err = tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/Go/?byName=true", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		err = json.Unmarshal(body, &tagResp)
+		require.Nil(t, err)
+		require.Equal(t, testData[0].Tags[0].TagId, tagResp.ID)
 		require.Zero(t, tagResp.Courses)
 
 		// ----------------------------
