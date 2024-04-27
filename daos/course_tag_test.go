@@ -8,7 +8,6 @@ import (
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/pagination"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,7 +27,7 @@ func TestCourseTag_Count(t *testing.T) {
 
 		count, err := dao.Count(nil)
 		require.Nil(t, err)
-		assert.Zero(t, count)
+		require.Zero(t, count)
 	})
 
 	t.Run("entries", func(t *testing.T) {
@@ -38,7 +37,7 @@ func TestCourseTag_Count(t *testing.T) {
 
 		count, err := dao.Count(nil)
 		require.Nil(t, err)
-		assert.Equal(t, count, 12)
+		require.Equal(t, count, 12)
 	})
 
 	t.Run("where", func(t *testing.T) {
@@ -54,28 +53,28 @@ func TestCourseTag_Count(t *testing.T) {
 		// ----------------------------
 		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{courseDao.Table + ".title": testData[1].Course.Title}})
 		require.Nil(t, err)
-		assert.Equal(t, 5, count)
+		require.Equal(t, 5, count)
 
 		// ----------------------------
 		// NOT EQUALS
 		// ----------------------------
 		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{tagDao.Table + ".tag": "Go"}})
 		require.Nil(t, err)
-		assert.Equal(t, 8, count)
+		require.Equal(t, 8, count)
 
 		// ----------------------------
 		//  STARTS WITH (Java%)
 		// ----------------------------
 		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Like{tagDao.Table + ".tag": "Java%"}})
 		require.Nil(t, err)
-		assert.Equal(t, 4, count)
+		require.Equal(t, 4, count)
 
 		// ----------------------------
 		// ERROR
 		// ----------------------------
 		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{"": ""}})
 		require.ErrorContains(t, err, "syntax error")
-		assert.Equal(t, 0, count)
+		require.Zero(t, count)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -165,7 +164,7 @@ func TestCourseTag_Create(t *testing.T) {
 		ct.CourseId = testData[0].Course.ID
 
 		// Success
-		assert.Nil(t, dao.Create(ct, nil))
+		require.Nil(t, dao.Create(ct, nil))
 	})
 }
 
@@ -202,7 +201,7 @@ func TestCourseTag_List(t *testing.T) {
 		result, err := dao.List(&database.DatabaseParams{OrderBy: []string{tagDao.Table + ".tag desc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 10)
-		assert.Equal(t, "TypeScript", result[0].Tag)
+		require.Equal(t, "TypeScript", result[0].Tag)
 
 		// ----------------------------
 		// TAG ASC
@@ -210,14 +209,14 @@ func TestCourseTag_List(t *testing.T) {
 		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{tagDao.Table + ".tag asc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 10)
-		assert.Equal(t, "Go", result[0].Tag)
+		require.Equal(t, "Go", result[0].Tag)
 
 		// ----------------------------
 		// Error
 		// ----------------------------
 		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"unit_test asc"}}, nil)
 		require.ErrorContains(t, err, "no such column")
-		assert.Nil(t, result)
+		require.Nil(t, result)
 	})
 
 	t.Run("where", func(t *testing.T) {
@@ -247,7 +246,7 @@ func TestCourseTag_List(t *testing.T) {
 		// ----------------------------
 		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Eq{"": ""}}, nil)
 		require.ErrorContains(t, err, "syntax error")
-		assert.Nil(t, result)
+		require.Nil(t, result)
 	})
 
 	t.Run("pagination", func(t *testing.T) {
@@ -264,7 +263,7 @@ func TestCourseTag_List(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, 20, p.TotalItems())
-		assert.Equal(t, "C", result[0].Tag)
+		require.Equal(t, "C", result[0].Tag)
 
 		// ----------------------------
 		// Page 2 with 10 items
@@ -275,7 +274,7 @@ func TestCourseTag_List(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, 20, p.TotalItems())
-		assert.Equal(t, "Perl", result[0].Tag)
+		require.Equal(t, "Perl", result[0].Tag)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -309,7 +308,7 @@ func TestCourseTag_Delete(t *testing.T) {
 		_, dao, _ := scanSetup(t)
 
 		err := dao.Delete(nil, nil)
-		assert.ErrorIs(t, err, ErrMissingWhere)
+		require.ErrorIs(t, err, ErrMissingWhere)
 	})
 
 	t.Run("db error", func(t *testing.T) {

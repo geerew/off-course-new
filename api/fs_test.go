@@ -11,7 +11,6 @@ import (
 	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/gofiber/fiber/v2"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,14 +28,14 @@ func TestFsPath(t *testing.T) {
 
 		status, body, err := fsRequestHelper(appFs, http.MethodGet, "/api/filesystem/"+utils.EncodeString("/"))
 		require.Nil(t, err)
-		assert.Equal(t, http.StatusOK, status)
+		require.Equal(t, http.StatusOK, status)
 
 		var respData fileSystemResponse
 		err = json.Unmarshal(body, &respData)
 		require.Nil(t, err)
-		assert.Equal(t, respData.Count, 4)
-		assert.Len(t, respData.Directories, 1)
-		assert.Len(t, respData.Files, 3)
+		require.Equal(t, respData.Count, 4)
+		require.Len(t, respData.Directories, 1)
+		require.Len(t, respData.Files, 3)
 	})
 
 	t.Run("404 (path not found)", func(t *testing.T) {
@@ -44,7 +43,7 @@ func TestFsPath(t *testing.T) {
 
 		status, _, err := fsRequestHelper(appFs, http.MethodGet, "/api/filesystem/"+utils.EncodeString("nonexistent/path"))
 		require.Nil(t, err)
-		assert.Equal(t, http.StatusNotFound, status)
+		require.Equal(t, http.StatusNotFound, status)
 	})
 
 	t.Run("400 (decode error)", func(t *testing.T) {
@@ -52,9 +51,9 @@ func TestFsPath(t *testing.T) {
 
 		status, body, err := fsRequestHelper(appFs, http.MethodGet, "/api/filesystem/`")
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Equal(t, "failed to decode path", string(body))
+		require.Equal(t, "failed to decode path", string(body))
 	})
 }
 

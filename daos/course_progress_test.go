@@ -10,7 +10,6 @@ import (
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,12 +31,12 @@ func TestCourseProgress_Create(t *testing.T) {
 
 		cp, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
-		assert.False(t, cp.Started)
-		assert.True(t, cp.StartedAt.IsZero())
-		assert.Zero(t, cp.Percent)
-		assert.True(t, cp.CompletedAt.IsZero())
-		assert.False(t, cp.CreatedAt.IsZero())
-		assert.False(t, cp.UpdatedAt.IsZero())
+		require.False(t, cp.Started)
+		require.True(t, cp.StartedAt.IsZero())
+		require.Zero(t, cp.Percent)
+		require.True(t, cp.CompletedAt.IsZero())
+		require.False(t, cp.CreatedAt.IsZero())
+		require.False(t, cp.UpdatedAt.IsZero())
 	})
 
 	t.Run("duplicate course id", func(t *testing.T) {
@@ -88,23 +87,23 @@ func TestCourseProgress_Get(t *testing.T) {
 
 		cp, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
-		assert.Equal(t, testData[0].ID, cp.CourseID)
+		require.Equal(t, testData[0].ID, cp.CourseID)
 	})
 
 	t.Run("not found", func(t *testing.T) {
 		_, dao, _ := CourseProgressSetup(t)
 
 		cp, err := dao.Get("1234", nil)
-		assert.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, cp)
+		require.ErrorIs(t, err, sql.ErrNoRows)
+		require.Nil(t, cp)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
 		_, dao, _ := CourseProgressSetup(t)
 
 		cp, err := dao.Get("", nil)
-		assert.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, cp)
+		require.ErrorIs(t, err, sql.ErrNoRows)
+		require.Nil(t, cp)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -140,10 +139,10 @@ func TestCourseProgress_Update(t *testing.T) {
 		// Ensure the course percent is 0, started is false, and the started_at and completed_at are not set
 		origCp, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
-		assert.False(t, origCp.Started)
-		assert.True(t, origCp.StartedAt.IsZero())
+		require.False(t, origCp.Started)
+		require.True(t, origCp.StartedAt.IsZero())
 		require.Zero(t, origCp.Percent)
-		assert.True(t, origCp.CompletedAt.IsZero())
+		require.True(t, origCp.CompletedAt.IsZero())
 
 		// ----------------------------
 		// Set the first asset to completed
@@ -155,10 +154,10 @@ func TestCourseProgress_Update(t *testing.T) {
 		// Check the course percent is 50, started is true, started_at is set and completed_at is not set
 		updatedCp1, err := dao.Get(origCp.CourseID, nil)
 		require.Nil(t, err)
-		assert.True(t, updatedCp1.Started)
-		assert.False(t, updatedCp1.StartedAt.IsZero())
+		require.True(t, updatedCp1.Started)
+		require.False(t, updatedCp1.StartedAt.IsZero())
 		require.Equal(t, 50, updatedCp1.Percent)
-		assert.True(t, updatedCp1.CompletedAt.IsZero())
+		require.True(t, updatedCp1.CompletedAt.IsZero())
 
 		// ----------------------------
 		// Set the second asset to completed
@@ -174,11 +173,11 @@ func TestCourseProgress_Update(t *testing.T) {
 		// Check the course percent is 100, started is true, and started_at and completed_at are set
 		updatedCp2, err := dao.Get(origCp.CourseID, nil)
 		require.Nil(t, err)
-		assert.True(t, updatedCp2.Started)
-		assert.False(t, updatedCp2.StartedAt.IsZero())
-		assert.Equal(t, updatedCp2.StartedAt.String(), updatedCp1.StartedAt.String())
+		require.True(t, updatedCp2.Started)
+		require.False(t, updatedCp2.StartedAt.IsZero())
+		require.Equal(t, updatedCp2.StartedAt.String(), updatedCp1.StartedAt.String())
 		require.Equal(t, 100, updatedCp2.Percent)
-		assert.False(t, updatedCp2.CompletedAt.IsZero())
+		require.False(t, updatedCp2.CompletedAt.IsZero())
 
 		// ----------------------------
 		// Set the second asset as uncompleted
@@ -189,11 +188,11 @@ func TestCourseProgress_Update(t *testing.T) {
 		// Check the course percent is 50, started is true, started_at is set and completed_at is not set
 		updatedCp3, err := dao.Get(origCp.CourseID, nil)
 		require.Nil(t, err)
-		assert.True(t, updatedCp3.Started)
-		assert.False(t, updatedCp3.StartedAt.IsZero())
-		assert.Equal(t, updatedCp3.StartedAt.String(), updatedCp2.StartedAt.String())
+		require.True(t, updatedCp3.Started)
+		require.False(t, updatedCp3.StartedAt.IsZero())
+		require.Equal(t, updatedCp3.StartedAt.String(), updatedCp2.StartedAt.String())
 		require.Equal(t, 50, updatedCp3.Percent)
-		assert.True(t, updatedCp3.CompletedAt.IsZero())
+		require.True(t, updatedCp3.CompletedAt.IsZero())
 
 		// ----------------------------
 		// Set the first asset as uncompleted
@@ -205,10 +204,10 @@ func TestCourseProgress_Update(t *testing.T) {
 		// Check the percent is 0, started is false and started_at and completed_at are not set
 		updatedCp4, err := dao.Get(origCp.CourseID, nil)
 		require.Nil(t, err)
-		assert.False(t, updatedCp4.Started)
-		assert.True(t, updatedCp4.StartedAt.IsZero())
+		require.False(t, updatedCp4.Started)
+		require.True(t, updatedCp4.StartedAt.IsZero())
 		require.Zero(t, updatedCp4.Percent)
-		assert.True(t, updatedCp4.CompletedAt.IsZero())
+		require.True(t, updatedCp4.CompletedAt.IsZero())
 	})
 
 	t.Run("empty id", func(t *testing.T) {
@@ -221,7 +220,7 @@ func TestCourseProgress_Update(t *testing.T) {
 		origCp.CourseID = ""
 
 		err = dao.Refresh(origCp.CourseID, nil)
-		assert.EqualError(t, err, "id cannot be empty")
+		require.EqualError(t, err, "id cannot be empty")
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -254,5 +253,5 @@ func TestCourseProgress_DeleteCascade(t *testing.T) {
 	// Check the course progress was deleted
 	cp, err := dao.Get(testData[0].ID, nil)
 	require.ErrorIs(t, err, sql.ErrNoRows)
-	assert.Nil(t, cp)
+	require.Nil(t, cp)
 }

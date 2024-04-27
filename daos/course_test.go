@@ -11,7 +11,6 @@ import (
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,7 +30,7 @@ func TestCourse_Count(t *testing.T) {
 
 		count, err := dao.Count(nil)
 		require.Nil(t, err)
-		assert.Zero(t, count)
+		require.Zero(t, count)
 	})
 
 	t.Run("entries", func(t *testing.T) {
@@ -41,7 +40,7 @@ func TestCourse_Count(t *testing.T) {
 
 		count, err := dao.Count(nil)
 		require.Nil(t, err)
-		assert.Equal(t, count, 5)
+		require.Equal(t, count, 5)
 	})
 
 	t.Run("where", func(t *testing.T) {
@@ -54,21 +53,21 @@ func TestCourse_Count(t *testing.T) {
 		// ----------------------------
 		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table + ".id": testData[2].ID}})
 		require.Nil(t, err)
-		assert.Equal(t, 1, count)
+		require.Equal(t, 1, count)
 
 		// ----------------------------
 		// NOT EQUALS ID
 		// ----------------------------
 		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table + ".id": testData[2].ID}})
 		require.Nil(t, err)
-		assert.Equal(t, 2, count)
+		require.Equal(t, 2, count)
 
 		// ----------------------------
 		// ERROR
 		// ----------------------------
 		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{"": ""}})
 		require.ErrorContains(t, err, "syntax error")
-		assert.Equal(t, 0, count)
+		require.Zero(t, count)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -95,20 +94,20 @@ func TestCourse_Create(t *testing.T) {
 
 		newC, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
-		assert.NotEmpty(t, newC.ID)
-		assert.Equal(t, testData[0].Title, newC.Title)
-		assert.Equal(t, testData[0].Path, newC.Path)
-		assert.Empty(t, newC.CardPath)
-		assert.False(t, newC.Available)
-		assert.False(t, newC.CreatedAt.IsZero())
-		assert.False(t, newC.UpdatedAt.IsZero())
+		require.NotEmpty(t, newC.ID)
+		require.Equal(t, testData[0].Title, newC.Title)
+		require.Equal(t, testData[0].Path, newC.Path)
+		require.Empty(t, newC.CardPath)
+		require.False(t, newC.Available)
+		require.False(t, newC.CreatedAt.IsZero())
+		require.False(t, newC.UpdatedAt.IsZero())
 		//Scan status
-		assert.Empty(t, newC.ScanStatus)
+		require.Empty(t, newC.ScanStatus)
 		// Progress
-		assert.False(t, newC.Started)
-		assert.True(t, newC.StartedAt.IsZero())
-		assert.Zero(t, newC.Percent)
-		assert.True(t, newC.CompletedAt.IsZero())
+		require.False(t, newC.Started)
+		require.True(t, newC.StartedAt.IsZero())
+		require.Zero(t, newC.Percent)
+		require.True(t, newC.CompletedAt.IsZero())
 	})
 
 	t.Run("duplicate paths", func(t *testing.T) {
@@ -154,8 +153,8 @@ func TestCourse_Get(t *testing.T) {
 
 		c, err := dao.Get(testData[1].ID, nil)
 		require.Nil(t, err)
-		assert.Equal(t, testData[1].ID, c.ID)
-		assert.Empty(t, testData[1].ScanStatus)
+		require.Equal(t, testData[1].ID, c.ID)
+		require.Empty(t, testData[1].ScanStatus)
 
 		// ----------------------------
 		// scan
@@ -165,7 +164,7 @@ func TestCourse_Get(t *testing.T) {
 
 		c, err = dao.Get(testData[1].ID, nil)
 		require.Nil(t, err)
-		assert.Equal(t, string(types.ScanStatusWaiting), c.ScanStatus)
+		require.Equal(t, string(types.ScanStatusWaiting), c.ScanStatus)
 
 		// ----------------------------
 		// Availability
@@ -199,8 +198,8 @@ func TestCourse_Get(t *testing.T) {
 
 		// updatedCp, err :=  cpDao.Get(testData[1].ID, nil)
 		// require.Nil(t, err)
-		// assert.True(t, updatedCp.Started)
-		// assert.False(t, updatedCp.StartedAt.IsZero())
+		// require.True(t, updatedCp.Started)
+		// require.False(t, updatedCp.StartedAt.IsZero())
 
 		// 		// Set to started
 		// 		_, err = UpdateCourseProgressStarted(db, testData[1].ID, true)
@@ -229,8 +228,8 @@ func TestCourse_Get(t *testing.T) {
 		_, dao, _ := courseSetup(t)
 
 		c, err := dao.Get("1234", nil)
-		assert.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, c)
+		require.ErrorIs(t, err, sql.ErrNoRows)
+		require.Nil(t, c)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
@@ -238,7 +237,7 @@ func TestCourse_Get(t *testing.T) {
 
 		c, err := dao.Get("", nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, c)
+		require.Nil(t, c)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -275,7 +274,7 @@ func TestCourse_List(t *testing.T) {
 		// ----------------------------
 		// Scan
 		// ----------------------------
-		assert.Empty(t, result[1].ScanStatus)
+		require.Empty(t, result[1].ScanStatus)
 
 		// Create a scan for course 2
 		scanDao := NewScanDao(db)
@@ -283,8 +282,8 @@ func TestCourse_List(t *testing.T) {
 
 		result, err = dao.List(nil, nil)
 		require.Nil(t, err)
-		assert.Equal(t, testData[1].ID, result[1].ID)
-		assert.Equal(t, string(types.ScanStatusWaiting), result[1].ScanStatus)
+		require.Equal(t, testData[1].ID, result[1].ID)
+		require.Equal(t, string(types.ScanStatusWaiting), result[1].ScanStatus)
 
 		// ----------------------------
 		// Availability
@@ -301,7 +300,7 @@ func TestCourse_List(t *testing.T) {
 		result, err = dao.List(&database.DatabaseParams{Where: squirrel.And{squirrel.Eq{dao.Table + ".available": true}}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, testData[0].ID, result[0].ID)
+		require.Equal(t, testData[0].ID, result[0].ID)
 
 		// ----------------------------
 		// Progress
@@ -332,7 +331,7 @@ func TestCourse_List(t *testing.T) {
 		result, err = dao.List(dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, testData[0].ID, result[0].ID)
+		require.Equal(t, testData[0].ID, result[0].ID)
 
 		// Set progress for asset 1 in course 1 as complete
 		ap1.Completed = true
@@ -346,7 +345,7 @@ func TestCourse_List(t *testing.T) {
 		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Eq{cpDao.Table + ".percent": 100}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, testData[0].ID, result[0].ID)
+		require.Equal(t, testData[0].ID, result[0].ID)
 	})
 
 	t.Run("orderby", func(t *testing.T) {
@@ -361,7 +360,7 @@ func TestCourse_List(t *testing.T) {
 		result, err := dao.List(dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
-		assert.Equal(t, testData[2].ID, result[0].ID)
+		require.Equal(t, testData[2].ID, result[0].ID)
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -369,7 +368,7 @@ func TestCourse_List(t *testing.T) {
 		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"created_at asc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
-		assert.Equal(t, testData[0].ID, result[0].ID)
+		require.Equal(t, testData[0].ID, result[0].ID)
 
 		// ----------------------------
 		// SCAN_STATUS DESC
@@ -391,9 +390,9 @@ func TestCourse_List(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 3)
 
-		assert.Equal(t, testData[0].ID, result[2].ID)
-		assert.Equal(t, testData[1].ID, result[1].ID)
-		assert.Equal(t, testData[2].ID, result[0].ID)
+		require.Equal(t, testData[0].ID, result[2].ID)
+		require.Equal(t, testData[1].ID, result[1].ID)
+		require.Equal(t, testData[2].ID, result[0].ID)
 
 		// ----------------------------
 		// SCAN_STATUS ASC
@@ -402,9 +401,9 @@ func TestCourse_List(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 3)
 
-		assert.Equal(t, testData[0].ID, result[0].ID)
-		assert.Equal(t, testData[1].ID, result[1].ID)
-		assert.Equal(t, testData[2].ID, result[2].ID)
+		require.Equal(t, testData[0].ID, result[0].ID)
+		require.Equal(t, testData[1].ID, result[1].ID)
+		require.Equal(t, testData[2].ID, result[2].ID)
 
 		// ----------------------------
 		// Error
@@ -412,7 +411,7 @@ func TestCourse_List(t *testing.T) {
 		dbParams = &database.DatabaseParams{OrderBy: []string{"unit_test asc"}}
 		result, err = dao.List(dbParams, nil)
 		require.ErrorContains(t, err, "no such column")
-		assert.Nil(t, result)
+		require.Nil(t, result)
 	})
 
 	t.Run("where", func(t *testing.T) {
@@ -426,7 +425,7 @@ func TestCourse_List(t *testing.T) {
 		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{dao.Table + ".id": testData[2].ID}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, testData[2].ID, result[0].ID)
+		require.Equal(t, testData[2].ID, result[0].ID)
 
 		// ----------------------------
 		// EQUALS ID OR ID
@@ -438,15 +437,15 @@ func TestCourse_List(t *testing.T) {
 		result, err = dao.List(dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 2)
-		assert.Equal(t, testData[1].ID, result[0].ID)
-		assert.Equal(t, testData[2].ID, result[1].ID)
+		require.Equal(t, testData[1].ID, result[0].ID)
+		require.Equal(t, testData[2].ID, result[1].ID)
 
 		// ----------------------------
 		// ERROR
 		// ----------------------------
 		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Eq{"": ""}}, nil)
 		require.ErrorContains(t, err, "syntax error")
-		assert.Nil(t, result)
+		require.Nil(t, result)
 	})
 
 	t.Run("pagination", func(t *testing.T) {
@@ -463,8 +462,8 @@ func TestCourse_List(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, 17, p.TotalItems())
-		assert.Equal(t, testData[0].ID, result[0].ID)
-		assert.Equal(t, testData[9].ID, result[9].ID)
+		require.Equal(t, testData[0].ID, result[0].ID)
+		require.Equal(t, testData[9].ID, result[9].ID)
 
 		// ----------------------------
 		// Page 2 with 7 items
@@ -475,8 +474,8 @@ func TestCourse_List(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 7)
 		require.Equal(t, 17, p.TotalItems())
-		assert.Equal(t, testData[10].ID, result[0].ID)
-		assert.Equal(t, testData[16].ID, result[6].ID)
+		require.Equal(t, testData[10].ID, result[0].ID)
+		require.Equal(t, testData[16].ID, result[6].ID)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -505,7 +504,7 @@ func TestCourse_Update(t *testing.T) {
 
 		c, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
-		assert.Equal(t, testData[0].CardPath, c.CardPath)
+		require.Equal(t, testData[0].CardPath, c.CardPath)
 	})
 
 	t.Run("available", func(t *testing.T) {
@@ -520,14 +519,14 @@ func TestCourse_Update(t *testing.T) {
 
 		c, err := dao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
-		assert.True(t, c.Available)
+		require.True(t, c.Available)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
 		_, dao, _ := courseSetup(t)
 
 		err := dao.Update(&models.Course{})
-		assert.ErrorIs(t, err, ErrEmptyId)
+		require.ErrorIs(t, err, ErrEmptyId)
 	})
 
 	t.Run("invalid id", func(t *testing.T) {
@@ -567,7 +566,7 @@ func TestCourse_Delete(t *testing.T) {
 		_, dao, _ := courseSetup(t)
 
 		err := dao.Delete(nil, nil)
-		assert.ErrorIs(t, err, ErrMissingWhere)
+		require.ErrorIs(t, err, ErrMissingWhere)
 	})
 
 	t.Run("db error", func(t *testing.T) {

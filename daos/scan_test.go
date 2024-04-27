@@ -11,7 +11,6 @@ import (
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,10 +36,10 @@ func TestScan_Create(t *testing.T) {
 
 		newS, err := dao.Get(s.CourseID)
 		require.Nil(t, err)
-		assert.Equal(t, s.ID, newS.ID)
-		assert.True(t, newS.Status.IsWaiting())
-		assert.False(t, newS.CreatedAt.IsZero())
-		assert.False(t, newS.UpdatedAt.IsZero())
+		require.Equal(t, s.ID, newS.ID)
+		require.True(t, newS.Status.IsWaiting())
+		require.False(t, newS.CreatedAt.IsZero())
+		require.False(t, newS.UpdatedAt.IsZero())
 
 	})
 
@@ -88,24 +87,24 @@ func TestScan_Get(t *testing.T) {
 
 		s, err := dao.Get(testData[0].Course.ID)
 		require.Nil(t, err)
-		assert.Equal(t, testData[0].Scan.ID, s.ID)
-		assert.Equal(t, testData[0].Course.Path, s.CoursePath)
+		require.Equal(t, testData[0].Scan.ID, s.ID)
+		require.Equal(t, testData[0].Course.Path, s.CoursePath)
 	})
 
 	t.Run("not found", func(t *testing.T) {
 		_, dao, _ := scanSetup(t)
 
 		s, err := dao.Get("1234")
-		assert.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, s)
+		require.ErrorIs(t, err, sql.ErrNoRows)
+		require.Nil(t, s)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
 		_, dao, _ := scanSetup(t)
 
 		s, err := dao.Get("")
-		assert.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, s)
+		require.ErrorIs(t, err, sql.ErrNoRows)
+		require.Nil(t, s)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -154,7 +153,7 @@ func TestScan_Update(t *testing.T) {
 		_, dao, _ := scanSetup(t)
 
 		err := dao.Update(&models.Scan{})
-		assert.ErrorIs(t, err, ErrEmptyId)
+		require.ErrorIs(t, err, ErrEmptyId)
 	})
 
 	t.Run("invalid id", func(t *testing.T) {
@@ -164,7 +163,7 @@ func TestScan_Update(t *testing.T) {
 		testData[0].Scan.ID = "1234"
 
 		err := dao.Update(testData[0].Scan)
-		assert.Nil(t, err)
+		require.Nil(t, err)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -194,7 +193,7 @@ func TestScan_Delete(t *testing.T) {
 		_, dao, _ := scanSetup(t)
 
 		err := dao.Delete(nil, nil)
-		assert.ErrorIs(t, err, ErrMissingWhere)
+		require.ErrorIs(t, err, ErrMissingWhere)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -223,7 +222,7 @@ func TestScan_DeleteCascade(t *testing.T) {
 	// Check the scan was deleted
 	s, err := dao.Get(testData[0].ID)
 	require.ErrorIs(t, err, sql.ErrNoRows)
-	assert.Nil(t, s)
+	require.Nil(t, s)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -236,8 +235,8 @@ func TestScan_NextScan(t *testing.T) {
 
 		s, err := dao.Next()
 		require.Nil(t, err)
-		assert.Equal(t, testData[0].Scan.ID, s.ID)
-		assert.Equal(t, testData[0].Path, s.CoursePath)
+		require.Equal(t, testData[0].Scan.ID, s.ID)
+		require.Equal(t, testData[0].Path, s.CoursePath)
 	})
 
 	t.Run("next", func(t *testing.T) {
@@ -251,8 +250,8 @@ func TestScan_NextScan(t *testing.T) {
 
 		s, err := dao.Next()
 		require.Nil(t, err)
-		assert.Equal(t, testData[1].Scan.ID, s.ID)
-		assert.Equal(t, testData[1].Path, s.CoursePath)
+		require.Equal(t, testData[1].Scan.ID, s.ID)
+		require.Equal(t, testData[1].Path, s.CoursePath)
 
 	})
 
@@ -261,7 +260,7 @@ func TestScan_NextScan(t *testing.T) {
 
 		scan, err := dao.Next()
 		require.Nil(t, err)
-		assert.Nil(t, scan)
+		require.Nil(t, scan)
 	})
 
 	t.Run("db error", func(t *testing.T) {

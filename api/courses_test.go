@@ -21,7 +21,6 @@ import (
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/gofiber/fiber/v2"
 	"github.com/spf13/afero"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,7 +36,7 @@ func TestCourses_GetCourses(t *testing.T) {
 
 		paginationResp, _ := coursesUnmarshalHelper(t, body)
 		require.Zero(t, int(paginationResp.TotalItems))
-		require.Len(t, paginationResp.Items, 0)
+		require.Zero(t, len(paginationResp.Items))
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
@@ -319,7 +318,7 @@ func TestCourses_GetCourse(t *testing.T) {
 		err = json.Unmarshal(body, &courseResp)
 		require.Nil(t, err)
 		require.Equal(t, testData[2].ID, courseResp.ID)
-		assert.False(t, courseResp.Available)
+		require.False(t, courseResp.Available)
 
 		// ----------------------------
 		// Available
@@ -334,8 +333,8 @@ func TestCourses_GetCourse(t *testing.T) {
 
 		err = json.Unmarshal(body, &courseResp)
 		require.Nil(t, err)
-		assert.Equal(t, testData[2].ID, courseResp.ID)
-		assert.True(t, courseResp.Available)
+		require.Equal(t, testData[2].ID, courseResp.ID)
+		require.True(t, courseResp.Available)
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
@@ -378,10 +377,10 @@ func TestCourses_CreateCourse(t *testing.T) {
 		var courseResp courseResponse
 		err = json.Unmarshal(body, &courseResp)
 		require.Nil(t, err)
-		assert.NotNil(t, courseResp.ID)
-		assert.Equal(t, testData[0].Title, courseResp.Title)
-		assert.Equal(t, testData[0].Path, courseResp.Path)
-		assert.True(t, courseResp.Available)
+		require.NotNil(t, courseResp.ID)
+		require.Equal(t, testData[0].Title, courseResp.Title)
+		require.Equal(t, testData[0].Path, courseResp.Path)
+		require.True(t, courseResp.Available)
 	})
 
 	t.Run("400 (bind error)", func(t *testing.T) {
@@ -393,7 +392,7 @@ func TestCourses_CreateCourse(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "error parsing data")
+		require.Contains(t, string(body), "error parsing data")
 	})
 
 	t.Run("400 (invalid data)", func(t *testing.T) {
@@ -408,7 +407,7 @@ func TestCourses_CreateCourse(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "a title and path are required")
+		require.Contains(t, string(body), "a title and path are required")
 
 		// ----------------------------
 		// Missing path
@@ -419,7 +418,7 @@ func TestCourses_CreateCourse(t *testing.T) {
 		status, body, err = coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "a title and path are required")
+		require.Contains(t, string(body), "a title and path are required")
 
 		// ----------------------------
 		// Invalid path
@@ -430,7 +429,7 @@ func TestCourses_CreateCourse(t *testing.T) {
 		status, body, err = coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "invalid course path")
+		require.Contains(t, string(body), "invalid course path")
 	})
 
 	t.Run("400 (existing course)", func(t *testing.T) {
@@ -451,7 +450,7 @@ func TestCourses_CreateCourse(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "a course with this path already exists ")
+		require.Contains(t, string(body), "a course with this path already exists ")
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
@@ -471,7 +470,7 @@ func TestCourses_CreateCourse(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
-		assert.Contains(t, string(body), "error creating course")
+		require.Contains(t, string(body), "error creating course")
 	})
 
 	t.Run("500 (scan error)", func(t *testing.T) {
@@ -491,7 +490,7 @@ func TestCourses_CreateCourse(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
-		assert.Contains(t, string(body), "error creating scan job")
+		require.Contains(t, string(body), "error creating scan job")
 	})
 }
 
@@ -516,7 +515,7 @@ func TestCourses_DeleteCourse(t *testing.T) {
 		require.Equal(t, http.StatusNoContent, status)
 
 		_, err = courseDao.Get(testData[2].ID, nil)
-		assert.ErrorIs(t, err, sql.ErrNoRows)
+		require.ErrorIs(t, err, sql.ErrNoRows)
 
 		// ----------------------------
 		// Cascades
@@ -524,17 +523,17 @@ func TestCourses_DeleteCourse(t *testing.T) {
 
 		// Scan
 		_, err = scanDao.Get(testData[2].ID)
-		assert.ErrorIs(t, err, sql.ErrNoRows)
+		require.ErrorIs(t, err, sql.ErrNoRows)
 
 		// Assets
 		count, err := assetsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.NewAssetDao(db).Table + ".course_id": testData[2].ID}})
 		require.Nil(t, err)
-		assert.Zero(t, count)
+		require.Zero(t, count)
 
 		// Attachments
 		count, err = attachmentsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.NewAttachmentDao(db).Table + ".course_id": testData[2].ID}})
 		require.Nil(t, err)
-		assert.Zero(t, count)
+		require.Zero(t, count)
 	})
 
 	t.Run("204 (not found)", func(t *testing.T) {
@@ -578,7 +577,7 @@ func TestCourses_GetCard(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/card", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
-		assert.Equal(t, "test", string(body))
+		require.Equal(t, "test", string(body))
 	})
 
 	t.Run("404 (invalid id)", func(t *testing.T) {
@@ -587,7 +586,7 @@ func TestCourses_GetCard(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/test/card", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
-		assert.Equal(t, "Course not found", string(body))
+		require.Equal(t, "Course not found", string(body))
 	})
 
 	t.Run("404 (no card)", func(t *testing.T) {
@@ -598,7 +597,7 @@ func TestCourses_GetCard(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/card", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
-		assert.Equal(t, "Course has no card", string(body))
+		require.Equal(t, "Course has no card", string(body))
 	})
 
 	t.Run("404 (card not found)", func(t *testing.T) {
@@ -614,7 +613,7 @@ func TestCourses_GetCard(t *testing.T) {
 		status, body, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/card", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
-		assert.Equal(t, "Course card not found", string(body))
+		require.Equal(t, "Course card not found", string(body))
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
@@ -644,7 +643,7 @@ func TestCourses_GetAssets(t *testing.T) {
 
 		paginationResp, _ := assetsUnmarshalHelper(t, body)
 		require.Zero(t, int(paginationResp.TotalItems))
-		require.Len(t, paginationResp.Items, 0)
+		require.Zero(t, len(paginationResp.Items))
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
@@ -834,7 +833,7 @@ func TestCourses_GetAsset(t *testing.T) {
 		require.Equal(t, testData[0].Assets[1].ID, assetResp.ID)
 		require.Equal(t, testData[0].Assets[1].Title, assetResp.Title)
 		require.Equal(t, testData[0].Assets[1].Path, assetResp.Path)
-		assert.Nil(t, assetResp.Attachments)
+		require.Nil(t, assetResp.Attachments)
 
 		// ----------------------------
 		// Attachments
@@ -928,7 +927,7 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 
 		paginationResp, _ := attachmentsUnmarshalHelper(t, body)
 		require.Zero(t, int(paginationResp.TotalItems))
-		require.Len(t, paginationResp.Items, 0)
+		require.Zero(t, len(paginationResp.Items))
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
@@ -1252,8 +1251,7 @@ func TestCourses_GetTags(t *testing.T) {
 		var tags []courseTagResponse
 		err = json.Unmarshal(body, &tags)
 		require.Nil(t, err)
-
-		require.Len(t, tags, 0)
+		require.Zero(t, len(tags))
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {

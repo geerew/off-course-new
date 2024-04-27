@@ -19,7 +19,6 @@ import (
 	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/spf13/afero"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,8 +33,8 @@ func TestAssets_GetAssets(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, _ := assetsUnmarshalHelper(t, body)
-		assert.Zero(t, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 0)
+		require.Zero(t, int(paginationResp.TotalItems))
+		require.Zero(t, len(paginationResp.Items))
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
@@ -82,7 +81,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		paginationResp, assetsResp := assetsUnmarshalHelper(t, body)
 		require.Equal(t, 10, int(paginationResp.TotalItems))
 		require.Len(t, assetsResp, 10)
-		assert.Equal(t, testData[0].Assets[0].ID, assetsResp[0].ID)
+		require.Equal(t, testData[0].Assets[0].ID, assetsResp[0].ID)
 
 		// ----------------------------
 		// CREATED_AT DESC
@@ -94,7 +93,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		paginationResp, assetsResp = assetsUnmarshalHelper(t, body)
 		require.Equal(t, 10, int(paginationResp.TotalItems))
 		require.Len(t, assetsResp, 10)
-		assert.Equal(t, testData[1].Assets[4].ID, assetsResp[0].ID)
+		require.Equal(t, testData[1].Assets[4].ID, assetsResp[0].ID)
 
 		// ----------------------------
 		// CREATED_AT ASC + ATTACHMENTS.TITLE DESC
@@ -108,9 +107,9 @@ func TestAssets_GetAssets(t *testing.T) {
 		paginationResp, assetsResp = assetsUnmarshalHelper(t, body)
 		require.Equal(t, 10, int(paginationResp.TotalItems))
 		require.Len(t, assetsResp, 10)
-		assert.Equal(t, testData[0].Assets[0].ID, assetsResp[0].ID)
+		require.Equal(t, testData[0].Assets[0].ID, assetsResp[0].ID)
 		require.Len(t, assetsResp[0].Attachments, 2)
-		assert.Equal(t, testData[0].Assets[0].Attachments[1].ID, assetsResp[0].Attachments[0].ID)
+		require.Equal(t, testData[0].Assets[0].Attachments[1].ID, assetsResp[0].Attachments[0].ID)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
@@ -133,11 +132,11 @@ func TestAssets_GetAssets(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, assetsResp := assetsUnmarshalHelper(t, body)
-		assert.Equal(t, 18, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 10)
+		require.Equal(t, 18, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 10)
 
 		// Check the last asset in the paginated response
-		assert.Equal(t, testData[1].Assets[3].ID, assetsResp[9].ID)
+		require.Equal(t, testData[1].Assets[3].ID, assetsResp[9].ID)
 
 		// ----------------------------
 		// Get the second page (8 assets)
@@ -153,11 +152,11 @@ func TestAssets_GetAssets(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, assetsResp = assetsUnmarshalHelper(t, body)
-		assert.Equal(t, 18, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 8)
+		require.Equal(t, 18, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 8)
 
 		// Check the last asset in the paginated response
-		assert.Equal(t, testData[2].Assets[5].ID, assetsResp[7].ID)
+		require.Equal(t, testData[2].Assets[5].ID, assetsResp[7].ID)
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
@@ -188,11 +187,11 @@ func TestAssets_GetAsset(t *testing.T) {
 		var assetResp assetResponse
 		err = json.Unmarshal(body, &assetResp)
 		require.Nil(t, err)
-		assert.Equal(t, testData[1].Assets[3].ID, assetResp.ID)
-		assert.Equal(t, testData[1].Assets[3].Title, assetResp.Title)
-		assert.Equal(t, testData[1].Assets[3].Path, assetResp.Path)
-		assert.Equal(t, testData[1].Assets[3].CourseID, assetResp.CourseID)
-		assert.Nil(t, assetResp.Attachments)
+		require.Equal(t, testData[1].Assets[3].ID, assetResp.ID)
+		require.Equal(t, testData[1].Assets[3].Title, assetResp.Title)
+		require.Equal(t, testData[1].Assets[3].Path, assetResp.Path)
+		require.Equal(t, testData[1].Assets[3].CourseID, assetResp.CourseID)
+		require.Nil(t, assetResp.Attachments)
 
 		// ----------------------------
 		// Attachments
@@ -203,11 +202,11 @@ func TestAssets_GetAsset(t *testing.T) {
 
 		err = json.Unmarshal(body, &assetResp)
 		require.Nil(t, err)
-		assert.Equal(t, testData[1].Assets[3].ID, assetResp.ID)
-		assert.Equal(t, testData[1].Assets[3].Title, assetResp.Title)
-		assert.Equal(t, testData[1].Assets[3].Path, assetResp.Path)
-		assert.Equal(t, testData[1].Assets[3].CourseID, assetResp.CourseID)
-		assert.Len(t, assetResp.Attachments, 2)
+		require.Equal(t, testData[1].Assets[3].ID, assetResp.ID)
+		require.Equal(t, testData[1].Assets[3].Title, assetResp.Title)
+		require.Equal(t, testData[1].Assets[3].Path, assetResp.Path)
+		require.Equal(t, testData[1].Assets[3].CourseID, assetResp.CourseID)
+		require.Len(t, assetResp.Attachments, 2)
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
@@ -261,10 +260,10 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		var assetResp1 assetResponse
 		err = json.Unmarshal(body, &assetResp1)
 		require.Nil(t, err)
-		assert.Equal(t, testData[0].Assets[0].ID, assetResp1.ID)
-		assert.Equal(t, 45, assetResp1.VideoPos)
-		assert.False(t, assetResp1.Completed)
-		assert.True(t, assetResp1.CompletedAt.IsZero())
+		require.Equal(t, testData[0].Assets[0].ID, assetResp1.ID)
+		require.Equal(t, 45, assetResp1.VideoPos)
+		require.False(t, assetResp1.Completed)
+		require.True(t, assetResp1.CompletedAt.IsZero())
 
 		// ----------------------------
 		// Set completed to true
@@ -285,10 +284,10 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		var assetResp2 assetResponse
 		err = json.Unmarshal(body, &assetResp2)
 		require.Nil(t, err)
-		assert.Equal(t, testData[0].Assets[0].ID, assetResp2.ID)
-		assert.Equal(t, 45, assetResp2.VideoPos)
-		assert.True(t, assetResp2.Completed)
-		assert.False(t, assetResp2.CompletedAt.IsZero())
+		require.Equal(t, testData[0].Assets[0].ID, assetResp2.ID)
+		require.Equal(t, 45, assetResp2.VideoPos)
+		require.True(t, assetResp2.Completed)
+		require.False(t, assetResp2.CompletedAt.IsZero())
 
 		// ----------------------------
 		// Set video position to 10 completed to false
@@ -310,10 +309,10 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		var assetResp3 assetResponse
 		err = json.Unmarshal(body, &assetResp3)
 		require.Nil(t, err)
-		assert.Equal(t, testData[0].Assets[0].ID, assetResp3.ID)
-		assert.Equal(t, 10, assetResp3.VideoPos)
-		assert.False(t, assetResp3.Completed)
-		assert.True(t, assetResp3.CompletedAt.IsZero())
+		require.Equal(t, testData[0].Assets[0].ID, assetResp3.ID)
+		require.Equal(t, 10, assetResp3.VideoPos)
+		require.False(t, assetResp3.Completed)
+		require.True(t, assetResp3.CompletedAt.IsZero())
 	})
 
 	t.Run("400 (invalid data)", func(t *testing.T) {
@@ -372,7 +371,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 		status, body, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[0].Assets[1].ID+"/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
-		assert.Equal(t, "video", string(body))
+		require.Equal(t, "video", string(body))
 	})
 
 	t.Run("200 (stream video)", func(t *testing.T) {
@@ -390,7 +389,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 		status, body, err := assetsRequestHelper(appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusPartialContent, status)
-		assert.Equal(t, "video", string(body))
+		require.Equal(t, "video", string(body))
 	})
 
 	t.Run("200 (html)", func(t *testing.T) {
@@ -417,7 +416,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 		status, body, err := assetsRequestHelper(appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
-		assert.Equal(t, "html", string(body))
+		require.Equal(t, "html", string(body))
 	})
 
 	t.Run("400 (invalid path)", func(t *testing.T) {
@@ -428,7 +427,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 		status, body, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[0].Assets[1].ID+"/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "asset does not exist")
+		require.Contains(t, string(body), "asset does not exist")
 	})
 
 	t.Run("400 (invalid video range)", func(t *testing.T) {
@@ -446,7 +445,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 		status, body, err := assetsRequestHelper(appFs, db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "range start cannot be greater than end")
+		require.Contains(t, string(body), "range start cannot be greater than end")
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {

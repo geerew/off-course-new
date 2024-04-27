@@ -8,7 +8,6 @@ import (
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,13 +34,13 @@ func TestAssetProgress_Create(t *testing.T) {
 
 		err := dao.Create(ap, nil)
 		require.Nil(t, err)
-		assert.NotEmpty(t, ap.ID)
-		assert.Equal(t, testData[0].Assets[0].ID, ap.AssetID)
-		assert.Zero(t, ap.VideoPos)
-		assert.False(t, ap.Completed)
-		assert.True(t, ap.CompletedAt.IsZero())
-		assert.False(t, ap.CreatedAt.IsZero())
-		assert.False(t, ap.UpdatedAt.IsZero())
+		require.NotEmpty(t, ap.ID)
+		require.Equal(t, testData[0].Assets[0].ID, ap.AssetID)
+		require.Zero(t, ap.VideoPos)
+		require.False(t, ap.Completed)
+		require.True(t, ap.CompletedAt.IsZero())
+		require.False(t, ap.CreatedAt.IsZero())
+		require.False(t, ap.UpdatedAt.IsZero())
 	})
 
 	t.Run("duplicate asset id", func(t *testing.T) {
@@ -112,23 +111,23 @@ func TestAssetProgress_Get(t *testing.T) {
 
 		ap, err := dao.Get(testData[1].Assets[0].ID, nil)
 		require.Nil(t, err)
-		assert.Equal(t, testData[1].Assets[0].ID, ap.AssetID)
+		require.Equal(t, testData[1].Assets[0].ID, ap.AssetID)
 	})
 
 	t.Run("not found", func(t *testing.T) {
 		_, dao, _ := AssetProgressSetup(t)
 
 		ap, err := dao.Get("1234", nil)
-		assert.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, ap)
+		require.ErrorIs(t, err, sql.ErrNoRows)
+		require.Nil(t, ap)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
 		_, dao, _ := AssetProgressSetup(t)
 
 		ap, err := dao.Get("", nil)
-		assert.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, ap)
+		require.ErrorIs(t, err, sql.ErrNoRows)
+		require.Nil(t, ap)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -174,8 +173,8 @@ func TestAssetProgress_Update(t *testing.T) {
 		// Ensure the course was set to started
 		cp1, err := cpDao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
-		assert.True(t, cp1.Started)
-		assert.False(t, cp1.StartedAt.IsZero())
+		require.True(t, cp1.Started)
+		require.False(t, cp1.StartedAt.IsZero())
 
 		// ----------------------------
 		// Set to -10 (should be set to 0)
@@ -190,8 +189,8 @@ func TestAssetProgress_Update(t *testing.T) {
 		// Ensure the course is not started
 		cp2, err := cpDao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
-		assert.False(t, cp2.Started)
-		assert.True(t, cp2.StartedAt.IsZero())
+		require.False(t, cp2.Started)
+		require.True(t, cp2.StartedAt.IsZero())
 
 		// ----------------------------
 		// Set completed
@@ -208,10 +207,10 @@ func TestAssetProgress_Update(t *testing.T) {
 		// Ensure the course is started and completed
 		cp3, err := cpDao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
-		assert.True(t, cp3.Started)
-		assert.False(t, cp3.StartedAt.IsZero())
-		assert.Equal(t, 100, cp3.Percent)
-		assert.False(t, cp3.CompletedAt.IsZero())
+		require.True(t, cp3.Started)
+		require.False(t, cp3.StartedAt.IsZero())
+		require.Equal(t, 100, cp3.Percent)
+		require.False(t, cp3.CompletedAt.IsZero())
 	})
 
 	t.Run("empty id", func(t *testing.T) {

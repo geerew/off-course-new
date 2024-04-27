@@ -7,7 +7,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rzajac/zltest"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,7 +25,7 @@ func Test_TrimQuotes(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		assert.Equal(t, tt.expected, TrimQuotes(tt.in))
+		require.Equal(t, tt.expected, TrimQuotes(tt.in))
 	}
 }
 
@@ -35,26 +34,26 @@ func Test_TrimQuotes(t *testing.T) {
 func Test_DecodeString(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		res, err := DecodeString("")
-		assert.Nil(t, err)
-		assert.Equal(t, "", res)
+		require.Nil(t, err)
+		require.Equal(t, "", res)
 	})
 
 	t.Run("decode error", func(t *testing.T) {
 		res, err := DecodeString("`")
-		assert.EqualError(t, err, "failed to decode path")
-		assert.Empty(t, res)
+		require.EqualError(t, err, "failed to decode path")
+		require.Empty(t, res)
 	})
 
 	t.Run("unescape error", func(t *testing.T) {
 		res, err := DecodeString("dGVzdCUyMDElMiUyNiUyMHRlc3QlMjAy")
-		assert.EqualError(t, err, "failed to unescape path")
-		assert.Empty(t, res)
+		require.EqualError(t, err, "failed to unescape path")
+		require.Empty(t, res)
 	})
 
 	t.Run("success", func(t *testing.T) {
 		res, err := DecodeString("JTJGdGVzdCUyRmRhdGE=")
-		assert.Nil(t, err)
-		assert.Equal(t, "/test/data", res)
+		require.Nil(t, err)
+		require.Equal(t, "/test/data", res)
 	})
 }
 
@@ -63,12 +62,12 @@ func Test_DecodeString(t *testing.T) {
 func Test_EncodeString(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		res := EncodeString("")
-		assert.Equal(t, "", res)
+		require.Equal(t, "", res)
 	})
 
 	t.Run("success", func(t *testing.T) {
 		res := EncodeString("/test/data")
-		assert.Equal(t, "JTJGdGVzdCUyRmRhdGE=", res)
+		require.Equal(t, "JTJGdGVzdCUyRmRhdGE=", res)
 	})
 }
 
@@ -87,8 +86,8 @@ func Test_DiffStructs(t *testing.T) {
 
 	t.Run("not a struct empty", func(t *testing.T) {
 		leftDiff, rightDiff := DiffStructs([]string{"left"}, []string{"right"}, "")
-		assert.Nil(t, leftDiff)
-		assert.Nil(t, rightDiff)
+		require.Nil(t, leftDiff)
+		require.Nil(t, rightDiff)
 
 		loggerHook.LastEntry().ExpMsg("invalid struct or invalid key")
 		loggerHook.LastEntry().ExpLevel(zerolog.ErrorLevel)
@@ -101,8 +100,8 @@ func Test_DiffStructs(t *testing.T) {
 			[]testStruct{{ID: 0, Title: "Test"}},
 			"Name")
 
-		assert.Nil(t, leftDiff)
-		assert.Nil(t, rightDiff)
+		require.Nil(t, leftDiff)
+		require.Nil(t, rightDiff)
 
 		loggerHook.LastEntry().ExpMsg("invalid struct or invalid key")
 		loggerHook.LastEntry().ExpLevel(zerolog.ErrorLevel)
@@ -111,8 +110,8 @@ func Test_DiffStructs(t *testing.T) {
 
 	t.Run("both empty", func(t *testing.T) {
 		leftDiff, rightDiff := DiffStructs[testStruct](nil, nil, "")
-		assert.Nil(t, leftDiff)
-		assert.Nil(t, rightDiff)
+		require.Nil(t, leftDiff)
+		require.Nil(t, rightDiff)
 	})
 
 	t.Run("left empty", func(t *testing.T) {
@@ -123,7 +122,7 @@ func Test_DiffStructs(t *testing.T) {
 		}
 
 		leftDiff, rightDiff := DiffStructs(nil, right, "ID")
-		assert.Empty(t, leftDiff)
+		require.Empty(t, leftDiff)
 		require.Len(t, rightDiff, 5)
 	})
 
@@ -136,7 +135,7 @@ func Test_DiffStructs(t *testing.T) {
 
 		leftDiff, rightDiff := DiffStructs(left, nil, "ID")
 		require.Len(t, leftDiff, 5)
-		assert.Empty(t, rightDiff)
+		require.Empty(t, rightDiff)
 	})
 
 	t.Run("same", func(t *testing.T) {
@@ -149,8 +148,8 @@ func Test_DiffStructs(t *testing.T) {
 		}
 
 		leftDiff, rightDiff := DiffStructs(left, right, "ID")
-		assert.Empty(t, leftDiff)
-		assert.Empty(t, rightDiff)
+		require.Empty(t, leftDiff)
+		require.Empty(t, rightDiff)
 	})
 
 	t.Run("completely different", func(t *testing.T) {
@@ -201,12 +200,12 @@ func Test_DiffStructs(t *testing.T) {
 
 		leftDiff, rightDiff := DiffStructs(left, right, "ID")
 		require.Len(t, leftDiff, 1)
-		require.Len(t, rightDiff, 0)
+		require.Zero(t, len(rightDiff))
 
 		// Give right 1 extra (plus the new left one)
 		right = append(right, left[len(left)-1], &testStruct{ID: 6, Title: "Test"})
 		leftDiff, rightDiff = DiffStructs(left, right, "ID")
-		require.Len(t, leftDiff, 0)
+		require.Zero(t, len(leftDiff))
 		require.Len(t, rightDiff, 1)
 	})
 }
@@ -221,21 +220,21 @@ func Test_IsStructWithKey(t *testing.T) {
 
 	t.Run("valid struct", func(t *testing.T) {
 		test := testStruct{ID: 1, Title: "Test"}
-		assert.True(t, IsStructWithKey(test, "ID"))
+		require.True(t, IsStructWithKey(test, "ID"))
 	})
 
 	t.Run("valid pointer struct", func(t *testing.T) {
 		test := &testStruct{ID: 1, Title: "Test"}
-		assert.True(t, IsStructWithKey(test, "ID"))
+		require.True(t, IsStructWithKey(test, "ID"))
 	})
 
 	t.Run("string", func(t *testing.T) {
-		assert.False(t, IsStructWithKey("test", "ID"))
+		require.False(t, IsStructWithKey("test", "ID"))
 	})
 
 	t.Run("invalid key", func(t *testing.T) {
 		test := testStruct{ID: 1, Title: "Test"}
-		assert.False(t, IsStructWithKey(test, "Name"))
+		require.False(t, IsStructWithKey(test, "Name"))
 	})
 }
 
@@ -266,6 +265,6 @@ func Test_ValueToString(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		assert.Equal(t, test.output, ValueToString(reflect.ValueOf(test.input)))
+		require.Equal(t, test.output, ValueToString(reflect.ValueOf(test.input)))
 	}
 }

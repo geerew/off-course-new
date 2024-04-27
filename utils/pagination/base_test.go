@@ -8,7 +8,6 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
 )
@@ -25,10 +24,10 @@ func Test_NewFromApi(t *testing.T) {
 		p := NewFromApi(c)
 		p.SetCount(1)
 
-		assert.Equal(t, 1, p.page)
-		assert.Equal(t, DefaultPerPage, p.perPage)
-		assert.Equal(t, 1, p.TotalItems())
-		assert.Equal(t, 1, p.TotalPages())
+		require.Equal(t, 1, p.page)
+		require.Equal(t, DefaultPerPage, p.perPage)
+		require.Equal(t, 1, p.TotalItems())
+		require.Equal(t, 1, p.TotalPages())
 	})
 
 	t.Run("values", func(t *testing.T) {
@@ -40,9 +39,9 @@ func Test_NewFromApi(t *testing.T) {
 		p := NewFromApi(c)
 		p.SetCount(24)
 
-		assert.Equal(t, 2, p.page)
-		assert.Equal(t, 24, p.TotalItems())
-		assert.Equal(t, 3, p.TotalPages())
+		require.Equal(t, 2, p.page)
+		require.Equal(t, 24, p.TotalItems())
+		require.Equal(t, 3, p.TotalPages())
 	})
 
 	t.Run("invalid values", func(t *testing.T) {
@@ -54,10 +53,10 @@ func Test_NewFromApi(t *testing.T) {
 		p := NewFromApi(c)
 		p.SetCount(24)
 
-		assert.Equal(t, 1, p.page)
-		assert.Equal(t, DefaultPerPage, p.perPage)
-		assert.Equal(t, 24, p.TotalItems())
-		assert.Equal(t, 1, p.TotalPages())
+		require.Equal(t, 1, p.page)
+		require.Equal(t, DefaultPerPage, p.perPage)
+		require.Equal(t, 24, p.TotalItems())
+		require.Equal(t, 1, p.TotalPages())
 	})
 }
 
@@ -68,36 +67,36 @@ func Test_New(t *testing.T) {
 		p := New(1, DefaultPerPage)
 		p.SetCount(1)
 
-		assert.Equal(t, 1, p.page)
-		assert.Equal(t, DefaultPerPage, p.perPage)
-		assert.Equal(t, 1, p.TotalItems())
+		require.Equal(t, 1, p.page)
+		require.Equal(t, DefaultPerPage, p.perPage)
+		require.Equal(t, 1, p.TotalItems())
 	})
 
 	t.Run("values", func(t *testing.T) {
 		p := New(2, 10)
 		p.SetCount(24)
 
-		assert.Equal(t, 2, p.page)
-		assert.Equal(t, 24, p.TotalItems())
-		assert.Equal(t, 3, p.TotalPages())
+		require.Equal(t, 2, p.page)
+		require.Equal(t, 24, p.TotalItems())
+		require.Equal(t, 3, p.TotalPages())
 	})
 
 	t.Run("above max", func(t *testing.T) {
 		p := New(1, MaxPerPage+1)
 		p.SetCount(1)
 
-		assert.Equal(t, 1, p.page)
-		assert.Equal(t, MaxPerPage, p.perPage)
+		require.Equal(t, 1, p.page)
+		require.Equal(t, MaxPerPage, p.perPage)
 	})
 
 	t.Run("invalid values", func(t *testing.T) {
 		p := New(-1, -1)
 		p.SetCount(24)
 
-		assert.Equal(t, 1, p.page)
-		assert.Equal(t, DefaultPerPage, p.perPage)
-		assert.Equal(t, 24, p.TotalItems())
-		assert.Equal(t, 1, p.TotalPages())
+		require.Equal(t, 1, p.page)
+		require.Equal(t, DefaultPerPage, p.perPage)
+		require.Equal(t, 24, p.TotalItems())
+		require.Equal(t, 1, p.TotalPages())
 	})
 }
 
@@ -127,7 +126,7 @@ func Test_Limit(t *testing.T) {
 		p := NewFromApi(c)
 		p.SetCount(1)
 
-		assert.Equal(t, tt.expected, p.Limit())
+		require.Equal(t, tt.expected, p.Limit())
 	}
 }
 
@@ -158,7 +157,7 @@ func Test_Offset(t *testing.T) {
 		p := NewFromApi(c)
 		p.SetCount(1)
 
-		assert.Equal(t, tt.expected, p.Offset())
+		require.Equal(t, tt.expected, p.Offset())
 	}
 }
 
@@ -186,7 +185,7 @@ func Test_Page(t *testing.T) {
 		c.Request().SetRequestURI("/dummy?" + PageQueryParam + "=" + tt.in)
 		defer app.ReleaseCtx(c)
 
-		assert.Equal(t, tt.expected, page(c))
+		require.Equal(t, tt.expected, page(c))
 	}
 }
 
@@ -214,7 +213,7 @@ func Test_PerPage(t *testing.T) {
 		c.Request().SetRequestURI("/dummy?" + PerPageQueryParam + "=" + tt.in)
 		defer app.ReleaseCtx(c)
 
-		assert.Equal(t, tt.expected, perPage(c))
+		require.Equal(t, tt.expected, perPage(c))
 	}
 }
 
@@ -249,8 +248,8 @@ func Test_BuildResult(t *testing.T) {
 		for i, raw := range result.Items {
 			var d Data
 			require.Nil(t, json.Unmarshal(raw, &d))
-			assert.Equal(t, data[i].ID, d.ID)
-			assert.Equal(t, data[i].CreatedAt.String(), d.CreatedAt.String())
+			require.Equal(t, data[i].ID, d.ID)
+			require.Equal(t, data[i].CreatedAt.String(), d.CreatedAt.String())
 		}
 	})
 
@@ -265,7 +264,7 @@ func Test_BuildResult(t *testing.T) {
 
 		result, err := p.BuildResult("data")
 		require.EqualError(t, err, "input is not a slice")
-		assert.Nil(t, result)
+		require.Nil(t, result)
 	})
 
 	t.Run("error marshalling", func(t *testing.T) {
@@ -286,7 +285,7 @@ func Test_BuildResult(t *testing.T) {
 
 		result, err := p.BuildResult(badData)
 		require.EqualError(t, err, "json: unsupported type: chan int")
-		assert.Nil(t, result)
+		require.Nil(t, result)
 	})
 }
 
@@ -304,6 +303,6 @@ func Test_Apply(t *testing.T) {
 
 	query, args, err := builder.ToSql()
 	require.Nil(t, err)
-	assert.Equal(t, "SELECT * FROM dummy LIMIT 10 OFFSET 0", query)
-	assert.Nil(t, args)
+	require.Equal(t, "SELECT * FROM dummy LIMIT 10 OFFSET 0", query)
+	require.Nil(t, args)
 }

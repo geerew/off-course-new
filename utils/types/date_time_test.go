@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -12,7 +12,7 @@ import (
 func TestNowDateTime(t *testing.T) {
 	now := time.Now().UTC().Format("2006-01-02 15:04:05")
 	dt := NowDateTime()
-	assert.Contains(t, dt.String(), now)
+	require.Contains(t, dt.String(), now)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -38,8 +38,8 @@ func TestParseDateTime(t *testing.T) {
 
 	for _, tt := range tests {
 		dt, err := ParseDateTime(tt.value)
-		assert.Nil(t, err)
-		assert.Equal(t, tt.expected, dt.String())
+		require.Nil(t, err)
+		require.Equal(t, tt.expected, dt.String())
 	}
 }
 
@@ -49,35 +49,35 @@ func TestTime(t *testing.T) {
 	str := "2023-02-28 11:23:45.678Z"
 
 	expected, err := time.Parse(DefaultDateLayout, str)
-	assert.Nil(t, err)
+	require.Nil(t, err)
 
 	dt, err := ParseDateTime(str)
-	assert.Nil(t, err)
+	require.Nil(t, err)
 
 	res := dt.Time()
-	assert.Equal(t, expected, res)
+	require.Equal(t, expected, res)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestDateTimeIsZero(t *testing.T) {
 	dt0 := DateTime{}
-	assert.True(t, dt0.IsZero())
+	require.True(t, dt0.IsZero())
 
 	dt1 := NowDateTime()
-	assert.False(t, dt1.IsZero())
+	require.False(t, dt1.IsZero())
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestDateTimeString(t *testing.T) {
 	dt0 := DateTime{}
-	assert.Empty(t, dt0.String())
+	require.Empty(t, dt0.String())
 
 	expected := "2023-02-28 11:23:45.678Z"
 	dt1, err := ParseDateTime(expected)
-	assert.Nil(t, err)
-	assert.Equal(t, expected, dt1.String())
+	require.Nil(t, err)
+	require.Equal(t, expected, dt1.String())
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -93,11 +93,11 @@ func TestDateTimeMarshalJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		dt, err := ParseDateTime(tt.date)
-		assert.Nil(t, err)
+		require.Nil(t, err)
 
 		res, err := dt.MarshalJSON()
-		assert.Nil(t, err)
-		assert.Equal(t, tt.expected, string(res))
+		require.Nil(t, err)
+		require.Equal(t, tt.expected, string(res))
 	}
 }
 
@@ -118,7 +118,7 @@ func TestDateTimeUnmarshalJSON(t *testing.T) {
 	for _, tt := range tests {
 		dt := DateTime{}
 		dt.UnmarshalJSON([]byte(tt.date))
-		assert.Equal(t, tt.expected, dt.String())
+		require.Equal(t, tt.expected, dt.String())
 	}
 }
 
@@ -140,8 +140,8 @@ func TestDateTimeValue(t *testing.T) {
 		dt, _ := ParseDateTime(tt.value)
 		res, err := dt.Value()
 
-		assert.Nil(t, err)
-		assert.Equal(t, tt.expected, res)
+		require.Nil(t, err)
+		require.Equal(t, tt.expected, res)
 	}
 }
 
@@ -168,7 +168,7 @@ func TestDateTimeScan(t *testing.T) {
 		dt := DateTime{}
 
 		err := dt.Scan(tt.value)
-		assert.Nil(t, err)
-		assert.Contains(t, dt.String(), tt.expected)
+		require.Nil(t, err)
+		require.Contains(t, dt.String(), tt.expected)
 	}
 }

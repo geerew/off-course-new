@@ -14,7 +14,6 @@ import (
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/jobs"
 	"github.com/gofiber/fiber/v2"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,9 +33,9 @@ func TestScans_GetScan(t *testing.T) {
 		var respData scanResponse
 		err = json.Unmarshal(body, &respData)
 		require.Nil(t, err)
-		assert.Equal(t, testData[2].Scan.ID, respData.ID)
-		assert.Equal(t, testData[2].Scan.CourseID, respData.CourseID)
-		assert.Equal(t, testData[2].Scan.Status, respData.Status)
+		require.Equal(t, testData[2].Scan.ID, respData.ID)
+		require.Equal(t, testData[2].Scan.CourseID, respData.CourseID)
+		require.Equal(t, testData[2].Scan.Status, respData.Status)
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
@@ -82,7 +81,7 @@ func TestScans_CreateScan(t *testing.T) {
 		var respData scanResponse
 		err = json.Unmarshal(body, &respData)
 		require.Nil(t, err)
-		assert.Equal(t, testData[0].ID, respData.CourseID)
+		require.Equal(t, testData[0].ID, respData.CourseID)
 	})
 
 	t.Run("400 (bind error)", func(t *testing.T) {
@@ -94,7 +93,7 @@ func TestScans_CreateScan(t *testing.T) {
 		status, body, err := scansRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "error parsing data")
+		require.Contains(t, string(body), "error parsing data")
 	})
 
 	t.Run("400 (invalid data)", func(t *testing.T) {
@@ -106,7 +105,7 @@ func TestScans_CreateScan(t *testing.T) {
 		status, body, err := scansRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "a course ID is required")
+		require.Contains(t, string(body), "a course ID is required")
 	})
 
 	t.Run("400 (invalid course id)", func(t *testing.T) {
@@ -118,7 +117,7 @@ func TestScans_CreateScan(t *testing.T) {
 		status, body, err := scansRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "invalid course ID")
+		require.Contains(t, string(body), "invalid course ID")
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
@@ -133,7 +132,7 @@ func TestScans_CreateScan(t *testing.T) {
 		status, body, err := scansRequestHelper(appFs, db, cs, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
-		assert.Contains(t, string(body), "error creating scan job")
+		require.Contains(t, string(body), "error creating scan job")
 	})
 }
 

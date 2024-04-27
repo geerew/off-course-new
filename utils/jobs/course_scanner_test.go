@@ -14,7 +14,6 @@ import (
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,7 +27,7 @@ func Test_Add(t *testing.T) {
 
 		scan, err := scanner.Add(testData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, testData[0].ID, scan.CourseID)
+		require.Equal(t, testData[0].ID, scan.CourseID)
 	})
 
 	t.Run("duplicate", func(t *testing.T) {
@@ -37,8 +36,8 @@ func Test_Add(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 
 		scan, err := scanner.Add(testData[0].ID)
-		assert.Nil(t, err)
-		assert.Equal(t, testData[0].ID, scan.CourseID)
+		require.Nil(t, err)
+		require.Equal(t, testData[0].ID, scan.CourseID)
 
 		// Add the same course again
 		scan, err = scanner.Add(testData[0].ID)
@@ -54,7 +53,7 @@ func Test_Add(t *testing.T) {
 
 		scan, err := scanner.Add("test")
 		require.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, scan)
+		require.Nil(t, scan)
 	})
 
 	t.Run("not blocked", func(t *testing.T) {
@@ -64,11 +63,11 @@ func Test_Add(t *testing.T) {
 
 		scan1, err := scanner.Add(testData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, testData[0].ID, scan1.CourseID)
+		require.Equal(t, testData[0].ID, scan1.CourseID)
 
 		scan2, err := scanner.Add(testData[1].ID)
 		require.Nil(t, err)
-		assert.Equal(t, testData[1].ID, scan2.CourseID)
+		require.Equal(t, testData[1].ID, scan2.CourseID)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -82,7 +81,7 @@ func Test_Add(t *testing.T) {
 
 		scan, err := scanner.Add(testData[0].ID)
 		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", scanDao.Table))
-		assert.Nil(t, scan)
+		require.Nil(t, scan)
 	})
 }
 
@@ -102,7 +101,7 @@ func Test_Worker(t *testing.T) {
 		// Add the job
 		scan, err := scanner.Add(testData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, scan.CourseID, testData[0].ID)
+		require.Equal(t, scan.CourseID, testData[0].ID)
 
 		// Give time for the worker to finish
 		time.Sleep(time.Millisecond * 5)
@@ -110,7 +109,7 @@ func Test_Worker(t *testing.T) {
 		// Assert the scan job was deleted from the DB
 		s, err := scanner.scanDao.Get(testData[0].ID)
 		require.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, s)
+		require.Nil(t, s)
 
 		// Validate the logs
 		require.NotNil(t, lh.LastEntry())
@@ -142,7 +141,7 @@ func Test_Worker(t *testing.T) {
 		for _, course := range testData {
 			s, err := scanner.scanDao.Get(course.ID)
 			require.ErrorIs(t, err, sql.ErrNoRows)
-			assert.Nil(t, s)
+			require.Nil(t, s)
 		}
 
 		// Validate the logs
@@ -165,7 +164,7 @@ func Test_Worker(t *testing.T) {
 
 		scan, err := scanner.Add(testData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, scan.CourseID, testData[0].ID)
+		require.Equal(t, scan.CourseID, testData[0].ID)
 
 		// Give time for the worker to finish
 		time.Sleep(time.Millisecond * 5)
@@ -188,7 +187,7 @@ func Test_Worker(t *testing.T) {
 		// Add the job
 		scan, err := scanner.Add(testData[0].ID)
 		require.Nil(t, err)
-		assert.Equal(t, scan.CourseID, testData[0].ID)
+		require.Equal(t, scan.CourseID, testData[0].ID)
 
 		// Drop the DB
 		_, err = db.Exec("DROP TABLE IF EXISTS " + scanDao.Table)
@@ -264,7 +263,7 @@ func Test_CourseProcessor(t *testing.T) {
 
 		c, err := scanner.courseDao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
-		assert.Equal(t, fmt.Sprintf("%s/card.jpg", testData[0].Path), c.CardPath)
+		require.Equal(t, fmt.Sprintf("%s/card.jpg", testData[0].Path), c.CardPath)
 
 		// ----------------------------
 		// Ignore card in chapter
@@ -280,8 +279,8 @@ func Test_CourseProcessor(t *testing.T) {
 
 		c, err = scanner.courseDao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
-		assert.Empty(t, c.CardPath)
-		assert.Empty(t, testData[0].CardPath)
+		require.Empty(t, c.CardPath)
+		require.Empty(t, testData[0].CardPath)
 
 		// ----------------------------
 		// Multiple cards types
@@ -298,7 +297,7 @@ func Test_CourseProcessor(t *testing.T) {
 
 		c, err = scanner.courseDao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
-		assert.Equal(t, fmt.Sprintf("%s/card.jpg", testData[0].Path), c.CardPath)
+		require.Equal(t, fmt.Sprintf("%s/card.jpg", testData[0].Path), c.CardPath)
 	})
 
 	t.Run("card error", func(t *testing.T) {
@@ -344,7 +343,7 @@ func Test_CourseProcessor(t *testing.T) {
 
 		assets, err := scanner.assetDao.List(&database.DatabaseParams{Where: squirrel.Eq{assetDao.Table + ".course_id": testData[0].ID}}, nil)
 		require.Nil(t, err)
-		require.Len(t, assets, 0)
+		require.Zero(t, len(assets))
 	})
 
 	t.Run("assets", func(t *testing.T) {
@@ -373,17 +372,17 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, assets, 2)
 
-		assert.Equal(t, "file 1", assets[0].Title)
-		assert.Equal(t, testData[0].ID, assets[0].CourseID)
-		assert.Equal(t, 1, int(assets[0].Prefix.Int16))
-		assert.Empty(t, assets[0].Chapter)
-		assert.True(t, assets[0].Type.IsVideo())
+		require.Equal(t, "file 1", assets[0].Title)
+		require.Equal(t, testData[0].ID, assets[0].CourseID)
+		require.Equal(t, 1, int(assets[0].Prefix.Int16))
+		require.Empty(t, assets[0].Chapter)
+		require.True(t, assets[0].Type.IsVideo())
 
-		assert.Equal(t, "file 2", assets[1].Title)
-		assert.Equal(t, testData[0].ID, assets[1].CourseID)
-		assert.Equal(t, 2, int(assets[1].Prefix.Int16))
-		assert.Empty(t, assets[1].Chapter)
-		assert.True(t, assets[1].Type.IsHTML())
+		require.Equal(t, "file 2", assets[1].Title)
+		require.Equal(t, testData[0].ID, assets[1].CourseID)
+		require.Equal(t, 2, int(assets[1].Prefix.Int16))
+		require.Empty(t, assets[1].Chapter)
+		require.True(t, assets[1].Type.IsHTML())
 
 		// ----------------------------
 		// Delete asset
@@ -397,11 +396,11 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
 
-		assert.Equal(t, "file 2", assets[0].Title)
-		assert.Equal(t, testData[0].ID, assets[0].CourseID)
-		assert.Equal(t, 2, int(assets[0].Prefix.Int16))
-		assert.Empty(t, assets[0].Chapter)
-		assert.True(t, assets[0].Type.IsHTML())
+		require.Equal(t, "file 2", assets[0].Title)
+		require.Equal(t, testData[0].ID, assets[0].CourseID)
+		require.Equal(t, 2, int(assets[0].Prefix.Int16))
+		require.Empty(t, assets[0].Chapter)
+		require.True(t, assets[0].Type.IsHTML())
 
 		// ----------------------------
 		// Add chapter asset
@@ -415,17 +414,17 @@ func Test_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, assets, 2)
 
-		assert.Equal(t, "file 2", assets[0].Title)
-		assert.Equal(t, testData[0].ID, assets[0].CourseID)
-		assert.Equal(t, 2, int(assets[0].Prefix.Int16))
-		assert.Empty(t, assets[0].Chapter)
-		assert.True(t, assets[0].Type.IsHTML())
+		require.Equal(t, "file 2", assets[0].Title)
+		require.Equal(t, testData[0].ID, assets[0].CourseID)
+		require.Equal(t, 2, int(assets[0].Prefix.Int16))
+		require.Empty(t, assets[0].Chapter)
+		require.True(t, assets[0].Type.IsHTML())
 
-		assert.Equal(t, "file 3", assets[1].Title)
-		assert.Equal(t, testData[0].ID, assets[1].CourseID)
-		assert.Equal(t, 3, int(assets[1].Prefix.Int16))
-		assert.Equal(t, "01 Chapter 1", assets[1].Chapter)
-		assert.True(t, assets[1].Type.IsPDF())
+		require.Equal(t, "file 3", assets[1].Title)
+		require.Equal(t, testData[0].ID, assets[1].CourseID)
+		require.Equal(t, 3, int(assets[1].Prefix.Int16))
+		require.Equal(t, "01 Chapter 1", assets[1].Chapter)
+		require.True(t, assets[1].Type.IsPDF())
 	})
 
 	t.Run("assets error", func(t *testing.T) {
@@ -453,7 +452,11 @@ func Test_CourseProcessor(t *testing.T) {
 
 		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
 
-		assetDbParams := &database.DatabaseParams{Where: squirrel.Eq{assetDao.Table + ".course_id": testData[0].ID}}
+		assetDbParams := &database.DatabaseParams{
+			Where:            squirrel.Eq{assetDao.Table + ".course_id": testData[0].ID},
+			IncludeRelations: []string{attachmentDao.Table},
+		}
+
 		attachmentDbParams := &database.DatabaseParams{
 			OrderBy: []string{"created_at asc"},
 			Where:   squirrel.Eq{attachmentDao.Table + ".course_id": testData[0].ID},
@@ -471,17 +474,17 @@ func Test_CourseProcessor(t *testing.T) {
 		assets, err := scanner.assetDao.List(assetDbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
-		assert.Equal(t, "video", assets[0].Title)
-		assert.Equal(t, testData[0].ID, assets[0].CourseID)
-		assert.Equal(t, 1, int(assets[0].Prefix.Int16))
-		assert.Equal(t, fmt.Sprintf("%s/01 video.mp4", testData[0].Path), assets[0].Path)
-		assert.True(t, assets[0].Type.IsVideo())
+		require.Equal(t, "video", assets[0].Title)
+		require.Equal(t, testData[0].ID, assets[0].CourseID)
+		require.Equal(t, 1, int(assets[0].Prefix.Int16))
+		require.Equal(t, fmt.Sprintf("%s/01 video.mp4", testData[0].Path), assets[0].Path)
+		require.True(t, assets[0].Type.IsVideo())
 
 		attachments, err := scanner.attachmentDao.List(attachmentDbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
-		assert.Equal(t, "info.txt", attachments[0].Title)
-		assert.Equal(t, fmt.Sprintf("%s/01 info.txt", testData[0].Path), attachments[0].Path)
+		require.Equal(t, "info.txt", attachments[0].Title)
+		require.Equal(t, fmt.Sprintf("%s/01 info.txt", testData[0].Path), attachments[0].Path)
 
 		// ----------------------------
 		// Add another attachment
@@ -500,10 +503,10 @@ func Test_CourseProcessor(t *testing.T) {
 		attachments, err = scanner.attachmentDao.List(attachmentDbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, attachments, 2)
-		assert.Equal(t, "info.txt", attachments[0].Title)
-		assert.Equal(t, fmt.Sprintf("%s/01 info.txt", testData[0].Path), attachments[0].Path)
-		assert.Equal(t, "code.zip", attachments[1].Title)
-		assert.Equal(t, fmt.Sprintf("%s/01 code.zip", testData[0].Path), attachments[1].Path)
+		require.Equal(t, "info.txt", attachments[0].Title)
+		require.Equal(t, fmt.Sprintf("%s/01 info.txt", testData[0].Path), attachments[0].Path)
+		require.Equal(t, "code.zip", attachments[1].Title)
+		require.Equal(t, fmt.Sprintf("%s/01 code.zip", testData[0].Path), attachments[1].Path)
 
 		// ----------------------------
 		// Delete first attachment
@@ -517,14 +520,14 @@ func Test_CourseProcessor(t *testing.T) {
 		assets, err = scanner.assetDao.List(assetDbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
-		assert.Equal(t, "video", assets[0].Title)
+		require.Equal(t, "video", assets[0].Title)
 		require.Len(t, assets[0].Attachments, 1)
 
 		attachments, err = scanner.attachmentDao.List(attachmentDbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
-		assert.Equal(t, "code.zip", attachments[0].Title)
-		assert.Equal(t, fmt.Sprintf("%s/01 code.zip", testData[0].Path), attachments[0].Path)
+		require.Equal(t, "code.zip", attachments[0].Title)
+		require.Equal(t, fmt.Sprintf("%s/01 code.zip", testData[0].Path), attachments[0].Path)
 	})
 
 	t.Run("attachments error", func(t *testing.T) {
@@ -558,7 +561,11 @@ func Test_CourseProcessor(t *testing.T) {
 
 		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
 
-		assetDbParams := &database.DatabaseParams{Where: squirrel.Eq{assetDao.Table + ".course_id": testData[0].ID}}
+		assetDbParams := &database.DatabaseParams{
+			Where:            squirrel.Eq{assetDao.Table + ".course_id": testData[0].ID},
+			IncludeRelations: []string{attachmentDao.Table},
+		}
+
 		attachmentDbParams := &database.DatabaseParams{
 			OrderBy: []string{"created_at asc"},
 			Where:   squirrel.Eq{attachmentDao.Table + ".course_id": testData[0].ID},
@@ -576,8 +583,8 @@ func Test_CourseProcessor(t *testing.T) {
 		assets, err := scanner.assetDao.List(assetDbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
-		assert.Equal(t, pdfFile, assets[0].Path)
-		assert.True(t, assets[0].Type.IsPDF())
+		require.Equal(t, pdfFile, assets[0].Path)
+		require.True(t, assets[0].Type.IsPDF())
 		require.Empty(t, assets[0].Attachments)
 
 		// ----------------------------
@@ -592,14 +599,14 @@ func Test_CourseProcessor(t *testing.T) {
 		assets, err = scanner.assetDao.List(assetDbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
-		assert.Equal(t, htmlFile, assets[0].Path)
-		assert.True(t, assets[0].Type.IsHTML())
+		require.Equal(t, htmlFile, assets[0].Path)
+		require.True(t, assets[0].Type.IsHTML())
 		require.Len(t, assets[0].Attachments, 1)
 
 		attachments, err := scanner.attachmentDao.List(attachmentDbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
-		assert.Equal(t, pdfFile, attachments[0].Path)
+		require.Equal(t, pdfFile, attachments[0].Path)
 
 		// ----------------------------
 		// Add VIDEO (asset)
@@ -613,15 +620,15 @@ func Test_CourseProcessor(t *testing.T) {
 		assets, err = scanner.assetDao.List(assetDbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
-		assert.Equal(t, videoFile, assets[0].Path)
-		assert.True(t, assets[0].Type.IsVideo())
+		require.Equal(t, videoFile, assets[0].Path)
+		require.True(t, assets[0].Type.IsVideo())
 		require.Len(t, assets[0].Attachments, 2)
 
 		attachments, err = scanner.attachmentDao.List(attachmentDbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, attachments, 2)
-		assert.Equal(t, pdfFile, attachments[0].Path)
-		assert.Equal(t, htmlFile, attachments[1].Path)
+		require.Equal(t, pdfFile, attachments[0].Path)
+		require.Equal(t, htmlFile, attachments[1].Path)
 
 		// ----------------------------
 		// Add PDF file (attachment)
@@ -635,16 +642,16 @@ func Test_CourseProcessor(t *testing.T) {
 		assets, err = scanner.assetDao.List(assetDbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, assets, 1)
-		assert.Equal(t, videoFile, assets[0].Path)
-		assert.True(t, assets[0].Type.IsVideo())
+		require.Equal(t, videoFile, assets[0].Path)
+		require.True(t, assets[0].Type.IsVideo())
 		require.Len(t, assets[0].Attachments, 3)
 
 		attachments, err = scanner.attachmentDao.List(attachmentDbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, attachments, 3)
-		assert.Equal(t, pdfFile, attachments[0].Path)
-		assert.Equal(t, htmlFile, attachments[1].Path)
-		assert.Equal(t, pdfFile2, attachments[2].Path)
+		require.Equal(t, pdfFile, attachments[0].Path)
+		require.Equal(t, htmlFile, attachments[1].Path)
+		require.Equal(t, pdfFile2, attachments[2].Path)
 	})
 
 	t.Run("course updated", func(t *testing.T) {
@@ -659,7 +666,7 @@ func Test_CourseProcessor(t *testing.T) {
 
 		updatedCourse, err := scanner.courseDao.Get(testData[0].ID, nil)
 		require.Nil(t, err)
-		assert.NotEqual(t, testData[0].UpdatedAt, updatedCourse.UpdatedAt)
+		require.NotEqual(t, testData[0].UpdatedAt, updatedCourse.UpdatedAt)
 	})
 }
 
@@ -685,7 +692,7 @@ func Test_BuildFileInfo(t *testing.T) {
 
 		for _, tt := range tests {
 			fb := parseFileName(tt)
-			assert.Nil(t, fb)
+			require.Nil(t, fb)
 		}
 	})
 
@@ -711,7 +718,7 @@ func Test_BuildFileInfo(t *testing.T) {
 
 		for _, tt := range tests {
 			fb := parseFileName(tt.in)
-			assert.Equal(t, tt.expected, fb, fmt.Sprintf("error for [%s]", tt.in))
+			require.Equal(t, tt.expected, fb, fmt.Sprintf("error for [%s]", tt.in))
 		}
 	})
 
@@ -738,7 +745,7 @@ func Test_BuildFileInfo(t *testing.T) {
 
 		for _, tt := range tests {
 			fb := parseFileName(tt.in)
-			assert.Equal(t, tt.expected, fb, fmt.Sprintf("error for [%s]", tt.in))
+			require.Equal(t, tt.expected, fb, fmt.Sprintf("error for [%s]", tt.in))
 		}
 	})
 }
@@ -757,7 +764,7 @@ func Test_IsCard(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			assert.False(t, isCard(tt))
+			require.False(t, isCard(tt))
 		}
 	})
 
@@ -771,7 +778,7 @@ func Test_IsCard(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			assert.True(t, isCard(tt))
+			require.True(t, isCard(tt))
 		}
 	})
 }
@@ -832,7 +839,7 @@ func Test_UpdateAssets(t *testing.T) {
 
 		// Ensure all assets have an ID
 		for _, a := range testData[0].Assets {
-			assert.NotEmpty(t, a.ID)
+			require.NotEmpty(t, a.ID)
 		}
 	})
 

@@ -10,7 +10,6 @@ import (
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,7 +29,7 @@ func TestTag_Count(t *testing.T) {
 
 		count, err := dao.Count(nil)
 		require.Nil(t, err)
-		assert.Zero(t, count)
+		require.Zero(t, count)
 	})
 
 	t.Run("entries", func(t *testing.T) {
@@ -43,7 +42,7 @@ func TestTag_Count(t *testing.T) {
 
 		count, err := dao.Count(nil)
 		require.Nil(t, err)
-		assert.Equal(t, count, len(test_tags))
+		require.Equal(t, count, len(test_tags))
 	})
 
 	t.Run("where", func(t *testing.T) {
@@ -59,28 +58,28 @@ func TestTag_Count(t *testing.T) {
 		// ----------------------------
 		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table + ".tag": test_tags[0]}})
 		require.Nil(t, err)
-		assert.Equal(t, 1, count)
+		require.Equal(t, 1, count)
 
 		// ----------------------------
 		// NOT EQUALS
 		// ----------------------------
 		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table + ".tag": test_tags[0]}})
 		require.Nil(t, err)
-		assert.Equal(t, 19, count)
+		require.Equal(t, 19, count)
 
 		// ----------------------------
 		//  STARTS WITH (Java%)
 		// ----------------------------
 		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Like{dao.Table + ".tag": "Java%"}})
 		require.Nil(t, err)
-		assert.Equal(t, 2, count)
+		require.Equal(t, 2, count)
 
 		// ----------------------------
 		// ERROR
 		// ----------------------------
 		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{"": ""}})
 		require.ErrorContains(t, err, "syntax error")
-		assert.Equal(t, 0, count)
+		require.Zero(t, count)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -127,11 +126,11 @@ func TestTag_Create(t *testing.T) {
 
 		// Empty tag ID
 		tag := &models.Tag{}
-		assert.ErrorContains(t, dao.Create(tag, nil), fmt.Sprintf("NOT NULL constraint failed: %s.tag", dao.Table))
+		require.ErrorContains(t, dao.Create(tag, nil), fmt.Sprintf("NOT NULL constraint failed: %s.tag", dao.Table))
 
 		// Success
 		tag.Tag = "JavaScript"
-		assert.Nil(t, dao.Create(tag, nil))
+		require.Nil(t, dao.Create(tag, nil))
 	})
 }
 
@@ -141,12 +140,12 @@ func TestTag_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		_, dao, db := tagSetup(t)
 
-		testData := NewTestBuilder(t).Db(db).Courses(2).Tags(2).Build()
+		testData := NewTestBuilder(t).Db(db).Courses(2).Tags([]string{"Go", "TypeScript"}).Build()
 
 		// Get the first tag
 		tag, err := dao.Get(testData[0].Tags[0].TagId, nil, nil)
 		require.Nil(t, err)
-		assert.Equal(t, testData[0].Tags[0].TagId, tag.ID)
+		require.Equal(t, testData[0].Tags[0].TagId, tag.ID)
 
 		// ----------------------------
 		// Course tags
@@ -154,16 +153,17 @@ func TestTag_Get(t *testing.T) {
 		dbParams := &database.DatabaseParams{IncludeRelations: []string{NewCourseTagDao(dao.db).Table}}
 		tag, err = dao.Get(testData[0].Tags[0].TagId, dbParams, nil)
 		require.Nil(t, err)
-		assert.Len(t, tag.CourseTags, 1)
-		assert.Equal(t, testData[0].ID, tag.CourseTags[0].CourseId)
+		require.Len(t, tag.CourseTags, 2)
+		require.Equal(t, testData[0].ID, tag.CourseTags[1].CourseId)
+		require.Equal(t, testData[1].ID, tag.CourseTags[0].CourseId)
 	})
 
 	t.Run("not found", func(t *testing.T) {
 		_, dao, _ := tagSetup(t)
 
 		c, err := dao.Get("1234", nil, nil)
-		assert.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, c)
+		require.ErrorIs(t, err, sql.ErrNoRows)
+		require.Nil(t, c)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
@@ -171,7 +171,7 @@ func TestTag_Get(t *testing.T) {
 
 		c, err := dao.Get("", nil, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, c)
+		require.Nil(t, c)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -215,10 +215,10 @@ func TestTag_List(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 4)
 
-		assert.Len(t, result[0].CourseTags, 1) // PHP
-		assert.Len(t, result[1].CourseTags, 2) // GO
-		assert.Len(t, result[2].CourseTags, 2) // C
-		assert.Len(t, result[3].CourseTags, 1) // TypeScript
+		require.Len(t, result[0].CourseTags, 1) // PHP
+		require.Len(t, result[1].CourseTags, 2) // GO
+		require.Len(t, result[2].CourseTags, 2) // C
+		require.Len(t, result[3].CourseTags, 1) // TypeScript
 
 	})
 
@@ -236,7 +236,7 @@ func TestTag_List(t *testing.T) {
 		result, err := dao.List(&database.DatabaseParams{OrderBy: []string{"tag desc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 5)
-		assert.Equal(t, "TypeScript", result[0].Tag)
+		require.Equal(t, "TypeScript", result[0].Tag)
 
 		// ----------------------------
 		// TAG ASC
@@ -244,7 +244,7 @@ func TestTag_List(t *testing.T) {
 		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"tag asc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 5)
-		assert.Equal(t, "C", result[0].Tag)
+		require.Equal(t, "C", result[0].Tag)
 
 		// ----------------------------
 		// CREATED_AT ASC + COURSES.TITLE DESC
@@ -257,15 +257,15 @@ func TestTag_List(t *testing.T) {
 		result, err = dao.List(dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 5)
-		assert.Equal(t, "C", result[0].Tag)
-		assert.Equal(t, testData[2].ID, result[0].CourseTags[0].CourseId)
+		require.Equal(t, "C", result[0].Tag)
+		require.Equal(t, testData[2].ID, result[0].CourseTags[0].CourseId)
 
 		// ----------------------------
 		// Error
 		// ----------------------------
 		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"unit_test asc"}}, nil)
 		require.ErrorContains(t, err, "no such column")
-		assert.Nil(t, result)
+		require.Nil(t, result)
 	})
 
 	t.Run("where", func(t *testing.T) {
@@ -294,7 +294,7 @@ func TestTag_List(t *testing.T) {
 		// ----------------------------
 		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Eq{"": ""}}, nil)
 		require.ErrorContains(t, err, "syntax error")
-		assert.Nil(t, result)
+		require.Nil(t, result)
 	})
 
 	t.Run("pagination", func(t *testing.T) {
@@ -313,7 +313,7 @@ func TestTag_List(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, 20, p.TotalItems())
-		assert.Equal(t, "C", result[0].Tag)
+		require.Equal(t, "C", result[0].Tag)
 
 		// ----------------------------
 		// Page 2 with 10 items
@@ -324,7 +324,7 @@ func TestTag_List(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, 20, p.TotalItems())
-		assert.Equal(t, "Perl", result[0].Tag)
+		require.Equal(t, "Perl", result[0].Tag)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -357,7 +357,7 @@ func TestTag_Delete(t *testing.T) {
 		_, dao, _ := scanSetup(t)
 
 		err := dao.Delete(nil, nil)
-		assert.ErrorIs(t, err, ErrMissingWhere)
+		require.ErrorIs(t, err, ErrMissingWhere)
 	})
 
 	t.Run("db error", func(t *testing.T) {

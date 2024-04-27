@@ -3,7 +3,7 @@ package types
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -21,7 +21,7 @@ func TestScanStatus_NewScanStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		s := NewScanStatus(tt.input)
-		assert.Equal(t, tt.expected, s.s)
+		require.Equal(t, tt.expected, s.s)
 	}
 }
 
@@ -29,20 +29,20 @@ func TestScanStatus_NewScanStatus(t *testing.T) {
 
 func TestScanStatus_SetWaiting(t *testing.T) {
 	s := NewScanStatus(ScanStatusProcessing)
-	assert.Equal(t, ScanStatusProcessing, s.s)
+	require.Equal(t, ScanStatusProcessing, s.s)
 
 	s.SetWaiting()
-	assert.Equal(t, ScanStatusWaiting, s.s)
+	require.Equal(t, ScanStatusWaiting, s.s)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestScanStatus_SetProcessing(t *testing.T) {
 	s := NewScanStatus(ScanStatusWaiting)
-	assert.Equal(t, ScanStatusWaiting, s.s)
+	require.Equal(t, ScanStatusWaiting, s.s)
 
 	s.SetProcessing()
-	assert.Equal(t, ScanStatusProcessing, s.s)
+	require.Equal(t, ScanStatusProcessing, s.s)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -58,7 +58,7 @@ func TestScanStatus_IsWaiting(t *testing.T) {
 
 	for _, tt := range tests {
 		s := NewScanStatus(tt.input)
-		assert.Equal(t, tt.expected, s.IsWaiting())
+		require.Equal(t, tt.expected, s.IsWaiting())
 	}
 }
 
@@ -77,8 +77,8 @@ func TestScanStatus_MarshalJSON(t *testing.T) {
 		s := NewScanStatus(tt.input)
 
 		res, err := s.MarshalJSON()
-		assert.Nil(t, err)
-		assert.Equal(t, tt.expected, string(res))
+		require.Nil(t, err)
+		require.Equal(t, tt.expected, string(res))
 	}
 }
 
@@ -106,9 +106,9 @@ func TestScanStatus_UnmarshalJSON(t *testing.T) {
 		err := ss.UnmarshalJSON([]byte(tt.input))
 
 		if tt.err == "" {
-			assert.Equal(t, tt.expected, ss.s)
+			require.Equal(t, tt.expected, ss.s)
 		} else {
-			assert.EqualError(t, err, tt.err)
+			require.EqualError(t, err, tt.err)
 		}
 	}
 }
@@ -128,8 +128,8 @@ func TestScanStatus_Value(t *testing.T) {
 		s := NewScanStatus(tt.input)
 
 		res, err := s.Value()
-		assert.Nil(t, err)
-		assert.Equal(t, tt.expected, res)
+		require.Nil(t, err)
+		require.Equal(t, tt.expected, res)
 	}
 }
 
@@ -151,7 +151,7 @@ func TestScanStatus_Scan(t *testing.T) {
 		ss := ScanStatus{}
 
 		err := ss.Scan(tt.value)
-		assert.Nil(t, err)
-		assert.Contains(t, ss.s, tt.expected)
+		require.Nil(t, err)
+		require.Contains(t, ss.s, tt.expected)
 	}
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,7 +30,7 @@ func TestAsset_Count(t *testing.T) {
 
 		count, err := dao.Count(nil)
 		require.Nil(t, err)
-		assert.Zero(t, count)
+		require.Zero(t, count)
 	})
 
 	t.Run("entries", func(t *testing.T) {
@@ -41,7 +40,7 @@ func TestAsset_Count(t *testing.T) {
 
 		count, err := dao.Count(nil)
 		require.Nil(t, err)
-		assert.Equal(t, count, 5)
+		require.Equal(t, count, 5)
 	})
 
 	t.Run("where", func(t *testing.T) {
@@ -54,28 +53,28 @@ func TestAsset_Count(t *testing.T) {
 		// ----------------------------
 		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table + ".id": testData[0].Assets[1].ID}})
 		require.Nil(t, err)
-		assert.Equal(t, 1, count)
+		require.Equal(t, 1, count)
 
 		// ----------------------------
 		// NOT EQUALS ID
 		// ----------------------------
 		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table + ".id": testData[0].Assets[1].ID}})
 		require.Nil(t, err)
-		assert.Equal(t, 5, count)
+		require.Equal(t, 5, count)
 
 		// ----------------------------
 		// EQUALS COURSE_ID
 		// ----------------------------
 		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table + ".course_id": testData[1].ID}})
 		require.Nil(t, err)
-		assert.Equal(t, 2, count)
+		require.Equal(t, 2, count)
 
 		// ----------------------------
 		// ERROR
 		// ----------------------------
 		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{"": ""}})
 		require.ErrorContains(t, err, "syntax error")
-		assert.Equal(t, 0, count)
+		require.Zero(t, count)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -107,20 +106,20 @@ func TestAsset_Create(t *testing.T) {
 
 		newA, err := dao.Get(testData[0].Assets[0].ID, nil, nil)
 		require.Nil(t, err)
-		assert.Equal(t, testData[0].Assets[0].ID, newA.ID)
-		assert.Equal(t, testData[0].Assets[0].CourseID, newA.CourseID)
-		assert.Equal(t, testData[0].Assets[0].Title, newA.Title)
-		assert.Equal(t, testData[0].Assets[0].Prefix, newA.Prefix)
-		assert.Equal(t, testData[0].Assets[0].Chapter, newA.Chapter)
-		assert.Equal(t, testData[0].Assets[0].Type, newA.Type)
-		assert.Equal(t, testData[0].Assets[0].Path, newA.Path)
-		assert.False(t, newA.CreatedAt.IsZero())
-		assert.False(t, newA.UpdatedAt.IsZero())
+		require.Equal(t, testData[0].Assets[0].ID, newA.ID)
+		require.Equal(t, testData[0].Assets[0].CourseID, newA.CourseID)
+		require.Equal(t, testData[0].Assets[0].Title, newA.Title)
+		require.Equal(t, testData[0].Assets[0].Prefix, newA.Prefix)
+		require.Equal(t, testData[0].Assets[0].Chapter, newA.Chapter)
+		require.Equal(t, testData[0].Assets[0].Type, newA.Type)
+		require.Equal(t, testData[0].Assets[0].Path, newA.Path)
+		require.False(t, newA.CreatedAt.IsZero())
+		require.False(t, newA.UpdatedAt.IsZero())
 
 		// Progress
-		assert.Zero(t, newA.VideoPos)
-		assert.False(t, newA.Completed)
-		assert.True(t, newA.CompletedAt.IsZero())
+		require.Zero(t, newA.VideoPos)
+		require.False(t, newA.Completed)
+		require.True(t, newA.CompletedAt.IsZero())
 	})
 
 	t.Run("duplicate paths", func(t *testing.T) {
@@ -140,41 +139,41 @@ func TestAsset_Create(t *testing.T) {
 
 		// No course ID
 		asset := &models.Asset{}
-		assert.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table))
+		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table))
 		asset.CourseID = ""
-		assert.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table))
+		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table))
 		asset.CourseID = "1234"
 
 		// No title
-		assert.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table))
+		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table))
 		asset.Title = ""
-		assert.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table))
+		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table))
 		asset.Title = "Course 1"
 
 		// No/invalid prefix
-		assert.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.prefix")
+		require.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.prefix")
 		asset.Prefix = sql.NullInt16{Int16: -1, Valid: true}
-		assert.ErrorContains(t, dao.Create(asset), "prefix must be greater than 0")
+		require.ErrorContains(t, dao.Create(asset), "prefix must be greater than 0")
 		asset.Prefix = sql.NullInt16{Int16: 1, Valid: true}
 
 		// No type
-		assert.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.type")
+		require.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.type")
 		asset.Type = types.Asset{}
-		assert.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.type")
+		require.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.type")
 		asset.Type = *types.NewAsset("mp4")
 
 		// No path
-		assert.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.path")
+		require.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.path")
 		asset.Path = ""
-		assert.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.path")
+		require.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.path")
 		asset.Path = "/course 1/01 asset"
 
 		// Invalid Course ID
-		assert.ErrorContains(t, dao.Create(asset), "FOREIGN KEY constraint failed")
+		require.ErrorContains(t, dao.Create(asset), "FOREIGN KEY constraint failed")
 
 		// Success
 		asset.CourseID = testData[0].ID
-		assert.Nil(t, dao.Create(asset))
+		require.Nil(t, dao.Create(asset))
 	})
 }
 
@@ -188,7 +187,7 @@ func TestAsset_Get(t *testing.T) {
 
 		a, err := dao.Get(testData[0].Assets[0].ID, nil, nil)
 		require.Nil(t, err)
-		assert.Equal(t, testData[0].Assets[0].ID, a.ID)
+		require.Equal(t, testData[0].Assets[0].ID, a.ID)
 		require.Nil(t, a.Attachments)
 
 		// ----------------------------
@@ -211,9 +210,9 @@ func TestAsset_Get(t *testing.T) {
 
 		a, err = dao.Get(a.ID, nil, nil)
 		require.Nil(t, err)
-		assert.Equal(t, 50, a.VideoPos)
-		assert.False(t, a.Completed)
-		assert.True(t, a.CompletedAt.IsZero())
+		require.Equal(t, 50, a.VideoPos)
+		require.False(t, a.Completed)
+		require.True(t, a.CompletedAt.IsZero())
 
 		// Set completed
 		ap.Completed = true
@@ -221,20 +220,20 @@ func TestAsset_Get(t *testing.T) {
 
 		a, err = dao.Get(a.ID, nil, nil)
 		require.Nil(t, err)
-		assert.Equal(t, 50, a.VideoPos)
-		assert.True(t, a.Completed)
-		assert.False(t, a.CompletedAt.IsZero())
+		require.Equal(t, 50, a.VideoPos)
+		require.True(t, a.Completed)
+		require.False(t, a.CompletedAt.IsZero())
 
 		// ----------------------------
 		// Attachments
 		// ----------------------------
 		a, err = dao.Get(testData[0].Assets[0].ID, &database.DatabaseParams{IncludeRelations: []string{NewAttachmentDao(dao.db).Table}}, nil)
 		require.Nil(t, err)
-		assert.Equal(t, testData[0].Assets[0].ID, a.ID)
+		require.Equal(t, testData[0].Assets[0].ID, a.ID)
 
 		require.Len(t, a.Attachments, 2)
-		assert.Equal(t, testData[0].Assets[0].Attachments[0].ID, a.Attachments[0].ID)
-		assert.Equal(t, testData[0].Assets[0].Attachments[1].ID, a.Attachments[1].ID)
+		require.Equal(t, testData[0].Assets[0].Attachments[0].ID, a.Attachments[0].ID)
+		require.Equal(t, testData[0].Assets[0].Attachments[1].ID, a.Attachments[1].ID)
 	})
 
 	t.Run("orderby", func(t *testing.T) {
@@ -255,8 +254,8 @@ func TestAsset_Get(t *testing.T) {
 		result, err := dao.Get(testData[0].Assets[0].ID, dbParams, nil)
 		require.Nil(t, err)
 		require.Equal(t, testData[0].Assets[0].ID, result.ID)
-		assert.Equal(t, testData[0].Assets[0].Attachments[0].ID, result.Attachments[1].ID)
-		assert.Equal(t, testData[0].Assets[0].Attachments[1].ID, result.Attachments[0].ID)
+		require.Equal(t, testData[0].Assets[0].Attachments[0].ID, result.Attachments[1].ID)
+		require.Equal(t, testData[0].Assets[0].Attachments[1].ID, result.Attachments[0].ID)
 
 		// ----------------------------
 		// ATTACHMENTS.CREATED_AT ASC
@@ -269,8 +268,8 @@ func TestAsset_Get(t *testing.T) {
 		result, err = dao.Get(testData[0].Assets[0].ID, dbParams, nil)
 		require.Nil(t, err)
 		require.Equal(t, testData[0].Assets[0].ID, result.ID)
-		assert.Equal(t, testData[0].Assets[0].Attachments[0].ID, result.Attachments[0].ID)
-		assert.Equal(t, testData[0].Assets[0].Attachments[1].ID, result.Attachments[1].ID)
+		require.Equal(t, testData[0].Assets[0].Attachments[0].ID, result.Attachments[0].ID)
+		require.Equal(t, testData[0].Assets[0].Attachments[1].ID, result.Attachments[1].ID)
 
 		// ----------------------------
 		// Error
@@ -282,15 +281,15 @@ func TestAsset_Get(t *testing.T) {
 
 		result, err = dao.Get(testData[0].Assets[0].ID, dbParams, nil)
 		require.ErrorContains(t, err, "no such column")
-		assert.Nil(t, result)
+		require.Nil(t, result)
 	})
 
 	t.Run("not found", func(t *testing.T) {
 		_, dao, _ := assetSetup(t)
 
 		c, err := dao.Get("1234", nil, nil)
-		assert.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, c)
+		require.ErrorIs(t, err, sql.ErrNoRows)
+		require.Nil(t, c)
 	})
 
 	t.Run("empty id", func(t *testing.T) {
@@ -298,7 +297,7 @@ func TestAsset_Get(t *testing.T) {
 
 		c, err := dao.Get("", nil, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
-		assert.Nil(t, c)
+		require.Nil(t, c)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -362,8 +361,8 @@ func TestAsset_List(t *testing.T) {
 		result, err = dao.List(dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, testData[0].Assets[0].ID, result[0].ID)
-		assert.Equal(t, 50, result[0].VideoPos)
+		require.Equal(t, testData[0].Assets[0].ID, result[0].ID)
+		require.Equal(t, 50, result[0].VideoPos)
 
 		// Mark the second asset as completed
 		ap2 := &models.AssetProgress{
@@ -379,9 +378,9 @@ func TestAsset_List(t *testing.T) {
 		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Eq{apDao.Table + ".completed": true}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, testData[1].Assets[1].ID, result[0].ID)
-		assert.True(t, result[0].Completed)
-		assert.False(t, result[0].CompletedAt.IsZero())
+		require.Equal(t, testData[1].Assets[1].ID, result[0].ID)
+		require.True(t, result[0].Completed)
+		require.False(t, result[0].CompletedAt.IsZero())
 
 		// ----------------------------
 		// Attachments
@@ -407,7 +406,7 @@ func TestAsset_List(t *testing.T) {
 		result, err := dao.List(dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
-		assert.Equal(t, testData[2].Assets[0].ID, result[0].ID)
+		require.Equal(t, testData[2].Assets[0].ID, result[0].ID)
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -415,7 +414,7 @@ func TestAsset_List(t *testing.T) {
 		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"created_at asc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
-		assert.Equal(t, testData[0].Assets[0].ID, result[0].ID)
+		require.Equal(t, testData[0].Assets[0].ID, result[0].ID)
 
 		// ----------------------------
 		// CREATED_AT ASC + ATTACHMENTS.CREATED_AT DESC
@@ -432,8 +431,8 @@ func TestAsset_List(t *testing.T) {
 
 		require.Nil(t, err)
 		require.Len(t, result, 3)
-		assert.Equal(t, testData[0].Assets[0].ID, result[0].ID)
-		assert.Equal(t, testData[0].Assets[0].Attachments[1].ID, result[0].Attachments[0].ID)
+		require.Equal(t, testData[0].Assets[0].ID, result[0].ID)
+		require.Equal(t, testData[0].Assets[0].Attachments[1].ID, result[0].Attachments[0].ID)
 
 		// ----------------------------
 		// Error
@@ -441,7 +440,7 @@ func TestAsset_List(t *testing.T) {
 		dbParams = &database.DatabaseParams{OrderBy: []string{"unit_test asc"}}
 		result, err = dao.List(dbParams, nil)
 		require.ErrorContains(t, err, "no such column")
-		assert.Nil(t, result)
+		require.Nil(t, result)
 	})
 
 	t.Run("where", func(t *testing.T) {
@@ -455,7 +454,7 @@ func TestAsset_List(t *testing.T) {
 		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{dao.Table + ".id": testData[0].Assets[1].ID}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, testData[0].Assets[1].ID, result[0].ID)
+		require.Equal(t, testData[0].Assets[1].ID, result[0].ID)
 
 		// ----------------------------
 		// EQUALS ID OR ID
@@ -467,15 +466,15 @@ func TestAsset_List(t *testing.T) {
 		result, err = dao.List(dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 2)
-		assert.Equal(t, testData[0].Assets[1].ID, result[0].ID)
-		assert.Equal(t, testData[1].Assets[1].ID, result[1].ID)
+		require.Equal(t, testData[0].Assets[1].ID, result[0].ID)
+		require.Equal(t, testData[1].Assets[1].ID, result[1].ID)
 
 		// ----------------------------
 		// ERROR
 		// ----------------------------
 		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Eq{"": ""}}, nil)
 		require.ErrorContains(t, err, "syntax error")
-		assert.Nil(t, result)
+		require.Nil(t, result)
 	})
 
 	t.Run("pagination", func(t *testing.T) {
@@ -492,8 +491,8 @@ func TestAsset_List(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, 17, p.TotalItems())
-		assert.Equal(t, testData[0].Assets[0].ID, result[0].ID)
-		assert.Equal(t, testData[0].Assets[9].ID, result[9].ID)
+		require.Equal(t, testData[0].Assets[0].ID, result[0].ID)
+		require.Equal(t, testData[0].Assets[9].ID, result[9].ID)
 
 		// ----------------------------
 		// Page 2 with 7 items
@@ -504,8 +503,8 @@ func TestAsset_List(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 7)
 		require.Equal(t, 17, p.TotalItems())
-		assert.Equal(t, testData[0].Assets[10].ID, result[0].ID)
-		assert.Equal(t, testData[0].Assets[16].ID, result[6].ID)
+		require.Equal(t, testData[0].Assets[10].ID, result[0].ID)
+		require.Equal(t, testData[0].Assets[16].ID, result[6].ID)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -534,7 +533,7 @@ func TestAsset_Delete(t *testing.T) {
 		_, dao, _ := assetSetup(t)
 
 		err := dao.Delete(nil, nil)
-		assert.ErrorIs(t, err, ErrMissingWhere)
+		require.ErrorIs(t, err, ErrMissingWhere)
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -563,5 +562,5 @@ func TestAsset_DeleteCascade(t *testing.T) {
 	// Check the asset was deleted
 	a, err := dao.Get(testData[0].Assets[0].ID, nil, nil)
 	require.ErrorIs(t, err, sql.ErrNoRows)
-	assert.Nil(t, a)
+	require.Nil(t, a)
 }

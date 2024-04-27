@@ -4,7 +4,6 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -53,10 +52,10 @@ func testRandomStringWithAlphabet(t *testing.T, randomFunc func(n int, alphabet 
 			require.Len(t, res, length)
 
 			reg := regexp.MustCompile(tt.expectPattern)
-			assert.True(t, reg.MatchString(res))
+			require.True(t, reg.MatchString(res))
 
 			for _, str := range generated {
-				assert.NotEqual(t, res, str)
+				require.NotEqual(t, res, str)
 			}
 
 			generated = append(generated, res)
@@ -74,10 +73,10 @@ func testRandomString(t *testing.T, randomFunc func(n int) string) {
 	for i := 0; i < 1000; i++ {
 		res := randomFunc(length)
 		require.Len(t, res, length)
-		assert.True(t, reg.MatchString(res))
+		require.True(t, reg.MatchString(res))
 
 		for _, str := range generated {
-			assert.NotEqual(t, res, str)
+			require.NotEqual(t, res, str)
 
 		}
 

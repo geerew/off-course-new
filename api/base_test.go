@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -22,7 +22,7 @@ func Test_RouterLogger(t *testing.T) {
 	})
 
 	_, err := router.router.Test(httptest.NewRequest(http.MethodGet, "/", nil))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	lh.LastEntry().ExpMsg("Request completed")
 	lh.LastEntry().ExpStr("path", "/")

@@ -15,7 +15,6 @@ import (
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/gofiber/fiber/v2"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -40,8 +39,8 @@ func TestTags_GetTags(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, _ := tagsUnmarshalHelper(t, body)
-		assert.Zero(t, int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 0)
+		require.Zero(t, int(paginationResp.TotalItems))
+		require.Zero(t, len(paginationResp.Items))
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
@@ -54,7 +53,7 @@ func TestTags_GetTags(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, tagsResp := tagsUnmarshalHelper(t, body)
-		assert.Equal(t, 5, int(paginationResp.TotalItems))
+		require.Equal(t, 5, int(paginationResp.TotalItems))
 		require.Len(t, tagsResp, 5)
 		require.Nil(t, tagsResp[0].Courses)
 
@@ -67,7 +66,7 @@ func TestTags_GetTags(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, tagsResp = tagsUnmarshalHelper(t, body)
-		assert.Equal(t, 5, int(paginationResp.TotalItems))
+		require.Equal(t, 5, int(paginationResp.TotalItems))
 		require.Len(t, tagsResp, 5)
 		require.Len(t, tagsResp[0].Courses, 2)
 	})
@@ -91,7 +90,7 @@ func TestTags_GetTags(t *testing.T) {
 		paginationResp, tagsResp := tagsUnmarshalHelper(t, body)
 		require.Equal(t, 5, int(paginationResp.TotalItems))
 		require.Len(t, tagsResp, 5)
-		assert.Equal(t, "PHP", tagsResp[0].Tag)
+		require.Equal(t, "PHP", tagsResp[0].Tag)
 
 		// ----------------------------
 		// CREATED_AT DESC
@@ -103,7 +102,7 @@ func TestTags_GetTags(t *testing.T) {
 		paginationResp, tagsResp = tagsUnmarshalHelper(t, body)
 		require.Equal(t, 5, int(paginationResp.TotalItems))
 		require.Len(t, tagsResp, 5)
-		assert.Equal(t, "JavaScript", tagsResp[0].Tag)
+		require.Equal(t, "JavaScript", tagsResp[0].Tag)
 
 		// ----------------------------
 		// CREATED_AT ASC + COURSES.TITLE DESC
@@ -117,9 +116,9 @@ func TestTags_GetTags(t *testing.T) {
 		paginationResp, tagsResp = tagsUnmarshalHelper(t, body)
 		require.Equal(t, 5, int(paginationResp.TotalItems))
 		require.Len(t, tagsResp, 5)
-		assert.Equal(t, "PHP", tagsResp[0].Tag)
+		require.Equal(t, "PHP", tagsResp[0].Tag)
 		require.Len(t, tagsResp[0].Courses, 2)
-		assert.Equal(t, "course 2", tagsResp[0].Courses[0].Title)
+		require.Equal(t, "course 2", tagsResp[0].Courses[0].Title)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
@@ -143,11 +142,11 @@ func TestTags_GetTags(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, tagsResp := tagsUnmarshalHelper(t, body)
-		assert.Equal(t, len(test_tags), int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 11)
+		require.Equal(t, len(test_tags), int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 11)
 
 		// Check the last tag in the paginated response
-		assert.Equal(t, "Perl", tagsResp[len(paginationResp.Items)-1].Tag)
+		require.Equal(t, "Perl", tagsResp[len(paginationResp.Items)-1].Tag)
 
 		// ----------------------------
 		// Get the second page (9 tags)
@@ -162,11 +161,11 @@ func TestTags_GetTags(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 
 		paginationResp, tagsResp = tagsUnmarshalHelper(t, body)
-		assert.Equal(t, len(test_tags), int(paginationResp.TotalItems))
-		assert.Len(t, paginationResp.Items, 9)
+		require.Equal(t, len(test_tags), int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 9)
 
 		// Check the last tag in the paginated response
-		assert.Equal(t, "TypeScript", tagsResp[len(paginationResp.Items)-1].Tag)
+		require.Equal(t, "TypeScript", tagsResp[len(paginationResp.Items)-1].Tag)
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
@@ -248,8 +247,8 @@ func TestTags_CreateTag(t *testing.T) {
 		var tagResp tagResponse
 		err = json.Unmarshal(body, &tagResp)
 		require.Nil(t, err)
-		assert.NotNil(t, tagResp.ID)
-		assert.Equal(t, "test", tagResp.Tag)
+		require.NotNil(t, tagResp.ID)
+		require.Equal(t, "test", tagResp.Tag)
 	})
 
 	t.Run("400 (bind error)", func(t *testing.T) {
@@ -261,7 +260,7 @@ func TestTags_CreateTag(t *testing.T) {
 		status, body, err := tagsRequestHelper(db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "error parsing data")
+		require.Contains(t, string(body), "error parsing data")
 	})
 
 	t.Run("400 (invalid data)", func(t *testing.T) {
@@ -276,7 +275,7 @@ func TestTags_CreateTag(t *testing.T) {
 		status, body, err := tagsRequestHelper(db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "a tag is required")
+		require.Contains(t, string(body), "a tag is required")
 	})
 
 	t.Run("400 (existing tag)", func(t *testing.T) {
@@ -293,7 +292,7 @@ func TestTags_CreateTag(t *testing.T) {
 		status, body, err := tagsRequestHelper(db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		assert.Contains(t, string(body), "tag already exists")
+		require.Contains(t, string(body), "tag already exists")
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
@@ -309,7 +308,7 @@ func TestTags_CreateTag(t *testing.T) {
 		status, body, err := tagsRequestHelper(db, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
-		assert.Contains(t, string(body), "error creating tag")
+		require.Contains(t, string(body), "error creating tag")
 	})
 }
 
@@ -337,7 +336,7 @@ func TestTags_DeleteTag(t *testing.T) {
 
 		result, err := tagsDao.List(&database.DatabaseParams{Where: squirrel.Eq{"id": tags[2].ID}}, nil)
 		require.Nil(t, err)
-		assert.Zero(t, len(result))
+		require.Zero(t, len(result))
 
 		// // ----------------------------
 		// // Cascades
@@ -345,17 +344,17 @@ func TestTags_DeleteTag(t *testing.T) {
 
 		// // Scan
 		// _, err = scanDao.Get(testData[2].ID)
-		// assert.ErrorIs(t, err, sql.ErrNoRows)
+		// require.ErrorIs(t, err, sql.ErrNoRows)
 
 		// // Assets
 		// count, err := assetsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": testData[2].ID}})
 		// require.Nil(t, err)
-		// assert.Zero(t, count)
+		// require.Zero(t, count)
 
 		// // Attachments
 		// count, err = attachmentsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": testData[2].ID}})
 		// require.Nil(t, err)
-		// assert.Zero(t, count)
+		// require.Zero(t, count)
 	})
 
 	t.Run("204 (not found)", func(t *testing.T) {

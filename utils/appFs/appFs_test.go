@@ -10,7 +10,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/rzajac/zltest"
 	"github.com/spf13/afero"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,9 +21,9 @@ func Test_Open(t *testing.T) {
 		appFs := NewAppFs(afero.NewMemMapFs())
 		res, err := appFs.Open("'")
 
-		assert.Error(t, err)
-		assert.True(t, os.IsNotExist(err))
-		assert.Nil(t, res)
+		require.Error(t, err)
+		require.True(t, os.IsNotExist(err))
+		require.Nil(t, res)
 	})
 
 	t.Run("file exists", func(t *testing.T) {
@@ -33,8 +32,8 @@ func Test_Open(t *testing.T) {
 		appFs.Fs.Create("/a")
 
 		res, err := appFs.Open("/a")
-		assert.Nil(t, err)
-		assert.NotNil(t, res)
+		require.Nil(t, err)
+		require.NotNil(t, res)
 	})
 }
 
@@ -50,8 +49,8 @@ func Test_ReadDir(t *testing.T) {
 		appFs := NewAppFs(afero.NewMemMapFs())
 		res, err := appFs.ReadDir("'", false)
 
-		assert.Nil(t, res)
-		assert.EqualError(t, err, "unable to open path")
+		require.Nil(t, res)
+		require.EqualError(t, err, "unable to open path")
 		logHook.LastEntry().ExpMsg("unable to open path")
 		logHook.LastEntry().ExpLevel(zerolog.ErrorLevel)
 	})
@@ -63,8 +62,8 @@ func Test_ReadDir(t *testing.T) {
 
 		// Read file as if it's a directory
 		res, err := appFs.ReadDir("/test", false)
-		assert.Nil(t, res)
-		assert.EqualError(t, err, "unable to read path")
+		require.Nil(t, res)
+		require.EqualError(t, err, "unable to read path")
 
 		logHook.LastEntry().ExpMsg("unable to read path")
 		logHook.LastEntry().ExpLevel(zerolog.ErrorLevel)
@@ -79,10 +78,10 @@ func Test_ReadDir(t *testing.T) {
 		appFs.Fs.Mkdir("/c", 0755)
 
 		res, err := appFs.ReadDir("/", true)
-		assert.Nil(t, err)
-		assert.NotNil(t, res)
-		assert.Equal(t, 2, len(res.Files))
-		assert.Equal(t, 1, len(res.Directories))
+		require.Nil(t, err)
+		require.NotNil(t, res)
+		require.Equal(t, 2, len(res.Files))
+		require.Equal(t, 1, len(res.Directories))
 	})
 }
 
@@ -96,8 +95,8 @@ func Test_ReadDirFlat(t *testing.T) {
 		appFs := NewAppFs(afero.NewMemMapFs())
 		res, err := appFs.ReadDirFlat("'", 1)
 
-		assert.Nil(t, res)
-		assert.EqualError(t, err, "unable to open path")
+		require.Nil(t, res)
+		require.EqualError(t, err, "unable to open path")
 		logHook.LastEntry().ExpMsg("unable to open path")
 		logHook.LastEntry().ExpLevel(zerolog.ErrorLevel)
 	})
@@ -109,8 +108,8 @@ func Test_ReadDirFlat(t *testing.T) {
 
 		// Read file as if it's a directory
 		res, err := appFs.ReadDirFlat("/test", 1)
-		assert.Nil(t, res)
-		assert.EqualError(t, err, "unable to read path")
+		require.Nil(t, res)
+		require.EqualError(t, err, "unable to read path")
 
 		logHook.LastEntry().ExpMsg("unable to read path")
 		logHook.LastEntry().ExpLevel(zerolog.ErrorLevel)
@@ -139,27 +138,27 @@ func Test_ReadDirFlat(t *testing.T) {
 
 		// Depth 0 (same as 1)
 		res, err := appFs.ReadDirFlat("/", 0)
-		assert.Nil(t, err)
-		assert.NotNil(t, res)
-		assert.Equal(t, 1, len(res))
+		require.Nil(t, err)
+		require.NotNil(t, res)
+		require.Equal(t, 1, len(res))
 
 		// Depth 1
 		res, err = appFs.ReadDirFlat("/", 1)
-		assert.Nil(t, err)
-		assert.NotNil(t, res)
-		assert.Equal(t, 1, len(res))
+		require.Nil(t, err)
+		require.NotNil(t, res)
+		require.Equal(t, 1, len(res))
 
 		// Depth 10
 		res, err = appFs.ReadDirFlat("/", 2)
-		assert.Nil(t, err)
-		assert.NotNil(t, res)
-		assert.Equal(t, 5, len(res))
+		require.Nil(t, err)
+		require.NotNil(t, res)
+		require.Equal(t, 5, len(res))
 
 		// Depth 10
 		res, err = appFs.ReadDirFlat("/", 10)
-		assert.Nil(t, err)
-		assert.NotNil(t, res)
-		assert.Equal(t, 11, len(res))
+		require.Nil(t, err)
+		require.NotNil(t, res)
+		require.Equal(t, 11, len(res))
 	})
 }
 
@@ -187,9 +186,9 @@ func Test_NonWslDrives(t *testing.T) {
 			t.Skip("not implemented")
 		}
 
-		assert.Nil(t, err)
-		assert.NotEmpty(t, drives)
-		// assert.EqualError(t, err, "unable to open path")
+		require.Nil(t, err)
+		require.NotEmpty(t, drives)
+		// require.EqualError(t, err, "unable to open path")
 	})
 
 	t.Run("success", func(t *testing.T) {
@@ -203,9 +202,9 @@ func Test_NonWslDrives(t *testing.T) {
 		}
 
 		drives, err := appFs.wslDrives()
-		assert.Nil(t, err)
+		require.Nil(t, err)
 		require.Len(t, drives, 3)
-		assert.ElementsMatch(t, []string{"/", "/mnt/c", "/mnt/d"}, drives)
+		require.ElementsMatch(t, []string{"/", "/mnt/c", "/mnt/d"}, drives)
 	})
 }
 
@@ -227,8 +226,8 @@ func Test_WslDrives(t *testing.T) {
 		}
 
 		drives, err := appFs.wslDrives()
-		assert.Nil(t, drives)
-		assert.EqualError(t, err, "unable to open path")
+		require.Nil(t, drives)
+		require.EqualError(t, err, "unable to open path")
 	})
 
 	t.Run("success", func(t *testing.T) {
@@ -242,8 +241,8 @@ func Test_WslDrives(t *testing.T) {
 		}
 
 		drives, err := appFs.wslDrives()
-		assert.Nil(t, err)
+		require.Nil(t, err)
 		require.Len(t, drives, 3)
-		assert.ElementsMatch(t, []string{"/", "/mnt/c", "/mnt/d"}, drives)
+		require.ElementsMatch(t, []string{"/", "/mnt/c", "/mnt/d"}, drives)
 	})
 }
