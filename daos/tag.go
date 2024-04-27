@@ -66,6 +66,51 @@ func (dao *TagDao) Create(t *models.Tag, tx *sql.Tx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Get selects a tag with the given ID.
+//
+// `dbparams` can be used to order the attachments
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *TagDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Tag, error) {
+	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+
+	tagDbParams := &database.DatabaseParams{
+		Columns: dao.columns(),
+		Where:   squirrel.Eq{dao.Table + ".id": id},
+	}
+
+	row, err := generic.Get(tagDbParams, tx)
+	if err != nil {
+		return nil, err
+	}
+
+	tag, err := dao.scanRow(row)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the attachments
+	courseTagDao := NewCourseTagDao(dao.db)
+	if dbParams != nil && slices.Contains(dbParams.IncludeRelations, courseTagDao.Table) {
+		courseTagDbParams := &database.DatabaseParams{
+			OrderBy: courseTagDao.ProcessOrderBy(dbParams.OrderBy, true),
+			Where:   squirrel.Eq{"tag_id": id},
+		}
+
+		// Get the course_tags
+		courseTags, err := courseTagDao.List(courseTagDbParams, tx)
+		if err != nil {
+			return nil, err
+		}
+
+		tag.CourseTags = courseTags
+	}
+
+	return tag, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // List selects tags
 //
 // `tx` allows for the function to be run within a transaction
@@ -111,7 +156,6 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*model
 	// Get the course_tags
 	courseTagDao := NewCourseTagDao(dao.db)
 	if len(tags) > 0 && slices.Contains(dbParams.IncludeRelations, courseTagDao.Table) {
-
 		// Reduce the order by clause to only include columns specific to the course_tags table
 		reducedOrderBy := courseTagDao.ProcessOrderBy(origOrderBy, true)
 
@@ -136,7 +180,6 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*model
 		for _, t := range tags {
 			t.CourseTags = tagMap[t.ID]
 		}
-
 	}
 
 	return tags, nil

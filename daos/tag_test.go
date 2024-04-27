@@ -1,6 +1,7 @@
 package daos
 
 import (
+	"database/sql"
 	"fmt"
 	"testing"
 
@@ -131,6 +132,56 @@ func TestTag_Create(t *testing.T) {
 		// Success
 		tag.Tag = "JavaScript"
 		assert.Nil(t, dao.Create(tag, nil))
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestTag_Get(t *testing.T) {
+	t.Run("found", func(t *testing.T) {
+		_, dao, db := tagSetup(t)
+
+		testData := NewTestBuilder(t).Db(db).Courses(2).Tags(2).Build()
+
+		// Get the first tag
+		tag, err := dao.Get(testData[0].Tags[0].TagId, nil, nil)
+		require.Nil(t, err)
+		assert.Equal(t, testData[0].Tags[0].TagId, tag.ID)
+
+		// ----------------------------
+		// Course tags
+		// ----------------------------
+		dbParams := &database.DatabaseParams{IncludeRelations: []string{NewCourseTagDao(dao.db).Table}}
+		tag, err = dao.Get(testData[0].Tags[0].TagId, dbParams, nil)
+		require.Nil(t, err)
+		assert.Len(t, tag.CourseTags, 1)
+		assert.Equal(t, testData[0].ID, tag.CourseTags[0].CourseId)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		_, dao, _ := tagSetup(t)
+
+		c, err := dao.Get("1234", nil, nil)
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, c)
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		_, dao, _ := tagSetup(t)
+
+		c, err := dao.Get("", nil, nil)
+		require.ErrorIs(t, err, sql.ErrNoRows)
+		assert.Nil(t, c)
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, dao, db := tagSetup(t)
+
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		require.Nil(t, err)
+
+		_, err = dao.Get("1234", nil, nil)
+		require.ErrorContains(t, err, "no such table: "+dao.Table)
 	})
 }
 

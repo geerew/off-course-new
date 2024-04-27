@@ -91,7 +91,7 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.T
 	if dbParams != nil && slices.Contains(dbParams.IncludeRelations, attachmentDao.Table) {
 		// Set the DB params
 		attachmentDbParams := &database.DatabaseParams{
-			OrderBy: dbParams.OrderBy,
+			OrderBy: attachmentDao.ProcessOrderBy(dbParams.OrderBy, true),
 			Where:   squirrel.Eq{"asset_id": asset.ID},
 		}
 
