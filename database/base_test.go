@@ -5,7 +5,6 @@ import (
 
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/spf13/afero"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,7 +36,7 @@ func Test_Bootstrap(t *testing.T) {
 		err := db.Bootstrap()
 
 		require.NotNil(t, err)
-		assert.EqualError(t, err, "operation not permitted")
+		require.EqualError(t, err, "operation not permitted")
 	})
 
 	t.Run("error opening db", func(t *testing.T) {
