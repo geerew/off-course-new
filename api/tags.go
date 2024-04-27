@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"strings"
 
 	"github.com/Masterminds/squirrel"
@@ -47,7 +48,9 @@ func bindTagsApi(router fiber.Router, db database.Database) {
 
 	subGroup := router.Group("/tags")
 
-	subGroup.Get("/", api.getTags)
+	subGroup.Get("", api.getTags)
+	subGroup.Get("/:id", api.getTag)
+	subGroup.Post("", api.createTag)
 	subGroup.Delete("/:id", api.deleteTag)
 }
 
@@ -87,6 +90,71 @@ func (api *tags) getTags(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func (api *tags) getTag(c *fiber.Ctx) error {
+	id := c.Params("id")
+	expand := c.QueryBool("expand", false)
+
+	dbParams := &database.DatabaseParams{}
+	if expand {
+		dbParams.IncludeRelations = []string{api.courseTagDao.Table}
+	}
+
+	tag, err := api.tagDao.Get(id, dbParams, nil)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).SendString("Not found")
+		}
+
+		log.Err(err).Msg("error looking up tag")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error looking up tag - " + err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(tagResponseHelper([]*models.Tag{tag})[0])
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (api *tags) createTag(c *fiber.Ctx) error {
+	tag := new(models.Tag)
+
+	if err := c.BodyParser(tag); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "error parsing data - " + err.Error(),
+		})
+	}
+
+	// Ensure there is a title and path
+	if tag.Tag == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "a tag is required",
+		})
+	}
+
+	// Empty stuff that should not be set
+	tag.ID = ""
+
+	if err := api.tagDao.Create(tag, nil); err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"message": "tag already exists - " + err.Error(),
+			})
+		}
+
+		log.Err(err).Msg("error creating tag")
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error creating tag - " + err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(tagResponseHelper([]*models.Tag{tag})[0])
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func (api *tags) deleteTag(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -96,7 +164,6 @@ func (api *tags) deleteTag(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "error deleting tag - " + err.Error(),
 		})
-
 	}
 
 	return c.Status(fiber.StatusNoContent).Send(nil)

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/Masterminds/squirrel"
@@ -178,6 +179,137 @@ func TestTags_GetTags(t *testing.T) {
 		status, _, err := tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestTags_GetTag(t *testing.T) {
+	t.Run("200 (found)", func(t *testing.T) {
+		_, db, _, _ := setup(t)
+
+		testData := daos.NewTestBuilder(t).Db(db).Courses(3).Tags([]string{"Go", "PHP"}).Build()
+
+		status, body, err := tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/"+testData[1].Tags[1].TagId, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var tagResp tagResponse
+		err = json.Unmarshal(body, &tagResp)
+		require.Nil(t, err)
+		require.Equal(t, testData[1].Tags[1].TagId, tagResp.ID)
+		require.Zero(t, tagResp.Courses)
+
+		// ----------------------------
+		// Courses
+		// ----------------------------
+		status, body, err = tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/"+testData[1].Tags[1].TagId+"/?expand=true", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		err = json.Unmarshal(body, &tagResp)
+		require.Nil(t, err)
+		require.Len(t, tagResp.Courses, 3)
+	})
+
+	t.Run("404 (not found)", func(t *testing.T) {
+		_, db, _, _ := setup(t)
+
+		status, _, err := tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/test", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
+	})
+
+	t.Run("500 (internal error)", func(t *testing.T) {
+		_, db, _, _ := setup(t)
+
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(db).Table)
+		require.Nil(t, err)
+
+		status, _, err := tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/test", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestTags_CreateTag(t *testing.T) {
+	t.Run("201 (created)", func(t *testing.T) {
+		_, db, _, _ := setup(t)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{"tag": "test"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := tagsRequestHelper(db, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
+
+		var tagResp tagResponse
+		err = json.Unmarshal(body, &tagResp)
+		require.Nil(t, err)
+		assert.NotNil(t, tagResp.ID)
+		assert.Equal(t, "test", tagResp.Tag)
+	})
+
+	t.Run("400 (bind error)", func(t *testing.T) {
+		_, db, _, _ := setup(t)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := tagsRequestHelper(db, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		assert.Contains(t, string(body), "error parsing data")
+	})
+
+	t.Run("400 (invalid data)", func(t *testing.T) {
+		_, db, _, _ := setup(t)
+
+		// ----------------------------
+		// Missing tag
+		// ----------------------------
+		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{"tag": ""}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := tagsRequestHelper(db, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		assert.Contains(t, string(body), "a tag is required")
+	})
+
+	t.Run("400 (existing tag)", func(t *testing.T) {
+		_, db, _, _ := setup(t)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{"tag": "test"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, _, err := tagsRequestHelper(db, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
+
+		// Create the tag again
+		status, body, err := tagsRequestHelper(db, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		assert.Contains(t, string(body), "tag already exists")
+	})
+
+	t.Run("500 (internal error)", func(t *testing.T) {
+		_, db, _, _ := setup(t)
+
+		// Drop the courses table
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(db).Table)
+		require.Nil(t, err)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{"tag": "test"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := tagsRequestHelper(db, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
+		assert.Contains(t, string(body), "error creating tag")
 	})
 }
 
