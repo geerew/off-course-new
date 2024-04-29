@@ -2,8 +2,16 @@ TODO
 
 https://dribbble.com/shots/23132040-E-learning-website-course-details
 
-- [ ] Use await
+- [x] Use await
 - [x] Tidy Loading component
+
+## Page -> Settings -> Tags
+
+- [x] Add table
+- [x] Allow deleting of tags
+- [x] Allow adding of tags
+- [ ] Allow editing of tags
+- [ ] Fix sorting by course count
 
 ## Page -> Home
 
@@ -39,17 +47,15 @@ https://dribbble.com/shots/23132040-E-learning-website-course-details
 
 - [ ] Rework getting all courses to be more efficient
 
-## Page -> Settings -> Tags
-
-- [ ] Add table
-- [ ] Allow editing of tags
-- [ ] Allow deleting of tags
-- [ ] Allow adding of tags
-
 ## Search
 
 - [ ] Add search (https://discord.com/channels/1116682155809067049/1117779396992979024/1163925360228962385)
 
 ## Backend -> logs
 
-- A logs DB
+- [ ] Add a separate logs DB
+- [ ] Add logs
+  
+## Backend -> Assets and Attachments
+
+- [ ] Add column for md5sum of file

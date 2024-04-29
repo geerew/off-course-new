@@ -1,5 +1,5 @@
 import { array, number, object, union, type Output } from 'valibot';
-import { AssetSchema, CourseSchema } from './models';
+import { AssetSchema, CourseSchema, TagSchema } from './models';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -18,7 +18,7 @@ export const PaginationSchema = object({
 	perPage: number(),
 	totalItems: number(),
 	totalPages: number(),
-	items: union([array(CourseSchema), array(AssetSchema)])
+	items: union([array(CourseSchema), array(AssetSchema), array(TagSchema)])
 });
 
 export type Pagination = Output<typeof PaginationSchema>;

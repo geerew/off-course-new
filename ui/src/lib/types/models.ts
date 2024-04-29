@@ -78,6 +78,7 @@ export type AssetsGetParams = {
 	orderBy?: string;
 	page?: number;
 	perPage?: number;
+	expand?: boolean;
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -127,18 +128,45 @@ export type CoursePostParams = {
 export type CourseChapters = Record<string, Asset[]>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Course Tags
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+export const CourseTagSchema = object({
+	id: string(),
+	tag: string()
+});
+
+export type CourseTag = Output<typeof CourseTagSchema>;
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Tags
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export const TagSchema = object({
-	id: string(),
-	tag: string(),
-	course: optional(string())
-});
-
-export const TagArraySchema = array(TagSchema);
+export const TagSchema = merge([
+	BaseSchema,
+	object({
+		tag: string(),
+		courses: optional(
+			array(
+				object({
+					id: string(),
+					title: string()
+				})
+			)
+		)
+	})
+]);
 
 export type Tag = Output<typeof TagSchema>;
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+export type TagsGetParams = {
+	orderBy?: string;
+	page?: number;
+	perPage?: number;
+	expand?: boolean;
+};
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Scan

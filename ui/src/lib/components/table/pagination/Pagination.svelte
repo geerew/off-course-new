@@ -2,6 +2,7 @@
 	import * as Pagination from '$components/ui/pagination';
 	import * as Select from '$components/ui/select';
 	import type { PaginationParams } from '$lib/types/pagination';
+	import { cn } from '$lib/utils';
 	import { ChevronLeft, ChevronRight } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { mediaQuery } from 'svelte-legos';
@@ -10,13 +11,16 @@
 	// Exports
 	// ----------------------
 	export let pagination: PaginationParams;
+	export let type: string;
 
 	// ----------------------
 	// Variables
 	// ----------------------
 	const isDesktop = mediaQuery('(min-width: 768px)');
 
-	const dispatch = createEventDispatcher<Record<'pageChange' | 'perPageChange', number>>();
+	const dispatch = createEventDispatcher();
+
+	let isOpen = false;
 
 	// ----------------------
 	// Reactive
@@ -31,6 +35,8 @@
 		<!-- Per pages -->
 		<div class="order-2 md:order-1">
 			<Select.Root
+				bind:open={isOpen}
+				preventScroll={false}
 				portal={null}
 				selected={{ value: pagination.perPage }}
 				onSelectedChange={(v) => {
@@ -40,6 +46,7 @@
 			>
 				<Select.Trigger class="w-[140px]">
 					<Select.Value placeholder={String(pagination.perPage)} />
+					<ChevronRight class={cn('size-4 duration-200', isOpen && 'rotate-90')} />
 				</Select.Trigger>
 				<Select.Content>
 					<Select.Group>
@@ -104,7 +111,8 @@
 				? 'md:col-span-4'
 				: undefined}"
 		>
-			{pagination.totalItems} course{pagination.totalItems > 1 ? 's' : ''}
+			{pagination.totalItems}
+			{type}{pagination.totalItems > 1 ? 's' : ''}
 		</div>
 	</div>
 {/if}

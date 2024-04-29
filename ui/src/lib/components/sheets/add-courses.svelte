@@ -318,10 +318,19 @@
 
 <Sheet.Root bind:open={isOpen}>
 	<Sheet.Trigger asChild let:builder>
-		<Button builders={[builder]} class="h-8 gap-2 rounded px-3 md:h-10">
+		<Button
+			variant="outline"
+			class="bg-primary hover:bg-primary group flex h-8 gap-1.5 hover:brightness-110"
+			builders={[builder]}
+		>
 			<BookPlus class="h-4 w-4" />
 			<span>Add Courses</span>
 		</Button>
+
+		<!-- <Button builders={[builder]} class="h-8 gap-2 rounded px-3 md:h-10">
+			<BookPlus class="h-4 w-4" />
+			<span>Add Courses</span>
+		</Button> -->
 	</Sheet.Trigger>
 
 	<Sheet.Content

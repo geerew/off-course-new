@@ -33,7 +33,10 @@
 			if (!course) throw new Error('Course not found');
 
 			// Get the assets
-			assets = await GetAllCourseAssets(course.id, { orderBy: 'chapter asc, prefix asc' });
+			assets = await GetAllCourseAssets(course.id, {
+				orderBy: 'chapter asc, prefix asc',
+				expand: true
+			});
 			if (!assets) throw new Error('Failed to get course assets');
 
 			chapters = buildChapterStructure(assets);

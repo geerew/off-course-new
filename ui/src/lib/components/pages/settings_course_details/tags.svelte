@@ -4,7 +4,7 @@
 	import Button from '$components/ui/button/button.svelte';
 	import * as Tooltip from '$components/ui/tooltip';
 	import { AddCourseTag, DeleteCourseTag, GetCourseTags } from '$lib/api';
-	import type { Tag } from '$lib/types/models';
+	import type { CourseTag } from '$lib/types/models';
 	import { cn, flyAndScale } from '$lib/utils';
 	import { Pencil, RotateCcw, X } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
@@ -20,7 +20,7 @@
 	// ----------------------
 
 	// Sorter for tags
-	const sortTags = (tags: Tag[]) => {
+	const sortTags = (tags: CourseTag[]) => {
 		tags.sort((a, b) => {
 			if (a.tag.toLowerCase() < b.tag.toLowerCase()) {
 				return -1;
@@ -37,7 +37,7 @@
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Gets the tags for this course
-	const getTags = async (courseId: string): Promise<Tag[]> => {
+	const getTags = async (courseId: string): Promise<CourseTag[]> => {
 		tagsRefresh = false;
 
 		try {
@@ -53,7 +53,7 @@
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Use:action for inputting tags
-	const tagInput = (node: HTMLInputElement, tags: Tag[]) => {
+	const tagInput = (node: HTMLInputElement, tags: CourseTag[]) => {
 		function handleInput(e: KeyboardEvent) {
 			if (e.key === 'Enter') {
 				e.preventDefault();
@@ -289,8 +289,10 @@
 								processingTags = true;
 
 								// Add and delete tags
-								await Promise.all(toAdd.map((tag) => addCourseTag(courseId, tag)));
-								await Promise.all(toDelete.map((tagId) => deleteCourseTag(courseId, tagId)));
+								await Promise.all(toAdd.map(async (tag) => await addCourseTag(courseId, tag)));
+								await Promise.all(
+									toDelete.map(async (tagId) => await deleteCourseTag(courseId, tagId))
+								);
 
 								toAdd = [];
 								toDelete = [];

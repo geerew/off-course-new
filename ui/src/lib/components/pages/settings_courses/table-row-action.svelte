@@ -20,7 +20,7 @@
 	<DropdownMenu.Trigger asChild let:builder>
 		<Button
 			variant="ghost"
-			class="text-muted-foreground data-[highlighted]:text-foreground data-[state=open]:text-foreground data-[state=open]:bg-muted h-auto p-1.5"
+			class="text-muted-foreground hover:bg-alt-1/60 data-[state=open]:text-foreground data-[state=open]:bg-alt-1/60 h-auto p-1.5"
 			builders={[builder]}
 		>
 			<MoreHorizontal class="h-4 w-4" />
@@ -28,10 +28,7 @@
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content class="flex flex-col text-sm" align="end" fitViewport={true}>
-		<DropdownMenu.Item
-			class="data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground cursor-pointer gap-2.5"
-			href="/course?id={course.id}"
-		>
+		<DropdownMenu.Item class="cursor-pointer gap-2.5" href="/course?id={course.id}">
 			<Play class="h-4 w-4" />
 			Open
 		</DropdownMenu.Item>

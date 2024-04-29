@@ -210,40 +210,36 @@
 	// Variables
 	// ----------------------
 
-	let doCourses = getCourses();
+	let load = getCourses();
 </script>
 
-<div class="bg-background flex w-full flex-col gap-4 pb-10">
-	<!-- Heading -->
-	<div class="w-full border-b">
-		<div class="container flex items-center gap-2.5 py-2 md:py-4">
-			<span class="grow text-lg font-semibold md:text-2xl">Courses</span>
-			<AddCoursesSheet
-				on:added={() => {
-					pagination.page = 1;
-					doCourses = getCourses();
-				}}
-			/>
-		</div>
-	</div>
-
-	<div class="container flex flex-col gap-4">
-		{#await doCourses}
+<div class="bg-background flex w-full flex-col gap-4 pb-10 pt-6">
+	<div class="container flex flex-col gap-10">
+		{#await load}
 			<Loading />
 		{:then _}
 			<div class="flex w-full flex-row">
-				<div class="flex w-full justify-end gap-2.5">
-					<TableSortController
-						columns={availableSortColumns}
-						sortedColumn={sortKeys}
-						on:changed={getCourses}
-						disabled={$fetchedCourses.length === 0}
+				<div class="flex w-full justify-between">
+					<AddCoursesSheet
+						on:added={() => {
+							pagination.page = 1;
+							load = getCourses();
+						}}
 					/>
-					<TableColumnsController
-						columns={availableHiddenColumns}
-						columnStore={hiddenColumnIds}
-						disabled={$fetchedCourses.length === 0}
-					/>
+
+					<div class="flex w-full justify-end gap-2.5">
+						<TableSortController
+							columns={availableSortColumns}
+							sortedColumn={sortKeys}
+							on:changed={getCourses}
+							disabled={$fetchedCourses.length === 0}
+						/>
+						<TableColumnsController
+							columns={availableHiddenColumns}
+							columnStore={hiddenColumnIds}
+							disabled={$fetchedCourses.length === 0}
+						/>
+					</div>
 				</div>
 			</div>
 
@@ -262,15 +258,16 @@
 											$sortKeys.length >= 1 &&
 											$sortKeys[0].order === 'desc' &&
 											$sortKeys[0].id === cell.id}
-										<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()} let:props>
+										<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()}>
 											<th {...attrs}>
 												<div
 													class={cn(
-														'flex items-center gap-2.5',
+														'flex select-none items-center gap-2.5',
 														cell.id !== 'title' && 'justify-center'
 													)}
 												>
 													<Render of={cell.render()} />
+
 													{#if ascSort}
 														<ChevronUp
 															class="text-secondary/80 absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 stroke-[2]"
@@ -300,7 +297,7 @@
 						{:else}
 							{#each $rows as row (row.id)}
 								<Subscribe rowAttrs={row.attrs()} let:rowAttrs>
-									<tr {...rowAttrs}>
+									<tr {...rowAttrs} class="hover:bg-muted">
 										{#each row.cells as cell (cell.id)}
 											<Subscribe attrs={cell.attrs()} let:attrs>
 												<td
@@ -320,15 +317,16 @@
 			</div>
 
 			<Pagination
+				type={'course'}
 				{pagination}
 				on:pageChange={(ev) => {
 					pagination.page = ev.detail;
-					doCourses = getCourses();
+					load = getCourses();
 				}}
 				on:perPageChange={(ev) => {
 					pagination.perPage = ev.detail;
 					pagination.page = 1;
-					doCourses = getCourses();
+					load = getCourses();
 				}}
 			/>
 		{:catch error}
@@ -347,7 +345,7 @@
 		if (pagination.page > 1 && (pagination.totalItems - 1) % pagination.perPage === 0)
 			pagination.page = pagination.page - 1;
 
-		doCourses = getCourses();
+		load = getCourses();
 	}}
 />
 
@@ -361,7 +359,7 @@
 		}
 
 		& > tbody > tr > td {
-			@apply border-y px-4 py-2.5 text-left text-sm;
+			@apply border-y px-6 py-2.5 text-left text-sm;
 		}
 	}
 </style>

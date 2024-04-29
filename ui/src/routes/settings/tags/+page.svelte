@@ -1,1 +1,350 @@
-Tags
+<script lang="ts">
+	import { AddTagsDialog, DeleteTagsDialog } from '$components/dialogs';
+	import { Checkbox, Err, Loading, SelectAllCheckbox } from '$components/generic';
+	import { TableSortController } from '$components/table/controllers';
+	import { Pagination } from '$components/table/pagination';
+	import { GetTags } from '$lib/api';
+	import { TagsTableActions } from '$lib/components/pages/settings_tags';
+	import * as Table from '$lib/components/ui/table';
+	import type { Tag } from '$lib/types/models';
+	import type { PaginationParams } from '$lib/types/pagination';
+	import { cn, flattenOrderBy } from '$lib/utils';
+	import { ChevronDown, ChevronUp } from 'lucide-svelte';
+	import { Render, Subscribe, createRender, createTable } from 'svelte-headless-table';
+	import { addSortBy } from 'svelte-headless-table/plugins';
+	import { toast } from 'svelte-sonner';
+	import { writable } from 'svelte/store';
+
+	// ----------------------
+	// Variables
+	// ----------------------
+	const fetchedTags = writable<Tag[]>([]);
+
+	const selectedTags = writable<Record<string, string>>({});
+	const selectedTagsCount = writable<number>(0);
+
+	let openDeleteDialog = false;
+
+	let pagination: PaginationParams = {
+		page: 1,
+		perPage: 10,
+		perPages: [10, 25, 100, 200],
+		totalItems: -1,
+		totalPages: -1
+	};
+
+	const table = createTable(fetchedTags, {
+		sort: addSortBy({
+			initialSortKeys: [{ id: 'tag', order: 'asc' }],
+			toggleOrder: ['desc', 'asc'],
+			serverSide: true
+		})
+	});
+
+	const columns = table.createColumns([
+		table.column({
+			header: () => {
+				return createRender(SelectAllCheckbox, {
+					selectedTagsCount,
+					totalItems: pagination.totalItems
+				}).on('click', () => {
+					if (Object.keys($selectedTags).length === 0) {
+						// Add all current fetched tags to selected tags
+						selectedTags.set(
+							$fetchedTags.reduce((acc, tag) => ({ ...acc, [tag.id]: tag.tag }), {})
+						);
+					} else {
+						// Search for an unchecked tag on this page
+						const foundUncheckedTag = $fetchedTags.find((tag) => !$selectedTags[tag.id]);
+
+						if (foundUncheckedTag) {
+							// Add all fetched tags on this page to selected tags
+							selectedTags.update((tags) => {
+								const newTags = $fetchedTags.reduce((acc, tag) => {
+									if (!tags[tag.id]) {
+										acc[tag.id] = tag.tag;
+									}
+									return acc;
+								}, tags);
+
+								return newTags;
+							});
+						} else {
+							// All tags on this page are checked. Remove them from selected tags but keep the rest
+							selectedTags.update((tags) => {
+								const newTags = { ...tags };
+								$fetchedTags.forEach((tag) => {
+									delete newTags[tag.id];
+								});
+								return newTags;
+							});
+						}
+					}
+				});
+			},
+			accessor: 'id',
+			cell: ({ value, row }) => {
+				return createRender(Checkbox, {
+					selected: selectedTags,
+					id: value
+				}).on('click', () => {
+					selectedTags.update((tags) => {
+						if (tags[value]) {
+							delete tags[value];
+						} else {
+							if (row.isData()) {
+								tags[value] = row.original.tag;
+							}
+						}
+						return { ...tags };
+					});
+				});
+			}
+		}),
+		table.column({
+			header: 'Tag',
+			accessor: 'tag'
+		}),
+		table.column({
+			header: 'Course Count',
+			accessor: 'courses',
+			cell: ({ value }) => {
+				return !value ? 0 : value.length;
+			}
+		})
+	]);
+
+	const { headerRows, pageRows, tableAttrs, tableBodyAttrs, flatColumns, pluginStates, rows } =
+		table.createViewModel(columns, { rowDataId: (row) => row.id });
+
+	// Writable plugin stores
+	const { sortKeys } = pluginStates.sort;
+
+	// The columns that can be sorted
+	const availableSortIds = ['id'];
+	const availableSortColumns: Array<{ id: string; label: string }> = flatColumns
+		.filter((col) => !availableSortIds.includes(col.id.toString()))
+		.map((col) => {
+			return { id: col.id.toString(), label: col.header.toString() };
+		});
+
+	// ----------------------
+	// Functions
+	// ----------------------
+
+	// GET a paginated list of tags
+	const getTags = async () => {
+		try {
+			const response = await GetTags({
+				orderBy: flattenOrderBy($sortKeys),
+				page: pagination.page,
+				perPage: pagination.perPage,
+				expand: true
+			});
+
+			if (!response) {
+				fetchedTags.set([]);
+				pagination = { ...pagination, totalItems: 0, totalPages: 0 };
+				return true;
+			}
+
+			fetchedTags.set(response.items as Tag[]);
+
+			pagination = {
+				...pagination,
+				totalItems: response.totalItems,
+				totalPages: response.totalPages
+			};
+
+			return true;
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : (error as string));
+			throw error;
+		}
+	};
+
+	// ----------------------
+	// Reactive
+	// ----------------------
+
+	$: selectedTagsCount.set(Object.keys($selectedTags).length);
+
+	$: if ($selectedTagsCount > 0)
+		toast.success('Selected ' + $selectedTagsCount + ' tag' + ($selectedTagsCount > 1 ? 's' : ''), {
+			duration: 2000
+		});
+
+	// ----------------------
+	// Variables
+	// ----------------------
+
+	let load = getTags();
+</script>
+
+<div class="bg-background flex w-full flex-col gap-4 pb-10 pt-6">
+	<div class="container flex flex-col gap-7">
+		{#await load}
+			<Loading />
+		{:then _}
+			<div class="flex w-full flex-row">
+				<div class="flex w-full justify-between">
+					<div class="flex">
+						<AddTagsDialog
+							on:added={() => {
+								// It is possible that the user deleted the last course on this page,
+								// therefore we need to set the page to the previous one
+								if (pagination.page > 1 && (pagination.totalItems - 1) % pagination.perPage === 0)
+									pagination.page = pagination.page - 1;
+
+								selectedTags.set({});
+
+								load = getTags();
+							}}
+						/>
+					</div>
+
+					<div class="flex w-full justify-end gap-2.5">
+						<TagsTableActions
+							{selectedTagsCount}
+							on:deselect={() => {
+								selectedTags.set({});
+							}}
+							on:delete={() => {
+								openDeleteDialog = true;
+							}}
+						/>
+
+						<TableSortController
+							columns={availableSortColumns}
+							sortedColumn={sortKeys}
+							on:changed={getTags}
+							disabled={$fetchedTags.length === 0}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div class="flex flex-col gap-5">
+				<Table.Root {...$tableAttrs} class="min-w-[15rem] border-collapse">
+					<Table.Header>
+						{#each $headerRows as headerRow}
+							<Subscribe rowAttrs={headerRow.attrs()}>
+								<Table.Row class="hover:bg-transparent">
+									{#each headerRow.cells as cell (cell.id)}
+										{@const ascSort =
+											$sortKeys.length >= 1 &&
+											$sortKeys[0].order === 'asc' &&
+											$sortKeys[0].id === cell.id}
+										{@const descSort =
+											$sortKeys.length >= 1 &&
+											$sortKeys[0].order === 'desc' &&
+											$sortKeys[0].id === cell.id}
+
+										<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()}>
+											<Table.Head
+												{...attrs}
+												class={cn(
+													'relative whitespace-nowrap px-6 tracking-wide [&:has([role=checkbox])]:pl-3',
+													cell.id === 'tag' ? 'min-w-96' : 'min-w-[1%]'
+												)}
+											>
+												<div
+													class={cn(
+														'flex items-center gap-2.5',
+														cell.id !== 'tag' && 'justify-center'
+													)}
+												>
+													<Render of={cell.render()} />
+
+													{#if ascSort}
+														<ChevronUp
+															class="text-secondary/80 absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 stroke-[2]"
+														/>
+													{:else if descSort}
+														<ChevronDown
+															class="text-secondary/80 absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 stroke-[2]"
+														/>
+													{/if}
+												</div>
+											</Table.Head>
+										</Subscribe>
+									{/each}
+								</Table.Row>
+							</Subscribe>
+						{/each}
+					</Table.Header>
+
+					<Table.Body {...$tableBodyAttrs}>
+						{#if $rows.length === 0}
+							<Table.Row class="hover:bg-transparent">
+								<Table.Cell colspan={flatColumns.length}>
+									<div class="flex w-full flex-grow flex-col place-content-center items-center p-5">
+										<p class="text-muted-foreground text-center text-sm">No tags found.</p>
+									</div>
+								</Table.Cell>
+							</Table.Row>
+						{:else}
+							{#each $pageRows as row (row.id)}
+								<Subscribe rowAttrs={row.attrs()} let:rowAttrs>
+									<Table.Row
+										{...rowAttrs}
+										data-row={row.id}
+										data-state={$selectedTags[row.id] && 'selected'}
+									>
+										{#each row.cells as cell (cell.id)}
+											<Subscribe attrs={cell.attrs()} let:attrs>
+												<Table.Cell
+													class={cn(
+														'whitespace-nowrap px-6 text-sm [&:has([role=checkbox])]:pl-3',
+														cell.id === 'tag' ? 'min-w-96' : 'min-w-[1%]'
+													)}
+													{...attrs}
+												>
+													<div class={cn(cell.id !== 'tag' && 'text-center')}>
+														<Render of={cell.render()} />
+													</div>
+												</Table.Cell>
+											</Subscribe>
+										{/each}
+									</Table.Row>
+								</Subscribe>
+							{/each}
+						{/if}
+					</Table.Body>
+				</Table.Root>
+
+				<Pagination
+					type="tag"
+					{pagination}
+					on:pageChange={(ev) => {
+						pagination.page = ev.detail;
+						load = getTags();
+					}}
+					on:perPageChange={(ev) => {
+						pagination.perPage = ev.detail;
+						pagination.page = 1;
+						load = getTags();
+					}}
+				/>
+			</div>
+		{:catch error}
+			<Err errorMessage={error} />
+		{/await}
+	</div>
+</div>
+
+<!-- Delete dialog -->
+<DeleteTagsDialog
+	tags={$selectedTags}
+	bind:open={openDeleteDialog}
+	on:deleted={() => {
+		// It is possible that the user deleted the last course on this page,
+		// therefore we need to set the page to the previous one
+		if (pagination.page > 1 && (pagination.totalItems - 1) % pagination.perPage === 0)
+			pagination.page = pagination.page - 1;
+
+		selectedTags.set({});
+
+		load = getTags();
+	}}
+/>

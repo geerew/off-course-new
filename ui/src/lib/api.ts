@@ -3,19 +3,21 @@ import { FileSystemSchema, type FileSystem } from '$lib/types/fileSystem';
 import {
 	AssetSchema,
 	CourseSchema,
+	CourseTagSchema,
 	ScanSchema,
-	TagArraySchema,
 	TagSchema,
 	type Asset,
 	type AssetsGetParams,
 	type Course,
+	type CourseTag,
 	type CoursesGetParams,
 	type Scan,
-	type Tag
+	type Tag,
+	type TagsGetParams
 } from '$lib/types/models';
 import { PaginationSchema, type Pagination } from '$lib/types/pagination';
 import axios from 'axios';
-import { safeParse } from 'valibot';
+import { array, safeParse } from 'valibot';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -31,13 +33,11 @@ export const ASSET_API =
 export const ATTACHMENT_API =
 	process.env.NODE_ENV === 'production' ? '/api/attachments' : `${PUBLIC_BACKEND}/api/attachments`;
 
+export const TAGS_API =
+	process.env.NODE_ENV === 'production' ? '/api/tags' : `${PUBLIC_BACKEND}/api/tags`;
+
 export const SCAN_API =
 	process.env.NODE_ENV === 'production' ? '/api/scans' : `${PUBLIC_BACKEND}/api/scans`;
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-export const ErrorMessage = (error: Error) => {
-	return axios.isAxiosError(error) && error.response?.data ? error.response.data : error.message;
-};
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // FileSystem
@@ -58,7 +58,11 @@ export const GetFileSystem = async (path?: string): Promise<FileSystem> => {
 		if (!result.success) throw new Error('Invalid response from server');
 		return result.output;
 	} catch (error) {
-		throw new Error(`Failed to retrieve file system: ${error}`);
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to retrieve file system: ${error}`);
+		}
 	}
 };
 
@@ -76,7 +80,11 @@ export const GetCourses = async (params?: CoursesGetParams): Promise<Pagination>
 		if (!result.success) throw new Error('Invalid response from server');
 		return result.output;
 	} catch (error) {
-		throw new Error(`Failed to retrieve courses: ${error}`);
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to retrieve courses: ${error}`);
+		}
 	}
 };
 
@@ -101,7 +109,11 @@ export const GetAllCourses = async (params?: CoursesGetParams): Promise<Course[]
 				break;
 			}
 		} catch (error) {
-			throw new Error(`Failed to fetch all courses: ${error}`);
+			if (axios.isAxiosError(error)) {
+				throw error;
+			} else {
+				throw new Error(`Failed to fetch all courses: ${error}`);
+			}
 		}
 	} while (page <= totalPages);
 
@@ -119,7 +131,11 @@ export const GetCourse = async (id: string): Promise<Course> => {
 		if (!result.success) throw new Error('Invalid response from server');
 		return result.output;
 	} catch (error) {
-		throw new Error(`Failed to retrieve course: ${error}`);
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to retrieve course: ${error}`);
+		}
 	}
 };
 
@@ -152,7 +168,11 @@ export const AddCourse = async (title: string, path: string): Promise<Course> =>
 		if (!result.success) throw new Error('Invalid response from server');
 		return result.output;
 	} catch (error) {
-		throw new Error(`Failed to create course: ${error}`);
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to create course: ${error}`);
+		}
 	}
 };
 
@@ -171,7 +191,11 @@ export const UpdateCourse = async (course: Course): Promise<Course> => {
 		if (!result.success) throw new Error('Invalid response from server');
 		return result.output;
 	} catch (error) {
-		throw new Error(`Failed to update course: ${error}`);
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to update course: ${error}`);
+		}
 	}
 };
 
@@ -183,7 +207,11 @@ export const DeleteCourse = async (id: string): Promise<boolean> => {
 		await axios.delete(`${COURSE_API}/${id}`);
 		return true;
 	} catch (error) {
-		throw new Error(`Failed to delete course: ${error}`);
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to delete course: ${error}`);
+		}
 	}
 };
 
@@ -192,24 +220,28 @@ export const DeleteCourse = async (id: string): Promise<boolean> => {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GET - Get a list of tags for a course
-export const GetCourseTags = async (courseId: string): Promise<Tag[]> => {
+export const GetCourseTags = async (courseId: string): Promise<CourseTag[]> => {
 	try {
-		const response = await axios.get<Tag[]>(`${COURSE_API}/${courseId}/tags`);
-		const result = safeParse(TagArraySchema, response.data);
+		const response = await axios.get<CourseTag[]>(`${COURSE_API}/${courseId}/tags`);
+		const result = safeParse(array(CourseTagSchema), response.data);
 
 		if (!result.success) throw new Error('Invalid response from server');
 		return result.output;
 	} catch (error) {
-		throw new Error(`Failed to retrieve course tags: ${error}`);
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to retrieve course tags: ${error}`);
+		}
 	}
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// POST - Create a tag for a course
-export const AddCourseTag = async (courseId: string, tag: string): Promise<Tag> => {
+// POST - Add a tag to a course. The tag will be created if it does not exist
+export const AddCourseTag = async (courseId: string, tag: string): Promise<CourseTag> => {
 	try {
-		const response = await axios.post<Tag>(
+		const response = await axios.post<CourseTag>(
 			`${COURSE_API}/${courseId}/tags/`,
 			{ tag },
 			{
@@ -218,12 +250,16 @@ export const AddCourseTag = async (courseId: string, tag: string): Promise<Tag> 
 				}
 			}
 		);
-		const result = safeParse(TagSchema, response.data);
+		const result = safeParse(CourseTagSchema, response.data);
 
 		if (!result.success) throw new Error('Invalid response from server');
 		return result.output;
 	} catch (error) {
-		throw new Error(`Failed to add course tag: ${error}`);
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to add course tag: ${error}`);
+		}
 	}
 };
 
@@ -235,7 +271,11 @@ export const DeleteCourseTag = async (courseId: string, tagId: string): Promise<
 		await axios.delete(`${COURSE_API}/${courseId}/tags/${tagId}`);
 		return true;
 	} catch (error) {
-		throw new Error(`Failed to delete course tag: ${error}`);
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to delete course tag: ${error}`);
+		}
 	}
 };
 
@@ -258,7 +298,11 @@ export const GetCourseAssets = async (
 		if (!result.success) throw new Error('Invalid response from server');
 		return result.output;
 	} catch (error) {
-		throw new Error(`Failed to get course assets: ${error}`);
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to get course assets: ${error}`);
+		}
 	}
 };
 
@@ -289,7 +333,11 @@ export const GetAllCourseAssets = async (
 				break;
 			}
 		} catch (error) {
-			throw new Error(`Failed to get all course assets: ${error}`);
+			if (axios.isAxiosError(error)) {
+				throw error;
+			} else {
+				throw new Error(`Failed to get all course assets: ${error}`);
+			}
 		}
 	} while (page <= totalPages);
 
@@ -312,7 +360,11 @@ export const UpdateAsset = async (asset: Asset): Promise<Asset> => {
 		if (!parseResult.success) throw new Error('Invalid response from server');
 		return parseResult.output;
 	} catch (error) {
-		throw new Error(`Failed to update asset: ${error}`);
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to update asset: ${error}`);
+		}
 	}
 };
 
@@ -329,7 +381,11 @@ export const GetScan = async (courseId: string): Promise<Scan> => {
 		if (!result.success) throw new Error('Invalid response from server');
 		return result.output;
 	} catch (error) {
-		throw new Error(`Failed to get scan: ${error}`);
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to get scan: ${error}`);
+		}
 	}
 };
 
@@ -353,6 +409,94 @@ export const AddScan = async (courseId: string): Promise<Scan> => {
 		if (!result.success) throw new Error('Invalid response from server');
 		return result.output;
 	} catch (error) {
-		throw new Error(`Failed to add scan job: ${error}`);
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to add scan job: ${error}`);
+		}
+	}
+};
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Tags
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GET - Get a tag by ID or name
+export const GetTag = async (idOrName: string, byName: boolean): Promise<Tag> => {
+	try {
+		const response = await axios.get<Tag>(`${TAGS_API}/${idOrName}`, { params: { byName } });
+		const result = safeParse(TagSchema, response.data);
+
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to get tag: ${error}`);
+		}
+	}
+};
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GET - Get a paginated list of tags
+export const GetTags = async (params?: TagsGetParams): Promise<Pagination> => {
+	try {
+		const response = await axios.get<Pagination>(TAGS_API, { params });
+		const result = safeParse(PaginationSchema, response.data);
+
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to retrieve tags: ${error}`);
+		}
+	}
+};
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// POST - Create a tag
+export const AddTag = async (tag: string): Promise<Tag> => {
+	try {
+		const response = await axios.post<Tag>(
+			TAGS_API,
+			{ tag },
+			{
+				headers: {
+					'content-type': 'application/json'
+				}
+			}
+		);
+
+		const result = safeParse(TagSchema, response.data);
+
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to add tag: ${error}`);
+		}
+	}
+};
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// DELETE - Delete a tag
+export const DeleteTag = async (tagId: string): Promise<boolean> => {
+	try {
+		await axios.delete(`${TAGS_API}/${tagId}`);
+		return true;
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to delete course tag: ${error}`);
+		}
 	}
 };

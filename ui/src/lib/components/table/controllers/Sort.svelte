@@ -17,14 +17,16 @@
 	// Variables
 	// -------------------
 	const dispatch = createEventDispatcher();
+
+	let isOpen = false;
 </script>
 
-<Popover.Root>
+<Popover.Root bind:open={isOpen}>
 	<Popover.Trigger asChild let:builder>
-		<Button variant="outline" {disabled} class="group flex h-8 gap-1.5" builders={[builder]}>
+		<Button variant="outline" {disabled} class="flex h-8 gap-1.5" builders={[builder]}>
 			<ArrowDownUp class="h-4 w-4" />
 			<span>Sort</span>
-			<ChevronRight class="h-4 w-4 duration-200 group-data-[state=open]:rotate-90" />
+			<ChevronRight class={cn('h-4 w-4 duration-200', isOpen && 'rotate-90')} />
 		</Button>
 	</Popover.Trigger>
 

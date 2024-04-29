@@ -27,7 +27,10 @@
 		assetRefresh = false;
 
 		try {
-			const response = await GetAllCourseAssets(courseId, { orderBy: 'chapter asc, prefix asc' });
+			const response = await GetAllCourseAssets(courseId, {
+				orderBy: 'chapter asc, prefix asc',
+				expand: true
+			});
 			if (!response) return {};
 
 			return buildChapterStructure(response);
