@@ -3,6 +3,8 @@ package daos
 import (
 	"errors"
 	"strings"
+
+	"github.com/Masterminds/squirrel"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -10,6 +12,14 @@ import (
 // Scannable is an interface for a database row that can be scanned into a struct
 type Scannable interface {
 	Scan(dest ...interface{}) error
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+type daoer interface {
+	countSelect() squirrel.SelectBuilder
+	baseSelect() squirrel.SelectBuilder
+	columns() []string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

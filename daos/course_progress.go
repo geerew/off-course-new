@@ -63,7 +63,7 @@ func (dao *CourseProgressDao) Create(cp *models.CourseProgress, tx *sql.Tx) erro
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *CourseProgressDao) Get(courseId string, tx *sql.Tx) (*models.CourseProgress, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
@@ -184,16 +184,23 @@ func (dao *CourseProgressDao) Refresh(courseId string, tx *sql.Tx) error {
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// baseSelect returns the default select builder
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
-func (dao *CourseProgressDao) baseSelect() squirrel.SelectBuilder {
+// countSelect returns the default count select builder
+func (dao *CourseProgressDao) countSelect() squirrel.SelectBuilder {
 	return squirrel.StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
 		Select("").
 		From(dao.Table).
 		RemoveColumns()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// baseSelect returns the default select builder
+//
+// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
+// this select builder
+func (dao *CourseProgressDao) baseSelect() squirrel.SelectBuilder {
+	return dao.countSelect()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

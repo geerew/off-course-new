@@ -31,7 +31,7 @@ func NewAssetDao(db database.Database) *AssetDao {
 
 // Count returns the number of assets
 func (dao *AssetDao) Count(params *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.Count(params, nil)
 }
 
@@ -69,7 +69,7 @@ func (dao *AssetDao) Create(a *models.Asset) error {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Asset, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 
 	assetDbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
@@ -112,7 +112,7 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.T
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Asset, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
@@ -192,7 +192,7 @@ func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.Delete(dbParams, tx)
 }
 
@@ -208,12 +208,27 @@ func (dao *AssetDao) ProcessOrderBy(orderBy []string, explicit bool) []string {
 		return orderBy
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.ProcessOrderBy(orderBy, dao.columns(), explicit)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Internal
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// countSelect returns the default count select builder
+func (dao *AssetDao) countSelect() squirrel.SelectBuilder {
+	apDao := NewAssetProgressDao(dao.db)
+
+	return squirrel.
+		StatementBuilder.
+		PlaceholderFormat(squirrel.Question).
+		Select("").
+		From(dao.Table).
+		LeftJoin(apDao.Table + " ON " + dao.Table + ".id = " + apDao.Table + ".asset_id").
+		RemoveColumns()
+}
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // baseSelect returns the default select builder
@@ -224,15 +239,7 @@ func (dao *AssetDao) ProcessOrderBy(orderBy []string, explicit bool) []string {
 // Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
 // this select builder
 func (dao *AssetDao) baseSelect() squirrel.SelectBuilder {
-	apDao := NewAssetProgressDao(dao.db)
-
-	return squirrel.
-		StatementBuilder.
-		PlaceholderFormat(squirrel.Question).
-		Select("").
-		From(dao.Table).
-		LeftJoin(apDao.Table + " ON " + dao.Table + ".id = " + apDao.Table + ".asset_id").
-		RemoveColumns()
+	return dao.countSelect()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

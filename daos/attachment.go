@@ -30,7 +30,7 @@ func NewAttachmentDao(db database.Database) *AttachmentDao {
 
 // Count returns the number of attachments
 func (dao *AttachmentDao) Count(params *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.Count(params, nil)
 }
 
@@ -62,7 +62,7 @@ func (dao *AttachmentDao) Create(a *models.Attachment) error {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AttachmentDao) Get(id string, tx *sql.Tx) (*models.Attachment, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
@@ -88,7 +88,7 @@ func (dao *AttachmentDao) Get(id string, tx *sql.Tx) (*models.Attachment, error)
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Attachment, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
@@ -136,7 +136,7 @@ func (dao *AttachmentDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) 
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.Delete(dbParams, tx)
 }
 
@@ -152,7 +152,7 @@ func (dao *AttachmentDao) ProcessOrderBy(orderBy []string, explicit bool) []stri
 		return orderBy
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.ProcessOrderBy(orderBy, dao.columns(), explicit)
 }
 
@@ -160,17 +160,24 @@ func (dao *AttachmentDao) ProcessOrderBy(orderBy []string, explicit bool) []stri
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// baseSelect returns the default select builder
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
-func (dao *AttachmentDao) baseSelect() squirrel.SelectBuilder {
+// countSelect returns the default count select builder
+func (dao *AttachmentDao) countSelect() squirrel.SelectBuilder {
 	return squirrel.
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
 		Select("").
 		From(dao.Table).
 		RemoveColumns()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// baseSelect returns the default select builder
+//
+// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
+// this select builder
+func (dao *AttachmentDao) baseSelect() squirrel.SelectBuilder {
+	return dao.countSelect()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

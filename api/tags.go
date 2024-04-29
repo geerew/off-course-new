@@ -24,11 +24,12 @@ type tags struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type tagResponse struct {
-	ID        string         `json:"id"`
-	Tag       string         `json:"tag"`
-	Courses   []*courseTag   `json:"courses,omitempty"`
-	CreatedAt types.DateTime `json:"createdAt"`
-	UpdatedAt types.DateTime `json:"updatedAt"`
+	ID          string         `json:"id"`
+	Tag         string         `json:"tag"`
+	CourseCount int            `json:"courseCount"`
+	Courses     []*courseTag   `json:"courses,omitempty"`
+	CreatedAt   types.DateTime `json:"createdAt"`
+	UpdatedAt   types.DateTime `json:"updatedAt"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -179,10 +180,11 @@ func tagResponseHelper(tags []*models.Tag) []*tagResponse {
 
 	for _, tag := range tags {
 		t := &tagResponse{
-			ID:        tag.ID,
-			Tag:       tag.Tag,
-			CreatedAt: tag.CreatedAt,
-			UpdatedAt: tag.UpdatedAt,
+			ID:          tag.ID,
+			Tag:         tag.Tag,
+			CreatedAt:   tag.CreatedAt,
+			UpdatedAt:   tag.UpdatedAt,
+			CourseCount: tag.CourseCount,
 		}
 
 		// Add the course tags

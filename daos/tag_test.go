@@ -140,7 +140,7 @@ func TestTag_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		_, dao, db := tagSetup(t)
 
-		testData := NewTestBuilder(t).Db(db).Courses(2).Tags([]string{"Go", "TypeScript"}).Build()
+		testData := NewTestBuilder(t).Db(db).Courses([]string{"course 1", "course 2"}).Tags([]string{"Go", "TypeScript"}).Build()
 
 		// Get the first tag
 		tag, err := dao.Get(testData[0].Tags[0].TagId, false, nil, nil)
@@ -151,16 +151,21 @@ func TestTag_Get(t *testing.T) {
 		tag, err = dao.Get("Go", true, nil, nil)
 		require.Nil(t, err)
 		require.Equal(t, testData[0].Tags[0].TagId, tag.ID)
+		require.Equal(t, 2, tag.CourseCount)
 
 		// ----------------------------
 		// Course tags
 		// ----------------------------
-		dbParams := &database.DatabaseParams{IncludeRelations: []string{NewCourseTagDao(dao.db).Table}}
+		dbParams := &database.DatabaseParams{
+			OrderBy:          []string{NewCourseDao(dao.db).Table + ".title asc"},
+			IncludeRelations: []string{NewCourseTagDao(dao.db).Table},
+		}
+
 		tag, err = dao.Get(testData[0].Tags[0].TagId, false, dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, tag.CourseTags, 2)
-		require.Equal(t, testData[0].ID, tag.CourseTags[1].CourseId)
-		require.Equal(t, testData[1].ID, tag.CourseTags[0].CourseId)
+		require.Equal(t, testData[0].ID, tag.CourseTags[0].CourseId)
+		require.Equal(t, testData[1].ID, tag.CourseTags[1].CourseId)
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -204,25 +209,37 @@ func TestTag_List(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		_, dao, _ := tagSetup(t)
 
-		NewTestBuilder(t).Db(dao.db).Courses(1).Tags([]string{"PHP", "Go"}).Build()
-		NewTestBuilder(t).Db(dao.db).Courses(1).Tags([]string{"Go", "C"}).Build()
-		NewTestBuilder(t).Db(dao.db).Courses(1).Tags([]string{"C", "TypeScript"}).Build()
+		NewTestBuilder(t).Db(dao.db).Courses([]string{"course 1"}).Tags([]string{"PHP", "Go"}).Build()
+		NewTestBuilder(t).Db(dao.db).Courses([]string{"course 2"}).Tags([]string{"Go", "C"}).Build()
+		NewTestBuilder(t).Db(dao.db).Courses([]string{"course 3"}).Tags([]string{"C", "TypeScript"}).Build()
 
-		result, err := dao.List(nil, nil)
+		dbParams := &database.DatabaseParams{
+			OrderBy: []string{dao.Table + ".tag asc"},
+		}
+
+		result, err := dao.List(dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 4)
 		require.Nil(t, result[0].CourseTags)
 
+		require.Equal(t, 2, result[0].CourseCount) // C
+		require.Equal(t, 2, result[1].CourseCount) // GO
+		require.Equal(t, 1, result[2].CourseCount) // PHP
+		require.Equal(t, 1, result[3].CourseCount) // TypeScript
+
 		// ----------------------------
 		// Course tags
 		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{IncludeRelations: []string{NewCourseTagDao(dao.db).Table}}, nil)
+
+		dbParams.IncludeRelations = []string{NewCourseTagDao(dao.db).Table}
+
+		result, err = dao.List(dbParams, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 4)
 
-		require.Len(t, result[0].CourseTags, 1) // PHP
+		require.Len(t, result[0].CourseTags, 2) // C
 		require.Len(t, result[1].CourseTags, 2) // GO
-		require.Len(t, result[2].CourseTags, 2) // C
+		require.Len(t, result[2].CourseTags, 1) // PHP
 		require.Len(t, result[3].CourseTags, 1) // TypeScript
 
 	})

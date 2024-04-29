@@ -60,7 +60,7 @@ func (dao *ScanDao) Create(s *models.Scan) error {
 
 // Get selects a scan with the given course ID
 func (dao *ScanDao) Get(courseId string) (*models.Scan, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
@@ -114,7 +114,7 @@ func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error 
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.Delete(dbParams, tx)
 }
 
@@ -122,7 +122,7 @@ func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error 
 
 // Next returns the next scan whose status is `waiting“
 func (dao *ScanDao) Next() (*models.Scan, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
@@ -152,14 +152,8 @@ func (dao *ScanDao) Next() (*models.Scan, error) {
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// baseSelect returns the default select builder
-//
-// It performs 1 left join
-//   - courses table to get `course_path`
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
-func (dao *ScanDao) baseSelect() squirrel.SelectBuilder {
+// countSelect returns the default count select builder
+func (dao *ScanDao) countSelect() squirrel.SelectBuilder {
 	courseDao := NewCourseDao(dao.db)
 
 	return squirrel.StatementBuilder.
@@ -168,6 +162,19 @@ func (dao *ScanDao) baseSelect() squirrel.SelectBuilder {
 		From(dao.Table).
 		LeftJoin(courseDao.Table + " ON " + dao.Table + ".course_id = " + courseDao.Table + ".id").
 		RemoveColumns()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// baseSelect returns the default select builder
+//
+// It performs 1 left join
+//   - courses table to get `course_path`
+//
+// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
+// this select builder
+func (dao *ScanDao) baseSelect() squirrel.SelectBuilder {
+	return dao.countSelect()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -31,7 +31,7 @@ func NewTagDao(db database.Database) *TagDao {
 
 // Count returns the number of tags
 func (dao *TagDao) Count(params *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.Count(params, nil)
 }
 
@@ -70,7 +70,7 @@ func (dao *TagDao) Create(t *models.Tag, tx *sql.Tx) error {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Tag, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 
 	tagDbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
@@ -118,7 +118,7 @@ func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Tag, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
@@ -198,7 +198,7 @@ func (dao *TagDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.Delete(dbParams, tx)
 }
 
@@ -214,7 +214,7 @@ func (dao *TagDao) ProcessOrderBy(orderBy []string, explicit bool) []string {
 		return orderBy
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.ProcessOrderBy(orderBy, dao.columns(), explicit)
 }
 
@@ -222,25 +222,39 @@ func (dao *TagDao) ProcessOrderBy(orderBy []string, explicit bool) []string {
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// baseSelect returns the default select builder
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
-func (dao *TagDao) baseSelect() squirrel.SelectBuilder {
+// countSelect returns the default count select builder
+func (dao *TagDao) countSelect() squirrel.SelectBuilder {
+	courseTagDao := NewCourseTagDao(dao.db)
+
 	return squirrel.
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
 		Select("").
 		From(dao.Table).
+		LeftJoin(courseTagDao.Table + " ON " + dao.Table + ".id = " + courseTagDao.Table + ".tag_id").
 		RemoveColumns()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// baseSelect returns the default select builder
+//
+// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
+// this select builder
+func (dao *TagDao) baseSelect() squirrel.SelectBuilder {
+	return dao.countSelect().GroupBy("tags.id")
+	// GroupBy("tags.id", "tags.tag", "tags.created_at", "tags.updated_at").
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // columns returns the columns to select
 func (dao *TagDao) columns() []string {
+	courseTagDao := NewCourseTagDao(dao.db)
+
 	return []string{
 		dao.Table + ".*",
+		"COALESCE(COUNT(" + courseTagDao.Table + ".id), 0) AS course_count",
 	}
 }
 
@@ -267,6 +281,7 @@ func (dao *TagDao) scanRow(scannable Scannable) (*models.Tag, error) {
 		&t.Tag,
 		&t.CreatedAt,
 		&t.UpdatedAt,
+		&t.CourseCount,
 	)
 
 	if err != nil {

@@ -30,7 +30,7 @@ func NewCourseTagDao(db database.Database) *CourseTagDao {
 
 // Count returns the number of course-tags
 func (dao *CourseTagDao) Count(dbParams *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.Count(dbParams, nil)
 }
 
@@ -56,7 +56,7 @@ func (dao *CourseTagDao) Create(ct *models.CourseTag, tx *sql.Tx) error {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *CourseTagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.CourseTag, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
@@ -104,7 +104,7 @@ func (dao *CourseTagDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) e
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.Delete(dbParams, tx)
 }
 
@@ -120,7 +120,7 @@ func (dao *CourseTagDao) ProcessOrderBy(orderBy []string, explicit bool) []strin
 		return orderBy
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.ProcessOrderBy(orderBy, dao.columns(), explicit)
 }
 
@@ -188,15 +188,8 @@ func (dao *CourseTagDao) create(ct *models.CourseTag, tx *sql.Tx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// baseSelect returns the default select builder
-//
-// It performs 2 left joins
-//   - courses table to get `title`
-//   - tags table to get `tag`
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
-func (dao *CourseTagDao) baseSelect() squirrel.SelectBuilder {
+// countSelect returns the default count select builder
+func (dao *CourseTagDao) countSelect() squirrel.SelectBuilder {
 	tagDao := NewTagDao(dao.db)
 	courseDao := NewCourseDao(dao.db)
 
@@ -208,6 +201,19 @@ func (dao *CourseTagDao) baseSelect() squirrel.SelectBuilder {
 		LeftJoin(courseDao.Table + " ON " + dao.Table + ".course_id = " + courseDao.Table + ".id").
 		LeftJoin(tagDao.Table + " ON " + dao.Table + ".tag_id = " + tagDao.Table + ".id").
 		RemoveColumns()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// baseSelect returns the default select builder
+//
+// It performs 2 left joins
+//   - courses table to get `title`
+//   - tags table to get `tag`
+//
+// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
+// this select builder
+func (dao *CourseTagDao) baseSelect() squirrel.SelectBuilder {
+	return dao.countSelect()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -49,7 +49,7 @@ func (dao *AssetProgressDao) Create(ap *models.AssetProgress, tx *sql.Tx) error 
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AssetProgressDao) Get(assetId string, tx *sql.Tx) (*models.AssetProgress, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
@@ -197,17 +197,24 @@ func (dao *AssetProgressDao) update(ap *models.AssetProgress, tx *sql.Tx) error 
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// baseSelect returns the default select builder
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
-func (dao *AssetProgressDao) baseSelect() squirrel.SelectBuilder {
+// countSelect returns the default count select builder
+func (dao *AssetProgressDao) countSelect() squirrel.SelectBuilder {
 	return squirrel.
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
 		Select("").
 		From(dao.Table).
 		RemoveColumns()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// baseSelect returns the default select builder
+//
+// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
+// this select builder
+func (dao *AssetProgressDao) baseSelect() squirrel.SelectBuilder {
+	return dao.countSelect()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

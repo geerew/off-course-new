@@ -15,5 +15,6 @@ type Tag struct {
 	// --------------------------------
 
 	// Courses
-	CourseTags []*CourseTag
+	CourseCount int
+	CourseTags  []*CourseTag
 }

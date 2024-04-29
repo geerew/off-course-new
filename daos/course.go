@@ -31,7 +31,7 @@ func NewCourseDao(db database.Database) *CourseDao {
 
 // Count returns the number of courses
 func (dao *CourseDao) Count(params *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.Count(params, nil)
 }
 
@@ -77,7 +77,7 @@ func (dao *CourseDao) Create(c *models.Course) error {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *CourseDao) Get(id string, tx *sql.Tx) (*models.Course, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
@@ -103,7 +103,7 @@ func (dao *CourseDao) Get(id string, tx *sql.Tx) (*models.Course, error) {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Course, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
@@ -176,7 +176,7 @@ func (dao *CourseDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) erro
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao.baseSelect())
+	generic := NewGenericDao(dao.db, dao.Table, dao)
 	return generic.Delete(dbParams, tx)
 }
 
@@ -236,15 +236,8 @@ func (dao *CourseDao) ProcessOrderBy(orderBy []string) []string {
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// baseSelect returns the default select builder
-//
-// It performs 2 left joins
-//   - scans table to get `scan_status`
-//   - courses progress table to get `started`, `started_at`, `percent`, and `completed_at`
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
-func (dao *CourseDao) baseSelect() squirrel.SelectBuilder {
+// countSelect returns the default select builder for counting
+func (dao *CourseDao) countSelect() squirrel.SelectBuilder {
 	sDao := NewScanDao(dao.db)
 	cpDao := NewCourseProgressDao(dao.db)
 
@@ -256,6 +249,20 @@ func (dao *CourseDao) baseSelect() squirrel.SelectBuilder {
 		LeftJoin(sDao.Table + " ON " + dao.Table + ".id = " + sDao.Table + ".course_id").
 		LeftJoin(cpDao.Table + " ON " + dao.Table + ".id = " + cpDao.Table + ".course_id").
 		RemoveColumns()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// baseSelect returns the default select builder
+//
+// It performs 2 left joins
+//   - scans table to get `scan_status`
+//   - courses progress table to get `started`, `started_at`, `percent`, and `completed_at`
+//
+// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
+// this select builder
+func (dao *CourseDao) baseSelect() squirrel.SelectBuilder {
+	return dao.countSelect()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

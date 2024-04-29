@@ -56,6 +56,7 @@ func TestTags_GetTags(t *testing.T) {
 		require.Equal(t, 5, int(paginationResp.TotalItems))
 		require.Len(t, tagsResp, 5)
 		require.Nil(t, tagsResp[0].Courses)
+		require.Equal(t, 2, tagsResp[0].CourseCount)
 
 		// ----------------------------
 		// Courses
@@ -199,6 +200,7 @@ func TestTags_GetTag(t *testing.T) {
 		require.Nil(t, err)
 		require.Equal(t, testData[1].Tags[1].TagId, tagResp.ID)
 		require.Zero(t, tagResp.Courses)
+		require.Equal(t, 3, tagResp.CourseCount)
 
 		// By Name
 		status, body, err = tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/Go/?byName=true", nil))
@@ -209,6 +211,7 @@ func TestTags_GetTag(t *testing.T) {
 		require.Nil(t, err)
 		require.Equal(t, testData[0].Tags[0].TagId, tagResp.ID)
 		require.Zero(t, tagResp.Courses)
+		require.Equal(t, 3, tagResp.CourseCount)
 
 		// ----------------------------
 		// Courses
@@ -219,7 +222,9 @@ func TestTags_GetTag(t *testing.T) {
 
 		err = json.Unmarshal(body, &tagResp)
 		require.Nil(t, err)
+		require.Equal(t, 3, tagResp.CourseCount)
 		require.Len(t, tagResp.Courses, 3)
+
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
@@ -345,7 +350,7 @@ func TestTags_DeleteTag(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNoContent, status)
 
-		result, err := tagsDao.List(&database.DatabaseParams{Where: squirrel.Eq{"id": tags[2].ID}}, nil)
+		result, err := tagsDao.List(&database.DatabaseParams{Where: squirrel.Eq{daos.NewTagDao(db).Table + ".id": tags[2].ID}}, nil)
 		require.Nil(t, err)
 		require.Zero(t, len(result))
 
