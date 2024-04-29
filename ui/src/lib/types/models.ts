@@ -146,6 +146,7 @@ export const TagSchema = merge([
 	BaseSchema,
 	object({
 		tag: string(),
+		courseCount: number(),
 		courses: optional(
 			array(
 				object({

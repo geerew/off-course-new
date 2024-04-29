@@ -107,10 +107,7 @@
 		}),
 		table.column({
 			header: 'Course Count',
-			accessor: 'courses',
-			cell: ({ value }) => {
-				return !value ? 0 : value.length;
-			}
+			accessor: 'courseCount'
 		})
 	]);
 
