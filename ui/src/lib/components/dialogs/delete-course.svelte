@@ -3,6 +3,7 @@
 	import * as Dialog from '$components/ui/dialog';
 	import * as Table from '$components/ui/table';
 	import { DeleteCourse } from '$lib/api';
+	import { cn } from '$lib/utils';
 	import { AlertOctagon } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -39,6 +40,12 @@
 			toast.error(error instanceof Error ? error.message : (error as string));
 		}
 	}
+
+	// ----------------------
+	// Reactive
+	// ----------------------
+
+	$: coursesCount = Object.keys(courses).length;
 </script>
 
 <Dialog.Root bind:open>
@@ -47,15 +54,17 @@
 	>
 		<div class="flex flex-col items-center gap-5 overflow-y-scroll px-8 pt-4">
 			<AlertOctagon class="text-destructive size-10" />
-			<span>Do you really want to delete the following courses?</span>
+			<span>Do you really want to delete the following course{coursesCount > 1 ? 's' : ''}?</span>
 		</div>
 
 		<div class="flex max-h-[20rem] flex-col gap-2 overflow-hidden overflow-y-auto px-8">
 			<Table.Root>
 				<Table.Body>
 					{#each Object.entries(courses) as [_, c], i (i)}
-						<Table.Row class="last:border-none">
-							<Table.Cell class="text-muted-foreground select-none px-4 py-1.5">{c}</Table.Cell>
+						<Table.Row class={cn('last:border-none', coursesCount === 1 && 'hover:bg-inherit')}>
+							<Table.Cell class="text-muted-foreground select-none text-wrap px-4 py-1.5">
+								{c}
+							</Table.Cell>
 						</Table.Row>
 					{/each}
 				</Table.Body>

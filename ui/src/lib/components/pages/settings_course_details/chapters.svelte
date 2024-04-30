@@ -211,7 +211,7 @@
 				</Accordion.Item>
 			{/each}
 		</Accordion.Root>
-	{:catch}
-		<Err class="min-h-[5rem]" />
+	{:catch error}
+		<Err class="min-h-[5rem]" errorMessage={error} />
 	{/await}
 </div>

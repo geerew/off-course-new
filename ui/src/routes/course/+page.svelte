@@ -180,7 +180,7 @@
 				}}
 			/>
 		</div>
-	{:catch}
-		<Err />
+	{:catch error}
+		<Err errorMessage={error} />
 	{/await}
 </div>

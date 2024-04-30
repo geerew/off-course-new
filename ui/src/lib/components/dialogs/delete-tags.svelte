@@ -3,6 +3,7 @@
 	import * as Dialog from '$components/ui/dialog';
 	import * as Table from '$components/ui/table';
 	import { DeleteTag } from '$lib/api';
+	import { cn } from '$lib/utils';
 	import { AlertOctagon } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -39,6 +40,12 @@
 			toast.error(error instanceof Error ? error.message : (error as string));
 		}
 	}
+
+	// ----------------------
+	// Reactive
+	// ----------------------
+
+	$: tagsCount = Object.keys(tags).length;
 </script>
 
 <Dialog.Root bind:open>
@@ -47,15 +54,17 @@
 	>
 		<div class="flex flex-col items-center gap-5 overflow-y-scroll px-8 pt-4">
 			<AlertOctagon class="text-destructive size-10" />
-			<span>Do you really want to delete the following tags?</span>
+			<span>Do you really want to delete the following tag{tagsCount > 1 ? 's' : ''}?</span>
 		</div>
 
 		<div class="flex max-h-[20rem] flex-col gap-2 overflow-hidden overflow-y-auto px-8">
 			<Table.Root>
 				<Table.Body>
 					{#each Object.entries(tags) as [_, t], i (i)}
-						<Table.Row class="last:border-none">
-							<Table.Cell class="text-muted-foreground select-none px-4 py-1.5">{t}</Table.Cell>
+						<Table.Row class={cn('last:border-none', tagsCount === 1 && 'hover:bg-inherit')}>
+							<Table.Cell class="text-muted-foreground select-none text-wrap px-4 py-1.5">
+								{t}
+							</Table.Cell>
 						</Table.Row>
 					{/each}
 				</Table.Body>

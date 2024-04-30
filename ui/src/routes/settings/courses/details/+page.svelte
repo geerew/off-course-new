@@ -26,6 +26,24 @@
 	import { toast } from 'svelte-sonner';
 
 	// ----------------------
+	// variables
+	// ----------------------
+
+	let course: Record<string, string> = {};
+
+	// True when the course is being deleted
+	let openDeleteDialog = false;
+
+	// True when the assets need to be refreshed
+	let assetRefresh = false;
+
+	// True when the card needs to be refreshed
+	let cardRefresh = false;
+
+	// True when the tags need to be refreshed
+	let tagsRefresh = false;
+
+	// ----------------------
 	// Functions
 	// ----------------------
 
@@ -37,7 +55,6 @@
 
 			return response;
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : (error as string));
 			throw error;
 		}
 	};
@@ -53,29 +70,10 @@
 			toast.error(error instanceof Error ? error.message : (error as string));
 		}
 	};
-
-	// ----------------------
-	// Variables
-	// ----------------------
-
-	// Holds the information about the course being viewed
-	let course = getCourse();
-
-	// True when the course is being deleted
-	let openDeleteDialog = false;
-
-	// True when the assets need to be refreshed
-	let assetRefresh = false;
-
-	// True when the card needs to be refreshed
-	let cardRefresh = false;
-
-	// True when the tags need to be refreshed
-	let tagsRefresh = false;
 </script>
 
 <div class="bg-background flex w-full flex-col gap-4 pb-10">
-	{#await course}
+	{#await getCourse()}
 		<Loading />
 	{:then data}
 		<!-- Course Details -->
@@ -210,6 +208,7 @@
 								variant="outline"
 								class="hover:bg-destructive bg-muted border-muted-foreground hover:border-destructive hover:text-destructive-foreground h-8 cursor-pointer gap-2 px-2.5"
 								on:click={() => {
+									course = { [data.id]: data.title };
 									openDeleteDialog = true;
 								}}
 							>
@@ -231,13 +230,13 @@
 
 		<!-- Delete dialog -->
 		<DeleteCourseDialog
-			courseId={data.id}
+			courses={course}
 			bind:open={openDeleteDialog}
 			on:courseDeleted={() => {
 				goto('/settings/courses');
 			}}
 		/>
-	{:catch _}
-		<Err />
+	{:catch error}
+		<Err errorMessage={error} />
 	{/await}
 </div>
