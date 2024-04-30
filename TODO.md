@@ -1,4 +1,4 @@
-TODO 
+TODO
 
 https://dribbble.com/shots/23132040-E-learning-website-course-details
 
@@ -11,7 +11,7 @@ https://dribbble.com/shots/23132040-E-learning-website-course-details
 - [x] Allow deleting of tags
 - [x] Allow adding of tags
 - [ ] Allow editing of tags
-- [ ] Fix sorting by course count
+- [x] Fix sorting by course count
 
 ## Page -> Home
 
@@ -22,7 +22,7 @@ https://dribbble.com/shots/23132040-E-learning-website-course-details
   - [ ] Name the category
   - [ ] Show categories on the home page
 
-## Page -> Course 
+## Page -> Course
 
 - [ ] When a course is unavailable, still show the menu
 - [ ] Support PDF
@@ -51,11 +51,11 @@ https://dribbble.com/shots/23132040-E-learning-website-course-details
 
 - [ ] Add search (https://discord.com/channels/1116682155809067049/1117779396992979024/1163925360228962385)
 
+## Backend -> Assets and Attachments
+
+- [ ] Add column for md5sum of file
+
 ## Backend -> logs
 
 - [ ] Add a separate logs DB
 - [ ] Add logs
-  
-## Backend -> Assets and Attachments
-
-- [ ] Add column for md5sum of file

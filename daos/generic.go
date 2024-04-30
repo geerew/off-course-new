@@ -12,17 +12,15 @@ import (
 // GenericDao is the data access object for generic queries
 type GenericDao struct {
 	db     database.Database
-	table  string
 	caller daoer
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // NewGenericDao returns a new GenericDao
-func NewGenericDao(db database.Database, table string, caller daoer) *GenericDao {
+func NewGenericDao(db database.Database, caller daoer) *GenericDao {
 	return &GenericDao{
 		db:     db,
-		table:  table,
 		caller: caller,
 	}
 }
@@ -39,7 +37,7 @@ func (dao *GenericDao) Count(dbParams *database.DatabaseParams, tx *sql.Tx) (int
 	}
 
 	builder := dao.caller.countSelect().
-		Columns("COUNT(DISTINCT " + dao.table + ".id)")
+		Columns("COUNT(DISTINCT " + dao.caller.Table() + ".id)")
 
 	if dbParams != nil && dbParams.Where != nil {
 		builder = builder.Where(dbParams.Where)
@@ -71,7 +69,7 @@ func (dao *GenericDao) Get(dbParams *database.DatabaseParams, tx *sql.Tx) (*sql.
 	builder := dao.caller.baseSelect()
 
 	if dbParams.Columns == nil {
-		builder = builder.Columns(dao.table + ".*")
+		builder = builder.Columns(dao.caller.Table() + ".*")
 	} else {
 		builder = builder.Columns(dbParams.Columns...)
 	}
@@ -107,7 +105,7 @@ func (dao *GenericDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) (*sql
 
 	if dbParams != nil {
 		if dbParams.Columns == nil {
-			builder = builder.Columns(dao.table + ".*")
+			builder = builder.Columns(dao.caller.Table() + ".*")
 		} else {
 			builder = builder.Columns(dbParams.Columns...)
 		}
@@ -155,7 +153,7 @@ func (dao *GenericDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) err
 	query, args, _ := squirrel.
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
-		Delete(dao.table).
+		Delete(dao.caller.Table()).
 		Where(dbParams.Where).
 		ToSql()
 

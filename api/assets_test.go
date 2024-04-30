@@ -100,7 +100,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		// ----------------------------
 		attDao := daos.NewAttachmentDao(db)
 
-		status, body, err = assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/?expand=true&orderBy=created_at%20asc,"+attDao.Table+".created_at%20desc", nil))
+		status, body, err = assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/?expand=true&orderBy=created_at%20asc,"+attDao.Table()+".created_at%20desc", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -163,7 +163,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
 		// Drop the table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(db).Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(db).Table())
 		require.Nil(t, err)
 
 		status, _, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
@@ -221,7 +221,7 @@ func TestAssets_GetAsset(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
 		// Drop the table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(db).Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(db).Table())
 		require.Nil(t, err)
 
 		status, _, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/test", nil))
@@ -344,7 +344,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		bindAssetsApi(f.Group("/api"), appFs, db)
 
 		// Drop the table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(db).Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(db).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodPut, "/api/assets/test", strings.NewReader(`{"id": "1234567"}`))
@@ -462,7 +462,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 		f := fiber.New()
 		bindAssetsApi(f.Group("/api"), appFs, db)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(db).Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(db).Table())
 		require.Nil(t, err)
 
 		status, _, err := assetsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/assets/test/serve", nil))

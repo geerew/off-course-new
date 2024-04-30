@@ -134,7 +134,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
 		// Drop the table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(db).Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(db).Table())
 		require.Nil(t, err)
 
 		status, _, err := attachmentsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
@@ -176,7 +176,7 @@ func TestAttachments_GetAttachment(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
 		// Drop the table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(db).Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(db).Table())
 		require.Nil(t, err)
 
 		status, _, err := attachmentsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/test", nil))
@@ -226,7 +226,7 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 		appFs, db, _, _ := setup(t)
 
 		// Drop the table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(db).Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(db).Table())
 		require.Nil(t, err)
 
 		status, _, err := attachmentsRequestHelper(appFs, db, httptest.NewRequest(http.MethodGet, "/api/attachments/test/serve", nil))

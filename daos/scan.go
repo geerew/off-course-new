@@ -14,7 +14,7 @@ import (
 // ScanDao is the data access object for scans
 type ScanDao struct {
 	db    database.Database
-	Table string
+	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -23,8 +23,15 @@ type ScanDao struct {
 func NewScanDao(db database.Database) *ScanDao {
 	return &ScanDao{
 		db:    db,
-		Table: "scans",
+		table: "scans",
 	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Table returns the table name
+func (dao *ScanDao) Table() string {
+	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -47,7 +54,7 @@ func (dao *ScanDao) Create(s *models.Scan) error {
 
 	query, args, _ := squirrel.
 		StatementBuilder.
-		Insert(dao.Table).
+		Insert(dao.Table()).
 		SetMap(dao.data(s)).
 		ToSql()
 
@@ -60,11 +67,11 @@ func (dao *ScanDao) Create(s *models.Scan) error {
 
 // Get selects a scan with the given course ID
 func (dao *ScanDao) Get(courseId string) (*models.Scan, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
-		Where:   squirrel.Eq{dao.Table + ".course_id": courseId},
+		Where:   squirrel.Eq{dao.Table() + ".course_id": courseId},
 	}
 
 	row, err := generic.Get(dbParams, nil)
@@ -94,7 +101,7 @@ func (dao *ScanDao) Update(scan *models.Scan) error {
 
 	query, args, _ := squirrel.
 		StatementBuilder.
-		Update(dao.Table).
+		Update(dao.Table()).
 		Set("status", NilStr(scan.Status.String())).
 		Set("updated_at", scan.UpdatedAt).
 		Where("id = ?", scan.ID).
@@ -114,7 +121,7 @@ func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error 
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 	return generic.Delete(dbParams, tx)
 }
 
@@ -122,11 +129,11 @@ func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error 
 
 // Next returns the next scan whose status is `waiting“
 func (dao *ScanDao) Next() (*models.Scan, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
-		Where:   squirrel.Eq{dao.Table + ".status": types.ScanStatusWaiting},
+		Where:   squirrel.Eq{dao.Table() + ".status": types.ScanStatusWaiting},
 		OrderBy: []string{"created_at ASC"},
 	}
 
@@ -159,8 +166,8 @@ func (dao *ScanDao) countSelect() squirrel.SelectBuilder {
 	return squirrel.StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
 		Select("").
-		From(dao.Table).
-		LeftJoin(courseDao.Table + " ON " + dao.Table + ".course_id = " + courseDao.Table + ".id").
+		From(dao.Table()).
+		LeftJoin(courseDao.Table() + " ON " + dao.Table() + ".course_id = " + courseDao.Table() + ".id").
 		RemoveColumns()
 }
 
@@ -184,8 +191,8 @@ func (dao *ScanDao) columns() []string {
 	courseDao := NewCourseDao(dao.db)
 
 	return []string{
-		dao.Table + ".*",
-		courseDao.Table + ".path AS course_path",
+		dao.Table() + ".*",
+		courseDao.Table() + ".path AS course_path",
 	}
 }
 

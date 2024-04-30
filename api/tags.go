@@ -67,7 +67,7 @@ func (api *tags) getTags(c *fiber.Ctx) error {
 	}
 
 	if expand {
-		dbParams.IncludeRelations = []string{api.courseTagDao.Table}
+		dbParams.IncludeRelations = []string{api.courseTagDao.Table()}
 	}
 
 	tags, err := api.tagDao.List(dbParams, nil)
@@ -98,7 +98,7 @@ func (api *tags) getTag(c *fiber.Ctx) error {
 
 	dbParams := &database.DatabaseParams{}
 	if expand {
-		dbParams.IncludeRelations = []string{api.courseTagDao.Table}
+		dbParams.IncludeRelations = []string{api.courseTagDao.Table()}
 	}
 
 	tag, err := api.tagDao.Get(id, byName, dbParams, nil)

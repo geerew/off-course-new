@@ -57,7 +57,7 @@ func TestAssetProgress_Create(t *testing.T) {
 		require.Nil(t, dao.Create(ap, nil))
 
 		// Create (again)
-		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("UNIQUE constraint failed: %s.asset_id", dao.Table))
+		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("UNIQUE constraint failed: %s.asset_id", dao.Table()))
 	})
 
 	t.Run("constraint errors", func(t *testing.T) {
@@ -68,17 +68,17 @@ func TestAssetProgress_Create(t *testing.T) {
 		ap := &models.AssetProgress{}
 
 		// Asset ID
-		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", dao.Table))
+		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", dao.Table()))
 		ap.AssetID = ""
 
-		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", dao.Table))
+		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", dao.Table()))
 		ap.AssetID = "1234"
 
 		// Course ID
-		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table))
+		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table()))
 		ap.CourseID = ""
 
-		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table))
+		require.ErrorContains(t, dao.Create(ap, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table()))
 		ap.CourseID = "1234"
 
 		// Invalid asset ID
@@ -133,11 +133,11 @@ func TestAssetProgress_Get(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := AssetProgressSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
 		_, err = dao.Get("1234", nil)
-		require.ErrorContains(t, err, "no such table: "+dao.Table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
 
@@ -261,10 +261,10 @@ func TestAssetProgress_Update(t *testing.T) {
 
 		require.Nil(t, dao.Create(ap, nil))
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
-		require.ErrorContains(t, dao.Update(ap, nil), "no such table: "+dao.Table)
+		require.ErrorContains(t, dao.Update(ap, nil), "no such table: "+dao.Table())
 	})
 }
 

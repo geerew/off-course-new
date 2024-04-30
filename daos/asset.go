@@ -14,7 +14,7 @@ import (
 // AssetDao is the data access object for assets
 type AssetDao struct {
 	db    database.Database
-	Table string
+	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -23,15 +23,22 @@ type AssetDao struct {
 func NewAssetDao(db database.Database) *AssetDao {
 	return &AssetDao{
 		db:    db,
-		Table: "assets",
+		table: "assets",
 	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Table returns the table name
+func (dao *AssetDao) Table() string {
+	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of assets
 func (dao *AssetDao) Count(params *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 	return generic.Count(params, nil)
 }
 
@@ -52,7 +59,7 @@ func (dao *AssetDao) Create(a *models.Asset) error {
 
 	query, args, _ := squirrel.
 		StatementBuilder.
-		Insert(dao.Table).
+		Insert(dao.Table()).
 		SetMap(dao.data(a)).
 		ToSql()
 
@@ -69,11 +76,11 @@ func (dao *AssetDao) Create(a *models.Asset) error {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Asset, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 
 	assetDbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
-		Where:   squirrel.Eq{dao.Table + ".id": id},
+		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
 	row, err := generic.Get(assetDbParams, tx)
@@ -88,7 +95,7 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.T
 
 	// Get the attachments
 	attachmentDao := NewAttachmentDao(dao.db)
-	if dbParams != nil && slices.Contains(dbParams.IncludeRelations, attachmentDao.Table) {
+	if dbParams != nil && slices.Contains(dbParams.IncludeRelations, attachmentDao.Table()) {
 		// Set the DB params
 		attachmentDbParams := &database.DatabaseParams{
 			OrderBy: attachmentDao.ProcessOrderBy(dbParams.OrderBy, true),
@@ -112,7 +119,7 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.T
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Asset, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
@@ -151,7 +158,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mod
 
 	// Get the attachments
 	attachmentDao := NewAttachmentDao(dao.db)
-	if len(assets) > 0 && slices.Contains(dbParams.IncludeRelations, attachmentDao.Table) {
+	if len(assets) > 0 && slices.Contains(dbParams.IncludeRelations, attachmentDao.Table()) {
 
 		// Reduce the order by clause to only include columns specific to the attachments table
 		reducedOrderBy := attachmentDao.ProcessOrderBy(origOrderBy, true)
@@ -192,7 +199,7 @@ func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 	return generic.Delete(dbParams, tx)
 }
 
@@ -208,7 +215,7 @@ func (dao *AssetDao) ProcessOrderBy(orderBy []string, explicit bool) []string {
 		return orderBy
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 	return generic.ProcessOrderBy(orderBy, dao.columns(), explicit)
 }
 
@@ -224,8 +231,8 @@ func (dao *AssetDao) countSelect() squirrel.SelectBuilder {
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
 		Select("").
-		From(dao.Table).
-		LeftJoin(apDao.Table + " ON " + dao.Table + ".id = " + apDao.Table + ".asset_id").
+		From(dao.Table()).
+		LeftJoin(apDao.Table() + " ON " + dao.Table() + ".id = " + apDao.Table() + ".asset_id").
 		RemoveColumns()
 }
 
@@ -249,10 +256,10 @@ func (dao *AssetDao) columns() []string {
 	apDao := NewAssetProgressDao(dao.db)
 
 	return []string{
-		dao.Table + ".*",
-		apDao.Table + ".video_pos",
-		apDao.Table + ".completed",
-		apDao.Table + ".completed_at",
+		dao.Table() + ".*",
+		apDao.Table() + ".video_pos",
+		apDao.Table() + ".completed",
+		apDao.Table() + ".completed_at",
 	}
 }
 

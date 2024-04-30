@@ -14,7 +14,7 @@ import (
 // AssetProgressDao is the data access object for assets progress
 type AssetProgressDao struct {
 	db    database.Database
-	Table string
+	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -23,8 +23,15 @@ type AssetProgressDao struct {
 func NewAssetProgressDao(db database.Database) *AssetProgressDao {
 	return &AssetProgressDao{
 		db:    db,
-		Table: "assets_progress",
+		table: "assets_progress",
 	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Table returns the table name
+func (dao *AssetProgressDao) Table() string {
+	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -49,11 +56,11 @@ func (dao *AssetProgressDao) Create(ap *models.AssetProgress, tx *sql.Tx) error 
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AssetProgressDao) Get(assetId string, tx *sql.Tx) (*models.AssetProgress, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
-		Where:   squirrel.Eq{dao.Table + ".asset_id": assetId},
+		Where:   squirrel.Eq{dao.Table() + ".asset_id": assetId},
 	}
 
 	row, err := generic.Get(dbParams, tx)
@@ -105,7 +112,7 @@ func (dao *AssetProgressDao) create(ap *models.AssetProgress, tx *sql.Tx) error 
 
 	query, args, _ := squirrel.
 		StatementBuilder.
-		Insert(dao.Table).
+		Insert(dao.Table()).
 		SetMap(dao.data(ap)).
 		ToSql()
 
@@ -177,7 +184,7 @@ func (dao *AssetProgressDao) update(ap *models.AssetProgress, tx *sql.Tx) error 
 	// Update (or create if it doesn't exist)
 	query, args, _ := squirrel.
 		StatementBuilder.
-		Insert(dao.Table).
+		Insert(dao.Table()).
 		SetMap(dao.data(ap)).
 		Suffix(
 			"ON CONFLICT (asset_id) DO UPDATE SET video_pos = ?, completed = ?, completed_at = ?, updated_at = ?",
@@ -203,7 +210,7 @@ func (dao *AssetProgressDao) countSelect() squirrel.SelectBuilder {
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
 		Select("").
-		From(dao.Table).
+		From(dao.Table()).
 		RemoveColumns()
 }
 
@@ -222,7 +229,7 @@ func (dao *AssetProgressDao) baseSelect() squirrel.SelectBuilder {
 // columns returns the columns to select
 func (dao *AssetProgressDao) columns() []string {
 	return []string{
-		dao.Table + ".*",
+		dao.Table() + ".*",
 	}
 }
 

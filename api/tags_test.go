@@ -110,7 +110,7 @@ func TestTags_GetTags(t *testing.T) {
 		// ----------------------------
 		courseDao := daos.NewCourseDao(db)
 
-		status, body, err = tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/?expand=true&orderBy=created_at%20asc,"+courseDao.Table+".title%20desc", nil))
+		status, body, err = tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/?expand=true&orderBy=created_at%20asc,"+courseDao.Table()+".title%20desc", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -173,7 +173,7 @@ func TestTags_GetTags(t *testing.T) {
 		_, db, _, _ := setup(t)
 
 		// Drop the courses table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(db).Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(db).Table())
 		require.Nil(t, err)
 
 		status, _, err := tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/", nil))
@@ -238,7 +238,7 @@ func TestTags_GetTag(t *testing.T) {
 	t.Run("500 (internal error)", func(t *testing.T) {
 		_, db, _, _ := setup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(db).Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(db).Table())
 		require.Nil(t, err)
 
 		status, _, err := tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/test", nil))
@@ -315,7 +315,7 @@ func TestTags_CreateTag(t *testing.T) {
 		_, db, _, _ := setup(t)
 
 		// Drop the courses table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(db).Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(db).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{"tag": "test"}`))
@@ -350,7 +350,7 @@ func TestTags_DeleteTag(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNoContent, status)
 
-		result, err := tagsDao.List(&database.DatabaseParams{Where: squirrel.Eq{daos.NewTagDao(db).Table + ".id": tags[2].ID}}, nil)
+		result, err := tagsDao.List(&database.DatabaseParams{Where: squirrel.Eq{daos.NewTagDao(db).Table() + ".id": tags[2].ID}}, nil)
 		require.Nil(t, err)
 		require.Zero(t, len(result))
 
@@ -363,12 +363,12 @@ func TestTags_DeleteTag(t *testing.T) {
 		// require.ErrorIs(t, err, sql.ErrNoRows)
 
 		// // Assets
-		// count, err := assetsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAssets() + ".course_id": testData[2].ID}})
+		// count, err := assetsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.Table()Assets() + ".course_id": testData[2].ID}})
 		// require.Nil(t, err)
 		// require.Zero(t, count)
 
 		// // Attachments
-		// count, err = attachmentsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.TableAttachments() + ".course_id": testData[2].ID}})
+		// count, err = attachmentsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.Table()Attachments() + ".course_id": testData[2].ID}})
 		// require.Nil(t, err)
 		// require.Zero(t, count)
 	})
@@ -385,7 +385,7 @@ func TestTags_DeleteTag(t *testing.T) {
 		_, db, _, _ := setup(t)
 
 		// Drop the table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(db).Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(db).Table())
 		require.Nil(t, err)
 
 		status, _, err := tagsRequestHelper(db, httptest.NewRequest(http.MethodDelete, "/api/tags/test", nil))

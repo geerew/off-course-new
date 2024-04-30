@@ -56,21 +56,21 @@ func TestTag_Count(t *testing.T) {
 		// ----------------------------
 		// EQUALS
 		// ----------------------------
-		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table + ".tag": test_tags[0]}})
+		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table() + ".tag": test_tags[0]}})
 		require.Nil(t, err)
 		require.Equal(t, 1, count)
 
 		// ----------------------------
 		// NOT EQUALS
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table + ".tag": test_tags[0]}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table() + ".tag": test_tags[0]}})
 		require.Nil(t, err)
 		require.Equal(t, 19, count)
 
 		// ----------------------------
 		//  STARTS WITH (Java%)
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Like{dao.Table + ".tag": "Java%"}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Like{dao.Table() + ".tag": "Java%"}})
 		require.Nil(t, err)
 		require.Equal(t, 2, count)
 
@@ -85,11 +85,11 @@ func TestTag_Count(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := tagSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
 		_, err = dao.Count(nil)
-		require.ErrorContains(t, err, "no such table: "+dao.Table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
 
@@ -118,7 +118,7 @@ func TestTag_Create(t *testing.T) {
 		require.Nil(t, dao.Create(tag, nil))
 
 		// Create the asset (again)
-		require.ErrorContains(t, dao.Create(tag, nil), fmt.Sprintf("UNIQUE constraint failed: %s.tag", dao.Table))
+		require.ErrorContains(t, dao.Create(tag, nil), fmt.Sprintf("UNIQUE constraint failed: %s.tag", dao.Table()))
 	})
 
 	t.Run("constraints", func(t *testing.T) {
@@ -126,7 +126,7 @@ func TestTag_Create(t *testing.T) {
 
 		// Empty tag ID
 		tag := &models.Tag{}
-		require.ErrorContains(t, dao.Create(tag, nil), fmt.Sprintf("NOT NULL constraint failed: %s.tag", dao.Table))
+		require.ErrorContains(t, dao.Create(tag, nil), fmt.Sprintf("NOT NULL constraint failed: %s.tag", dao.Table()))
 
 		// Success
 		tag.Tag = "JavaScript"
@@ -157,8 +157,8 @@ func TestTag_Get(t *testing.T) {
 		// Course tags
 		// ----------------------------
 		dbParams := &database.DatabaseParams{
-			OrderBy:          []string{NewCourseDao(dao.db).Table + ".title asc"},
-			IncludeRelations: []string{NewCourseTagDao(dao.db).Table},
+			OrderBy:          []string{NewCourseDao(dao.db).Table() + ".title asc"},
+			IncludeRelations: []string{NewCourseTagDao(dao.db).Table()},
 		}
 
 		tag, err = dao.Get(testData[0].Tags[0].TagId, false, dbParams, nil)
@@ -187,11 +187,11 @@ func TestTag_Get(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := tagSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
 		_, err = dao.Get("1234", false, nil, nil)
-		require.ErrorContains(t, err, "no such table: "+dao.Table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
 
@@ -214,7 +214,7 @@ func TestTag_List(t *testing.T) {
 		NewTestBuilder(t).Db(dao.db).Courses([]string{"course 3"}).Tags([]string{"C", "TypeScript"}).Build()
 
 		dbParams := &database.DatabaseParams{
-			OrderBy: []string{dao.Table + ".tag asc"},
+			OrderBy: []string{dao.Table() + ".tag asc"},
 		}
 
 		result, err := dao.List(dbParams, nil)
@@ -231,7 +231,7 @@ func TestTag_List(t *testing.T) {
 		// Course tags
 		// ----------------------------
 
-		dbParams.IncludeRelations = []string{NewCourseTagDao(dao.db).Table}
+		dbParams.IncludeRelations = []string{NewCourseTagDao(dao.db).Table()}
 
 		result, err = dao.List(dbParams, nil)
 		require.Nil(t, err)
@@ -272,8 +272,8 @@ func TestTag_List(t *testing.T) {
 		// CREATED_AT ASC + COURSES.TITLE DESC
 		// ----------------------------
 		dbParams := &database.DatabaseParams{
-			OrderBy:          []string{"tag asc", NewCourseDao(dao.db).Table + ".title desc"},
-			IncludeRelations: []string{NewCourseTagDao(dao.db).Table},
+			OrderBy:          []string{"tag asc", NewCourseDao(dao.db).Table() + ".title desc"},
+			IncludeRelations: []string{NewCourseTagDao(dao.db).Table()},
 		}
 
 		result, err = dao.List(dbParams, nil)
@@ -300,14 +300,14 @@ func TestTag_List(t *testing.T) {
 		// ----------------------------
 		// EQUALS (PHP)
 		// ----------------------------
-		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{dao.Table + ".tag": "PHP"}}, nil)
+		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{dao.Table() + ".tag": "PHP"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 
 		// ----------------------------
 		// LIKE (Java%)
 		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Like{dao.Table + ".tag": "Java%"}}, nil)
+		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Like{dao.Table() + ".tag": "Java%"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 2)
 
@@ -352,11 +352,11 @@ func TestTag_List(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := tagSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
 		_, err = dao.List(nil, nil)
-		require.ErrorContains(t, err, "no such table: "+dao.Table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
 
@@ -385,10 +385,10 @@ func TestTag_Delete(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := tagSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
 		err = dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"tag": "1234"}}, nil)
-		require.ErrorContains(t, err, "no such table: "+dao.Table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }

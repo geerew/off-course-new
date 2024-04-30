@@ -51,14 +51,14 @@ func TestCourse_Count(t *testing.T) {
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table + ".id": testData[2].ID}})
+		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table() + ".id": testData[2].ID}})
 		require.Nil(t, err)
 		require.Equal(t, 1, count)
 
 		// ----------------------------
 		// NOT EQUALS ID
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table + ".id": testData[2].ID}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table() + ".id": testData[2].ID}})
 		require.Nil(t, err)
 		require.Equal(t, 2, count)
 
@@ -73,11 +73,11 @@ func TestCourse_Count(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := courseSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
 		_, err = dao.Count(nil)
-		require.ErrorContains(t, err, "no such table: "+dao.Table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
 
@@ -119,7 +119,7 @@ func TestCourse_Create(t *testing.T) {
 		require.Nil(t, err)
 
 		err = dao.Create(testData[0].Course)
-		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.path", dao.Table))
+		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.path", dao.Table()))
 	})
 
 	t.Run("constraints", func(t *testing.T) {
@@ -127,15 +127,15 @@ func TestCourse_Create(t *testing.T) {
 
 		// No title
 		c := &models.Course{}
-		require.ErrorContains(t, dao.Create(c), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table))
+		require.ErrorContains(t, dao.Create(c), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table()))
 		c.Title = ""
-		require.ErrorContains(t, dao.Create(c), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table))
+		require.ErrorContains(t, dao.Create(c), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table()))
 		c.Title = "Course 1"
 
 		// No path
-		require.ErrorContains(t, dao.Create(c), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table))
+		require.ErrorContains(t, dao.Create(c), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
 		c.Path = ""
-		require.ErrorContains(t, dao.Create(c), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table))
+		require.ErrorContains(t, dao.Create(c), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
 		c.Path = "/course 1"
 
 		// Success
@@ -243,11 +243,11 @@ func TestCourse_Get(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := courseSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
 		_, err = dao.Get("1234", nil)
-		require.ErrorContains(t, err, "no such table: "+dao.Table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
 
@@ -297,7 +297,7 @@ func TestCourse_List(t *testing.T) {
 		require.Nil(t, dao.Update(testData[0].Course))
 
 		// Find available courses
-		result, err = dao.List(&database.DatabaseParams{Where: squirrel.And{squirrel.Eq{dao.Table + ".available": true}}}, nil)
+		result, err = dao.List(&database.DatabaseParams{Where: squirrel.And{squirrel.Eq{dao.Table() + ".available": true}}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		require.Equal(t, testData[0].ID, result[0].ID)
@@ -323,8 +323,8 @@ func TestCourse_List(t *testing.T) {
 		// Find in-progress courses
 		dbParams := &database.DatabaseParams{
 			Where: squirrel.And{
-				squirrel.Eq{cpDao.Table + ".started": true},
-				squirrel.NotEq{cpDao.Table + ".percent": 100},
+				squirrel.Eq{cpDao.Table() + ".started": true},
+				squirrel.NotEq{cpDao.Table() + ".percent": 100},
 			},
 		}
 
@@ -342,7 +342,7 @@ func TestCourse_List(t *testing.T) {
 		require.Nil(t, apDao.Create(ap2, nil))
 
 		// Find completed courses
-		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Eq{cpDao.Table + ".percent": 100}}, nil)
+		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Eq{cpDao.Table() + ".percent": 100}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		require.Equal(t, testData[0].ID, result[0].ID)
@@ -386,7 +386,7 @@ func TestCourse_List(t *testing.T) {
 		testData[2].Scan.Status = types.NewScanStatus(types.ScanStatusProcessing)
 		require.Nil(t, scanDao.Update(testData[2].Scan))
 
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{scanDao.Table + ".status desc"}}, nil)
+		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{scanDao.Table() + ".status desc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
 
@@ -397,7 +397,7 @@ func TestCourse_List(t *testing.T) {
 		// ----------------------------
 		// SCAN_STATUS ASC
 		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{scanDao.Table + ".status asc"}}, nil)
+		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{scanDao.Table() + ".status asc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
 
@@ -422,7 +422,7 @@ func TestCourse_List(t *testing.T) {
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{dao.Table + ".id": testData[2].ID}}, nil)
+		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{dao.Table() + ".id": testData[2].ID}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 1)
 		require.Equal(t, testData[2].ID, result[0].ID)
@@ -431,7 +431,7 @@ func TestCourse_List(t *testing.T) {
 		// EQUALS ID OR ID
 		// ----------------------------
 		dbParams := &database.DatabaseParams{
-			Where:   squirrel.Or{squirrel.Eq{dao.Table + ".id": testData[1].ID}, squirrel.Eq{dao.Table + ".id": testData[2].ID}},
+			Where:   squirrel.Or{squirrel.Eq{dao.Table() + ".id": testData[1].ID}, squirrel.Eq{dao.Table() + ".id": testData[2].ID}},
 			OrderBy: []string{"created_at asc"},
 		}
 		result, err = dao.List(dbParams, nil)
@@ -481,11 +481,11 @@ func TestCourse_List(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := courseSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
 		_, err = dao.List(nil, nil)
-		require.ErrorContains(t, err, "no such table: "+dao.Table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
 
@@ -540,13 +540,13 @@ func TestCourse_Update(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := courseSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
 		testData := NewTestBuilder(t).Courses(1).Build()
 
 		err = dao.Update(testData[0].Course)
-		require.ErrorContains(t, err, "no such table: "+dao.Table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
 
@@ -572,10 +572,10 @@ func TestCourse_Delete(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		_, dao, db := courseSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
 		err = dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": "1234"}}, nil)
-		require.ErrorContains(t, err, "no such table: "+dao.Table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }

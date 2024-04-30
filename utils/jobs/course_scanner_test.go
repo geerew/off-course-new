@@ -76,11 +76,11 @@ func Test_Add(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
 		scanDao := daos.NewScanDao(db)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + scanDao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + scanDao.Table())
 		require.Nil(t, err)
 
 		scan, err := scanner.Add(testData[0].ID)
-		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", scanDao.Table))
+		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", scanDao.Table()))
 		require.Nil(t, scan)
 	})
 }
@@ -190,7 +190,7 @@ func Test_Worker(t *testing.T) {
 		require.Equal(t, scan.CourseID, testData[0].ID)
 
 		// Drop the DB
-		_, err = db.Exec("DROP TABLE IF EXISTS " + scanDao.Table)
+		_, err = db.Exec("DROP TABLE IF EXISTS " + scanDao.Table())
 		require.Nil(t, err)
 
 		// Start the worker
@@ -225,11 +225,11 @@ func Test_CourseProcessor(t *testing.T) {
 		courseDao := daos.NewCourseDao(db)
 
 		// Drop the table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + courseDao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + courseDao.Table())
 		require.Nil(t, err)
 
 		err = CourseProcessor(scanner, testData[0].Scan)
-		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", courseDao.Table))
+		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", courseDao.Table()))
 	})
 
 	t.Run("course unavailable", func(t *testing.T) {
@@ -311,7 +311,7 @@ func Test_CourseProcessor(t *testing.T) {
 
 		// Rename the card_path column
 		courseDao := daos.NewCourseDao(db)
-		_, err := db.Exec(fmt.Sprintf("ALTER TABLE %s RENAME COLUMN card_path TO ignore_card_path", courseDao.Table))
+		_, err := db.Exec(fmt.Sprintf("ALTER TABLE %s RENAME COLUMN card_path TO ignore_card_path", courseDao.Table()))
 		require.Nil(t, err)
 
 		err = CourseProcessor(scanner, testData[0].Scan)
@@ -341,7 +341,7 @@ func Test_CourseProcessor(t *testing.T) {
 
 		assetDao := daos.NewAssetDao(db)
 
-		assets, err := scanner.assetDao.List(&database.DatabaseParams{Where: squirrel.Eq{assetDao.Table + ".course_id": testData[0].ID}}, nil)
+		assets, err := scanner.assetDao.List(&database.DatabaseParams{Where: squirrel.Eq{assetDao.Table() + ".course_id": testData[0].ID}}, nil)
 		require.Nil(t, err)
 		require.Zero(t, len(assets))
 	})
@@ -353,8 +353,8 @@ func Test_CourseProcessor(t *testing.T) {
 		assetDao := daos.NewAssetDao(db)
 
 		dbParams := &database.DatabaseParams{
-			OrderBy: []string{assetDao.Table + ".chapter asc", assetDao.Table + ".prefix asc"},
-			Where:   squirrel.Eq{assetDao.Table + ".course_id": testData[0].ID},
+			OrderBy: []string{assetDao.Table() + ".chapter asc", assetDao.Table() + ".prefix asc"},
+			Where:   squirrel.Eq{assetDao.Table() + ".course_id": testData[0].ID},
 		}
 
 		// ----------------------------
@@ -436,11 +436,11 @@ func Test_CourseProcessor(t *testing.T) {
 		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
 		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mkv", testData[0].Path))
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + assetDao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + assetDao.Table())
 		require.Nil(t, err)
 
 		err = CourseProcessor(scanner, testData[0].Scan)
-		require.ErrorContains(t, err, "no such table: "+assetDao.Table)
+		require.ErrorContains(t, err, "no such table: "+assetDao.Table())
 	})
 
 	t.Run("attachments", func(t *testing.T) {
@@ -453,13 +453,13 @@ func Test_CourseProcessor(t *testing.T) {
 		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
 
 		assetDbParams := &database.DatabaseParams{
-			Where:            squirrel.Eq{assetDao.Table + ".course_id": testData[0].ID},
-			IncludeRelations: []string{attachmentDao.Table},
+			Where:            squirrel.Eq{assetDao.Table() + ".course_id": testData[0].ID},
+			IncludeRelations: []string{attachmentDao.Table()},
 		}
 
 		attachmentDbParams := &database.DatabaseParams{
 			OrderBy: []string{"created_at asc"},
-			Where:   squirrel.Eq{attachmentDao.Table + ".course_id": testData[0].ID},
+			Where:   squirrel.Eq{attachmentDao.Table() + ".course_id": testData[0].ID},
 		}
 
 		// ----------------------------
@@ -541,11 +541,11 @@ func Test_CourseProcessor(t *testing.T) {
 		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 info", testData[0].Path))
 
 		// Drop the attachments table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + attachmentDao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + attachmentDao.Table())
 		require.Nil(t, err)
 
 		err = CourseProcessor(scanner, testData[0].Scan)
-		require.ErrorContains(t, err, "no such table: "+attachmentDao.Table)
+		require.ErrorContains(t, err, "no such table: "+attachmentDao.Table())
 	})
 
 	t.Run("asset priority", func(t *testing.T) {
@@ -562,13 +562,13 @@ func Test_CourseProcessor(t *testing.T) {
 		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
 
 		assetDbParams := &database.DatabaseParams{
-			Where:            squirrel.Eq{assetDao.Table + ".course_id": testData[0].ID},
-			IncludeRelations: []string{attachmentDao.Table},
+			Where:            squirrel.Eq{assetDao.Table() + ".course_id": testData[0].ID},
+			IncludeRelations: []string{attachmentDao.Table()},
 		}
 
 		attachmentDbParams := &database.DatabaseParams{
 			OrderBy: []string{"created_at asc"},
-			Where:   squirrel.Eq{attachmentDao.Table + ".course_id": testData[0].ID},
+			Where:   squirrel.Eq{attachmentDao.Table() + ".course_id": testData[0].ID},
 		}
 
 		// ----------------------------
@@ -795,7 +795,7 @@ func Test_UpdateAssets(t *testing.T) {
 		err := updateAssets(scanner.assetDao, testData[0].ID, testData[0].Assets)
 		require.Nil(t, err)
 
-		dbParams := &database.DatabaseParams{Where: squirrel.Eq{assetDao.Table + ".course_id": testData[0].ID}}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{assetDao.Table() + ".course_id": testData[0].ID}}
 		count, err := scanner.assetDao.Count(dbParams)
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
@@ -812,7 +812,7 @@ func Test_UpdateAssets(t *testing.T) {
 			require.Nil(t, scanner.assetDao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": a.ID}}, nil))
 		}
 
-		dbParams := &database.DatabaseParams{Where: squirrel.Eq{assetDao.Table + ".course_id": testData[0].ID}}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{assetDao.Table() + ".course_id": testData[0].ID}}
 
 		// ----------------------------
 		// Add 10 assets
@@ -849,7 +849,7 @@ func Test_UpdateAssets(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Assets(12).Build()
 		assetDao := daos.NewAssetDao(db)
 
-		dbParams := &database.DatabaseParams{Where: squirrel.Eq{assetDao.Table + ".course_id": testData[0].ID}}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{assetDao.Table() + ".course_id": testData[0].ID}}
 
 		// ----------------------------
 		// Remove 2 assets
@@ -881,11 +881,11 @@ func Test_UpdateAssets(t *testing.T) {
 		assetDao := daos.NewAssetDao(db)
 
 		// Drop the table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + assetDao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + assetDao.Table())
 		require.Nil(t, err)
 
 		err = updateAssets(scanner.assetDao, "1234", []*models.Asset{})
-		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", assetDao.Table))
+		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", assetDao.Table()))
 	})
 }
 
@@ -901,7 +901,7 @@ func Test_UpdateAttachments(t *testing.T) {
 		err := updateAttachments(scanner.attachmentDao, testData[0].ID, testData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
-		count, err := scanner.attachmentDao.Count(&database.DatabaseParams{Where: squirrel.Eq{attDao.Table + ".course_id": testData[0].ID}})
+		count, err := scanner.attachmentDao.Count(&database.DatabaseParams{Where: squirrel.Eq{attDao.Table() + ".course_id": testData[0].ID}})
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 	})
@@ -917,7 +917,7 @@ func Test_UpdateAttachments(t *testing.T) {
 			require.Nil(t, scanner.attachmentDao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": a.ID}}, nil))
 		}
 
-		dbParams := &database.DatabaseParams{Where: squirrel.Eq{attDao.Table + ".course_id": testData[0].ID}}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{attDao.Table() + ".course_id": testData[0].ID}}
 
 		// ----------------------------
 		// Add 10 attachments
@@ -946,7 +946,7 @@ func Test_UpdateAttachments(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Scan().Assets(1).Attachments(12).Build()
 		attachmentDao := daos.NewAttachmentDao(db)
 
-		dbParams := &database.DatabaseParams{Where: squirrel.Eq{attachmentDao.Table + ".course_id": testData[0].ID}}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{attachmentDao.Table() + ".course_id": testData[0].ID}}
 
 		// ----------------------------
 		// Remove 2 attachments
@@ -980,10 +980,10 @@ func Test_UpdateAttachments(t *testing.T) {
 		attachmentDao := daos.NewAttachmentDao(db)
 
 		// Drop the table
-		_, err := db.Exec("DROP TABLE IF EXISTS " + attachmentDao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + attachmentDao.Table())
 		require.Nil(t, err)
 
 		err = updateAttachments(scanner.attachmentDao, "1234", []*models.Attachment{})
-		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", attachmentDao.Table))
+		require.ErrorContains(t, err, fmt.Sprintf("no such table: %s", attachmentDao.Table()))
 	})
 }

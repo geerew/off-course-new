@@ -17,9 +17,9 @@ type Scannable interface {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type daoer interface {
+	Table() string
 	countSelect() squirrel.SelectBuilder
 	baseSelect() squirrel.SelectBuilder
-	columns() []string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

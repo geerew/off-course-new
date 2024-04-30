@@ -51,21 +51,21 @@ func TestCourseTag_Count(t *testing.T) {
 		// ----------------------------
 		// EQUALS
 		// ----------------------------
-		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{courseDao.Table + ".title": testData[1].Course.Title}})
+		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{courseDao.Table() + ".title": testData[1].Course.Title}})
 		require.Nil(t, err)
 		require.Equal(t, 5, count)
 
 		// ----------------------------
 		// NOT EQUALS
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{tagDao.Table + ".tag": "Go"}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{tagDao.Table() + ".tag": "Go"}})
 		require.Nil(t, err)
 		require.Equal(t, 8, count)
 
 		// ----------------------------
 		//  STARTS WITH (Java%)
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Like{tagDao.Table + ".tag": "Java%"}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Like{tagDao.Table() + ".tag": "Java%"}})
 		require.Nil(t, err)
 		require.Equal(t, 4, count)
 
@@ -80,11 +80,11 @@ func TestCourseTag_Count(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		dao, db := courseTagSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
 		_, err = dao.Count(nil)
-		require.ErrorContains(t, err, "no such table: "+dao.Table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
 
@@ -143,7 +143,7 @@ func TestCourseTag_Create(t *testing.T) {
 		require.Nil(t, dao.Create(ct, nil))
 
 		// Create the course-tag (again)
-		require.ErrorContains(t, dao.Create(ct, nil), fmt.Sprintf("UNIQUE constraint failed: %s.tag_id, %s.course_id", dao.Table, dao.Table))
+		require.ErrorContains(t, dao.Create(ct, nil), fmt.Sprintf("UNIQUE constraint failed: %s.tag_id, %s.course_id", dao.Table(), dao.Table()))
 	})
 
 	t.Run("constraints", func(t *testing.T) {
@@ -198,7 +198,7 @@ func TestCourseTag_List(t *testing.T) {
 		// ----------------------------
 		// TAG DESC
 		// ----------------------------
-		result, err := dao.List(&database.DatabaseParams{OrderBy: []string{tagDao.Table + ".tag desc"}}, nil)
+		result, err := dao.List(&database.DatabaseParams{OrderBy: []string{tagDao.Table() + ".tag desc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, "TypeScript", result[0].Tag)
@@ -206,7 +206,7 @@ func TestCourseTag_List(t *testing.T) {
 		// ----------------------------
 		// TAG ASC
 		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{tagDao.Table + ".tag asc"}}, nil)
+		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{tagDao.Table() + ".tag asc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, "Go", result[0].Tag)
@@ -230,14 +230,14 @@ func TestCourseTag_List(t *testing.T) {
 		// ----------------------------
 		// EQUALS (course title)
 		// ----------------------------
-		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{courseDao.Table + ".title": testData[0].Course.Title}}, nil)
+		result, err := dao.List(&database.DatabaseParams{Where: squirrel.Eq{courseDao.Table() + ".title": testData[0].Course.Title}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 5)
 
 		// ----------------------------
 		// Like (Java%)
 		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Like{tagDao.Table + ".tag": "Java%"}}, nil)
+		result, err = dao.List(&database.DatabaseParams{Where: squirrel.Like{tagDao.Table() + ".tag": "Java%"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 4)
 
@@ -280,11 +280,11 @@ func TestCourseTag_List(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		dao, db := courseTagSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
 		_, err = dao.List(nil, nil)
-		require.ErrorContains(t, err, "no such table: "+dao.Table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
 
@@ -314,10 +314,10 @@ func TestCourseTag_Delete(t *testing.T) {
 	t.Run("db error", func(t *testing.T) {
 		dao, db := courseTagSetup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table)
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
 		err = dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"tag": "1234"}}, nil)
-		require.ErrorContains(t, err, "no such table: "+dao.Table)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }

@@ -101,7 +101,7 @@ func main() {
 	wg.Wait()
 
 	// TMP -> Delete all scans
-	_, err := db.Exec("DELETE FROM " + daos.NewScanDao(db).Table)
+	_, err := db.Exec("DELETE FROM " + daos.NewScanDao(db).Table())
 	if err != nil {
 		log.Error().Err(err).Msg("")
 	}

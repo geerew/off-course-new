@@ -13,7 +13,7 @@ import (
 // AttachmentDao is the data access object for attachments
 type AttachmentDao struct {
 	db    database.Database
-	Table string
+	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -22,15 +22,22 @@ type AttachmentDao struct {
 func NewAttachmentDao(db database.Database) *AttachmentDao {
 	return &AttachmentDao{
 		db:    db,
-		Table: "attachments",
+		table: "attachments",
 	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Table returns the table name
+func (dao *AttachmentDao) Table() string {
+	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of attachments
 func (dao *AttachmentDao) Count(params *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 	return generic.Count(params, nil)
 }
 
@@ -47,7 +54,7 @@ func (dao *AttachmentDao) Create(a *models.Attachment) error {
 
 	query, args, _ := squirrel.
 		StatementBuilder.
-		Insert(dao.Table).
+		Insert(dao.Table()).
 		SetMap(dao.data(a)).
 		ToSql()
 
@@ -62,11 +69,11 @@ func (dao *AttachmentDao) Create(a *models.Attachment) error {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AttachmentDao) Get(id string, tx *sql.Tx) (*models.Attachment, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
-		Where:   squirrel.Eq{dao.Table + ".id": id},
+		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
 	row, err := generic.Get(dbParams, tx)
@@ -88,7 +95,7 @@ func (dao *AttachmentDao) Get(id string, tx *sql.Tx) (*models.Attachment, error)
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Attachment, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
@@ -136,7 +143,7 @@ func (dao *AttachmentDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) 
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 	return generic.Delete(dbParams, tx)
 }
 
@@ -152,7 +159,7 @@ func (dao *AttachmentDao) ProcessOrderBy(orderBy []string, explicit bool) []stri
 		return orderBy
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 	return generic.ProcessOrderBy(orderBy, dao.columns(), explicit)
 }
 
@@ -166,7 +173,7 @@ func (dao *AttachmentDao) countSelect() squirrel.SelectBuilder {
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
 		Select("").
-		From(dao.Table).
+		From(dao.Table()).
 		RemoveColumns()
 }
 
@@ -185,7 +192,7 @@ func (dao *AttachmentDao) baseSelect() squirrel.SelectBuilder {
 // columns returns the columns to select
 func (dao *AttachmentDao) columns() []string {
 	return []string{
-		dao.Table + ".*",
+		dao.Table() + ".*",
 	}
 }
 

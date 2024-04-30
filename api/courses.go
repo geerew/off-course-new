@@ -117,21 +117,21 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 	if started != "undefined" {
 		if started == "true" {
 			dbParams.Where = squirrel.And{
-				squirrel.Eq{api.courseProgressDao.Table + ".started": true},
-				squirrel.NotEq{api.courseProgressDao.Table + ".percent": 100},
+				squirrel.Eq{api.courseProgressDao.Table() + ".started": true},
+				squirrel.NotEq{api.courseProgressDao.Table() + ".percent": 100},
 			}
 		} else {
-			dbParams.Where = squirrel.NotEq{api.courseProgressDao.Table + ".started": true}
+			dbParams.Where = squirrel.NotEq{api.courseProgressDao.Table() + ".started": true}
 		}
 	}
 
 	// Filter on completed (if defined)
 	if completed != "undefined" {
 		if completed == "true" {
-			dbParams.Where = squirrel.Eq{api.courseProgressDao.Table + ".percent": 100}
+			dbParams.Where = squirrel.Eq{api.courseProgressDao.Table() + ".percent": 100}
 
 		} else {
-			dbParams.Where = squirrel.Lt{api.courseProgressDao.Table + ".percent": 100}
+			dbParams.Where = squirrel.Lt{api.courseProgressDao.Table() + ".percent": 100}
 		}
 	}
 
@@ -305,12 +305,12 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 
 	dbParams := &database.DatabaseParams{
 		OrderBy:    strings.Split(orderBy, ","),
-		Where:      squirrel.Eq{api.assetDao.Table + ".course_id": id},
+		Where:      squirrel.Eq{api.assetDao.Table() + ".course_id": id},
 		Pagination: pagination.NewFromApi(c),
 	}
 
 	if expand {
-		dbParams.IncludeRelations = []string{api.attachmentDao.Table}
+		dbParams.IncludeRelations = []string{api.attachmentDao.Table()}
 	}
 
 	assets, err := api.assetDao.List(dbParams, nil)
@@ -354,7 +354,7 @@ func (api *courses) getAsset(c *fiber.Ctx) error {
 	// TODO: support attachments orderby
 	dbParams := &database.DatabaseParams{}
 	if expand {
-		dbParams.IncludeRelations = []string{api.attachmentDao.Table}
+		dbParams.IncludeRelations = []string{api.attachmentDao.Table()}
 	}
 
 	asset, err := api.assetDao.Get(assetId, dbParams, nil)
@@ -416,7 +416,7 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 
 	dbParams := &database.DatabaseParams{
 		OrderBy:    strings.Split(orderBy, ","),
-		Where:      squirrel.Eq{api.attachmentDao.Table + ".asset_id": assetId},
+		Where:      squirrel.Eq{api.attachmentDao.Table() + ".asset_id": assetId},
 		Pagination: pagination.NewFromApi(c),
 	}
 
@@ -515,8 +515,8 @@ func (api *courses) getTags(c *fiber.Ctx) error {
 	}
 
 	dbParams := &database.DatabaseParams{
-		OrderBy: []string{api.tagDao.Table + ".tag asc"},
-		Where:   squirrel.Eq{api.courseTagDao.Table + ".course_id": id},
+		OrderBy: []string{api.tagDao.Table() + ".tag asc"},
+		Where:   squirrel.Eq{api.courseTagDao.Table() + ".course_id": id},
 	}
 
 	tags, err := api.courseTagDao.List(dbParams, nil)

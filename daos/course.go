@@ -14,7 +14,7 @@ import (
 // CourseDao is the data access object for courses
 type CourseDao struct {
 	db    database.Database
-	Table string
+	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -23,15 +23,22 @@ type CourseDao struct {
 func NewCourseDao(db database.Database) *CourseDao {
 	return &CourseDao{
 		db:    db,
-		Table: "courses",
+		table: "courses",
 	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Table returns the table name
+func (dao *CourseDao) Table() string {
+	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of courses
 func (dao *CourseDao) Count(params *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 	return generic.Count(params, nil)
 }
 
@@ -51,7 +58,7 @@ func (dao *CourseDao) Create(c *models.Course) error {
 
 	query, args, _ := squirrel.
 		StatementBuilder.
-		Insert(dao.Table).
+		Insert(dao.Table()).
 		SetMap(dao.data(c)).
 		ToSql()
 
@@ -77,11 +84,11 @@ func (dao *CourseDao) Create(c *models.Course) error {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *CourseDao) Get(id string, tx *sql.Tx) (*models.Course, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
-		Where:   squirrel.Eq{dao.Table + ".id": id},
+		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
 	row, err := generic.Get(dbParams, tx)
@@ -103,7 +110,7 @@ func (dao *CourseDao) Get(id string, tx *sql.Tx) (*models.Course, error) {
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Course, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
@@ -155,7 +162,7 @@ func (dao *CourseDao) Update(course *models.Course) error {
 
 	query, args, _ := squirrel.
 		StatementBuilder.
-		Update(dao.Table).
+		Update(dao.Table()).
 		Set("card_path", NilStr(course.CardPath)).
 		Set("available", course.Available).
 		Set("updated_at", course.UpdatedAt).
@@ -176,7 +183,7 @@ func (dao *CourseDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) erro
 		return ErrMissingWhere
 	}
 
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 	return generic.Delete(dbParams, tx)
 }
 
@@ -208,7 +215,7 @@ func (dao *CourseDao) ProcessOrderBy(orderBy []string) []string {
 
 		if isValidOrderBy(table, column, validTableColumns) {
 			// When the column is 'scan_status', apply the custom sorting logic
-			if column == "scan_status" || table+"."+column == scanDao.Table+".status" {
+			if column == "scan_status" || table+"."+column == scanDao.Table()+".status" {
 				// Determine the sort direction, defaulting to ASC if not specified
 				parts := strings.Fields(ob)
 				sortDirection := "ASC"
@@ -245,9 +252,9 @@ func (dao *CourseDao) countSelect() squirrel.SelectBuilder {
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
 		Select("").
-		From(dao.Table).
-		LeftJoin(sDao.Table + " ON " + dao.Table + ".id = " + sDao.Table + ".course_id").
-		LeftJoin(cpDao.Table + " ON " + dao.Table + ".id = " + cpDao.Table + ".course_id").
+		From(dao.Table()).
+		LeftJoin(sDao.Table() + " ON " + dao.Table() + ".id = " + sDao.Table() + ".course_id").
+		LeftJoin(cpDao.Table() + " ON " + dao.Table() + ".id = " + cpDao.Table() + ".course_id").
 		RemoveColumns()
 }
 
@@ -273,13 +280,13 @@ func (dao *CourseDao) columns() []string {
 	cpDao := NewCourseProgressDao(dao.db)
 
 	return []string{
-		dao.Table + ".*",
-		sDao.Table + ".status as scan_status",
-		cpDao.Table + ".started",
-		cpDao.Table + ".started_at",
-		cpDao.Table + ".percent",
-		cpDao.Table + ".completed_at",
-		cpDao.Table + ".updated_at as progress_updated_at",
+		dao.Table() + ".*",
+		sDao.Table() + ".status as scan_status",
+		cpDao.Table() + ".started",
+		cpDao.Table() + ".started_at",
+		cpDao.Table() + ".percent",
+		cpDao.Table() + ".completed_at",
+		cpDao.Table() + ".updated_at as progress_updated_at",
 	}
 }
 

@@ -15,7 +15,7 @@ import (
 // CourseProgressDao is the data access object for courses progress
 type CourseProgressDao struct {
 	db    database.Database
-	Table string
+	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -24,8 +24,15 @@ type CourseProgressDao struct {
 func NewCourseProgressDao(db database.Database) *CourseProgressDao {
 	return &CourseProgressDao{
 		db:    db,
-		Table: "courses_progress",
+		table: "courses_progress",
 	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Table returns the table name
+func (dao *CourseProgressDao) Table() string {
+	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -48,7 +55,7 @@ func (dao *CourseProgressDao) Create(cp *models.CourseProgress, tx *sql.Tx) erro
 
 	query, args, _ := squirrel.
 		StatementBuilder.
-		Insert(dao.Table).
+		Insert(dao.Table()).
 		SetMap(dao.data(cp)).
 		ToSql()
 
@@ -63,11 +70,11 @@ func (dao *CourseProgressDao) Create(cp *models.CourseProgress, tx *sql.Tx) erro
 //
 // `tx` allows for the function to be run within a transaction
 func (dao *CourseProgressDao) Get(courseId string, tx *sql.Tx) (*models.CourseProgress, error) {
-	generic := NewGenericDao(dao.db, dao.Table, dao)
+	generic := NewGenericDao(dao.db, dao)
 
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
-		Where:   squirrel.Eq{dao.Table + ".course_id": courseId},
+		Where:   squirrel.Eq{dao.Table() + ".course_id": courseId},
 	}
 
 	row, err := generic.Get(dbParams, tx)
@@ -119,12 +126,12 @@ func (dao *CourseProgressDao) Refresh(courseId string, tx *sql.Tx) error {
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
 		Select(
-			"COUNT(DISTINCT "+aDao.Table+".id) AS total_count",
-			"SUM(CASE WHEN "+apDao.Table+".completed THEN 1 ELSE 0 END) AS completed_count",
-			"SUM(CASE WHEN "+apDao.Table+".video_pos > 0 THEN 1 ELSE 0 END) AS started_count").
-		From(aDao.Table).
-		LeftJoin(apDao.Table + " ON " + aDao.Table + ".id = " + apDao.Table + ".asset_id").
-		Where(squirrel.And{squirrel.Eq{aDao.Table + ".course_id": courseId}}).
+			"COUNT(DISTINCT "+aDao.Table()+".id) AS total_count",
+			"SUM(CASE WHEN "+apDao.Table()+".completed THEN 1 ELSE 0 END) AS completed_count",
+			"SUM(CASE WHEN "+apDao.Table()+".video_pos > 0 THEN 1 ELSE 0 END) AS started_count").
+		From(aDao.Table()).
+		LeftJoin(apDao.Table() + " ON " + aDao.Table() + ".id = " + apDao.Table() + ".asset_id").
+		Where(squirrel.And{squirrel.Eq{aDao.Table() + ".course_id": courseId}}).
 		ToSql()
 
 	var totalAssetCount sql.NullInt32
@@ -155,7 +162,7 @@ func (dao *CourseProgressDao) Refresh(courseId string, tx *sql.Tx) error {
 
 	builder := squirrel.
 		StatementBuilder.
-		Update(dao.Table).
+		Update(dao.Table()).
 		Set("started", isStarted).
 		Set("percent", percent).
 		Set("updated_at", updatedAt).
@@ -189,7 +196,7 @@ func (dao *CourseProgressDao) countSelect() squirrel.SelectBuilder {
 	return squirrel.StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
 		Select("").
-		From(dao.Table).
+		From(dao.Table()).
 		RemoveColumns()
 }
 
@@ -208,7 +215,7 @@ func (dao *CourseProgressDao) baseSelect() squirrel.SelectBuilder {
 // columns returns the columns to select
 func (dao *CourseProgressDao) columns() []string {
 	return []string{
-		dao.Table + ".*",
+		dao.Table() + ".*",
 	}
 }
 

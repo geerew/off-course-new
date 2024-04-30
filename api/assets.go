@@ -87,7 +87,7 @@ func (api *assets) getAssets(c *fiber.Ctx) error {
 	}
 
 	if expand {
-		dbParams.IncludeRelations = []string{api.attachmentDao.Table}
+		dbParams.IncludeRelations = []string{api.attachmentDao.Table()}
 	}
 
 	assets, err := api.assetDao.List(dbParams, nil)
@@ -117,7 +117,7 @@ func (api *assets) getAsset(c *fiber.Ctx) error {
 
 	dbParams := &database.DatabaseParams{}
 	if expand {
-		dbParams.IncludeRelations = []string{api.attachmentDao.Table}
+		dbParams.IncludeRelations = []string{api.attachmentDao.Table()}
 	}
 
 	// TODO: support attachments orderby
