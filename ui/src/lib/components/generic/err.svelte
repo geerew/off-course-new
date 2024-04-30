@@ -11,7 +11,7 @@
 	export { className as class };
 	export let imgClass: ClassName = undefined;
 	export let textClass: ClassName = undefined;
-	export let errorMessage = 'Oh no! An error occurred.';
+	export let errorMessage = '';
 </script>
 
 <div
@@ -21,5 +21,11 @@
 	)}
 >
 	<CircleOff class={cn('text-destructive h-12 w-12', imgClass)} />
-	<span class={cn('text-destructive-foreground', textClass)}>{errorMessage}</span>
+
+	<div class="flex flex-col gap-2.5 text-center">
+		<span class={cn('text-foreground', textClass)}>Oh no! An error occurred</span>
+		{#if errorMessage}
+			<span class={cn('text-muted-foreground text-sm', textClass)}>{errorMessage}</span>
+		{/if}
+	</div>
 </div>
