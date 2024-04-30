@@ -45,7 +45,7 @@
 		table.column({
 			header: () => {
 				return createRender(SelectAllCheckbox, {
-					selectedTagsCount,
+					selectedCount: selectedTagsCount,
 					totalItems: pagination.totalItems
 				}).on('click', () => {
 					if (Object.keys($selectedTags).length === 0) {
@@ -80,6 +80,8 @@
 							});
 						}
 					}
+
+					selectedTagsToast();
 				});
 			},
 			accessor: 'id',
@@ -98,6 +100,8 @@
 						}
 						return { ...tags };
 					});
+
+					selectedTagsToast();
 				});
 			}
 		}),
@@ -118,9 +122,9 @@
 	const { sortKeys } = pluginStates.sort;
 
 	// The columns that can be sorted
-	const availableSortIds = ['id'];
+	const ignoredSortIds = ['id'];
 	const availableSortColumns: Array<{ id: string; label: string }> = flatColumns
-		.filter((col) => !availableSortIds.includes(col.id.toString()))
+		.filter((col) => !ignoredSortIds.includes(col.id.toString()))
 		.map((col) => {
 			return { id: col.id.toString(), label: col.header.toString() };
 		});
@@ -160,16 +164,27 @@
 		}
 	};
 
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	// Display a toast when a tag is selected/deselected
+	const selectedTagsToast = () => {
+		const count = Object.keys($selectedTags).length;
+		let message = 'Selected ' + count + ' tag' + (count > 1 ? 's' : '');
+
+		if (count === 0) {
+			message = 'Deselected all tags';
+		}
+
+		toast.success(message, {
+			duration: 2000
+		});
+	};
+
 	// ----------------------
 	// Reactive
 	// ----------------------
 
 	$: selectedTagsCount.set(Object.keys($selectedTags).length);
-
-	$: if ($selectedTagsCount > 0)
-		toast.success('Selected ' + $selectedTagsCount + ' tag' + ($selectedTagsCount > 1 ? 's' : ''), {
-			duration: 2000
-		});
 
 	// ----------------------
 	// Variables
@@ -205,6 +220,7 @@
 							{selectedTagsCount}
 							on:deselect={() => {
 								selectedTags.set({});
+								selectedTagsToast();
 							}}
 							on:delete={() => {
 								openDeleteDialog = true;

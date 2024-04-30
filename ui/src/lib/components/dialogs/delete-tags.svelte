@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button } from '$components/ui/button';
 	import * as Dialog from '$components/ui/dialog';
+	import * as Table from '$components/ui/table';
 	import { DeleteTag } from '$lib/api';
 	import { AlertOctagon } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
@@ -41,27 +42,31 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="min-w-[20rem] max-w-[425px] md:max-w-[30rem]">
-		<div class="flex flex-col gap-2 overflow-y-scroll px-4 py-2">
-			<AlertOctagon class="text-destructive size-10 w-full text-center" />
+	<Dialog.Content
+		class="min-w-[20rem] max-w-[425px] px-0 py-4 md:top-20 md:max-w-lg md:translate-y-0"
+	>
+		<div class="flex flex-col items-center gap-5 overflow-y-scroll px-8 pt-4">
+			<AlertOctagon class="text-destructive size-10" />
 			<span>Do you really want to delete the following tags?</span>
 		</div>
 
-		<div class="flex max-h-[20rem] flex-col gap-2 overflow-hidden overflow-y-auto px-4">
-			<ul class="list-inside">
-				{#each Object.entries(tags) as [id, name]}
-					<li class="text-muted-foreground list-disc">
-						<span class="text-muted-foreground select-none">{name}</span>
-					</li>
-				{/each}
-			</ul>
+		<div class="flex max-h-[20rem] flex-col gap-2 overflow-hidden overflow-y-auto px-8">
+			<Table.Root>
+				<Table.Body>
+					{#each Object.entries(tags) as [_, t], i (i)}
+						<Table.Row class="last:border-none">
+							<Table.Cell class="text-muted-foreground select-none px-4 py-1.5">{t}</Table.Cell>
+						</Table.Row>
+					{/each}
+				</Table.Body>
+			</Table.Root>
 		</div>
 
-		<Dialog.Footer class="gap-2">
-			<Button variant="outline" class="px-6" on:click={() => (open = false)}>No</Button>
+		<Dialog.Footer class="gap-2 border-t px-4 pt-4">
+			<Button variant="outline" class="w-20" on:click={() => (open = false)}>Cancel</Button>
 			<Button
 				variant="destructive"
-				class="px-6"
+				class="w-20"
 				on:click={async () => {
 					await deleteTags();
 					dispatch('deleted');

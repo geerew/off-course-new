@@ -1,10 +1,18 @@
 <script lang="ts">
 	import { DeleteCourseDialog } from '$components/dialogs';
-	import { Err, Loading, NiceDate, ScanStatus } from '$components/generic';
+	import {
+		Checkbox,
+		Err,
+		Loading,
+		NiceDate,
+		ScanStatus,
+		SelectAllCheckbox
+	} from '$components/generic';
 	import {
 		CoursesRowAction,
 		CoursesRowAvailability,
-		CoursesRowProgress
+		CoursesRowProgress,
+		CoursesTableActions
 	} from '$components/pages/settings_courses';
 	import { AddCoursesSheet } from '$components/sheets';
 	import { TableColumnsController, TableSortController } from '$components/table/controllers';
@@ -24,8 +32,12 @@
 	// ----------------------
 	const fetchedCourses = writable<Course[]>([]);
 
-	// Set when a course is selected for delete
-	let deleteCourseId = '';
+	// Set when a single course is selected via the row action
+	let selectedCourse = <Record<string, string>>{};
+
+	// Set when courses are selected via the checkbox
+	const selectedCourses = writable<Record<string, string>>({});
+	const selectedCoursesCount = writable<number>(0);
 
 	let openDeleteDialog = false;
 
@@ -52,6 +64,71 @@
 
 	// Define the table columns
 	const columns = table.createColumns([
+		table.column({
+			header: () => {
+				return createRender(SelectAllCheckbox, {
+					selectedCount: selectedCoursesCount,
+					totalItems: pagination.totalItems
+				}).on('click', () => {
+					if (Object.keys($selectedCourses).length === 0) {
+						// Add all current fetched courses to selected courses
+						selectedCourses.set(
+							$fetchedCourses.reduce((acc, course) => ({ ...acc, [course.id]: course.title }), {})
+						);
+					} else {
+						// Search for an unchecked course on this page
+						const foundUncheckedTag = $fetchedCourses.find(
+							(course) => !$selectedCourses[course.id]
+						);
+
+						if (foundUncheckedTag) {
+							// Add all fetched courses on this page to selected courses
+							selectedCourses.update((courses) => {
+								const newTags = $fetchedCourses.reduce((acc, course) => {
+									if (!courses[course.id]) {
+										acc[course.id] = course.title;
+									}
+									return acc;
+								}, courses);
+
+								return newTags;
+							});
+						} else {
+							// All curses on this page are checked. Remove them from selected courses but keep the rest
+							selectedCourses.update((courses) => {
+								const newTags = { ...courses };
+								$fetchedCourses.forEach((course) => {
+									delete newTags[course.id];
+								});
+								return newTags;
+							});
+						}
+					}
+
+					selectedCoursesToast();
+				});
+			},
+			accessor: 'id',
+			cell: ({ value, row }) => {
+				return createRender(Checkbox, {
+					selected: selectedCourses,
+					id: value
+				}).on('click', () => {
+					selectedCourses.update((courses) => {
+						if (courses[value]) {
+							delete courses[value];
+						} else {
+							if (row.isData()) {
+								courses[value] = row.original.title;
+							}
+						}
+						return { ...courses };
+					});
+
+					selectedCoursesToast();
+				});
+			}
+		}),
 		table.column({
 			header: 'Course',
 			accessor: 'title'
@@ -107,13 +184,18 @@
 					disable: true
 				}
 			},
-			cell: ({ value }) => {
+			cell: ({ value, row }) => {
 				return createRender(CoursesRowAction, { course: value })
 					.on('delete', () => {
-						deleteCourseId = value.id;
-						openDeleteDialog = true;
+						if (row.isData()) {
+							selectedCourse[value.id] = value.title;
+							openDeleteDialog = true;
+						}
 					})
-					.on('scan', () => startScan(value));
+					.on('scan', () => {
+						selectedCourse[value.id] = value.title;
+						startScans(selectedCourse);
+					});
 			}
 		})
 	]);
@@ -127,17 +209,17 @@
 	const { hiddenColumnIds } = pluginStates.hide;
 
 	// The columns that can be sorted
-	const availableSortIds = ['actions'];
+	const ignoredSortIds = ['id', 'actions'];
 	const availableSortColumns: Array<{ id: string; label: string }> = flatColumns
-		.filter((col) => !availableSortIds.includes(col.id.toString()))
+		.filter((col) => !ignoredSortIds.includes(col.id.toString()))
 		.map((col) => {
 			return { id: col.id.toString(), label: col.header.toString() };
 		});
 
 	// The columns that can be hidden
-	const availableExcludeIds = ['title', 'actions'];
+	const ignoredExcludeIds = ['id', 'title', 'actions'];
 	const availableHiddenColumns: Array<{ id: string; label: string }> = flatColumns
-		.filter((col) => !availableExcludeIds.includes(col.id.toString()))
+		.filter((col) => !ignoredExcludeIds.includes(col.id.toString()))
 		.map((col) => {
 			return { id: col.id.toString(), label: col.header.toString() };
 		});
@@ -194,17 +276,55 @@
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Start a scan for a course
-	const startScan = async (course: Course) => {
+	const startScans = async (courses: Record<string, string>) => {
 		try {
-			const response = await AddScan(course.id);
-			if (!response) throw new Error('Failed to start scan');
+			const ids = Object.keys(courses);
 
-			course.scanStatus = 'waiting';
-			updateCourseInCourses(course);
+			await Promise.all(
+				ids.map(async (id) => {
+					try {
+						await AddScan(id);
+						const course = $fetchedCourses.find((course) => course.id === id);
+
+						// Update the course so it reflects in the table
+						if (course) {
+							course.scanStatus = 'waiting';
+							updateCourseInCourses(course);
+						}
+
+						toast.success('Started scan for ' + courses[id]);
+					} catch (error) {
+						toast.error('Failed to start a scan for: ' + courses[id]);
+					}
+				})
+			);
+
+			selectedCourses.set({});
+			selectedCourse = {};
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : (error as string));
 		}
 	};
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	// Display a toast when a course is selected/deselected
+	const selectedCoursesToast = () => {
+		const count = Object.keys($selectedCourses).length;
+		let message = 'Selected ' + count + ' course' + (count > 1 ? 's' : '');
+
+		if (count === 0) message = 'Deselected all courses';
+
+		toast.success(message, {
+			duration: 2000
+		});
+	};
+
+	// ----------------------
+	// Variables
+	// ----------------------
+
+	$: selectedCoursesCount.set(Object.keys($selectedCourses).length);
 
 	// ----------------------
 	// Variables
@@ -228,6 +348,20 @@
 					/>
 
 					<div class="flex w-full justify-end gap-2.5">
+						<CoursesTableActions
+							{selectedCoursesCount}
+							on:deselect={() => {
+								selectedCourses.set({});
+								selectedCoursesToast();
+							}}
+							on:scan={() => {
+								startScans($selectedCourses);
+							}}
+							on:delete={() => {
+								openDeleteDialog = true;
+							}}
+						/>
+
 						<TableSortController
 							columns={availableSortColumns}
 							sortedColumn={sortKeys}
@@ -337,13 +471,18 @@
 
 <!-- Delete dialog -->
 <DeleteCourseDialog
-	courseId={deleteCourseId}
+	courses={Object.keys(selectedCourse).length > 0 ? selectedCourse : $selectedCourses}
 	bind:open={openDeleteDialog}
+	on:deleted={() => {
+		selectedCourse = {};
+	}}
 	on:deleted={() => {
 		// It is possible that the user deleted the last course on this page,
 		// therefore we need to set the page to the previous one
 		if (pagination.page > 1 && (pagination.totalItems - 1) % pagination.perPage === 0)
 			pagination.page = pagination.page - 1;
+
+		selectedCourses.set({});
 
 		load = getCourses();
 	}}
