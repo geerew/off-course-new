@@ -2,7 +2,6 @@ package daos
 
 import (
 	"database/sql"
-	"fmt"
 	"slices"
 	"strings"
 
@@ -250,21 +249,14 @@ func (dao *CourseDao) ClassifyPaths(paths []string) (map[string]types.PathClassi
 
 	// Process
 	for _, path := range paths {
-		fmt.Println("path", path)
-
 		for _, coursePath := range coursePaths {
-			fmt.Println("coursePath", coursePath)
-
 			if coursePath == path {
-				fmt.Println("exact match")
 				results[path] = types.PathClassificationCourse
 				break
 			} else if strings.HasPrefix(coursePath, path) {
-				fmt.Println("ancestor")
 				results[path] = types.PathClassificationAncestor
 				break
 			} else if strings.HasPrefix(path, coursePath) && results[path] != types.PathClassificationAncestor {
-				fmt.Println("descendant")
 				results[path] = types.PathClassificationDescendant
 				break
 			}
