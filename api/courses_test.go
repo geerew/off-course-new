@@ -1495,17 +1495,3 @@ func coursesUnmarshalHelper(t *testing.T, body []byte) (pagination.PaginationRes
 
 	return respData, coursesResponse
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// func courseTagsUnmarshalHelper(t *testing.T, body []byte) ([]courseTagResponse) {
-
-// 	var coursesResponse []courseResponse
-// 	for _, item := range respData.Items {
-// 		var course courseResponse
-// 		require.Nil(t, json.Unmarshal(item, &course))
-// 		coursesResponse = append(coursesResponse, course)
-// 	}
-
-// 	return respData, coursesResponse
-// }

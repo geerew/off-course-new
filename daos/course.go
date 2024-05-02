@@ -2,11 +2,14 @@ package daos
 
 import (
 	"database/sql"
+	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -185,6 +188,90 @@ func (dao *CourseDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) erro
 
 	generic := NewGenericDao(dao.db, dao)
 	return generic.Delete(dbParams, tx)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ClassifyPaths classifies the given paths into one of the following categories:
+//   - PathClassificationNone: The path does not exist in the courses table
+//   - PathClassificationAncestor: The path is an ancestor of a course path
+//   - PathClassificationCourse: The path is an exact match to a course path
+//   - PathClassificationDescendant: The path is a descendant of a course path
+//
+// The paths are returned as a map with the original path as the key and the classification as the
+// value
+func (dao *CourseDao) ClassifyPaths(paths []string) (map[string]types.PathClassification, error) {
+	paths = slices.DeleteFunc(paths, func(s string) bool {
+		return s == ""
+	})
+
+	if len(paths) == 0 {
+		return nil, nil
+	}
+
+	// Initialize the results map
+	results := make(map[string]types.PathClassification)
+	for _, path := range paths {
+		results[path] = types.PathClassificationNone
+	}
+
+	// Build the where clause
+	whereClause := make([]squirrel.Sqlizer, len(paths))
+	for i, path := range paths {
+		whereClause[i] = squirrel.Like{dao.Table() + ".path": path + "%"}
+	}
+
+	query, args, _ := squirrel.
+		StatementBuilder.
+		Select(dao.Table() + ".path").
+		From(dao.table).
+		Where(squirrel.Or(whereClause)).
+		ToSql()
+
+	rows, err := dao.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Store the found course paths
+	var coursePath string
+	coursePaths := []string{}
+	for rows.Next() {
+		if err := rows.Scan(&coursePath); err != nil {
+			return nil, err
+		}
+		coursePaths = append(coursePaths, coursePath)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Process
+	for _, path := range paths {
+		fmt.Println("path", path)
+
+		for _, coursePath := range coursePaths {
+			fmt.Println("coursePath", coursePath)
+
+			if coursePath == path {
+				fmt.Println("exact match")
+				results[path] = types.PathClassificationCourse
+				break
+			} else if strings.HasPrefix(coursePath, path) {
+				fmt.Println("ancestor")
+				results[path] = types.PathClassificationAncestor
+				break
+			} else if strings.HasPrefix(path, coursePath) && results[path] != types.PathClassificationAncestor {
+				fmt.Println("descendant")
+				results[path] = types.PathClassificationDescendant
+				break
+			}
+		}
+	}
+
+	return results, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

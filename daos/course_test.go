@@ -3,6 +3,7 @@ package daos
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/Masterminds/squirrel"
@@ -577,5 +578,57 @@ func TestCourse_Delete(t *testing.T) {
 
 		err = dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": "1234"}}, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.Table())
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestCourse_IsAncestor(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		_, dao, db := courseSetup(t)
+
+		testData := NewTestBuilder(t).Db(db).Courses([]string{"course 1", "course 2", "course 3"}).Build()
+
+		path1 := "/"                                               // ancestor
+		path2 := strings.TrimSuffix(testData[1].Path, "/course 2") // ancestor
+		path3 := "/test"                                           // none
+		path4 := testData[2].Path                                  // course
+		path5 := testData[2].Path + "/test"                        // descendant
+
+		result, err := dao.ClassifyPaths([]string{path1, path2, path3, path4, path5})
+		require.Nil(t, err)
+
+		require.Equal(t, types.PathClassificationAncestor, result[path1])
+		require.Equal(t, types.PathClassificationAncestor, result[path2], fmt.Sprintf("path2: %s, result: %d", path2, result[path2]))
+		require.Equal(t, types.PathClassificationNone, result[path3])
+		require.Equal(t, types.PathClassificationCourse, result[path4])
+		require.Equal(t, types.PathClassificationDescendant, result[path5])
+	})
+
+	t.Run("no paths", func(t *testing.T) {
+		_, dao, _ := courseSetup(t)
+
+		result, err := dao.ClassifyPaths([]string{})
+		require.Nil(t, err)
+		require.Empty(t, result)
+	})
+
+	t.Run("empty path", func(t *testing.T) {
+		_, dao, _ := courseSetup(t)
+
+		result, err := dao.ClassifyPaths([]string{"", "", ""})
+		require.Nil(t, err)
+		require.Empty(t, result)
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, dao, db := courseSetup(t)
+
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
+		require.Nil(t, err)
+
+		result, err := dao.ClassifyPaths([]string{"/"})
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
+		require.Empty(t, result)
 	})
 }
