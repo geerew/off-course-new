@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DeleteCourseDialog } from '$components/dialogs';
+	import { AddCoursesDialog, DeleteCourseDialog } from '$components/dialogs';
 	import {
 		Checkbox,
 		Err,
@@ -14,7 +14,6 @@
 		CoursesRowProgress,
 		CoursesTableActions
 	} from '$components/pages/settings_courses';
-	import { AddCoursesSheet } from '$components/sheets';
 	import { TableColumnsController, TableSortController } from '$components/table/controllers';
 	import { Pagination } from '$components/table/pagination';
 	import { AddScan, GetCourses } from '$lib/api';
@@ -340,7 +339,7 @@
 		{:then _}
 			<div class="flex w-full flex-row">
 				<div class="flex w-full justify-between">
-					<AddCoursesSheet
+					<AddCoursesDialog
 						on:added={() => {
 							pagination.page = 1;
 							load = getCourses();

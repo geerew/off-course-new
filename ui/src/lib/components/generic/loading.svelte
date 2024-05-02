@@ -12,13 +12,6 @@
 	export let loaderClass: ClassName = undefined;
 </script>
 
-<!-- <div
-	class={cn(
-		'flex min-h-[20rem] w-full flex-grow flex-col place-content-center items-center gap-5 p-10',
-		className
-	)}>
-</div> -->
-
 <div
 	class={cn(
 		'flex min-h-40 w-full flex-grow flex-col place-content-center items-center gap-5 p-10',

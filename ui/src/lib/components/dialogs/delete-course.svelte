@@ -50,7 +50,7 @@
 
 <Dialog.Root bind:open>
 	<Dialog.Content
-		class="min-w-[20rem] max-w-[425px] px-0 py-4 md:top-20 md:max-w-lg md:translate-y-0"
+		class="bg-muted top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md px-0 py-0 duration-200 md:max-w-xl [&>button[data-dialog-close]]:hidden"
 	>
 		<div class="flex flex-col items-center gap-5 overflow-y-scroll px-8 pt-4">
 			<AlertOctagon class="text-destructive size-10" />
@@ -61,7 +61,12 @@
 			<Table.Root>
 				<Table.Body>
 					{#each Object.entries(courses) as [_, c], i (i)}
-						<Table.Row class={cn('last:border-none', coursesCount === 1 && 'hover:bg-inherit')}>
+						<Table.Row
+							class={cn(
+								'border-alt-1/40 last:border-none',
+								coursesCount === 1 && 'hover:bg-inherit'
+							)}
+						>
 							<Table.Cell class="text-muted-foreground select-none text-wrap px-4 py-1.5">
 								{c}
 							</Table.Cell>
@@ -71,21 +76,21 @@
 			</Table.Root>
 		</div>
 
-		<Dialog.Footer class="gap-2 border-t px-4 pt-4">
+		<Dialog.Footer
+			class="border-alt-1/60 h-14 flex-row items-center justify-end gap-2 border-t px-4"
+		>
 			<Button
 				variant="outline"
-				class="w-20"
+				class="bg-muted border-alt-1/60 hover:bg-alt-1/60 h-8 w-20"
 				on:click={() => {
 					dispatch('cancelled');
 					open = false;
-				}}
+				}}>Cancel</Button
 			>
-				Cancel
-			</Button>
 
 			<Button
 				variant="destructive"
-				class="w-20"
+				class="h-8 w-20"
 				on:click={async () => {
 					await deleteCourses();
 					dispatch('deleted');

@@ -17,7 +17,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	let isOpen = false;
+	let isOpen = true;
 
 	let inputEl: HTMLInputElement;
 
@@ -108,13 +108,11 @@
 	onOpenChange={(open) => {
 		if (!open) {
 			toAdd = [];
-		} else {
-			inputEl.focus();
 		}
 	}}
 >
 	<Dialog.Content
-		class="bg-muted max-w-[27rem] p-0 transition md:max-w-xl [&>button[data-dialog-close]]:hidden"
+		class="bg-muted top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md px-0 py-0 duration-200 md:max-w-xl [&>button[data-dialog-close]]:hidden"
 	>
 		<div class="border-alt-1/60 group relative flex flex-row items-center border-b">
 			<label class="px-5" for="add-tag-input">
@@ -173,11 +171,12 @@
 		>
 			<Button
 				variant="outline"
-				class="bg-muted border-alt-1/60 hover:bg-alt-1/60 h-8 px-6"
+				class="bg-muted border-alt-1/60 hover:bg-alt-1/60 h-8 w-20"
 				on:click={() => {
 					isOpen = false;
 				}}>Cancel</Button
 			>
+
 			<Button
 				class="h-8 px-6"
 				disabled={toAdd.length === 0}

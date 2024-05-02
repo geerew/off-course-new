@@ -1,4 +1,15 @@
-import { array, boolean, number, object, optional, string, type Output } from 'valibot';
+import { array, boolean, enum_, number, object, optional, string, type Output } from 'valibot';
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+export const PathClassification = {
+	None: 0,
+	Ancestor: 1,
+	Course: 2,
+	Descendant: 3
+} as const;
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 const FileInfoSchema = object({
 	title: string(),
@@ -12,9 +23,8 @@ export type FileInfo = Output<typeof FileInfoSchema>;
 const DirInfoSchema = object({
 	title: string(),
 	path: string(),
-	isSelected: optional(boolean()),
-	isExistingCourse: optional(boolean()),
-	isParent: optional(boolean())
+	classification: enum_(PathClassification),
+	isSelected: optional(boolean())
 });
 
 export type DirInfo = Output<typeof DirInfoSchema>;

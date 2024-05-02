@@ -5,6 +5,7 @@ https://dribbble.com/shots/23132040-E-learning-website-course-details
 - [x] Use await
 - [x] Tidy Loading component
 
+
 ## Page -> Settings -> Tags
 
 - [x] Add table
@@ -12,6 +13,11 @@ https://dribbble.com/shots/23132040-E-learning-website-course-details
 - [x] Allow adding of tags
 - [ ] Allow editing of tags
 - [x] Fix sorting by course count
+
+## Page -> Settings -> Courses -> Add
+
+- [ ] Rework into a dialog
+- [ ] Rework getting all courses to be more efficient
 
 ## Page -> Home
 
@@ -42,10 +48,6 @@ https://dribbble.com/shots/23132040-E-learning-website-course-details
 
 - [ ] Filter
 - [ ] Store table state in local storage/db
-
-## Page -> Settings -> Courses -> Add
-
-- [ ] Rework getting all courses to be more efficient
 
 ## Search
 
