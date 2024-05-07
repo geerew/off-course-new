@@ -19,7 +19,7 @@
 	const dispatch = createEventDispatcher();
 
 	// True when the sheet is open. This is used to reset stuff on open
-	let open = true; // tmp
+	let open = false;
 
 	// True when the initial loading of the drives/volumes is happening. We are considered to be
 	// loading drives/volumes when the path is empty

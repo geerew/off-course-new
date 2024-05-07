@@ -17,9 +17,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	let isOpen = true;
-
-	let inputEl: HTMLInputElement;
+	let isOpen = false;
 
 	let showSpinner = false;
 
@@ -39,16 +37,18 @@
 
 				showSpinner = true;
 
+				const tagToAdd = node.value.trim();
+
 				// Check if the tag already exists in the list
-				if (toAdd.find((t) => t.toLowerCase() === node.value.toLowerCase())) {
-					toast.error('Tag already in list of tags to add');
+				if (toAdd.find((t) => t.toLowerCase() === tagToAdd.toLowerCase())) {
+					toast.error('Tag is already in the list of tags to add');
 					showSpinner = false;
 					return;
 				}
 
 				// Check if tag already exists in the backend
 				try {
-					await GetTag(node.value, true);
+					await GetTag(tagToAdd, true);
 
 					toast.error('Tag already exists');
 					showSpinner = false;
@@ -59,7 +59,7 @@
 					}
 				}
 
-				toAdd = [...toAdd, node.value.toLowerCase()];
+				toAdd = [...toAdd, tagToAdd];
 				node.value = '';
 
 				showSpinner = false;
@@ -92,6 +92,12 @@
 			toast.error(error instanceof Error ? error.message : (error as string));
 		}
 	}
+
+	$: (() => {
+		if (!isOpen) {
+			toAdd = [];
+		}
+	})();
 </script>
 
 <Button
@@ -103,14 +109,7 @@
 	<span>Add Tags</span>
 </Button>
 
-<Dialog.Root
-	bind:open={isOpen}
-	onOpenChange={(open) => {
-		if (!open) {
-			toAdd = [];
-		}
-	}}
->
+<Dialog.Root bind:open={isOpen}>
 	<Dialog.Content
 		class="bg-muted top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md px-0 py-0 duration-200 md:max-w-xl [&>button[data-dialog-close]]:hidden"
 	>
@@ -122,7 +121,6 @@
 			<input
 				type="text"
 				id="add-tag-input"
-				bind:this={inputEl}
 				use:tagInput
 				placeholder="Add tag..."
 				class="placeholder-muted-foreground/60 text-foreground h-14 w-full rounded-none border-none bg-inherit px-0 focus-visible:outline-none focus-visible:ring-0"

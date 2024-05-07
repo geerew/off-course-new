@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"sort"
 	"strings"
 
 	"github.com/Masterminds/squirrel"
@@ -59,7 +60,8 @@ func bindTagsApi(router fiber.Router, db database.Database) {
 
 func (api *tags) getTags(c *fiber.Ctx) error {
 	expand := c.QueryBool("expand", false)
-	orderBy := c.Query("orderBy", "tag asc")
+	filter := c.Query("filter", "")
+	orderBy := c.Query("orderBy", api.tagDao.Table()+".tag asc")
 
 	dbParams := &database.DatabaseParams{
 		OrderBy:    strings.Split(orderBy, ","),
@@ -70,11 +72,48 @@ func (api *tags) getTags(c *fiber.Ctx) error {
 		dbParams.IncludeRelations = []string{api.courseTagDao.Table()}
 	}
 
+	if filter != "" {
+		dbParams.Where = squirrel.Like{api.tagDao.Table() + ".tag": "%" + filter + "%"}
+	}
+
 	tags, err := api.tagDao.List(dbParams, nil)
 	if err != nil {
 		log.Err(err).Msg("error looking up tags")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "error looking up tags - " + err.Error(),
+		})
+	}
+
+	if filter != "" {
+		sort.SliceStable(tags, func(i, j int) bool {
+			// Convert tags and filter to lower case for case insensitive comparison
+			iTag, jTag := strings.ToLower(tags[i].Tag), strings.ToLower(tags[j].Tag)
+			filterLower := strings.ToLower(filter)
+
+			// Check for exact matches, starts with, and contains in a case insensitive manner
+			iExact, jExact := iTag == filterLower, jTag == filterLower
+			iStarts, jStarts := strings.HasPrefix(iTag, filterLower), strings.HasPrefix(jTag, filterLower)
+			iContains, jContains := strings.Contains(iTag, filterLower), strings.Contains(jTag, filterLower)
+
+			// Prioritize exact matches first
+			if iExact && !jExact {
+				return true
+			} else if !iExact && jExact {
+				return false
+			}
+
+			// Then prioritize tags starting with the filter
+			if iStarts && !jStarts {
+				return true
+			} else if !iStarts && jStarts {
+				return false
+			}
+
+			// Lastly, sort by those that contain the substring, alphabetically
+			if iContains && jContains {
+				return iTag < jTag // Use case insensitive comparison for alphabetical order
+			}
+			return iContains && !jContains
 		})
 	}
 

@@ -122,6 +122,94 @@ func TestTags_GetTags(t *testing.T) {
 		require.Equal(t, "course 2", tagsResp[0].Courses[0].Title)
 	})
 
+	t.Run("200 (filter)", func(t *testing.T) {
+		_, db, _, _ := setup(t)
+
+		daos.NewTestBuilder(t).
+			Db(db).
+			Courses(1).
+			Tags([]string{"slightly", "light", "lighter", "highlight", "ghoul", "lightning", "delight"}).
+			Build()
+
+		// ----------------------------
+		// Filter by `none`
+		// ----------------------------
+		status, body, err := tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=none", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, tagsResp := tagsUnmarshalHelper(t, body)
+		require.Equal(t, 0, int(paginationResp.TotalItems))
+		require.Zero(t, tagsResp)
+
+		// ----------------------------
+		// Filter by `li`
+		// ----------------------------
+		status, body, err = tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=li", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, tagsResp = tagsUnmarshalHelper(t, body)
+		require.Equal(t, 6, int(paginationResp.TotalItems))
+		require.Len(t, tagsResp, 6)
+		require.Equal(t, "light", tagsResp[0].Tag)
+		require.Equal(t, "lighter", tagsResp[1].Tag)
+		require.Equal(t, "lightning", tagsResp[2].Tag)
+		require.Equal(t, "delight", tagsResp[3].Tag)
+		require.Equal(t, "highlight", tagsResp[4].Tag)
+		require.Equal(t, "slightly", tagsResp[5].Tag)
+
+		// ----------------------------
+		// Filter by `gh`
+		// ----------------------------
+		status, body, err = tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=gh", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, tagsResp = tagsUnmarshalHelper(t, body)
+		require.Equal(t, 7, int(paginationResp.TotalItems))
+		require.Len(t, tagsResp, 7)
+		require.Equal(t, "ghoul", tagsResp[0].Tag)
+		require.Equal(t, "delight", tagsResp[1].Tag)
+		require.Equal(t, "highlight", tagsResp[2].Tag)
+		require.Equal(t, "light", tagsResp[3].Tag)
+		require.Equal(t, "lighter", tagsResp[4].Tag)
+		require.Equal(t, "lightning", tagsResp[5].Tag)
+		require.Equal(t, "slightly", tagsResp[6].Tag)
+
+		// ----------------------------
+		// Filter by `slight`
+		// ----------------------------
+		status, body, err = tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=slight", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, tagsResp = tagsUnmarshalHelper(t, body)
+		require.Equal(t, 1, int(paginationResp.TotalItems))
+		require.Len(t, tagsResp, 1)
+		require.Equal(t, "slightly", tagsResp[0].Tag)
+
+		// ----------------------------
+		// Case insensitive
+		// ----------------------------
+		daos.NewTestBuilder(t).
+			Db(db).
+			Courses(1).
+			Tags([]string{"Slight"}).
+			Build()
+
+		status, body, err = tagsRequestHelper(db, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=slight", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, tagsResp = tagsUnmarshalHelper(t, body)
+		require.Equal(t, 2, int(paginationResp.TotalItems))
+		require.Len(t, tagsResp, 2)
+		require.Equal(t, "Slight", tagsResp[0].Tag)
+		require.Equal(t, "slightly", tagsResp[1].Tag)
+
+	})
+
 	t.Run("200 (pagination)", func(t *testing.T) {
 		_, db, _, _ := setup(t)
 

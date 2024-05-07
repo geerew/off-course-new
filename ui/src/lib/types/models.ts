@@ -133,7 +133,8 @@ export type CourseChapters = Record<string, Asset[]>;
 
 export const CourseTagSchema = object({
 	id: string(),
-	tag: string()
+	tag: string(),
+	forDeletion: optional(boolean())
 });
 
 export type CourseTag = Output<typeof CourseTagSchema>;
@@ -166,6 +167,7 @@ export type TagsGetParams = {
 	orderBy?: string;
 	page?: number;
 	perPage?: number;
+	filter?: string;
 	expand?: boolean;
 };
 
