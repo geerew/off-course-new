@@ -27,6 +27,6 @@
 
 <Checkbox
 	on:click
-	class={cn('border-alt-1', totalItems === 0 && 'opacity-0')}
+	class={cn('border-alt-1 data-[state=checked]:border-primary', totalItems === 0 && 'opacity-0')}
 	bind:checked={checkedOrIndeterminate}
 />

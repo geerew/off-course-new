@@ -8,4 +8,4 @@
 	$: checked = ($selected[id] && true) || false;
 </script>
 
-<Checkbox on:click class="border-alt-1" bind:checked />
+<Checkbox on:click class="border-alt-1 data-[state=checked]:border-primary" bind:checked />
