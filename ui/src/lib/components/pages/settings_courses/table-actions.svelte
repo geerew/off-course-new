@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
-	import { BoxSelect, ChevronRight, FolderSearch, Trash2, X } from 'lucide-svelte';
+	import { BoxSelect, ChevronRight, FolderSearch, Tag, Trash2, X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import type { Writable } from 'svelte/store';
 
@@ -46,8 +46,19 @@
 				dispatch('scan');
 			}}
 		>
-			<FolderSearch class="h-4 w-4" />
+			<FolderSearch class="size-4" />
 			Scan
+		</DropdownMenu.Item>
+
+		<DropdownMenu.Item
+			disabled={$selectedCoursesCount === 0}
+			class="cursor-pointer gap-2.5"
+			on:click={() => {
+				dispatch('tags');
+			}}
+		>
+			<Tag class="size-4" />
+			Add Tags
 		</DropdownMenu.Item>
 
 		<DropdownMenu.Separator class="bg-muted my-1 -ml-1 -mr-1 block h-px" />

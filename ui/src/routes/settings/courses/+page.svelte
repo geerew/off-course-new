@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AddCoursesDialog, DeleteCourseDialog } from '$components/dialogs';
+	import { AddCourseTagsDialog, AddCoursesDialog, DeleteCourseDialog } from '$components/dialogs';
 	import {
 		Checkbox,
 		Err,
@@ -16,6 +16,7 @@
 	} from '$components/pages/settings_courses';
 	import { TableColumnsController, TableSortController } from '$components/table/controllers';
 	import { Pagination } from '$components/table/pagination';
+	import * as Table from '$components/ui/table';
 	import { AddScan, GetCourses } from '$lib/api';
 	import type { Course } from '$lib/types/models';
 	import type { PaginationParams } from '$lib/types/pagination';
@@ -39,6 +40,7 @@
 	const selectedCoursesCount = writable<number>(0);
 
 	let openDeleteDialog = false;
+	let openAddTagsDialog = false;
 
 	// Pagination
 	let pagination: PaginationParams = {
@@ -200,7 +202,7 @@
 	]);
 
 	// Create the view, which is used when building the table
-	const { headerRows, rows, tableAttrs, tableBodyAttrs, pluginStates, flatColumns } =
+	const { headerRows, pageRows, tableAttrs, tableBodyAttrs, pluginStates, flatColumns } =
 		table.createViewModel(columns);
 
 	// Writable plugin stores
@@ -356,6 +358,9 @@
 							on:scan={() => {
 								startScans($selectedCourses);
 							}}
+							on:tags={() => {
+								openAddTagsDialog = true;
+							}}
 							on:delete={() => {
 								openDeleteDialog = true;
 							}}
@@ -376,12 +381,12 @@
 				</div>
 			</div>
 
-			<div class="flex w-full overflow-x-auto">
-				<table {...$tableAttrs}>
-					<thead>
-						{#each $headerRows as headerRow (headerRow.id)}
-							<Subscribe rowAttrs={headerRow.attrs()} let:rowAttrs>
-								<tr {...rowAttrs}>
+			<div class="flex flex-col gap-5">
+				<Table.Root {...$tableAttrs} class="min-w-[15rem] border-collapse">
+					<Table.Header>
+						{#each $headerRows as headerRow}
+							<Subscribe rowAttrs={headerRow.attrs()}>
+								<Table.Row class="hover:bg-transparent">
 									{#each headerRow.cells as cell (cell.id)}
 										{@const ascSort =
 											$sortKeys.length >= 1 &&
@@ -391,8 +396,15 @@
 											$sortKeys.length >= 1 &&
 											$sortKeys[0].order === 'desc' &&
 											$sortKeys[0].id === cell.id}
+
 										<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()}>
-											<th {...attrs}>
+											<Table.Head
+												{...attrs}
+												class={cn(
+													'relative whitespace-nowrap px-6 tracking-wide [&:has([role=checkbox])]:pl-3',
+													cell.id === 'title' ? 'min-w-96' : 'min-w-[1%]'
+												)}
+											>
 												<div
 													class={cn(
 														'flex select-none items-center gap-2.5',
@@ -403,50 +415,60 @@
 
 													{#if ascSort}
 														<ChevronUp
-															class="text-secondary/80 absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 stroke-[2]"
+															class="text-secondary/80 absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2]"
 														/>
 													{:else if descSort}
 														<ChevronDown
-															class="text-secondary/80 absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 stroke-[2]"
+															class="text-secondary/80 absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2]"
 														/>
 													{/if}
 												</div>
-											</th>
+											</Table.Head>
 										</Subscribe>
 									{/each}
-								</tr>
+								</Table.Row>
 							</Subscribe>
 						{/each}
-					</thead>
-					<tbody {...$tableBodyAttrs}>
-						{#if $rows.length === 0}
-							<tr>
-								<td colspan={flatColumns.length}>
+					</Table.Header>
+
+					<Table.Body {...$tableBodyAttrs}>
+						{#if $pageRows.length === 0}
+							<Table.Row class="hover:bg-transparent">
+								<Table.Cell colspan={flatColumns.length}>
 									<div class="flex w-full flex-grow flex-col place-content-center items-center p-5">
 										<p class="text-muted-foreground text-center text-sm">No courses found.</p>
 									</div>
-								</td>
-							</tr>
+								</Table.Cell>
+							</Table.Row>
 						{:else}
-							{#each $rows as row (row.id)}
+							{#each $pageRows as row (row.id)}
 								<Subscribe rowAttrs={row.attrs()} let:rowAttrs>
-									<tr {...rowAttrs} class="hover:bg-muted">
+									<Table.Row
+										{...rowAttrs}
+										data-row={row.id}
+										data-state={$selectedCourses[row.id] && 'selected'}
+									>
 										{#each row.cells as cell (cell.id)}
 											<Subscribe attrs={cell.attrs()} let:attrs>
-												<td
+												<Table.Cell
+													class={cn(
+														'whitespace-nowrap px-6 text-sm [&:has([role=checkbox])]:pl-3',
+														cell.id === 'title' ? 'min-w-96' : 'min-w-[1%]'
+													)}
 													{...attrs}
-													class={cell.id === 'title' ? 'min-w-96' : 'min-w-[1%] whitespace-nowrap'}
 												>
-													<Render of={cell.render()} />
-												</td>
+													<div class={cn(cell.id !== 'title' && 'text-center')}>
+														<Render of={cell.render()} />
+													</div>
+												</Table.Cell>
 											</Subscribe>
 										{/each}
-									</tr>
+									</Table.Row>
 								</Subscribe>
 							{/each}
 						{/if}
-					</tbody>
-				</table>
+					</Table.Body>
+				</Table.Root>
 			</div>
 
 			<Pagination
@@ -493,6 +515,21 @@
 			selectedCourses.set({});
 		}
 
+		load = getCourses();
+	}}
+/>
+
+<!-- Add tags dialog -->
+<AddCourseTagsDialog
+	courseIds={Object.keys($selectedCourses)}
+	bind:open={openAddTagsDialog}
+	on:deleted={() => {
+		// It is possible that the user deleted the last course on this page,
+		// therefore we need to set the page to the previous one
+		if (pagination.page > 1 && (pagination.totalItems - 1) % pagination.perPage === 0)
+			pagination.page = pagination.page - 1;
+
+		selectedCourses.set({});
 		load = getCourses();
 	}}
 />

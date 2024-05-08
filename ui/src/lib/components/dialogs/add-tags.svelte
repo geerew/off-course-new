@@ -51,7 +51,6 @@
 					if (tagsEl) {
 						const tagEl = tagsEl.querySelector(`[data-tag="${foundTag}"]`);
 						if (tagEl) {
-							// shake the tag if not already shaking
 							if (tagEl.classList.contains('animate-shake')) return;
 
 							tagEl.classList.add('animate-shake');

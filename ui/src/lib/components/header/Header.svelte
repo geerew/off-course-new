@@ -10,7 +10,7 @@
 	<div class="flex h-[var(--header-height)] items-center justify-between gap-8 px-4 md:px-8">
 		<div class="mr-3">
 			<a href="/" class="mr-6 flex items-center gap-2">
-				<Hexagon class="fill-primary h-8 w-8 rotate-90 stroke-none" />
+				<Hexagon class="fill-primary size-8 rotate-90 stroke-none" />
 				<span class="inline-block font-semibold">{site.name}</span>
 			</a>
 		</div>

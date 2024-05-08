@@ -91,19 +91,19 @@
 						<div class="flex flex-col gap-2.5">
 							<!-- Path -->
 							<div class="flex max-w-[30rem] flex-row items-center gap-2.5 md:max-w-full">
-								<Folder class="h-4 w-4 shrink-0" />
+								<Folder class="size-4 shrink-0" />
 								<span class="text-xs">{data.path}</span>
 							</div>
 
 							<!-- Created at -->
 							<div class="flex flex-row items-center gap-2.5">
-								<CalendarPlus class="h-4 w-4 shrink-0" />
+								<CalendarPlus class="size-4 shrink-0" />
 								<NiceDate date={data.createdAt} class="text-foreground text-xs" />
 							</div>
 
 							<!-- Update at || scan status -->
 							<div class="flex flex-row items-center gap-2.5">
-								<CalendarSearch class="h-4 w-4 shrink-0" />
+								<CalendarSearch class="size-4 shrink-0" />
 								{#if !data.scanStatus}
 									<NiceDate date={data.updatedAt} class="text-foreground text-xs" />
 								{:else}
@@ -136,7 +136,7 @@
 									<Badge
 										class="bg-success text-success-foreground hover:bg-success items-center gap-1.5 rounded-sm"
 									>
-										<CheckCircle2 class="h-4 w-4" />
+										<CheckCircle2 class="size-4" />
 										Available
 									</Badge>
 								{:else}
@@ -144,7 +144,7 @@
 										variant="destructive"
 										class="hover:bg-destructive items-center gap-1.5 rounded-sm"
 									>
-										<CircleSlash class="h-4 w-4" />
+										<CircleSlash class="size-4" />
 										Unavailable
 									</Badge>
 								{/if}
@@ -154,12 +154,12 @@
 									<Badge
 										class="bg-alt-1 hover:bg-alt-1 text-foreground items-center gap-1.5 rounded-sm"
 									>
-										<Circle class="h-4 w-4" />
+										<Circle class="size-4" />
 										Not Started
 									</Badge>
 								{:else if data.percent === 100}
 									<Badge class="hover:bg-primary items-center gap-1.5 rounded-sm">
-										<CheckCircle2 class="h-4 w-4" />
+										<CheckCircle2 class="size-4" />
 										Completed
 									</Badge>
 								{:else}
@@ -167,7 +167,7 @@
 										variant="secondary"
 										class="hover:bg-secondary items-center gap-1.5 rounded-sm"
 									>
-										<PlayCircle class="h-4 w-4" />
+										<PlayCircle class="size-4" />
 										{data.percent}% completed
 									</Badge>
 								{/if}
@@ -181,7 +181,7 @@
 								class="hover:bg-primary bg-muted border-muted-foreground hover:text-primary-foreground hover:border-primary h-8 cursor-pointer gap-2 px-2.5"
 								href="/course?id={data.id}"
 							>
-								<Play class="h-4 w-4" />
+								<Play class="size-4" />
 								{#if data.percent === 0}
 									Start
 								{:else if data.percent === 100}
@@ -200,7 +200,7 @@
 									if (newStatus) data.scanStatus = newStatus;
 								}}
 							>
-								<FolderSearch class="h-4 w-4" />
+								<FolderSearch class="size-4" />
 								Scan
 							</Button>
 
@@ -212,7 +212,7 @@
 									openDeleteDialog = true;
 								}}
 							>
-								<Trash2 class="h-4 w-4" />
+								<Trash2 class="size-4" />
 								Delete
 							</Button>
 						</div>

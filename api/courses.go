@@ -561,6 +561,7 @@ func (api *courses) createTag(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"message": "a tag for this course already exists - " + err.Error(),
 			})
+
 		}
 
 		log.Err(err).Msg("error creating course tag")

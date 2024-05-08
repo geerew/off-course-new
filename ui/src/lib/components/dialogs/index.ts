@@ -1,3 +1,4 @@
+export { default as AddCourseTagsDialog } from './add-course-tags.svelte';
 export { default as AddCoursesDialog } from './add-courses.svelte';
 export { default as AddTagsDialog } from './add-tags.svelte';
 export { default as DeleteCourseDialog } from './delete-course.svelte';

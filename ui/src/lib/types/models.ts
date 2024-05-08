@@ -165,7 +165,7 @@ export type Tag = Output<typeof TagSchema>;
 
 export type TagGetParams = {
 	byName?: boolean;
-	insensitive?: boolean
+	insensitive?: boolean;
 };
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

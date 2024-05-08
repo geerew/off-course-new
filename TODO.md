@@ -1,6 +1,5 @@
 TODO
 
-https://dribbble.com/shots/23132040-E-learning-website-course-details
 
 - [x] Use await
 - [x] Tidy Loading component
@@ -14,11 +13,23 @@ https://dribbble.com/shots/23132040-E-learning-website-course-details
 - [x] Fix sorting by course count
 - [x] Fix adding the same tag with different case (upper/lower/capital)
 - [x] Allow editing of tags
+- [ ] Add courses to tag(s)
 
 ## Page -> Settings -> Courses -> Add
 
 - [x] Rework into a dialog
 - [x] Rework getting all courses to be more efficient
+
+## Page -> Settings -> Courses
+
+- [ ] Filter
+- [ ] Store table state in local storage/db
+- [x] Add table action `Add Tags`
+- [x] Use shadcn table
+
+## Page -> Courses
+
+- [ ] https://dribbble.com/shots/23132040-E-learning-website-course-details
 
 ## Page -> Home
 
@@ -45,10 +56,7 @@ https://dribbble.com/shots/23132040-E-learning-website-course-details
 - [ ] Change how frequently the course availability check is run
 - [ ] Support for FFMPEG path
 
-## Page -> Settings -> Courses
 
-- [ ] Filter
-- [ ] Store table state in local storage/db
 
 ## Search
 

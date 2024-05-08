@@ -78,7 +78,7 @@
 				{Object.keys(data).length}
 				{Object.keys(data).length ? 'chapters' : 'chapter'}
 			</span>
-			<Dot class="text-muted-foreground h-5 w-5" />
+			<Dot class="text-muted-foreground size-5" />
 			<span class="text-muted-foreground text-sm">
 				{totalAssetCount(data)}
 				{totalAssetCount(data) ? 'assets' : 'asset'}
@@ -132,16 +132,16 @@
 
 											<!-- Progress -->
 											{#if asset.completed}
-												<Dot class="h-5 w-5" />
+												<Dot class="size-5" />
 												<span class="text-success font-bold"> completed </span>
 											{:else if asset.assetType === 'video' && asset.videoPos > 0}
-												<Dot class="h-5 w-5" />
+												<Dot class="size-5" />
 												<span class="text-secondary"> in-progress </span>
 											{/if}
 
 											<!-- Attachments -->
 											{#if asset.attachments && asset.attachments.length > 0}
-												<Dot class="h-5 w-5" />
+												<Dot class="size-5" />
 
 												<DropdownMenu.Root closeOnItemClick={false}>
 													<DropdownMenu.Trigger asChild let:builder>
@@ -155,7 +155,7 @@
 																: ''}
 
 															<ChevronRight
-																class="h-3 w-3 duration-200 group-data-[state=open]:rotate-90"
+																class="size-3 duration-200 group-data-[state=open]:rotate-90"
 															/>
 														</Button>
 													</DropdownMenu.Trigger>
@@ -176,7 +176,7 @@
 																	<span class="grow">{attachment.title}</span>
 																</div>
 
-																<Download class="flex h-3 w-3 shrink-0" />
+																<Download class="flex size-3 shrink-0" />
 															</DropdownMenu.Item>
 
 															{#if !lastAttachment}

@@ -298,11 +298,11 @@
 
 													{#if ascSort}
 														<ChevronUp
-															class="text-secondary/80 absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 stroke-[2]"
+															class="text-secondary/80 absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2]"
 														/>
 													{:else if descSort}
 														<ChevronDown
-															class="text-secondary/80 absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 stroke-[2]"
+															class="text-secondary/80 absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2]"
 														/>
 													{/if}
 												</div>

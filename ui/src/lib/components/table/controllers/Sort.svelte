@@ -24,9 +24,9 @@
 <Popover.Root bind:open={isOpen}>
 	<Popover.Trigger asChild let:builder>
 		<Button variant="outline" {disabled} class="flex h-8 gap-1.5" builders={[builder]}>
-			<ArrowDownUp class="h-4 w-4" />
+			<ArrowDownUp class="size-4" />
 			<span>Sort</span>
-			<ChevronRight class={cn('h-4 w-4 duration-200', isOpen && 'rotate-90')} />
+			<ChevronRight class={cn('size-4 duration-200', isOpen && 'rotate-90')} />
 		</Button>
 	</Popover.Trigger>
 
@@ -67,7 +67,7 @@
 					>
 						<ChevronUp
 							class={cn(
-								'text-muted-foreground h-5 w-5 duration-150',
+								'text-muted-foreground size-5 duration-150',
 								isAscSorted ? 'text-primary' : 'hover:text-foreground'
 							)}
 						/>
@@ -82,7 +82,7 @@
 					>
 						<ChevronDown
 							class={cn(
-								'text-muted-foreground h-5 w-5 duration-150',
+								'text-muted-foreground size-5 duration-150',
 								isDescSorted ? 'text-primary' : 'hover:text-foreground'
 							)}
 						/>

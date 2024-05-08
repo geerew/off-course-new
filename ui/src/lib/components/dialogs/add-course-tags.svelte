@@ -3,12 +3,12 @@
 	import { Badge } from '$components/ui/badge';
 	import { Button } from '$components/ui/button';
 	import * as Dialog from '$components/ui/dialog';
-	import * as Tooltip from '$components/ui/tooltip';
-	import { AddCourseTag, DeleteCourseTag, GetTags } from '$lib/api';
-	import type { CourseTag, Tag } from '$lib/types/models';
-	import { cn, flyAndScale } from '$lib/utils';
+	import { AddCourseTag, GetTags } from '$lib/api';
+	import type { Tag } from '$lib/types/models';
+	import { cn } from '$lib/utils';
 	import { createCombobox, type ComboboxOption } from '@melt-ui/svelte';
-	import { ArrowLeft, Pencil, RotateCcw, Search, X } from 'lucide-svelte';
+	import axios from 'axios';
+	import { ArrowLeft, Search, X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { writable, type Writable } from 'svelte/store';
@@ -18,17 +18,14 @@
 	// Exports
 	// ----------------------
 
-	export let courseId: string;
-	export let existingTags: CourseTag[] = [];
+	export let courseIds: string[];
+	export let open: boolean;
 
 	// ----------------------
 	// Variables
 	// ----------------------
 
 	const dispatch = createEventDispatcher();
-
-	// True when the dialog is open. This is bound to the dialog component
-	let isDialogOpen = false;
 
 	// An array of tags that should be added to the course
 	let toAdd: string[] = [];
@@ -72,9 +69,7 @@
 	function appendTag(tag: string) {
 		if (!tag || !tag.trim()) return;
 
-		const foundTag =
-			toAdd.find((t) => t.toLowerCase() === tag.toLowerCase()) ||
-			existingTags.find((t) => t.tag.toLowerCase() === tag.toLowerCase());
+		const foundTag = toAdd.find((t) => t.toLowerCase() === tag.toLowerCase());
 
 		if (foundTag) {
 			toast.error(`Tag '${tag}' already added`);
@@ -163,48 +158,33 @@
 
 	// Backend -> Add the new tags to the course
 	async function addTags() {
-		try {
-			await Promise.all(
-				toAdd.map(async (tag) => {
+		await Promise.all(
+			toAdd.map(async (tag) => {
+				courseIds.forEach(async (courseId) => {
 					try {
+						// console.log('Adding tag: ' + tag + ' to course: ' + courseId);
 						await AddCourseTag(courseId, tag);
 					} catch (error) {
-						toast.error('Failed to add tag: ' + tag);
-					}
-				})
-			);
-		} catch (error) {
-			toast.error(error instanceof Error ? error.message : (error as string));
-		}
-	}
-
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	// Backend -> Delete the tags that are marked for deletion from the course
-	async function deleteTags() {
-		try {
-			await Promise.all(
-				existingTags
-					.filter((tag) => tag.forDeletion)
-					.map(async (tag) => {
-						try {
-							await DeleteCourseTag(courseId, tag.id);
-						} catch (error) {
-							toast.error('Failed to delete tag: ' + tag.tag);
+						// Show a toast if the error is not a 400 error or a network error. A status of
+						// 400 means that the tag already exists for this course
+						if (
+							!axios.isAxiosError(error) ||
+							(error.response && error.response.status !== 400) ||
+							error.message === 'Network Error'
+						) {
+							toast.error(error instanceof Error ? error.message : String(error));
+							return;
 						}
-					})
-			);
-		} catch (error) {
-			toast.error(error instanceof Error ? error.message : (error as string));
-		}
+					}
+				});
+			})
+		);
 	}
+
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	function isDisabled(tag: string): boolean {
-		return (
-			toAdd.find((t) => t.toLowerCase() === tag.toLowerCase()) !== undefined ||
-			existingTags.find((t) => t.tag.toLowerCase() === tag.toLowerCase()) !== undefined
-		);
+		return toAdd.find((t) => t.toLowerCase() === tag.toLowerCase()) !== undefined;
 	}
 
 	// ----------------------
@@ -224,46 +204,17 @@
 	}
 
 	// Reset the state when the dialog is closed
-	$: if (!isDialogOpen) {
+	$: if (!open) {
 		toAdd = [];
 		changes = 0;
 		filteredTags = [];
 		showSpinner = false;
 		inputValue.set('');
 		selected.set({ value: '', label: '' });
-
-		existingTags.forEach((tag) => {
-			tag.forDeletion = false;
-		});
 	}
 </script>
 
-<Tooltip.Root openDelay={100} portal={null} closeOnPointerDown={true}>
-	<Tooltip.Trigger asChild let:builder>
-		<Button
-			builders={[builder]}
-			variant="ghost"
-			class="text-muted-foreground hover:text-foreground h-auto cursor-pointer px-2.5 py-1"
-			on:click={() => {
-				isDialogOpen = true;
-			}}
-		>
-			<Pencil class="size-4" />
-		</Button>
-	</Tooltip.Trigger>
-
-	<Tooltip.Content
-		class="bg-foreground text-background select-none rounded-sm border-none px-1.5 py-1 text-xs"
-		transition={flyAndScale}
-		transitionConfig={{ y: 8, duration: 100 }}
-		side="bottom"
-	>
-		Edit
-		<Tooltip.Arrow class="bg-background" />
-	</Tooltip.Content>
-</Tooltip.Root>
-
-<Dialog.Root bind:open={isDialogOpen} closeOnEscape={false} closeOnOutsideClick={false}>
+<Dialog.Root bind:open closeOnEscape={false} closeOnOutsideClick={false}>
 	<Dialog.Content
 		class="bg-muted top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md px-0 py-0 duration-200 md:max-w-xl [&>button[data-dialog-close]]:hidden"
 	>
@@ -325,35 +276,6 @@
 			class="flex max-h-[20rem] min-h-[7rem] flex-col gap-2 overflow-hidden overflow-y-auto px-4"
 		>
 			<div class="flex flex-row flex-wrap gap-2.5" bind:this={tagsEl}>
-				{#each existingTags as tag}
-					<div class="flex flex-row" data-tag={tag.tag}>
-						<!-- Tag -->
-						<Badge
-							class={cn(
-								'bg-alt-1 hover:bg-alt-1 text-foreground min-w-0 items-center justify-between gap-1.5 whitespace-nowrap rounded-sm rounded-r-none',
-								tag.forDeletion && 'text-destructive-foreground opacity-60'
-							)}
-						>
-							{tag.tag}
-						</Badge>
-
-						<Button
-							class={cn(
-								'bg-alt-1 hover:bg-destructive inline-flex h-auto items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5 duration-200',
-								toAdd.includes(tag.tag) && 'bg-success text-success-foreground',
-								tag.forDeletion &&
-									'text-destructive-foreground hover:bg-alt-1 opacity-60 transition-opacity hover:opacity-100'
-							)}
-							on:click={() => {
-								changes += tag.forDeletion ? 1 : -1;
-								tag.forDeletion = !tag.forDeletion;
-							}}
-						>
-							<svelte:component this={tag.forDeletion ? RotateCcw : X} class="size-3" />
-						</Button>
-					</div>
-				{/each}
-
 				{#each toAdd as tag}
 					<div class="flex flex-row" data-tag={tag}>
 						<!-- Tag -->
@@ -389,7 +311,7 @@
 				variant="outline"
 				class="bg-muted border-alt-1/60 hover:bg-alt-1/60 h-8 w-20"
 				on:click={() => {
-					isDialogOpen = false;
+					open = false;
 				}}
 			>
 				Cancel
@@ -400,9 +322,8 @@
 				disabled={changes === 0}
 				on:click={async () => {
 					await addTags();
-					await deleteTags();
 					dispatch('updated');
-					isDialogOpen = false;
+					open = false;
 				}}
 			>
 				Save

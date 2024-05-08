@@ -195,7 +195,7 @@
 					}}
 					class="hover:text-secondary px-3"
 				>
-					<ArrowLeft class="h-6 w-6" />
+					<ArrowLeft class="size-6" />
 				</Button>
 
 				<Button
@@ -207,7 +207,7 @@
 					}}
 					class="hover:text-secondary px-3"
 				>
-					<ArrowRight class="h-6 w-6" />
+					<ArrowRight class="size-6" />
 				</Button>
 			{/await}
 		</div>
@@ -279,6 +279,6 @@
 			</Carousel.Root>
 		{/if}
 	{:catch _}
-		<Err class="text-muted min-h-[6rem] p-5 text-sm" imgClass="h-6 w-6" />
+		<Err class="text-muted min-h-[6rem] p-5 text-sm" imgClass="size-6" />
 	{/await}
 </div>

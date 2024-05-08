@@ -69,7 +69,7 @@
 									<span class="grow">{attachment.title}</span>
 								</div>
 
-								<Download class="flex h-3 w-3 shrink-0" />
+								<Download class="flex size-3 shrink-0" />
 							</DropdownMenu.Item>
 
 							{#if !lastAttachment}

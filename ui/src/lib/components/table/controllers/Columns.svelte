@@ -16,9 +16,9 @@
 <DropdownMenu.Root closeOnItemClick={false}>
 	<DropdownMenu.Trigger asChild let:builder>
 		<Button variant="outline" {disabled} class="group flex h-8 gap-2.5" builders={[builder]}>
-			<EyeOff class="h-4 w-4" />
+			<EyeOff class="size-4" />
 			<span>Columns</span>
-			<ChevronRight class="h-4 w-4 duration-200 group-data-[state=open]:rotate-90" />
+			<ChevronRight class="size-4 duration-200 group-data-[state=open]:rotate-90" />
 		</Button>
 	</DropdownMenu.Trigger>
 
@@ -40,7 +40,7 @@
 						!$columnStore.includes(col.id) ? 'block' : 'hidden'
 					)}
 				>
-					<Check class="h-4 w-4" />
+					<Check class="size-4" />
 				</div>
 
 				<span class={$columnStore.includes(col.id) ? 'text-muted-foreground' : ''}>

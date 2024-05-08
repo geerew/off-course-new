@@ -23,7 +23,7 @@
 			class="text-muted-foreground hover:bg-alt-1/60 data-[state=open]:text-foreground data-[state=open]:bg-alt-1/60 h-auto p-1.5"
 			builders={[builder]}
 		>
-			<MoreHorizontal class="h-4 w-4" />
+			<MoreHorizontal class="size-4" />
 		</Button>
 	</DropdownMenu.Trigger>
 
@@ -46,7 +46,7 @@
 				dispatch('delete', { id: tag.id });
 			}}
 		>
-			<Trash2 class="h-4 w-4" />
+			<Trash2 class="size-4" />
 			Delete
 		</DropdownMenu.Item>
 	</DropdownMenu.Content>

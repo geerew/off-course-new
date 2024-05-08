@@ -28,7 +28,7 @@
 			}}
 		>
 			<span class="text-start">
-				<ArrowLeft class="h-5 w-5" />
+				<ArrowLeft class="size-5" />
 			</span>
 			{prevAsset.prefix}. {prevAsset.title}
 		</Button>
@@ -47,7 +47,7 @@
 			<span class="text-start">
 				{nextAsset.prefix}. {nextAsset.title}
 			</span>
-			<ArrowRight class="h-5 w-5" />
+			<ArrowRight class="size-5" />
 		</Button>
 	{:else}
 		<div class="basis-1/2"></div>

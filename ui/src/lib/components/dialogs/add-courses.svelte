@@ -296,7 +296,7 @@
 		open = true;
 	}}
 >
-	<BookPlus class="h-4 w-4" />
+	<BookPlus class="size-4" />
 	<span>Add Courses</span>
 </Button>
 
@@ -311,7 +311,7 @@
 					class="border-alt-1/60 flex h-14 shrink-0 items-center justify-between border-b px-3 text-base font-medium"
 				>
 					<div class="flex items-center gap-2">
-						<BookPlus class="h-4 w-4" />
+						<BookPlus class="size-4" />
 						<span>Course Selection</span>
 					</div>
 
@@ -324,7 +324,7 @@
 					>
 						<RefreshCw
 							class={cn(
-								'group-hover:text-foreground text-muted-foreground h-5 w-5',
+								'group-hover:text-foreground text-muted-foreground size-5',
 								refreshing && 'animate-spin'
 							)}
 						/>
@@ -371,7 +371,7 @@
 										>
 											<div class="flex grow gap-2 text-sm">
 												<CornerUpLeft
-													class="text-muted-foreground group-hover:text-foreground h-4 w-4"
+													class="text-muted-foreground group-hover:text-foreground size-4"
 												/>
 												<span>Back</span>
 											</div>
@@ -381,7 +381,7 @@
 											class="hidden h-full min-w-20 shrink-0 place-content-center items-center opacity-100"
 											id="back-loader"
 										>
-											<Loading class="px-0 py-0" loaderClass="h-5 w-5" />
+											<Loading class="px-0 py-0" loaderClass="size-5" />
 										</div>
 									</div>
 								{/key}
@@ -423,7 +423,7 @@
 
 										<div class="flex h-full min-w-20 shrink-0 place-content-center items-center">
 											{#if loadingPath && dirInfo.path === currentLoadingPath}
-												<Loading class="px-0 py-0" loaderClass="h-5 w-5" />
+												<Loading class="px-0 py-0" loaderClass="size-5" />
 											{:else}
 												<Button
 													variant="ghost"

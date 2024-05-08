@@ -74,7 +74,7 @@
 							class="hover:bg-accent-1 group rounded-md p-1.5 text-sm font-semibold duration-200"
 						>
 							<Github
-								class="fill-foreground-muted group-hover:fill-foreground h-7 w-7 stroke-none duration-200"
+								class="fill-foreground-muted group-hover:fill-foreground size-7 stroke-none duration-200"
 							/>
 							<span class="sr-only">GitHub</span>
 						</div>
