@@ -166,6 +166,18 @@ func TestTag_Get(t *testing.T) {
 		require.Len(t, tag.CourseTags, 2)
 		require.Equal(t, testData[0].ID, tag.CourseTags[0].CourseId)
 		require.Equal(t, testData[1].ID, tag.CourseTags[1].CourseId)
+
+		// ----------------------------
+		// Case Insensitive
+		// ----------------------------
+		dbParams = &database.DatabaseParams{
+			CaseInsensitive: true,
+		}
+
+		tag, err = dao.Get("go", true, dbParams, nil)
+		require.Nil(t, err)
+		require.Equal(t, testData[0].Tags[0].TagId, tag.ID)
+
 	})
 
 	t.Run("not found", func(t *testing.T) {

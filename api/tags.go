@@ -134,8 +134,12 @@ func (api *tags) getTag(c *fiber.Ctx) error {
 	id := c.Params("id")
 	expand := c.QueryBool("expand", false)
 	byName := c.QueryBool("byName", false)
+	insensitive := c.QueryBool("insensitive", false)
 
-	dbParams := &database.DatabaseParams{}
+	dbParams := &database.DatabaseParams{
+		CaseInsensitive: insensitive,
+	}
+
 	if expand {
 		dbParams.IncludeRelations = []string{api.courseTagDao.Table()}
 	}

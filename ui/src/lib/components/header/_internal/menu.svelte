@@ -8,7 +8,6 @@
 	import { site } from '$lib/config/site';
 	import { cn, isBrowser } from '$lib/utils';
 	import { createCollapsible } from '@melt-ui/svelte';
-	import { useClickOutside } from '@melt-ui/svelte/internal/actions';
 	import { slide } from 'svelte/transition';
 	import Burger from './burger.svelte';
 
@@ -37,15 +36,7 @@
 </script>
 
 <!-- Shown on sm- -->
-<nav
-	class="md:hidden"
-	{...$root}
-	use:useClickOutside={{
-		handler: () => {
-			open.set(false);
-		}
-	}}
->
+<nav class="md:hidden" {...$root}>
 	<Burger {trigger} {open} />
 
 	{#if $open}

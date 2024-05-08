@@ -11,9 +11,9 @@ https://dribbble.com/shots/23132040-E-learning-website-course-details
 - [x] Add table
 - [x] Allow deleting of tags
 - [x] Allow adding of tags
-- [ ] Allow editing of tags
 - [x] Fix sorting by course count
-- [ ] Fix adding the same tag with different case (upper/lower/capital)
+- [x] Fix adding the same tag with different case (upper/lower/capital)
+- [] Allow editing of tags
 
 ## Page -> Settings -> Courses -> Add
 

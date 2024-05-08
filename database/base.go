@@ -61,6 +61,9 @@ type DatabaseParams struct {
 
 	// Control which related entities to fetch
 	IncludeRelations []string
+
+	// Whether to use case-insensitive search
+	CaseInsensitive bool
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

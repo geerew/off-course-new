@@ -23,6 +23,8 @@
 
 	let toAdd: string[] = [];
 
+	let tagsEl: HTMLDivElement;
+
 	// ----------------------
 	// Functions
 	// ----------------------
@@ -40,17 +42,33 @@
 				const tagToAdd = node.value.trim();
 
 				// Check if the tag already exists in the list
-				if (toAdd.find((t) => t.toLowerCase() === tagToAdd.toLowerCase())) {
-					toast.error('Tag is already in the list of tags to add');
+				const foundTag = toAdd.find((tag) => tag.toLowerCase() === tagToAdd.toLowerCase());
+
+				if (foundTag) {
+					toast.error(`Tag '${tagToAdd}' is already added`);
 					showSpinner = false;
+
+					if (tagsEl) {
+						const tagEl = tagsEl.querySelector(`[data-tag="${foundTag}"]`);
+						if (tagEl) {
+							// shake the tag if not already shaking
+							if (tagEl.classList.contains('animate-shake')) return;
+
+							tagEl.classList.add('animate-shake');
+							setTimeout(() => {
+								tagEl.classList.remove('animate-shake');
+							}, 1000);
+						}
+					}
+
 					return;
 				}
 
 				// Check if tag already exists in the backend
 				try {
-					await GetTag(tagToAdd, true);
+					await GetTag(tagToAdd, { byName: true, insensitive: true });
 
-					toast.error('Tag already exists');
+					toast.error(`Tag '${tagToAdd}' is an existing tag`);
 					showSpinner = false;
 					return;
 				} catch (error) {
@@ -135,9 +153,9 @@
 		<div
 			class="flex max-h-[20rem] min-h-[7rem] flex-col gap-2 overflow-hidden overflow-y-auto px-4"
 		>
-			<div class="flex flex-row flex-wrap gap-2.5">
+			<div class="flex flex-row flex-wrap gap-2.5" bind:this={tagsEl}>
 				{#each toAdd as tag}
-					<div class="flex flex-row">
+					<div class="flex flex-row" data-tag={tag}>
 						<!-- Tag -->
 						<Badge
 							class={cn(

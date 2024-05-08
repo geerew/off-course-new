@@ -36,6 +36,9 @@
 	// True when the combobox is open. This is used to show a spinner when backend events are happening
 	let showSpinner = false;
 
+	// The elements containing the edited/added tags
+	let tagsEl: HTMLDivElement;
+
 	// Every time the tags are added or existing tag is deleted, this counted will increment. When the
 	// inverse happens, it the counter will decrement. This can be used to enable/disable parts of the UI
 	// while the counter is 0
@@ -50,7 +53,7 @@
 	// A debounce timer to prevent the backend from being called too often
 	let debounceTimer: ReturnType<typeof setTimeout>;
 
-	// True when the tag can be appended to the list of tags to be added
+	// True when the tag can be appended to `toAdd`
 	let canAppendTag = false;
 
 	const {
@@ -69,16 +72,28 @@
 	function appendTag(tag: string) {
 		if (!tag || !tag.trim()) return;
 
-		// if (!selected || (!selected.value && selected.value !== tag)) return;
-
-		if (
+		const foundTag =
 			toAdd.find((t) => t.toLowerCase() === tag.toLowerCase()) ||
-			existingTags.find((t) => t.tag.toLowerCase() === tag.toLowerCase())
-		) {
+			existingTags.find((t) => t.tag.toLowerCase() === tag.toLowerCase());
+
+		if (foundTag) {
 			toast.error(`Tag '${tag}' already added`);
 			inputValue.set(tag);
 			selected.set({ value: '', label: '' });
 			isComboOpen.set(true);
+
+			if (tagsEl) {
+				const tagEl = tagsEl.querySelector(`[data-tag="${foundTag}"]`);
+				if (tagEl) {
+					// shake the tag if not already shaking
+					if (tagEl.classList.contains('animate-shake')) return;
+
+					tagEl.classList.add('animate-shake');
+					setTimeout(() => {
+						tagEl.classList.remove('animate-shake');
+					}, 1000);
+				}
+			}
 
 			return;
 		}
@@ -253,6 +268,7 @@
 	<Dialog.Content
 		class="bg-muted top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md px-0 py-0 duration-200 md:max-w-xl [&>button[data-dialog-close]]:hidden"
 	>
+		<!-- Input -->
 		<div class="border-alt-1/60 group relative flex flex-row items-center border-b">
 			<!-- svelte-ignore a11y-label-has-associated-control - $label contains the 'for' attribute -->
 			<label {...$label} use:label>
@@ -278,6 +294,7 @@
 			/>
 		</div>
 
+		<!-- Popup for input -->
 		{#if $isComboOpen && filteredTags.length > 0}
 			<div class=" z-50" {...$menu} use:menu transition:fly={{ duration: 150, y: -5 }}>
 				<div class="bg-background ml-10 mr-2 gap-1.5 rounded-b-md py-2">
@@ -304,12 +321,13 @@
 			</div>
 		{/if}
 
+		<!-- Body -->
 		<div
 			class="flex max-h-[20rem] min-h-[7rem] flex-col gap-2 overflow-hidden overflow-y-auto px-4"
 		>
-			<div class="flex flex-row flex-wrap gap-2.5">
+			<div class="flex flex-row flex-wrap gap-2.5" bind:this={tagsEl}>
 				{#each existingTags as tag}
-					<div class="flex flex-row">
+					<div class="flex flex-row" data-tag={tag.tag}>
 						<!-- Tag -->
 						<Badge
 							class={cn(
@@ -338,7 +356,7 @@
 				{/each}
 
 				{#each toAdd as tag}
-					<div class="flex flex-row">
+					<div class="flex flex-row" data-tag={tag}>
 						<!-- Tag -->
 						<Badge
 							class={cn(

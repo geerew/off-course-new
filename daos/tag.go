@@ -84,7 +84,11 @@ func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams
 	}
 
 	if byName {
-		tagDbParams.Where = squirrel.Eq{dao.Table() + ".tag": id}
+		if dbParams != nil && dbParams.CaseInsensitive {
+			tagDbParams.Where = squirrel.Eq{dao.Table() + ".tag COLLATE NOCASE": id}
+		} else {
+			tagDbParams.Where = squirrel.Eq{dao.Table() + ".tag": id}
+		}
 	} else {
 		tagDbParams.Where = squirrel.Eq{dao.Table() + ".id": id}
 	}

@@ -13,6 +13,7 @@ import {
 	type CoursesGetParams,
 	type Scan,
 	type Tag,
+	type TagGetParams,
 	type TagsGetParams
 } from '$lib/types/models';
 import { PaginationSchema, type Pagination } from '$lib/types/pagination';
@@ -422,9 +423,9 @@ export const AddScan = async (courseId: string): Promise<Scan> => {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GET - Get a tag by ID or name
-export const GetTag = async (idOrName: string, byName: boolean): Promise<Tag> => {
+export const GetTag = async (idOrName: string, params?: TagGetParams): Promise<Tag> => {
 	try {
-		const response = await axios.get<Tag>(`${TAGS_API}/${idOrName}`, { params: { byName } });
+		const response = await axios.get<Tag>(`${TAGS_API}/${idOrName}`, { params });
 		const result = safeParse(TagSchema, response.data);
 
 		if (!result.success) throw new Error('Invalid response from server');
