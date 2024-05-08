@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -413,6 +414,106 @@ func TestTags_CreateTag(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 		require.Contains(t, string(body), "error creating tag")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestTags_UpdateTag(t *testing.T) {
+	t.Run("200 (found)", func(t *testing.T) {
+		_, db, _, _ := setup(t)
+
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Tags([]string{"Go", "PHP"}).Build()
+
+		tagDao := daos.NewTagDao(db)
+
+		goTag, err := tagDao.Get(testData[0].Tags[0].TagId, false, nil, nil)
+		require.Nil(t, err)
+
+		// ----------------------------
+		// Update the tag name to 'go'
+		// ----------------------------
+		goTag.Tag = "go"
+
+		// Marshal the tag for the request
+		data, err := json.Marshal(tagResponseHelper([]*models.Tag{goTag})[0])
+		require.Nil(t, err)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/tags/"+goTag.ID, strings.NewReader(string(data)))
+		req.Header.Set("Content-Type", "application/json")
+
+		status, body, err := tagsRequestHelper(db, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var tagResp1 tagResponse
+		err = json.Unmarshal(body, &tagResp1)
+		require.Nil(t, err)
+		require.Equal(t, goTag.ID, tagResp1.ID)
+		require.Equal(t, "go", tagResp1.Tag)
+	})
+
+	t.Run("400 (invalid data)", func(t *testing.T) {
+		_, db, _, _ := setup(t)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/tags/test", strings.NewReader(`bob`))
+		req.Header.Set("Content-Type", "application/json")
+
+		status, _, err := tagsRequestHelper(db, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+	})
+
+	t.Run("404 (not found)", func(t *testing.T) {
+		_, db, _, _ := setup(t)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/tags/test", strings.NewReader(`{"id": "1234567"}`))
+		req.Header.Set("Content-Type", "application/json")
+
+		status, _, err := tagsRequestHelper(db, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
+	})
+
+	t.Run("400 (duplicate)", func(t *testing.T) {
+		_, db, _, _ := setup(t)
+
+		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Tags([]string{"Go", "PHP"}).Build()
+
+		tagDao := daos.NewTagDao(db)
+
+		tag, err := tagDao.Get(testData[0].Tags[0].TagId, false, nil, nil)
+		require.Nil(t, err)
+
+		tag.Tag = "PHP"
+
+		// Marshal the tag for the request
+		data, err := json.Marshal(tagResponseHelper([]*models.Tag{tag})[0])
+		require.Nil(t, err)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/tags/"+tag.ID, strings.NewReader(string(data)))
+		req.Header.Set("Content-Type", "application/json")
+
+		status, body, err := tagsRequestHelper(db, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+
+		require.Contains(t, string(body), "error updating tag - constraint failed: UNIQUE constraint failed:"+fmt.Sprintf(" %s.tag", tagDao.Table()))
+	})
+
+	t.Run("500 (internal error)", func(t *testing.T) {
+		_, db, _, _ := setup(t)
+
+		// Drop the table
+		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(db).Table())
+		require.Nil(t, err)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/tags/test", strings.NewReader(`{"id": "1234567"}`))
+		req.Header.Set("Content-Type", "application/json")
+
+		status, _, err := tagsRequestHelper(db, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, status)
 	})
 }
 

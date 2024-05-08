@@ -583,7 +583,7 @@ func TestCourse_Delete(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestCourse_IsAncestor(t *testing.T) {
+func TestCourse_ClassifyPaths(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, dao, db := courseSetup(t)
 

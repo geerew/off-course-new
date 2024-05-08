@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { AddTagsDialog, DeleteTagsDialog } from '$components/dialogs';
+	import { AddTagsDialog, DeleteTagsDialog, RenameTagDialog } from '$components/dialogs';
 	import { Checkbox, Err, Loading, SelectAllCheckbox } from '$components/generic';
 	import { TableSortController } from '$components/table/controllers';
 	import { Pagination } from '$components/table/pagination';
 	import { GetTags } from '$lib/api';
-	import { TagsTableActions } from '$lib/components/pages/settings_tags';
+	import { TagsRowAction, TagsTableActions } from '$lib/components/pages/settings_tags';
 	import * as Table from '$lib/components/ui/table';
 	import type { Tag } from '$lib/types/models';
 	import type { PaginationParams } from '$lib/types/pagination';
@@ -20,10 +20,16 @@
 	// ----------------------
 	const fetchedTags = writable<Tag[]>([]);
 
+	// Set when a single tag is selected via the row action
+	let selectedTag: Tag | undefined = undefined;
+
+	// Set when tags are selected via the checkbox
 	const selectedTags = writable<Record<string, string>>({});
 	const selectedTagsCount = writable<number>(0);
 
+	// Dialogs
 	let openDeleteDialog = false;
+	let openRenameDialog = false;
 
 	let pagination: PaginationParams = {
 		page: 1,
@@ -112,6 +118,27 @@
 		table.column({
 			header: 'Course Count',
 			accessor: 'courseCount'
+		}),
+		table.column({
+			accessor: (item) => item,
+			header: '',
+			id: 'actions',
+			plugins: {
+				sort: {
+					disable: true
+				}
+			},
+			cell: ({ value }) => {
+				return createRender(TagsRowAction, { tag: value })
+					.on('delete', () => {
+						selectedTag = value;
+						openDeleteDialog = true;
+					})
+					.on('rename', () => {
+						selectedTag = value;
+						openRenameDialog = true;
+					});
+			}
 		})
 	]);
 
@@ -348,16 +375,43 @@
 
 <!-- Delete dialog -->
 <DeleteTagsDialog
-	tags={$selectedTags}
+	tags={selectedTag ? { [selectedTag.id]: selectedTag.tag } : $selectedTags}
 	bind:open={openDeleteDialog}
+	on:cancelled={() => {
+		selectedTag = undefined;
+	}}
 	on:deleted={() => {
-		// It is possible that the user deleted the last course on this page,
+		// It is possible that the user deleted the last tag on this page,
 		// therefore we need to set the page to the previous one
 		if (pagination.page > 1 && (pagination.totalItems - 1) % pagination.perPage === 0)
 			pagination.page = pagination.page - 1;
 
-		selectedTags.set({});
+		if (selectedTag) {
+			// If a single tag was deleted, remove it from the selected tags
+			selectedTags.update((tags) => {
+				if (selectedTag) delete tags[selectedTag.id];
+				return { ...tags };
+			});
+
+			selectedTag = undefined;
+		} else {
+			selectedTags.set({});
+		}
 
 		load = getTags();
 	}}
 />
+
+{#if selectedTag}
+	<RenameTagDialog
+		tag={selectedTag}
+		bind:open={openRenameDialog}
+		on:cancelled={() => {
+			selectedTag = undefined;
+		}}
+		on:renamed={() => {
+			selectedTag = undefined;
+			load = getTags();
+		}}
+	/>
+{/if}

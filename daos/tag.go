@@ -201,6 +201,30 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*model
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Update updates a tag
+//
+// Note: Only `tag` can be updated
+func (dao *TagDao) Update(tag *models.Tag) error {
+	if tag.ID == "" {
+		return ErrEmptyId
+	}
+
+	tag.RefreshUpdatedAt()
+
+	query, args, _ := squirrel.
+		StatementBuilder.
+		Update(dao.Table()).
+		Set("tag", NilStr(tag.Tag)).
+		Set("updated_at", tag.UpdatedAt).
+		Where("id = ?", tag.ID).
+		ToSql()
+
+	_, err := dao.db.Exec(query, args...)
+	return err
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Delete deletes a tag based upon the where clause
 //
 // `tx` allows for the function to be run within a transaction

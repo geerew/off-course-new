@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -53,6 +54,7 @@ func bindTagsApi(router fiber.Router, db database.Database) {
 	subGroup.Get("", api.getTags)
 	subGroup.Get("/:id", api.getTag)
 	subGroup.Post("", api.createTag)
+	subGroup.Put("/:id", api.updateTag)
 	subGroup.Delete("/:id", api.deleteTag)
 }
 
@@ -144,6 +146,16 @@ func (api *tags) getTag(c *fiber.Ctx) error {
 		dbParams.IncludeRelations = []string{api.courseTagDao.Table()}
 	}
 
+	if byName {
+		// Decode the URL-encoded parameter
+		var err error
+		id, err = url.QueryUnescape(id)
+
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid name parameter")
+		}
+	}
+
 	tag, err := api.tagDao.Get(id, byName, dbParams, nil)
 
 	if err != nil {
@@ -196,6 +208,53 @@ func (api *tags) createTag(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(tagResponseHelper([]*models.Tag{tag})[0])
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (api *tags) updateTag(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	// Parse the request body to get the updated fields
+	reqTag := &tagResponse{}
+	if err := c.BodyParser(reqTag); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Failed to parse request body",
+		})
+	}
+
+	// Create an asset progress
+	tag := &models.Tag{
+		BaseModel: models.BaseModel{ID: id},
+		Tag:       reqTag.Tag,
+	}
+
+	// Update the asset progress
+	if err := api.tagDao.Update(tag); err != nil {
+		if err == sql.ErrNoRows || strings.HasPrefix(err.Error(), "constraint failed") {
+			return c.Status(fiber.StatusBadRequest).SendString("error updating tag - " + err.Error())
+		}
+
+		log.Err(err).Msg("error updating tag")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error updating tag - " + err.Error(),
+		})
+	}
+
+	// Get the updated asset
+	updatedTag, err := api.tagDao.Get(id, false, nil, nil)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).SendString("Not found")
+		}
+
+		log.Err(err).Msg("error looking up tag")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error looking up tag - " + err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(tagResponseHelper([]*models.Tag{updatedTag})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

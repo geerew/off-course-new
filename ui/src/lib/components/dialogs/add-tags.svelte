@@ -127,7 +127,7 @@
 	<span>Add Tags</span>
 </Button>
 
-<Dialog.Root bind:open={isOpen}>
+<Dialog.Root bind:open={isOpen} closeOnEscape={false} closeOnOutsideClick={false}>
 	<Dialog.Content
 		class="bg-muted top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md px-0 py-0 duration-200 md:max-w-xl [&>button[data-dialog-close]]:hidden"
 	>

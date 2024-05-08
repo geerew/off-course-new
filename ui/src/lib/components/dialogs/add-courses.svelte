@@ -300,7 +300,7 @@
 	<span>Add Courses</span>
 </Button>
 
-<Dialog.Root bind:open>
+<Dialog.Root bind:open closeOnEscape={false} closeOnOutsideClick={false}>
 	<Dialog.Content
 		class="bg-muted top-20 max-w-[calc(100vw-4rem)] translate-y-0 overflow-hidden rounded-md px-0 py-0 sm:max-w-xl [&>button[data-dialog-close]]:hidden"
 	>

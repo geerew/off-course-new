@@ -50,28 +50,46 @@
 
 <Dialog.Root bind:open>
 	<Dialog.Content
-		class="bg-muted top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md px-0 py-0 duration-200 md:max-w-xl [&>button[data-dialog-close]]:hidden"
+		class="bg-muted top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md px-0 py-0 duration-200 md:max-w-md [&>button[data-dialog-close]]:hidden"
 	>
 		<div class="flex flex-col items-center gap-5 overflow-y-scroll px-8 pt-4">
 			<AlertOctagon class="text-destructive size-10" />
-			<span>Do you really want to delete the following tag{tagsCount > 1 ? 's' : ''}?</span>
+
+			{#if tagsCount > 1}
+				<span class="text-center">
+					Are the sure you want to delete the following {tagsCount} tags
+				</span>
+			{:else}
+				<div class="flex flex-col items-center gap-3">
+					Are you sure you want to delete this tag?
+
+					<span class="text-muted-foreground text-sm">
+						{Object.values(tags)[0]}
+					</span>
+				</div>
+			{/if}
 		</div>
 
-		<div class="flex max-h-[20rem] flex-col gap-2 overflow-hidden overflow-y-auto px-8">
-			<Table.Root>
-				<Table.Body>
-					{#each Object.entries(tags) as [_, t], i (i)}
-						<Table.Row
-							class={cn('border-alt-1/40 last:border-none', tagsCount === 1 && 'hover:bg-inherit')}
-						>
-							<Table.Cell class="text-muted-foreground select-none text-wrap px-4 py-1.5">
-								{t}
-							</Table.Cell>
-						</Table.Row>
-					{/each}
-				</Table.Body>
-			</Table.Root>
-		</div>
+		{#if tagsCount > 1}
+			<div class="flex max-h-[20rem] flex-col gap-2 overflow-hidden overflow-y-auto px-8">
+				<Table.Root>
+					<Table.Body>
+						{#each Object.entries(tags) as [_, t], i (i)}
+							<Table.Row
+								class={cn(
+									'border-alt-1/40 last:border-none',
+									tagsCount === 1 && 'hover:bg-inherit'
+								)}
+							>
+								<Table.Cell class="text-muted-foreground select-none text-wrap px-2.5 py-1.5">
+									{t}
+								</Table.Cell>
+							</Table.Row>
+						{/each}
+					</Table.Body>
+				</Table.Root>
+			</div>
+		{/if}
 
 		<Dialog.Footer
 			class="border-alt-1/60 h-14 flex-row items-center justify-end gap-2 border-t px-4"

@@ -472,7 +472,7 @@
 <DeleteCourseDialog
 	courses={Object.keys(selectedCourse).length > 0 ? selectedCourse : $selectedCourses}
 	bind:open={openDeleteDialog}
-	on:deleted={() => {
+	on:cancelled={() => {
 		selectedCourse = {};
 	}}
 	on:deleted={() => {
@@ -481,7 +481,17 @@
 		if (pagination.page > 1 && (pagination.totalItems - 1) % pagination.perPage === 0)
 			pagination.page = pagination.page - 1;
 
-		selectedCourses.set({});
+		if (Object.keys(selectedCourse).length > 0) {
+			// If a single course was deleted, remove it from the selected courses
+			selectedCourses.update((courses) => {
+				delete courses[Object.keys(selectedCourse)[0]];
+				return { ...courses };
+			});
+
+			selectedCourse = {};
+		} else {
+			selectedCourses.set({});
+		}
 
 		load = getCourses();
 	}}

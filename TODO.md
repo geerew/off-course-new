@@ -13,7 +13,7 @@ https://dribbble.com/shots/23132040-E-learning-website-course-details
 - [x] Allow adding of tags
 - [x] Fix sorting by course count
 - [x] Fix adding the same tag with different case (upper/lower/capital)
-- [] Allow editing of tags
+- [x] Allow editing of tags
 
 ## Page -> Settings -> Courses -> Add
 

@@ -374,6 +374,62 @@ func TestTag_List(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func TestTag_Update(t *testing.T) {
+	t.Run("tag", func(t *testing.T) {
+		_, dao, db := tagSetup(t)
+
+		testData := NewTestBuilder(t).Db(db).Courses(1).Tags([]string{"Go"}).Build()
+
+		tag, err := dao.Get(testData[0].Tags[0].TagId, false, nil, nil)
+		require.Nil(t, err)
+		require.Equal(t, "Go", tag.Tag)
+
+		// Update the tag
+		tag.Tag = "go"
+		require.Nil(t, dao.Update(tag))
+
+		updatedTag, err := dao.Get(testData[0].Tags[0].TagId, false, nil, nil)
+		require.Nil(t, err)
+		require.Equal(t, "go", updatedTag.Tag)
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		_, dao, _ := tagSetup(t)
+
+		err := dao.Update(&models.Tag{})
+		require.ErrorIs(t, err, ErrEmptyId)
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		_, dao, db := tagSetup(t)
+
+		testData := NewTestBuilder(t).Db(db).Courses(1).Tags(1).Build()
+
+		tag, err := dao.Get(testData[0].Tags[0].TagId, false, nil, nil)
+		require.Nil(t, err)
+
+		tag.ID = "1234"
+		require.Nil(t, dao.Update(tag))
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		_, dao, db := tagSetup(t)
+
+		testData := NewTestBuilder(t).Db(db).Courses(1).Tags(1).Build()
+
+		tag, err := dao.Get(testData[0].Tags[0].TagId, false, nil, nil)
+		require.Nil(t, err)
+
+		_, err = db.Exec("DROP TABLE IF EXISTS " + dao.Table())
+		require.Nil(t, err)
+
+		err = dao.Update(tag)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func TestTag_Delete(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		_, dao, _ := tagSetup(t)

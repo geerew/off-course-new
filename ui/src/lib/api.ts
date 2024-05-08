@@ -488,6 +488,29 @@ export const AddTag = async (tag: string): Promise<Tag> => {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// PUT - Update a tag
+export const UpdateTag = async (tag: Tag): Promise<Tag> => {
+	try {
+		const response = await axios.put<Tag>(`${TAGS_API}/${tag.id}`, tag, {
+			headers: {
+				'content-type': 'application/json'
+			}
+		});
+		const result = safeParse(TagSchema, response.data);
+
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to update tag: ${error}`);
+		}
+	}
+};
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // DELETE - Delete a tag
 export const DeleteTag = async (tagId: string): Promise<boolean> => {
 	try {

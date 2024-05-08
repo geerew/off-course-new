@@ -54,27 +54,42 @@
 	>
 		<div class="flex flex-col items-center gap-5 overflow-y-scroll px-8 pt-4">
 			<AlertOctagon class="text-destructive size-10" />
-			<span>Do you really want to delete the following course{coursesCount > 1 ? 's' : ''}?</span>
+
+			{#if coursesCount > 1}
+				<span class="text-center">
+					Are the sure you want to delete the following {coursesCount} courses?
+				</span>
+			{:else}
+				<div class="flex flex-col items-center gap-3">
+					Are you sure you want to delete this course?
+
+					<span class="text-muted-foreground text-sm">
+						{Object.values(courses)[0]}
+					</span>
+				</div>
+			{/if}
 		</div>
 
-		<div class="flex max-h-[20rem] flex-col gap-2 overflow-hidden overflow-y-auto px-8">
-			<Table.Root>
-				<Table.Body>
-					{#each Object.entries(courses) as [_, c], i (i)}
-						<Table.Row
-							class={cn(
-								'border-alt-1/40 last:border-none',
-								coursesCount === 1 && 'hover:bg-inherit'
-							)}
-						>
-							<Table.Cell class="text-muted-foreground select-none text-wrap px-4 py-1.5">
-								{c}
-							</Table.Cell>
-						</Table.Row>
-					{/each}
-				</Table.Body>
-			</Table.Root>
-		</div>
+		{#if coursesCount > 1}
+			<div class="flex max-h-[20rem] flex-col gap-2 overflow-hidden overflow-y-auto px-8">
+				<Table.Root>
+					<Table.Body>
+						{#each Object.entries(courses) as [_, c], i (i)}
+							<Table.Row
+								class={cn(
+									'border-alt-1/40 last:border-none',
+									coursesCount === 1 && 'hover:bg-inherit'
+								)}
+							>
+								<Table.Cell class="text-muted-foreground select-none text-wrap px-2.5 py-1.5">
+									{c}
+								</Table.Cell>
+							</Table.Row>
+						{/each}
+					</Table.Body>
+				</Table.Root>
+			</div>
+		{/if}
 
 		<Dialog.Footer
 			class="border-alt-1/60 h-14 flex-row items-center justify-end gap-2 border-t px-4"
