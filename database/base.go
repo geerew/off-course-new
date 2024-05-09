@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/migrations"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
@@ -55,6 +56,12 @@ type DatabaseParams struct {
 	//   LIKE: sq.Like{"title": "%dev%"}
 	//   NOT:  sq.NotEq{"id": "123"}
 	Where any
+
+	// Columns to group by
+	GroupBys []string
+
+	// Limit the results
+	Having squirrel.Sqlizer
 
 	// Used to paginate the results
 	Pagination *pagination.Pagination
