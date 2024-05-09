@@ -261,7 +261,7 @@ func Test_CourseProcessor(t *testing.T) {
 		err := CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
-		c, err := scanner.courseDao.Get(testData[0].ID, nil)
+		c, err := scanner.courseDao.Get(testData[0].ID, nil, nil)
 		require.Nil(t, err)
 		require.Equal(t, fmt.Sprintf("%s/card.jpg", testData[0].Path), c.CardPath)
 
@@ -277,7 +277,7 @@ func Test_CourseProcessor(t *testing.T) {
 		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
-		c, err = scanner.courseDao.Get(testData[0].ID, nil)
+		c, err = scanner.courseDao.Get(testData[0].ID, nil, nil)
 		require.Nil(t, err)
 		require.Empty(t, c.CardPath)
 		require.Empty(t, testData[0].CardPath)
@@ -295,7 +295,7 @@ func Test_CourseProcessor(t *testing.T) {
 		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
-		c, err = scanner.courseDao.Get(testData[0].ID, nil)
+		c, err = scanner.courseDao.Get(testData[0].ID, nil, nil)
 		require.Nil(t, err)
 		require.Equal(t, fmt.Sprintf("%s/card.jpg", testData[0].Path), c.CardPath)
 	})
@@ -664,7 +664,7 @@ func Test_CourseProcessor(t *testing.T) {
 		err := CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
-		updatedCourse, err := scanner.courseDao.Get(testData[0].ID, nil)
+		updatedCourse, err := scanner.courseDao.Get(testData[0].ID, nil, nil)
 		require.Nil(t, err)
 		require.NotEqual(t, testData[0].UpdatedAt, updatedCourse.UpdatedAt)
 	})

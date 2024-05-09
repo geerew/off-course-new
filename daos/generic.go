@@ -128,6 +128,14 @@ func (dao *GenericDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) (*sql
 					Limit(uint64(dbParams.Pagination.Limit()))
 			}
 		}
+
+		if dbParams.GroupBys != nil {
+			builder = builder.GroupBy(dbParams.GroupBys...)
+		}
+
+		if dbParams.Having != nil {
+			builder = builder.Having(dbParams.Having)
+		}
 	}
 
 	query, args, _ := builder.ToSql()

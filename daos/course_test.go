@@ -93,7 +93,7 @@ func TestCourse_Create(t *testing.T) {
 		err := dao.Create(testData[0].Course)
 		require.Nil(t, err)
 
-		newC, err := dao.Get(testData[0].ID, nil)
+		newC, err := dao.Get(testData[0].ID, nil, nil)
 		require.Nil(t, err)
 		require.NotEmpty(t, newC.ID)
 		require.Equal(t, testData[0].Title, newC.Title)
@@ -152,7 +152,7 @@ func TestCourse_Get(t *testing.T) {
 
 		testData := NewTestBuilder(t).Db(db).Courses(2).Assets(1).Build()
 
-		c, err := dao.Get(testData[1].ID, nil)
+		c, err := dao.Get(testData[1].ID, nil, nil)
 		require.Nil(t, err)
 		require.Equal(t, testData[1].ID, c.ID)
 		require.Empty(t, testData[1].ScanStatus)
@@ -163,7 +163,7 @@ func TestCourse_Get(t *testing.T) {
 		scanDao := NewScanDao(db)
 		require.Nil(t, scanDao.Create(&models.Scan{CourseID: testData[1].ID}))
 
-		c, err = dao.Get(testData[1].ID, nil)
+		c, err = dao.Get(testData[1].ID, nil, nil)
 		require.Nil(t, err)
 		require.Equal(t, string(types.ScanStatusWaiting), c.ScanStatus)
 
@@ -176,7 +176,7 @@ func TestCourse_Get(t *testing.T) {
 		testData[1].Available = true
 		require.Nil(t, dao.Update(testData[1].Course))
 
-		c, err = dao.Get(testData[1].ID, nil)
+		c, err = dao.Get(testData[1].ID, nil, nil)
 		require.Nil(t, err)
 		require.True(t, c.Available)
 
@@ -228,7 +228,7 @@ func TestCourse_Get(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		_, dao, _ := courseSetup(t)
 
-		c, err := dao.Get("1234", nil)
+		c, err := dao.Get("1234", nil, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		require.Nil(t, c)
 	})
@@ -236,7 +236,7 @@ func TestCourse_Get(t *testing.T) {
 	t.Run("empty id", func(t *testing.T) {
 		_, dao, _ := courseSetup(t)
 
-		c, err := dao.Get("", nil)
+		c, err := dao.Get("", nil, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		require.Nil(t, c)
 	})
@@ -247,7 +247,7 @@ func TestCourse_Get(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
-		_, err = dao.Get("1234", nil)
+		_, err = dao.Get("1234", nil, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
@@ -503,7 +503,7 @@ func TestCourse_Update(t *testing.T) {
 		testData[0].CardPath = "/path/to/card.jpg"
 		require.Nil(t, dao.Update(testData[0].Course))
 
-		c, err := dao.Get(testData[0].ID, nil)
+		c, err := dao.Get(testData[0].ID, nil, nil)
 		require.Nil(t, err)
 		require.Equal(t, testData[0].CardPath, c.CardPath)
 	})
@@ -518,7 +518,7 @@ func TestCourse_Update(t *testing.T) {
 		testData[0].Available = true
 		require.Nil(t, dao.Update(testData[0].Course))
 
-		c, err := dao.Get(testData[0].ID, nil)
+		c, err := dao.Get(testData[0].ID, nil, nil)
 		require.Nil(t, err)
 		require.True(t, c.Available)
 	})

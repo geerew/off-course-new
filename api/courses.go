@@ -2,6 +2,8 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -104,36 +106,76 @@ func bindCoursesApi(router fiber.Router, appFs *appFs.AppFs, db database.Databas
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func (api *courses) getCourses(c *fiber.Ctx) error {
-	started := c.Query("started", "undefined")
-	completed := c.Query("completed", "undefined")
 	orderBy := c.Query("orderBy", "created_at desc")
+	progress := c.Query("progress", "")
+	tags := c.Query("tags", "")
 
 	dbParams := &database.DatabaseParams{
 		OrderBy:    strings.Split(orderBy, ","),
 		Pagination: pagination.NewFromApi(c),
 	}
 
-	// Filter on started (if defined)
-	if started != "undefined" {
-		if started == "true" {
-			dbParams.Where = squirrel.And{
+	whereClause := squirrel.And{}
+
+	// Filter on progress (one of "not started", "started", "completed")
+	if progress != "" {
+		unescapedProgress, err := url.QueryUnescape(progress)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid progress parameter")
+		}
+
+		if unescapedProgress == "started" {
+			// Started but not completed
+			whereClause = append(whereClause, squirrel.And{
 				squirrel.Eq{api.courseProgressDao.Table() + ".started": true},
 				squirrel.NotEq{api.courseProgressDao.Table() + ".percent": 100},
+			})
+		} else if unescapedProgress == "not started" {
+			// Default to not started
+			whereClause = append(whereClause, squirrel.NotEq{api.courseProgressDao.Table() + ".started": true})
+		} else if unescapedProgress == "completed" {
+			// Completed
+			whereClause = append(whereClause, squirrel.Eq{api.courseProgressDao.Table() + ".percent": 100})
+		} else if unescapedProgress == "not completed" {
+			// Not completed
+			whereClause = append(whereClause, squirrel.NotEq{api.courseProgressDao.Table() + ".percent": 100})
+		}
+	}
+
+	// Filter based on tags
+	if tags != "" {
+		unescapedTags, err := url.QueryUnescape(tags)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid tags parameter")
+		}
+
+		tagList := strings.Split(unescapedTags, ",")
+
+		courseIds, err := api.courseTagDao.ListCourseIdsByTags(tagList, nil)
+		if err != nil {
+			log.Err(err).Msg("error looking up course ids by tags")
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "error looking up courses by tags - " + err.Error(),
+			})
+		}
+
+		if len(courseIds) == 0 {
+			pResult, err := dbParams.Pagination.BuildResult(courseResponseHelper(nil))
+			if err != nil {
+				log.Err(err).Msg("error building pagination result")
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"message": "error building pagination result - " + err.Error(),
+				})
 			}
+
+			fmt.Println(pResult)
+			return c.Status(fiber.StatusOK).JSON(pResult)
 		} else {
-			dbParams.Where = squirrel.NotEq{api.courseProgressDao.Table() + ".started": true}
+			whereClause = append(whereClause, squirrel.Eq{api.courseDao.Table() + ".id": courseIds})
 		}
 	}
 
-	// Filter on completed (if defined)
-	if completed != "undefined" {
-		if completed == "true" {
-			dbParams.Where = squirrel.Eq{api.courseProgressDao.Table() + ".percent": 100}
-
-		} else {
-			dbParams.Where = squirrel.Lt{api.courseProgressDao.Table() + ".percent": 100}
-		}
-	}
+	dbParams.Where = whereClause
 
 	courses, err := api.courseDao.List(dbParams, nil)
 
@@ -160,7 +202,7 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 func (api *courses) getCourse(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	course, err := api.courseDao.Get(id, nil)
+	course, err := api.courseDao.Get(id, nil, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -255,7 +297,7 @@ func (api *courses) deleteCourse(c *fiber.Ctx) error {
 func (api *courses) getCard(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	course, err := api.courseDao.Get(id, nil)
+	course, err := api.courseDao.Get(id, nil, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -291,7 +333,7 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 	expand := c.QueryBool("expand", false)
 
 	// Get the course
-	_, err := api.courseDao.Get(id, nil)
+	_, err := api.courseDao.Get(id, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -339,7 +381,7 @@ func (api *courses) getAsset(c *fiber.Ctx) error {
 	assetId := c.Params("asset")
 	expand := c.QueryBool("expand", false)
 
-	_, err := api.courseDao.Get(id, nil)
+	_, err := api.courseDao.Get(id, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -385,7 +427,7 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 	orderBy := c.Query("orderBy", "title asc")
 
 	// Get the course
-	_, err := api.courseDao.Get(id, nil)
+	_, err := api.courseDao.Get(id, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -447,7 +489,7 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 	attachmentId := c.Params("attachment")
 
 	// Get the course
-	_, err := api.courseDao.Get(id, nil)
+	_, err := api.courseDao.Get(id, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -502,7 +544,7 @@ func (api *courses) getTags(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// Get the course
-	_, err := api.courseDao.Get(id, nil)
+	_, err := api.courseDao.Get(id, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
@@ -598,7 +640,7 @@ func (api *courses) deleteTag(c *fiber.Ctx) error {
 func courseResponseHelper(courses []*models.Course) []*courseResponse {
 	responses := []*courseResponse{}
 	for _, course := range courses {
-		responses = append(responses, &courseResponse{
+		c := &courseResponse{
 			ID:        course.ID,
 			Title:     course.Title,
 			Path:      course.Path,
@@ -616,7 +658,9 @@ func courseResponseHelper(courses []*models.Course) []*courseResponse {
 			Percent:           course.Percent,
 			CompletedAt:       course.CompletedAt,
 			ProgressUpdatedAt: course.ProgressUpdatedAt,
-		})
+		}
+
+		responses = append(responses, c)
 	}
 
 	return responses

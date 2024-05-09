@@ -85,15 +85,15 @@ func (dao *CourseDao) Create(c *models.Course) error {
 // Get selects a course with the given ID
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *CourseDao) Get(id string, tx *sql.Tx) (*models.Course, error) {
+func (dao *CourseDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Course, error) {
 	generic := NewGenericDao(dao.db, dao)
 
-	dbParams := &database.DatabaseParams{
+	courseDbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
-	row, err := generic.Get(dbParams, tx)
+	row, err := generic.Get(courseDbParams, tx)
 	if err != nil {
 		return nil, err
 	}

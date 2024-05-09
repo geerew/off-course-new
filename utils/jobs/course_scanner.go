@@ -62,7 +62,7 @@ func NewCourseScanner(config *CourseScannerConfig) *CourseScanner {
 func (cs *CourseScanner) Add(courseId string) (*models.Scan, error) {
 
 	// Check if the course exists
-	course, err := cs.courseDao.Get(courseId, nil)
+	course, err := cs.courseDao.Get(courseId, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 	}
 
 	// Get the course for this scan
-	course, err := cs.courseDao.Get(scan.CourseID, nil)
+	course, err := cs.courseDao.Get(scan.CourseID, nil, nil)
 	if err != nil {
 		log.Debug().Str("course", scan.CourseID).Msg("ignoring scan job as the course no longer exists")
 		return err

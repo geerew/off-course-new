@@ -170,6 +170,73 @@ func TestCourseTag_Create(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func TestCourseTag_ListCourseIdsByTags(t *testing.T) {
+	t.Run("no entries", func(t *testing.T) {
+		dao, _ := courseTagSetup(t)
+
+		tags, err := dao.ListCourseIdsByTags([]string{"1234"}, nil)
+		require.Nil(t, err)
+		require.Zero(t, tags)
+	})
+
+	t.Run("found", func(t *testing.T) {
+		dao, _ := courseTagSetup(t)
+
+		course1 := NewTestBuilder(t).Db(dao.db).Courses([]string{"course 1"}).Tags([]string{"Go", "Data Structures"}).Build()[0]
+		course2 := NewTestBuilder(t).Db(dao.db).Courses([]string{"course 2"}).Tags([]string{"Data Structures", "TypeScript", "PHP"}).Build()[0]
+		course3 := NewTestBuilder(t).Db(dao.db).Courses([]string{"course 3"}).Tags([]string{"Go", "Data Structures", "PHP"}).Build()[0]
+
+		// Order by title (asc)
+		dbParams := &database.DatabaseParams{OrderBy: []string{NewCourseDao(dao.db).Table() + ".title asc"}}
+
+		// Go
+		result, err := dao.ListCourseIdsByTags([]string{"Go"}, dbParams)
+		require.Nil(t, err)
+		require.Len(t, result, 2)
+		require.Equal(t, course1.ID, result[0])
+		require.Equal(t, course3.ID, result[1])
+
+		// Go, Data Structures
+		result, err = dao.ListCourseIdsByTags([]string{"Go", "Data Structures"}, dbParams)
+		require.Nil(t, err)
+		require.Len(t, result, 2)
+		require.Equal(t, course1.ID, result[0])
+		require.Equal(t, course3.ID, result[1])
+
+		// Go, Data Structures, PHP
+		result, err = dao.ListCourseIdsByTags([]string{"Go", "Data Structures", "PHP"}, dbParams)
+		require.Nil(t, err)
+		require.Len(t, result, 1)
+		require.Equal(t, course3.ID, result[0])
+
+		// Go, Data Structures, PHP, TypeScript
+		result, err = dao.ListCourseIdsByTags([]string{"Go", "Data Structures", "PHP", "TypeScript"}, dbParams)
+		require.Nil(t, err)
+		require.Len(t, result, 0)
+
+		// Data Structures
+		result, err = dao.ListCourseIdsByTags([]string{"Data Structures"}, dbParams)
+		require.Nil(t, err)
+		require.Len(t, result, 3)
+		require.Equal(t, course1.ID, result[0])
+		require.Equal(t, course2.ID, result[1])
+		require.Equal(t, course3.ID, result[2])
+
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		dao, db := courseTagSetup(t)
+
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
+		require.Nil(t, err)
+
+		_, err = dao.ListCourseIdsByTags([]string{"1234"}, nil)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func TestCourseTag_List(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
 		dao, _ := courseTagSetup(t)

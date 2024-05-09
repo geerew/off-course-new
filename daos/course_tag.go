@@ -103,6 +103,50 @@ func (dao *CourseTagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// ListCourseIdsByTags selects course ids which have all the tags.
+func (dao *CourseTagDao) ListCourseIdsByTags(tags []string, dbParams *database.DatabaseParams) ([]string, error) {
+	if len(tags) == 0 {
+		return nil, nil
+	}
+
+	generic := NewGenericDao(dao.db, dao)
+
+	if dbParams == nil {
+		dbParams = &database.DatabaseParams{}
+	}
+
+	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy, false)
+	dbParams.Columns = []string{dao.Table() + ".course_id"}
+	dbParams.Where = squirrel.Eq{NewTagDao(dao.db).Table() + ".tag": tags}
+	dbParams.GroupBys = []string{dao.Table() + ".course_id"}
+	dbParams.Having = squirrel.Expr("COUNT(DISTINCT "+NewTagDao(dao.db).Table()+".tag) = ?", len(tags))
+	dbParams.Pagination = nil
+
+	rows, err := generic.List(dbParams, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var courseIds []string
+	for rows.Next() {
+		var courseId string
+		if err := rows.Scan(&courseId); err != nil {
+			return nil, err
+		}
+
+		courseIds = append(courseIds, courseId)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return courseIds, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Delete deletes a course-tag based upon the where clause
 //
 // `tx` allows for the function to be run within a transaction
