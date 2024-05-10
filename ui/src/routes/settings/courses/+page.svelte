@@ -5,6 +5,7 @@
 		Err,
 		Loading,
 		NiceDate,
+		Pagination,
 		ScanStatus,
 		SelectAllCheckbox
 	} from '$components/generic';
@@ -15,7 +16,6 @@
 		CoursesTableActions
 	} from '$components/pages/settings_courses';
 	import { TableColumnsController, TableSortController } from '$components/table/controllers';
-	import { Pagination } from '$components/table/pagination';
 	import * as Table from '$components/ui/table';
 	import { AddScan, GetCourses } from '$lib/api';
 	import type { Course } from '$lib/types/models';
@@ -239,12 +239,6 @@
 				page: pagination.page,
 				perPage: pagination.perPage
 			});
-
-			if (!response) {
-				fetchedCourses.set([]);
-				pagination = { ...pagination, totalItems: 0, totalPages: 0 };
-				return true;
-			}
 
 			fetchedCourses.set(response.items as Course[]);
 
@@ -498,10 +492,14 @@
 		selectedCourse = {};
 	}}
 	on:deleted={() => {
-		// It is possible that the user deleted the last course on this page,
-		// therefore we need to set the page to the previous one
-		if (pagination.page > 1 && (pagination.totalItems - 1) % pagination.perPage === 0)
+		// It is possible we need to go back a page
+		const count = selectedCourse ? 1 : Object.keys($selectedCourses).length;
+		if (
+			pagination.page > 1 &&
+			Math.ceil((pagination.totalItems - count) / pagination.perPage) !== pagination.page
+		) {
 			pagination.page = pagination.page - 1;
+		}
 
 		if (Object.keys(selectedCourse).length > 0) {
 			// If a single course was deleted, remove it from the selected courses
@@ -533,18 +531,3 @@
 		load = getCourses();
 	}}
 />
-
-<style lang="postcss">
-	table {
-		@apply w-full min-w-[50rem] border-collapse;
-
-		& > thead > tr > th {
-			@apply relative whitespace-nowrap border-y px-6 py-4 text-left text-sm font-semibold tracking-wide;
-			@apply text-muted-foreground;
-		}
-
-		& > tbody > tr > td {
-			@apply border-y px-6 py-2.5 text-left text-sm;
-		}
-	}
-</style>

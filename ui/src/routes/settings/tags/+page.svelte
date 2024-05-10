@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { AddTagsDialog, DeleteTagsDialog, RenameTagDialog } from '$components/dialogs';
-	import { Checkbox, Err, Loading, SelectAllCheckbox } from '$components/generic';
+	import { Checkbox, Err, Loading, Pagination, SelectAllCheckbox } from '$components/generic';
 	import { TableSortController } from '$components/table/controllers';
-	import { Pagination } from '$components/table/pagination';
 	import { GetTags } from '$lib/api';
 	import { TagsRowAction, TagsTableActions } from '$lib/components/pages/settings_tags';
 	import * as Table from '$lib/components/ui/table';
@@ -381,10 +380,14 @@
 		selectedTag = undefined;
 	}}
 	on:deleted={() => {
-		// It is possible that the user deleted the last tag on this page,
-		// therefore we need to set the page to the previous one
-		if (pagination.page > 1 && (pagination.totalItems - 1) % pagination.perPage === 0)
+		// It is possible we need to go back a page
+		const count = selectedTag ? 1 : Object.keys($selectedTags).length;
+		if (
+			pagination.page > 1 &&
+			Math.ceil((pagination.totalItems - count) / pagination.perPage) !== pagination.page
+		) {
 			pagination.page = pagination.page - 1;
+		}
 
 		if (selectedTag) {
 			// If a single tag was deleted, remove it from the selected tags

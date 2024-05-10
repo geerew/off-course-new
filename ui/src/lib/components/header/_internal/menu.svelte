@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import Theme from '$components/generic/theme.svelte';
 	import { Github } from '$components/icons';
 	import Button from '$components/ui/button/button.svelte';
 	import { Separator } from '$components/ui/separator';
@@ -61,12 +60,12 @@
 					</a>
 				{/each}
 
-				<div class="flex w-64 select-none pt-5">
+				<!-- <div class="flex w-64 select-none pt-5">
 					<div class="bg-accent-1 flex w-full items-center justify-between rounded-md px-2 py-1.5">
 						<span class="pl-1 text-sm">Appearance</span>
 						<Theme />
 					</div>
-				</div>
+				</div> -->
 
 				<div class="flex w-64 select-none items-center justify-center pt-2.5">
 					<a href={site.links.github} target="_blank" rel="noreferrer" class="flex items-center">
@@ -108,6 +107,6 @@
 			<span class="sr-only">GitHub</span>
 		</Button>
 
-		<Theme />
+		<!-- <Theme /> -->
 	</div>
 </nav>

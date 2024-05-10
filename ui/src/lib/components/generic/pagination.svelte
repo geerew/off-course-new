@@ -10,8 +10,16 @@
 	// ----------------------
 	// Exports
 	// ----------------------
+
+	// The pagination parameters
 	export let pagination: PaginationParams;
+
+	// The type of items being paginated(eg. 'course', 'tag'). An 's' will be appended if
+	// the totalItems is greater than 1
 	export let type: string;
+
+	// Whether to show the per page select
+	export let showPerPage = true;
 
 	// ----------------------
 	// Variables
@@ -31,37 +39,39 @@
 </script>
 
 {#if pagination.totalItems > 0}
-	<div class="grid grid-cols-2 gap-4 pt-5 md:grid-cols-5">
+	<div class="grid grid-cols-2 gap-4 pt-5 lg:grid-cols-5">
 		<!-- Per pages -->
-		<div class="order-2 md:order-1">
-			<Select.Root
-				bind:open={isOpen}
-				preventScroll={false}
-				portal={null}
-				selected={{ value: pagination.perPage }}
-				onSelectedChange={(v) => {
-					if (!v || v.value === currentPerPages) return;
-					dispatch('perPageChange', v.value);
-				}}
-			>
-				<Select.Trigger class="w-[140px]">
-					<Select.Value placeholder={String(pagination.perPage)} />
-					<ChevronRight class={cn('size-4 duration-200', isOpen && 'rotate-90')} />
-				</Select.Trigger>
-				<Select.Content>
-					<Select.Group>
-						{#each pagination.perPages as pp}
-							<Select.Item value={pp} label={String(pp)} class="cursor-pointer">{pp}</Select.Item>
-						{/each}
-					</Select.Group>
-				</Select.Content>
-				<Select.Input name="favoriteFruit" />
-			</Select.Root>
+		<div class="order-2 lg:order-1">
+			{#if showPerPage}
+				<Select.Root
+					bind:open={isOpen}
+					preventScroll={false}
+					portal={null}
+					selected={{ value: pagination.perPage }}
+					onSelectedChange={(v) => {
+						if (!v || v.value === currentPerPages) return;
+						dispatch('perPageChange', v.value);
+					}}
+				>
+					<Select.Trigger class="w-[140px]">
+						<Select.Value placeholder={String(pagination.perPage)} />
+						<ChevronRight class={cn('size-4 duration-200', isOpen && 'rotate-90')} />
+					</Select.Trigger>
+					<Select.Content>
+						<Select.Group>
+							{#each pagination.perPages as pp}
+								<Select.Item value={pp} label={String(pp)} class="cursor-pointer">{pp}</Select.Item>
+							{/each}
+						</Select.Group>
+					</Select.Content>
+					<Select.Input name="favoriteFruit" />
+				</Select.Root>
+			{/if}
 		</div>
 
 		<!-- Pagination -->
 		{#if pagination.totalPages > 1}
-			<div class="col-span-2 flex flex-col items-center md:order-2 md:col-span-3">
+			<div class="col-span-2 flex flex-col items-center lg:order-2 lg:col-span-3">
 				<Pagination.Root
 					count={pagination.totalItems}
 					page={pagination.page}
@@ -106,10 +116,11 @@
 
 		<!-- Count -->
 		<div
-			class="text-muted-foreground order-3 flex items-center justify-end text-sm {pagination.totalPages ===
-			1
-				? 'md:col-span-4'
-				: undefined}"
+			class={cn(
+				'text-muted-foreground order-3 flex items-center justify-end text-sm',
+				pagination.totalPages === 1 ? 'lg:col-span-4' : undefined,
+				!showPerPage && 'hidden lg:flex'
+			)}
 		>
 			{pagination.totalItems}
 			{type}{pagination.totalItems > 1 ? 's' : ''}

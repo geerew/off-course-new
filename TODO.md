@@ -29,7 +29,9 @@ TODO
 
 ## Page -> Courses
 
-- [ ] https://dribbble.com/shots/23132040-E-learning-website-course-details
+- [ ] Rework to look like https://dribbble.com/shots/23062409-NFS-Filter-Component
+- [x] https://dribbble.com/shots/23132040-E-learning-website-course-details
+- [ ] Burger menu when md or lower
 
 ## Page -> Home
 

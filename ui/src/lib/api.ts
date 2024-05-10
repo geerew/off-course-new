@@ -460,6 +460,38 @@ export const GetTags = async (params?: TagsGetParams): Promise<Pagination> => {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// GET - Get all tags (not paginated). This calls GetTags(...) until all tags are
+// are returned
+export const GetAllTags = async (params?: CoursesGetParams): Promise<Tag[]> => {
+	let allTags: Tag[] = [];
+	let page = 1;
+	let totalPages = 1;
+
+	do {
+		try {
+			const data = await GetTags({ ...params, page, perPage: 100 });
+
+			if (data.totalItems > 0) {
+				allTags = [...allTags, ...(data.items as Tag[])];
+				totalPages = data.totalPages;
+				page++;
+			} else {
+				break;
+			}
+		} catch (error) {
+			if (axios.isAxiosError(error)) {
+				throw error;
+			} else {
+				throw new Error(`Failed to fetch all tags: ${error}`);
+			}
+		}
+	} while (page <= totalPages);
+
+	return allTags;
+};
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // POST - Create a tag
 export const AddTag = async (tag: string): Promise<Tag> => {
 	try {

@@ -1,16 +1,15 @@
 <script lang="ts">
-	import { Err, Loading, NiceDate } from '$components/generic';
+	import { CourseCard, Err, Loading, NiceDate } from '$components/generic';
 	import { Button } from '$components/ui/button';
 	import { GetCourses } from '$lib/api';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Carousel from '$lib/components/ui/carousel';
-	import type { Course, CoursesGetParams } from '$lib/types/models';
+	import { CourseProgress, type Course, type CoursesGetParams } from '$lib/types/models';
 	import { ArrowLeft, ArrowRight } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import { writable } from 'svelte/store';
 	import theme from 'tailwindcss/defaultTheme';
 	import type { CarouselAPI } from '../../ui/carousel/context';
-	import CourseCard from './_internal/course-card.svelte';
 
 	// ----------------------
 	// Exports
@@ -23,14 +22,14 @@
 	// ----------------------
 
 	// Get courses (paginated)
-	async function getCourses(page: number, numCoursesToFetch: number): Promise<Course[]> {
+	async function getCourses(page: number, numCoursesToFetch: number): Promise<boolean> {
 		const params: CoursesGetParams = {
 			page,
 			perPage: numCoursesToFetch
 		};
 
 		if (variant === 'ongoing') {
-			params.started = true;
+			params.progress = CourseProgress.Started;
 			params.orderBy = 'progress_updated_at desc';
 		}
 
@@ -47,7 +46,7 @@
 			// Are there more courses to get?
 			moreToGet = fetchedCourses.length < response.totalItems;
 
-			return fetchedCourses;
+			return true;
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : (error as string));
 			throw error;

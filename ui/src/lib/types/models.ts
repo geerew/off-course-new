@@ -109,9 +109,19 @@ export type Course = Output<typeof CourseSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+export enum CourseProgress {
+	NotStarted = 'Not Started',
+	Started = 'Started',
+	NotCompleted = 'Not Completed',
+	Completed = 'Completed'
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 export type CoursesGetParams = {
 	orderBy?: string;
-	started?: boolean;
+	progress?: CourseProgress;
+	tags?: string;
 	page?: number;
 	perPage?: number;
 };

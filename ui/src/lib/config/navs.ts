@@ -1,5 +1,9 @@
 export const header = [
 	{
+		title: 'Courses',
+		href: '/courses/'
+	},
+	{
 		title: 'Settings',
 		href: '/settings/'
 	}

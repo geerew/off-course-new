@@ -124,6 +124,8 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 			return fiber.NewError(fiber.StatusBadRequest, "invalid progress parameter")
 		}
 
+		unescapedProgress = strings.ToLower(unescapedProgress)
+
 		if unescapedProgress == "started" {
 			// Started but not completed
 			whereClause = append(whereClause, squirrel.And{

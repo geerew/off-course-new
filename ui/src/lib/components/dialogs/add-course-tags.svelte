@@ -162,7 +162,6 @@
 			toAdd.map(async (tag) => {
 				courseIds.forEach(async (courseId) => {
 					try {
-						// console.log('Adding tag: ' + tag + ' to course: ' + courseId);
 						await AddCourseTag(courseId, tag);
 					} catch (error) {
 						// Show a toast if the error is not a 400 error or a network error. A status of
