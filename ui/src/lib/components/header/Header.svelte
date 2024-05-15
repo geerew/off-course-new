@@ -6,8 +6,10 @@
 	import SettingsMenu from './_internal/settings-menu.svelte';
 </script>
 
-<header class="bg-background sticky top-0 z-50 w-full border-b">
-	<div class="flex h-[var(--header-height)] items-center justify-between gap-8 px-4 md:px-8">
+<header class="bg-background sticky top-0 z-20 w-full border-b">
+	<div
+		class="container flex h-[var(--header-height)] items-center justify-between gap-8 px-4 md:px-8"
+	>
 		<div class="mr-3">
 			<a href="/" class="mr-6 flex items-center gap-2">
 				<Hexagon class="fill-primary size-8 rotate-90 stroke-none" />
@@ -20,7 +22,7 @@
 		</div>
 	</div>
 
-	<!-- Settings -->
+	<!-- /settings/... -->
 	{#if $page.url.pathname.startsWith('/settings')}
 		<div class="container flex items-center px-4 md:px-8">
 			<SettingsMenu />

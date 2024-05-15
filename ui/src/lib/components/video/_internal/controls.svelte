@@ -24,9 +24,8 @@
 </div>
 
 <media-controls
-	class="media-controls:opacity-100 absolute inset-0 z-50 flex h-full w-full flex-col overflow-hidden opacity-0 transition-opacity"
+	class="media-controls:opacity-100 absolute inset-0 z-10 flex h-full w-full flex-col overflow-hidden opacity-0 transition-opacity"
 >
-	<!-- Controls -->
 	<media-controls-group
 		role="presentation"
 		class="absolute bottom-0 z-10 flex w-full items-end px-2 pb-2"
@@ -47,7 +46,6 @@
 			<div class="flex w-full flex-row items-center gap-2 rounded-sm bg-black px-2 py-1.5">
 				<Time />
 				<Volume />
-				<!-- <Settings /> -->
 				<Fullscreen />
 			</div>
 		</div>

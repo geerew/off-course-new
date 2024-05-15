@@ -165,7 +165,7 @@
 	{#await getCourse()}
 		<Loading />
 	{:then data}
-		<div class="flex h-full flex-row">
+		<div class="flex h-full flex-col lg:container lg:flex-row lg:gap-10">
 			<CourseMenu title={data.title} id={data.id} {chapters} bind:selectedAsset />
 
 			<CourseContent

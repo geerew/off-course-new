@@ -109,7 +109,7 @@
 					</div>
 				{:else}
 					<div class="flex flex-col gap-5 pb-5">
-						<div class="grid grid-cols-1 gap-5 md:grid-cols-3 xl:grid-cols-4">
+						<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
 							{#each fetchedCourses as course}
 								<Card.Root class="group relative h-full">
 									{#if !course.available}

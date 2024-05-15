@@ -20,9 +20,7 @@
 	const dispatch = createEventDispatcher();
 </script>
 
-<div
-	class="mx-auto w-full max-w-[70rem] px-4 md:px-8 lg:ml-[var(--course-menu-width)] xl:ml-[max(var(--course-menu-width),23vw)]"
->
+<div class="w-full px-4 md:px-8 lg:px-0">
 	<div class="flex h-full w-full flex-col gap-5 pb-8">
 		{#if selectedAsset}
 			<Title

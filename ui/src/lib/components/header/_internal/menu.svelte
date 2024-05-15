@@ -2,58 +2,37 @@
 	import { page } from '$app/stores';
 	import { Github } from '$components/icons';
 	import Button from '$components/ui/button/button.svelte';
+	import * as Collapsible from '$components/ui/collapsible';
 	import { Separator } from '$components/ui/separator';
 	import { header } from '$lib/config/navs';
 	import { site } from '$lib/config/site';
-	import { cn, isBrowser } from '$lib/utils';
-	import { createCollapsible } from '@melt-ui/svelte';
-	import { slide } from 'svelte/transition';
+	import { cn } from '$lib/utils';
 	import Burger from './burger.svelte';
 
 	// ----------------------
 	// Variables
 	// ----------------------
-	const {
-		elements: { root, content, trigger },
-		states: { open }
-	} = createCollapsible();
-
-	// ----------------------
-	// Reactive
-	// ----------------------
-	$: {
-		if (isBrowser) {
-			if ($open) {
-				document.body.style.overflow = 'hidden';
-				document.body.style.height = '100%';
-			} else {
-				document.body.style.overflow = 'auto';
-				document.body.style.height = 'auto';
-			}
-		}
-	}
+	let open = false;
 </script>
 
 <!-- Shown on sm- -->
-<nav class="md:hidden" {...$root}>
-	<Burger {trigger} {open} />
+<Collapsible.Root class="md:hidden" bind:open>
+	<Collapsible.Trigger asChild let:builder>
+		<Burger builders={[builder]} {open} />
+	</Collapsible.Trigger>
 
-	{#if $open}
-		<div
-			{...$content}
-			transition:slide={{ duration: 200 }}
-			class="bg-background fixed inset-0 top-16 z-10 h-screen w-screen"
-		>
-			<div class="flex flex-col place-content-center items-center gap-2 pt-10">
+	<Collapsible.Content class="bg-background fixed inset-0 top-10 z-[50] h-screen w-screen">
+		<div class="flex w-full flex-col items-center pt-10">
+			<div class="flex w-80 flex-col">
 				{#each header as navItem}
 					<a
 						href={navItem.href}
 						class={cn(
-							'hover:text-primary w-64 border-b px-1 py-2 text-base font-semibold duration-200',
+							'hover:text-primary border-alt-1/60 w-full border-b px-1 py-4 text-base font-semibold duration-200',
 							$page.url.pathname.startsWith(navItem.href) && 'text-primary'
 						)}
 						on:click={() => {
-							open.set(false);
+							open = false;
 						}}
 					>
 						{navItem.title}
@@ -61,28 +40,30 @@
 				{/each}
 
 				<!-- <div class="flex w-64 select-none pt-5">
-					<div class="bg-accent-1 flex w-full items-center justify-between rounded-md px-2 py-1.5">
-						<span class="pl-1 text-sm">Appearance</span>
-						<Theme />
-					</div>
-				</div> -->
+				<div class="bg-accent-1 flex w-full items-center justify-between rounded-md px-2 py-1.5">
+					<span class="pl-1 text-sm">Appearance</span>
+					<Theme />
+				</div>
+			</div> -->
 
-				<div class="flex w-64 select-none items-center justify-center pt-2.5">
-					<a href={site.links.github} target="_blank" rel="noreferrer" class="flex items-center">
-						<div
-							class="hover:bg-accent-1 group rounded-md p-1.5 text-sm font-semibold duration-200"
-						>
-							<Github
-								class="fill-foreground-muted group-hover:fill-foreground size-7 stroke-none duration-200"
-							/>
-							<span class="sr-only">GitHub</span>
-						</div>
-					</a>
+				<div class="flex select-none items-center justify-center pt-5">
+					<Button
+						variant="ghost"
+						href={site.links.github}
+						class="group"
+						rel="noreferrer"
+						target="_blank"
+					>
+						<Github
+							class="fill-muted-foreground group-hover:fill-foreground size-6 stroke-none duration-200"
+						/>
+						<span class="sr-only">GitHub</span>
+					</Button>
 				</div>
 			</div>
 		</div>
-	{/if}
-</nav>
+	</Collapsible.Content>
+</Collapsible.Root>
 
 <!-- Showing on md+ -->
 <nav class="hidden items-center gap-2.5 md:inline-flex">
@@ -102,8 +83,10 @@
 	<Separator orientation="vertical" class="h-8" />
 
 	<div class="flex flex-row gap-2.5">
-		<Button variant="ghost" href={site.links.github} size="icon" class="fill-foreground">
-			<Github class="h-[1.2rem] w-[1.2rem]" />
+		<Button variant="ghost" href={site.links.github} class="group" rel="noreferrer" target="_blank">
+			<Github
+				class="fill-muted-foreground group-hover:fill-foreground size-5 stroke-none duration-200"
+			/>
 			<span class="sr-only">GitHub</span>
 		</Button>
 
