@@ -192,20 +192,6 @@
 >
 	<media-provider />
 
-	<!-- When dragging a slider block all other interactions -->
-	{#if $ctx.draggingTimeSlider || $ctx.draggingVolumeSlider}
-		<div
-			class="absolute left-0 top-0 z-[50] h-full w-full cursor-grabbing"
-			on:pointerup={() => {
-				if ($ctx.draggingTimeSlider) {
-					ctx.set({ ...$ctx, draggingTimeSlider: false });
-				} else {
-					ctx.set({ ...$ctx, draggingVolumeSlider: false });
-				}
-			}}
-		/>
-	{/if}
-
 	<Gestures />
 	<Controls />
 

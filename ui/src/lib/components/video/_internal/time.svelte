@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
-	import { getCtx } from './context';
 
 	// ----------------------
 	// Variables
@@ -10,9 +9,6 @@
 
 	let timeBubbleEl: HTMLDivElement;
 	let timeBubbleWidth: number = 0;
-
-	// Video context
-	const ctx = getCtx();
 
 	// ----------------------
 	// Reactive
@@ -31,9 +27,6 @@
 	on:mouseleave={() => {
 		isPointering = false;
 	}}
-	on:pointerdown={() => {
-		ctx.set({ ...$ctx, draggingTimeSlider: true });
-	}}
 >
 	<!-- Track and fill -->
 	<div
@@ -48,7 +41,7 @@
 	<div
 		class={cn(
 			'pointer-events-none absolute z-20 flex flex-col items-center transition-opacity duration-200',
-			$ctx.draggingTimeSlider || isPointering ? 'opacity-0' : 'opacity-100'
+			isPointering ? 'opacity-0' : 'opacity-100'
 		)}
 		bind:this={timeBubbleEl}
 		style={`position: absolute; left: min(max(0px, calc(var(--slider-fill) - ${timeBubbleWidth / 2}px)), calc(100% - ${timeBubbleWidth}px)); width: max-content; bottom: calc(100% + var(--media-slider-preview-offset, 0px));`}

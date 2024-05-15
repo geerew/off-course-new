@@ -6,8 +6,6 @@ type Props = {
 	settingsOpen: boolean;
 	ended: boolean;
 	buffering: boolean;
-	draggingTimeSlider: boolean;
-	draggingVolumeSlider: boolean;
 };
 type Context = Writable<Props>;
 
@@ -16,9 +14,7 @@ export function setCtx() {
 		controlsOpen: false,
 		settingsOpen: false,
 		ended: false,
-		buffering: true,
-		draggingTimeSlider: false,
-		draggingVolumeSlider: false
+		buffering: true
 	});
 	setContext('ctx', props);
 }
