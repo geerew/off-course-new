@@ -24,7 +24,7 @@
 </script>
 
 <div class="border-b px-4 py-2 md:px-8 lg:hidden">
-	<Sheet.Root open={true}>
+	<Sheet.Root>
 		<Sheet.Trigger asChild let:builder>
 			<Button
 				builders={[builder]}
