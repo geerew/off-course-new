@@ -14,10 +14,14 @@
 	// The current fetched courses
 	let fetchedCourses: Course[] = [];
 
-	// The selected tags
-	let selectedTags: string[] = [];
+	// The titles to filter on
+	let filterTitles: string[] = [];
 
-	let selectedProgress: CourseProgress | undefined;
+	// The tags to filter on
+	let filterTags: string[] = [];
+
+	// The progress to filter on
+	let filterProgress: CourseProgress | undefined;
 
 	// Pagination for courses
 	let pagination: PaginationParams = {
@@ -42,11 +46,15 @@
 			perPage: pagination.perPage
 		};
 
-		if (selectedTags && selectedTags.length > 0) {
-			params.tags = selectedTags.join(',');
+		if (filterTitles && filterTitles.length > 0) {
+			params.titles = filterTitles.join(',');
 		}
 
-		params.progress = selectedProgress;
+		if (filterTags && filterTags.length > 0) {
+			params.tags = filterTags.join(',');
+		}
+
+		params.progress = filterProgress;
 
 		try {
 			const response = await GetCourses(params);
@@ -70,17 +78,22 @@
 <div class="container flex flex-col gap-6 py-6">
 	<div class="flex h-full w-full flex-col gap-5">
 		<CoursesFilter
+			on:titleFilter={(ev) => {
+				filterTitles = ev.detail;
+				courses = getCourses();
+			}}
 			on:tagsFilter={(ev) => {
-				selectedTags = ev.detail;
+				filterTags = ev.detail;
 				courses = getCourses();
 			}}
 			on:progressFilter={(ev) => {
-				selectedProgress = ev.detail;
+				filterProgress = ev.detail;
 				courses = getCourses();
 			}}
 			on:clear={() => {
-				selectedTags = [];
-				selectedProgress = undefined;
+				filterTitles = [];
+				filterTags = [];
+				filterProgress = undefined;
 				courses = getCourses();
 			}}
 		/>

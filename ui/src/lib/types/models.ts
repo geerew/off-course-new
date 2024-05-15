@@ -122,6 +122,7 @@ export type CoursesGetParams = {
 	orderBy?: string;
 	progress?: CourseProgress;
 	tags?: string;
+	titles?: string;
 	page?: number;
 	perPage?: number;
 };

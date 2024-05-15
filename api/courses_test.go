@@ -336,6 +336,71 @@ func TestCourses_GetCourses(t *testing.T) {
 		require.Equal(t, course3.ID, coursesResp[2].ID)
 	})
 
+	t.Run("200 (titles)", func(t *testing.T) {
+		appFs, db, cs, _ := setup(t)
+
+		testData := daos.NewTestBuilder(t).Db(db).Courses([]string{"course 1", "course 2", "course 3"}).Build()
+
+		// ------------------
+		// Not defined
+		// ------------------
+		status, body, err := coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, _ := coursesUnmarshalHelper(t, body)
+		require.Equal(t, 3, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 3)
+
+		// ------------------
+		// course
+		// ------------------
+		status, body, err = coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?titles=course&orderBy=title%20asc", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, _ = coursesUnmarshalHelper(t, body)
+		require.Equal(t, 3, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 3)
+
+		// ------------------
+		// course 1
+		// ------------------
+		status, body, err = coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?titles=course%201&orderBy=title%20asc", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, coursesResp := coursesUnmarshalHelper(t, body)
+		require.Equal(t, 1, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 1)
+		require.Equal(t, testData[0].ID, coursesResp[0].ID)
+
+		// ------------------
+		// course 1 or course 2
+		// ------------------
+		status, body, err = coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?titles=course%201,course%202&orderBy=title%20asc", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, coursesResp = coursesUnmarshalHelper(t, body)
+		require.Equal(t, 2, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 2)
+		require.Equal(t, testData[0].ID, coursesResp[0].ID)
+		require.Equal(t, testData[1].ID, coursesResp[1].ID)
+
+		// ------------------
+		// nothing
+		// ------------------
+
+		status, body, err = coursesRequestHelper(appFs, db, cs, httptest.NewRequest(http.MethodGet, "/api/courses/?tags=nothing&orderBy=title%20asc", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, _ = coursesUnmarshalHelper(t, body)
+		require.Equal(t, 0, int(paginationResp.TotalItems))
+		require.Len(t, paginationResp.Items, 0)
+	})
+
 	t.Run("500 (internal error)", func(t *testing.T) {
 		appFs, db, cs, _ := setup(t)
 

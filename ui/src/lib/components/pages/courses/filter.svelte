@@ -1,66 +1,111 @@
 <script lang="ts">
 	import { Badge } from '$components/ui/badge';
 	import { Button } from '$components/ui/button';
-	import type { CourseProgress } from '$lib/types/models';
+	import Separator from '$components/ui/separator/separator.svelte';
+	import { CourseProgress } from '$lib/types/models';
 	import { cn } from '$lib/utils';
-	import { Filter, Loader2, Tag, X } from 'lucide-svelte';
+	import { Filter, Loader2, Tag, Text, X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
-	import { CoursesProgressFilter, CoursesTagsFilter } from '.';
+	import { CoursesProgressFilter, CoursesTagsFilter, CoursesTitleFilter } from '.';
 
 	// ----------------------
 	// Variables
 	// ----------------------
-	let selectedTags: Record<string, string> = {};
-	let selectedProgress: CourseProgress | undefined;
+	let filterTitles: string[] = [];
+	let filterProgress: CourseProgress | undefined;
+	let filterTags: Record<string, string> = {};
 
 	const dispatchEvent = createEventDispatcher();
+
+	// ----------------------
+	// Reactive
+	// ----------------------
+	$: isFiltering =
+		filterTitles.length > 0 || Object.values(filterTags).length > 0 || filterProgress;
 </script>
 
 <!-- Filters -->
 <div class="border-alt-1/60 flex w-full flex-row gap-5 border-b pb-5">
-	<CoursesTagsFilter
-		bind:selectedTags
-		on:change={() => {
-			dispatchEvent('tagsFilter', Object.values(selectedTags));
+	<CoursesTitleFilter
+		on:change={(e) => {
+			filterTitles = [...filterTitles, e.detail];
+			dispatchEvent('titleFilter', filterTitles);
 		}}
 	/>
 
 	<CoursesProgressFilter
-		bind:progress={selectedProgress}
+		bind:progress={filterProgress}
 		on:change={() => {
-			dispatchEvent('progressFilter', selectedProgress);
+			dispatchEvent('progressFilter', filterProgress);
+		}}
+	/>
+
+	<CoursesTagsFilter
+		bind:filterTags
+		on:change={() => {
+			dispatchEvent('tagsFilter', Object.values(filterTags));
 		}}
 	/>
 </div>
 
-{#if Object.values(selectedTags).length > 0 || selectedProgress}
+{#if isFiltering}
 	<div class="border-alt-1/60 flex flex-col gap-4 border-b pb-5">
 		<div class="text-primary flex flex-row items-center gap-2.5 text-sm">
 			<Filter class="size-4" />
 			<span class="tracking-wide">ACTIVE FILTERS</span>
 		</div>
 
-		<div class="flex flex-row gap-2">
-			<!-- Progress -->
-
-			{#if selectedProgress}
-				<div class="flex flex-row" data-progress={selectedProgress}>
+		<div class="flex flex-row items-center gap-2">
+			<!-- Titles -->
+			{#each filterTitles as title}
+				<div class="flex flex-row" data-title={title}>
 					<Badge
 						class={cn(
-							'bg-alt-1/60 hover:bg-alt-1/60 text-foreground min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none'
+							'bg-alt-1/60 hover:bg-alt-1/60 text-foreground h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none'
 						)}
 					>
-						<Loader2 class="size-3" />
-						<span>{selectedProgress}</span>
+						<Text class="size-3" />
+						<span>{title}</span>
 					</Badge>
 
 					<Button
 						class={cn(
-							'bg-alt-1/60 hover:bg-destructive inline-flex h-auto items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5 duration-200'
+							'bg-alt-1/60 hover:bg-destructive inline-flex h-6 items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5 duration-200'
 						)}
 						on:click={() => {
-							selectedProgress = undefined;
-							dispatchEvent('progressFilter', selectedProgress);
+							filterTitles = filterTitles.filter((t) => t !== title);
+							filterTitles = [...filterTitles];
+							dispatchEvent('titleFilter', filterTitles);
+						}}
+					>
+						<X class="size-3" />
+					</Button>
+				</div>
+			{/each}
+
+			<!-- Progress -->
+			{#if filterProgress}
+				{#if filterTitles.length > 0}
+					<Separator orientation="vertical" class="bg-alt-1/60 h-8" />
+				{/if}
+
+				<div class="flex flex-row" data-progress={filterProgress}>
+					<Badge
+						class={cn(
+							'bg-alt-1/60 hover:bg-alt-1/60 text-foreground h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none'
+						)}
+					>
+						<Loader2 class="size-3" />
+						<span>{filterProgress}</span>
+					</Badge>
+
+					<Button
+						class={cn(
+							'bg-alt-1/60 hover:bg-destructive inline-flex h-6 items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5 duration-200'
+						)}
+						on:click={() => {
+							filterProgress = undefined;
+							dispatchEvent('progressFilter', filterProgress);
 						}}
 					>
 						<X class="size-3" />
@@ -69,39 +114,46 @@
 			{/if}
 
 			<!-- Tags -->
-			{#each Object.keys(selectedTags) as id}
-				<div class="flex flex-row" data-tag={selectedTags[id]}>
-					<Badge
-						class={cn(
-							'bg-alt-1/60 hover:bg-alt-1/60 text-foreground min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none'
-						)}
-					>
-						<Tag class="size-3" />
-						<span>{selectedTags[id]}</span>
-					</Badge>
+			{#if Object.keys(filterTags).length > 0}
+				{#if filterTitles.length > 0 || filterProgress}
+					<Separator orientation="vertical" class="bg-alt-1/60 h-8" />
+				{/if}
 
-					<Button
-						class={cn(
-							'bg-alt-1/60 hover:bg-destructive inline-flex h-auto items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5 duration-200'
-						)}
-						on:click={() => {
-							delete selectedTags[id];
-							selectedTags = { ...selectedTags };
-							dispatchEvent('tagsFilter', Object.values(selectedTags));
-						}}
-					>
-						<X class="size-3" />
-					</Button>
-				</div>
-			{/each}
+				{#each Object.keys(filterTags) as id}
+					<div class="flex flex-row" data-tag={filterTags[id]}>
+						<Badge
+							class={cn(
+								'bg-alt-1/60 hover:bg-alt-1/60 text-foreground h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none'
+							)}
+						>
+							<Tag class="size-3" />
+							<span>{filterTags[id]}</span>
+						</Badge>
+
+						<Button
+							class={cn(
+								'bg-alt-1/60 hover:bg-destructive inline-flex h-6 items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5 duration-200'
+							)}
+							on:click={() => {
+								delete filterTags[id];
+								filterTags = { ...filterTags };
+								dispatchEvent('tagsFilter', Object.values(filterTags));
+							}}
+						>
+							<X class="size-3" />
+						</Button>
+					</div>
+				{/each}
+			{/if}
 
 			<Button
 				class={cn(
-					'bg-primary hover:bg-primary inline-flex h-auto items-center rounded-lg px-2.5 py-0.5 duration-200 hover:brightness-110'
+					'bg-primary hover:bg-primary inline-flex h-6 items-center rounded-lg px-2.5 py-0.5 duration-200 hover:brightness-110'
 				)}
 				on:click={() => {
-					selectedTags = {};
-					selectedProgress = undefined;
+					filterTitles = [];
+					filterTags = {};
+					filterProgress = undefined;
 					dispatchEvent('clear');
 				}}
 			>

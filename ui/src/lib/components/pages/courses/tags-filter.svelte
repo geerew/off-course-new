@@ -11,7 +11,11 @@
 	// ----------------------
 	// Exports
 	// ----------------------
-	export let selectedTags: Record<string, string>;
+	export let filterTags: Record<string, string>;
+
+	// ----------------------
+	// Variables
+	// ----------------------
 
 	// A boolean promise that initially fetches the tags. It is used in an `await` block
 	let tags = getTags();
@@ -50,7 +54,7 @@
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Filter tags
-	function filterTags(value: string) {
+	function doFilter(value: string) {
 		if (value === '') {
 			workingTags = allTags;
 		} else {
@@ -63,15 +67,21 @@
 	// ----------------------
 
 	// As the search value changes, filter the tags
-	$: filterTags(searchValue);
+	$: doFilter(searchValue);
 </script>
 
-<DropdownMenu.Root closeOnItemClick={false} typeahead={false}>
+<DropdownMenu.Root
+	closeOnItemClick={false}
+	typeahead={false}
+	onOpenChange={(open) => {
+		if (!open) searchValue = '';
+	}}
+>
 	<DropdownMenu.Trigger asChild let:builder>
 		<Button
 			builders={[builder]}
 			variant="ghost"
-			class="data-[state=open]:border-primary border-alt-1/60 hover:border-primary group h-auto w-32 items-center justify-between gap-2.5 border px-2.5 text-xs hover:bg-inherit"
+			class="data-[state=open]:border-alt-1/100 border-alt-1/60 hover:border-alt-1/100 group h-auto w-32 items-center justify-between gap-2.5 border px-2.5 text-xs hover:bg-inherit"
 			on:click={(e) => {
 				e.stopPropagation();
 			}}
@@ -138,15 +148,15 @@
 						{#each workingTags as tag}
 							<DropdownMenu.CheckboxItem
 								class="data-[highlighted]:bg-alt-1/40 cursor-pointer"
-								checked={selectedTags[tag.id] ? true : false}
+								checked={filterTags[tag.id] ? true : false}
 								onCheckedChange={(checked) => {
 									if (checked) {
-										selectedTags[tag.id] = tag.tag;
+										filterTags[tag.id] = tag.tag;
 									} else {
-										delete selectedTags[tag.id];
+										delete filterTags[tag.id];
 									}
 
-									selectedTags = { ...selectedTags };
+									filterTags = { ...filterTags };
 									dispatchEvent('change');
 								}}
 							>

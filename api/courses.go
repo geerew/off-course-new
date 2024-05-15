@@ -109,6 +109,7 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 	orderBy := c.Query("orderBy", "created_at desc")
 	progress := c.Query("progress", "")
 	tags := c.Query("tags", "")
+	titles := c.Query("titles", "")
 
 	dbParams := &database.DatabaseParams{
 		OrderBy:    strings.Split(orderBy, ","),
@@ -175,6 +176,23 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 		} else {
 			whereClause = append(whereClause, squirrel.Eq{api.courseDao.Table() + ".id": courseIds})
 		}
+	}
+
+	// Filter based on titles
+	if titles != "" {
+		unescapedTitles, err := url.QueryUnescape(titles)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid titles parameter")
+		}
+
+		titleList := strings.Split(unescapedTitles, ",")
+
+		orClause := squirrel.Or{}
+		for _, title := range titleList {
+			orClause = append(orClause, squirrel.Like{api.courseDao.Table() + ".title": "%" + title + "%"})
+		}
+
+		whereClause = append(whereClause, orClause)
 	}
 
 	dbParams.Where = whereClause
