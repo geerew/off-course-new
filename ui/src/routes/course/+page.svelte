@@ -4,7 +4,7 @@
 	import { CourseContent, CourseMenu } from '$components/pages/course';
 	import { GetAllCourseAssets, GetCourseFromParams, UpdateAsset } from '$lib/api';
 	import type { Asset, Course, CourseChapters } from '$lib/types/models';
-	import { NO_CHAPTER, buildChapterStructure } from '$lib/utils';
+	import { BuildChapterStructure, NO_CHAPTER } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 
 	// ----------------------
@@ -39,7 +39,7 @@
 			});
 			if (!assets) throw new Error('Failed to get course assets');
 
-			chapters = buildChapterStructure(assets);
+			chapters = BuildChapterStructure(assets);
 
 			// Set ?a=xxx as the selected asset
 			const assetId = $page.url.searchParams && $page.url.searchParams.get('a');
@@ -59,7 +59,7 @@
 
 	// Finds the first asset that is not finished, or if the course is completed, find the first
 	// asset
-	const findFirstUnfinishedAsset = (course: Course, chapters: CourseChapters): Asset | null => {
+	function findFirstUnfinishedAsset(course: Course, chapters: CourseChapters): Asset | null {
 		for (const chapterKey in chapters) {
 			const chapterAssets = chapters[chapterKey];
 
@@ -76,7 +76,7 @@
 
 		// There are no assets within this course
 		return null;
-	};
+	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -95,22 +95,22 @@
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Find an asset by id
-	const findAsset = (id: string, chapters: CourseChapters): Asset | null => {
+	function findAsset(id: string, chapters: CourseChapters): Asset | null {
 		const allAssets = Object.values(chapters).flat();
 		const index = allAssets.findIndex((a) => a.id === id);
 		if (index === -1) return null;
 		return allAssets[index];
-	};
+	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Find the previous and next assets within chapters based upon a current asset. This is used
 	// when a video is finished to determine which asset to play next. It is also passed to the
 	// video player to generate the previous and next buttons
-	const findAdjacentAssets = (
+	function findAdjacentAssets(
 		currentAsset: Asset,
 		chapters: CourseChapters
-	): { prev: Asset | null; next: Asset | null } => {
+	): { prev: Asset | null; next: Asset | null } {
 		// Flatten the assets and find the index of the current asset
 		const allAssets = Object.values(chapters).flat();
 		const index = allAssets.findIndex((a) => a.id === currentAsset.id);
@@ -120,7 +120,7 @@
 		const nextAsset = index < allAssets.length - 1 ? allAssets[index + 1] : null;
 
 		return { prev: prevAsset, next: nextAsset };
-	};
+	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

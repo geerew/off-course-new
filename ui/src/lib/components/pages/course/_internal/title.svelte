@@ -4,7 +4,7 @@
 	import * as Tooltip from '$components/ui/tooltip';
 	import { ATTACHMENT_API, GetBackendUrl } from '$lib/api';
 	import type { Asset } from '$lib/types/models';
-	import { cn, flyAndScale } from '$lib/utils';
+	import { cn } from '$lib/utils';
 	import { CircleCheck, Download, FileCode, FileText, FileVideo, Paperclip } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -99,7 +99,6 @@
 
 			<Tooltip.Content
 				class="bg-foreground text-background select-none rounded-sm border-none px-1.5 py-1 text-xs"
-				transition={flyAndScale}
 				transitionConfig={{ y: 8, duration: 100 }}
 				side="bottom"
 			>

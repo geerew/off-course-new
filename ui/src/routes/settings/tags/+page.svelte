@@ -7,7 +7,7 @@
 	import * as Table from '$lib/components/ui/table';
 	import type { Tag } from '$lib/types/models';
 	import type { PaginationParams } from '$lib/types/pagination';
-	import { cn, flattenOrderBy } from '$lib/utils';
+	import { FlattenOrderBy, cn } from '$lib/utils';
 	import { ChevronDown, ChevronUp } from 'lucide-svelte';
 	import { Render, Subscribe, createRender, createTable } from 'svelte-headless-table';
 	import { addSortBy } from 'svelte-headless-table/plugins';
@@ -160,10 +160,10 @@
 	// ----------------------
 
 	// GET a paginated list of tags
-	const getTags = async () => {
+	async function getTags() {
 		try {
 			const response = await GetTags({
-				orderBy: flattenOrderBy($sortKeys),
+				orderBy: FlattenOrderBy($sortKeys),
 				page: pagination.page,
 				perPage: pagination.perPage,
 				expand: true
@@ -188,12 +188,12 @@
 			toast.error(error instanceof Error ? error.message : (error as string));
 			throw error;
 		}
-	};
+	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Display a toast when a tag is selected/deselected
-	const selectedTagsToast = () => {
+	function selectedTagsToast() {
 		const count = Object.keys($selectedTags).length;
 		let message = 'Selected ' + count + ' tag' + (count > 1 ? 's' : '');
 
@@ -204,7 +204,7 @@
 		toast.success(message, {
 			duration: 2000
 		});
-	};
+	}
 
 	// ----------------------
 	// Reactive

@@ -20,7 +20,7 @@
 	import { AddScan, GetCourses } from '$lib/api';
 	import type { Course } from '$lib/types/models';
 	import type { PaginationParams } from '$lib/types/pagination';
-	import { cn, flattenOrderBy } from '$lib/utils';
+	import { FlattenOrderBy, cn } from '$lib/utils';
 	import { ChevronDown, ChevronUp } from 'lucide-svelte';
 	import { Render, Subscribe, createRender, createTable } from 'svelte-headless-table';
 	import { addHiddenColumns, addSortBy } from 'svelte-headless-table/plugins';
@@ -230,8 +230,8 @@
 	// ----------------------
 
 	// GET all courses from the backend. The response is paginated
-	const getCourses = async () => {
-		const orderBy = flattenOrderBy($sortKeys);
+	async function getCourses() {
+		const orderBy = FlattenOrderBy($sortKeys);
 
 		try {
 			const response = await GetCourses({
@@ -253,12 +253,12 @@
 			toast.error(error instanceof Error ? error.message : (error as string));
 			throw error;
 		}
-	};
+	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Update a course in the courses array
-	const updateCourseInCourses = (updatedCourse: Course) => {
+	function updateCourseInCourses(updatedCourse: Course) {
 		fetchedCourses.update((currentCourses) => {
 			const index = currentCourses.findIndex((course) => course.id === updatedCourse.id);
 			if (index !== -1) {
@@ -266,12 +266,12 @@
 			}
 			return [...currentCourses]; // Return a new array to ensure reactivity
 		});
-	};
+	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Start a scan for a course
-	const startScans = async (courses: Record<string, string>) => {
+	async function startScans(courses: Record<string, string>) {
 		try {
 			const ids = Object.keys(courses);
 
@@ -299,12 +299,12 @@
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : (error as string));
 		}
-	};
+	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Display a toast when a course is selected/deselected
-	const selectedCoursesToast = () => {
+	function selectedCoursesToast() {
 		const count = Object.keys($selectedCourses).length;
 		let message = 'Selected ' + count + ' course' + (count > 1 ? 's' : '');
 
@@ -313,7 +313,7 @@
 		toast.success(message, {
 			duration: 2000
 		});
-	};
+	}
 
 	// ----------------------
 	// Variables

@@ -5,7 +5,7 @@
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import { ATTACHMENT_API, GetAllCourseAssets, GetBackendUrl } from '$lib/api';
 	import { type Asset, type CourseChapters } from '$lib/types/models';
-	import { buildChapterStructure, cn } from '$lib/utils';
+	import { BuildChapterStructure, cn } from '$lib/utils';
 	import { ChevronRight, Dot, Download } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -48,7 +48,7 @@
 				refreshPromise
 			]);
 
-			fectchedCourseChapters = buildChapterStructure(response);
+			fectchedCourseChapters = BuildChapterStructure(response);
 
 			return true;
 		} catch (error) {
@@ -59,11 +59,11 @@
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	const totalAssetCount = (courseChapters: CourseChapters) => {
+	function totalAssetCount(courseChapters: CourseChapters) {
 		return Object.values(courseChapters).reduce((sum, currentAssets) => {
 			return sum + currentAssets.length;
 		}, 0);
-	};
+	}
 
 	// ----------------------
 	// Reactive

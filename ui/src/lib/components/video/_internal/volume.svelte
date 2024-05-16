@@ -1,6 +1,5 @@
 <script lang="ts">
 	import * as Tooltip from '$components/ui/tooltip';
-	import { flyAndScale } from '$lib/utils';
 </script>
 
 <Tooltip.Root openDelay={100} portal={null} closeOnPointerDown={true}>
@@ -39,7 +38,6 @@
 
 	<Tooltip.Content
 		class="bg-background text-foreground rounded-sm border-none px-1.5 py-1 text-xs"
-		transition={flyAndScale}
 		transitionConfig={{ y: 8, duration: 100 }}
 		sideOffset={8}
 	>

@@ -13,7 +13,7 @@
 	// ----------------------
 
 	// Nav action that floats a background behind the nav items
-	const floatingBackground = (node: HTMLElement) => {
+	function floatingBackground(node: HTMLElement) {
 		let slide = false;
 
 		function handleMouseOver(e: MouseEvent) {
@@ -46,7 +46,7 @@
 				node.removeEventListener('mouseleave', handleMouseLeave);
 			}
 		};
-	};
+	}
 </script>
 
 <nav class="group relative flex select-none" use:floatingBackground>

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Button } from '$components/ui/button';
 	import * as Tooltip from '$components/ui/tooltip';
-	import { flyAndScale } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import { MediaRemoteControl } from 'vidstack';
 	import { getCtx } from './context';
@@ -104,7 +103,6 @@
 
 		<Tooltip.Content
 			class="bg-background text-foreground rounded-sm border-none px-1.5 py-1 text-xs"
-			transition={flyAndScale}
 			transitionConfig={{ y: 8, duration: 100 }}
 			sideOffset={5}
 		>

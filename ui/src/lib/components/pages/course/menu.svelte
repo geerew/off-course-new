@@ -3,7 +3,7 @@
 	import * as Sheet from '$components/ui/sheet';
 	import * as Tooltip from '$components/ui/tooltip';
 	import type { Asset, CourseChapters } from '$lib/types/models';
-	import { cn, flyAndScale } from '$lib/utils';
+	import { cn } from '$lib/utils';
 	import { CircleCheck, Info, Menu } from 'lucide-svelte';
 
 	// ----------------------
@@ -63,7 +63,6 @@
 
 								<Tooltip.Content
 									class="bg-foreground text-background select-none rounded-sm border-none px-1.5 py-1 text-xs"
-									transition={flyAndScale}
 									transitionConfig={{ y: 8, duration: 100 }}
 									side="bottom"
 								>
@@ -159,7 +158,6 @@
 
 						<Tooltip.Content
 							class="bg-foreground text-background select-none rounded-sm border-none px-1.5 py-1 text-xs"
-							transition={flyAndScale}
 							transitionConfig={{ y: 8, duration: 100 }}
 							side="bottom"
 						>

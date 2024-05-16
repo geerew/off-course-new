@@ -24,7 +24,7 @@
 	// ----------------------
 
 	// Sorter for tags
-	const sortTags = (tags: CourseTag[]) => {
+	function sortTags(tags: CourseTag[]) {
 		tags.sort((a, b) => {
 			if (a.tag.toLowerCase() < b.tag.toLowerCase()) {
 				return -1;
@@ -36,7 +36,7 @@
 		});
 
 		return tags;
-	};
+	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

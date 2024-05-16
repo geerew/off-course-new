@@ -25,7 +25,7 @@ export function cn(...inputs: ClassValue[]) {
  * Checks if the current environment is a browser environment.
  * @returns {boolean} True if the current environment is a browser environment, false otherwise.
  */
-export const isBrowser = typeof document !== 'undefined';
+export const IsBrowser = typeof document !== 'undefined';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -35,7 +35,7 @@ export const isBrowser = typeof document !== 'undefined';
  * @param {string} str - The input string in camelCase or PascalCase.
  * @returns {string} - The converted string in snake_case.
  */
-export function toSnakeCase(str: string): string {
+export function ToSnakeCase(str: string): string {
 	// Replace lowercase followed by uppercase, e.g., 'thisIs' -> 'this_Is'
 	let result = str.replace(/([a-z])([A-Z])/g, '$1_$2');
 
@@ -54,14 +54,14 @@ export function toSnakeCase(str: string): string {
  * @returns {string | undefined} - A flattened order-by string or undefined if the input array is
  * empty.
  */
-export function flattenOrderBy(sortKeys: SortKey[]): string | undefined {
+export function FlattenOrderBy(sortKeys: SortKey[]): string | undefined {
 	// Return undefined if the array is empty
 	if (sortKeys.length === 0) {
 		return undefined;
 	}
 
 	// Convert the array of sort keys to an array of strings
-	const orderStrings = sortKeys.map((sortKey) => `${toSnakeCase(sortKey.id)} ${sortKey.order}`);
+	const orderStrings = sortKeys.map((sortKey) => `${ToSnakeCase(sortKey.id)} ${sortKey.order}`);
 
 	// Join the array of strings with a comma and return
 	return orderStrings.join(', ');
@@ -81,7 +81,7 @@ export const NO_CHAPTER = '(no chapter)';
  * @returns {CourseChapters} - An object with chapter names as keys and an array of associated
  * assets as values. Assets without a chapter are grouped under the `NO_CHAPTER` key
  */
-export function buildChapterStructure(courseAssets: Asset[]): CourseChapters {
+export function BuildChapterStructure(courseAssets: Asset[]): CourseChapters {
 	const chapters: CourseChapters = {};
 
 	// Loop through each asset and build the chapter structure
@@ -95,10 +95,7 @@ export function buildChapterStructure(courseAssets: Asset[]): CourseChapters {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-/**
- *
- *
- */
+// Properties for the FlyAndScale transition
 type FlyAndScaleParams = {
 	y?: number;
 	x?: number;
@@ -106,10 +103,13 @@ type FlyAndScaleParams = {
 	duration?: number;
 };
 
-export const flyAndScale = (
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// A fly and scale transition for svelte
+export function FlyAndScale(
 	node: Element,
 	params: FlyAndScaleParams = { y: -8, x: 0, start: 0.95, duration: 150 }
-): TransitionConfig => {
+): TransitionConfig {
 	const style = getComputedStyle(node);
 	const transform = style.transform === 'none' ? '' : style.transform;
 
@@ -145,14 +145,14 @@ export const flyAndScale = (
 		},
 		easing: cubicOut
 	};
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export const Throttle = <R, A extends unknown[]>(
+export function Throttle<R, A extends unknown[]>(
 	fn: (...args: A) => R,
 	delay: number
-): [(...args: A) => R | undefined, () => void] => {
+): [(...args: A) => R | undefined, () => void] {
 	let wait = false;
 	let timeout: undefined | number;
 
@@ -176,4 +176,4 @@ export const Throttle = <R, A extends unknown[]>(
 			clearTimeout(timeout);
 		}
 	];
-};
+}

@@ -175,7 +175,7 @@
 
 	// Refresh the current path. This function is designed to take at least 1 second to prevent
 	// flickering
-	const refresh = async () => {
+	async function refresh() {
 		if (refreshing) return;
 
 		refreshing = true;
@@ -191,7 +191,7 @@
 		}
 
 		refreshing = false;
-	};
+	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

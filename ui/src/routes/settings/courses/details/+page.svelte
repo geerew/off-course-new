@@ -48,7 +48,7 @@
 	// ----------------------
 
 	// Lookup the course based upon the search params
-	const getCourse = async () => {
+	async function getCourse() {
 		try {
 			const response = await GetCourseFromParams($page.url.searchParams);
 			if (!response) throw new Error('Course not found');
@@ -57,19 +57,19 @@
 		} catch (error) {
 			throw error;
 		}
-	};
+	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Start a scan for a course
-	const startScan = async (courseId: string) => {
+	async function startScan(courseId: string) {
 		try {
 			const response = await AddScan(courseId);
 			return response.status;
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : (error as string));
 		}
-	};
+	}
 </script>
 
 <div class="bg-background flex w-full flex-col gap-4 pb-10">

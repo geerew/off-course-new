@@ -6,7 +6,7 @@
 	import * as Tooltip from '$components/ui/tooltip';
 	import { AddCourseTag, DeleteCourseTag, GetTags } from '$lib/api';
 	import type { CourseTag, Tag } from '$lib/types/models';
-	import { cn, flyAndScale } from '$lib/utils';
+	import { cn } from '$lib/utils';
 	import { createCombobox, type ComboboxOption } from '@melt-ui/svelte';
 	import { ArrowLeft, Pencil, RotateCcw, Search, X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
@@ -254,7 +254,6 @@
 
 	<Tooltip.Content
 		class="bg-foreground text-background select-none rounded-sm border-none px-1.5 py-1 text-xs"
-		transition={flyAndScale}
 		transitionConfig={{ y: 8, duration: 100 }}
 		side="bottom"
 	>

@@ -35,7 +35,7 @@
 	// When the scan status is set to either waiting or processing, start polling for updates. As
 	// the status changes, we dispatch an event to the parent component to update the courses list.
 	// When the scan finishes, we clear the interval and set the status to an empty string.
-	const startPolling = () => {
+	function startPolling() {
 		scanPoll = setInterval(async () => {
 			try {
 				const response = await GetCourse(courseId);
@@ -61,7 +61,7 @@
 				scanPoll = -1;
 			}
 		}, 1500);
-	};
+	}
 
 	// ----------------------
 	// Reactive

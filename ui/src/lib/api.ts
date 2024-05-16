@@ -36,13 +36,13 @@ export const SCAN_API = '/api/scans';
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Get the backend URL based on whether the app is in production or development
-export const GetBackendUrl = (api: string) => {
+export function GetBackendUrl(api: string) {
 	if (isProduction) {
 		return api;
 	} else {
 		return `http://${PUBLIC_BACKEND_HOST}:${PUBLIC_BACKEND_PORT}${api}`;
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // FileSystem
@@ -52,7 +52,7 @@ export const GetBackendUrl = (api: string) => {
 //
 // When the path is empty, the available drives are returned. When the path is populated, the
 // directories and files for this path are returned
-export const GetFileSystem = async (path?: string): Promise<FileSystem> => {
+export async function GetFileSystem(path?: string): Promise<FileSystem> {
 	try {
 		let query = GetBackendUrl(FS_API);
 		if (path) query += `/${window.btoa(encodeURIComponent(path))}`;
@@ -69,7 +69,7 @@ export const GetFileSystem = async (path?: string): Promise<FileSystem> => {
 			throw new Error(`Failed to retrieve file system: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Courses
@@ -77,7 +77,7 @@ export const GetFileSystem = async (path?: string): Promise<FileSystem> => {
 
 // GET - Get a paginated list of courses. Use `GetAllCourses()` to get an unpaginated list of
 // courses
-export const GetCourses = async (params?: CoursesGetParams): Promise<Pagination> => {
+export async function GetCourses(params?: CoursesGetParams): Promise<Pagination> {
 	try {
 		const response = await axios.get<Pagination>(GetBackendUrl(COURSE_API), { params });
 		const result = safeParse(PaginationSchema, response.data);
@@ -91,13 +91,13 @@ export const GetCourses = async (params?: CoursesGetParams): Promise<Pagination>
 			throw new Error(`Failed to retrieve courses: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GET - Get all courses (not paginated). This calls GetCourses(...) until all courses are
 // are returned
-export const GetAllCourses = async (params?: CoursesGetParams): Promise<Course[]> => {
+export async function GetAllCourses(params?: CoursesGetParams): Promise<Course[]> {
 	let allCourses: Course[] = [];
 	let page = 1;
 	let totalPages = 1;
@@ -123,12 +123,12 @@ export const GetAllCourses = async (params?: CoursesGetParams): Promise<Course[]
 	} while (page <= totalPages);
 
 	return allCourses;
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GET - Get a course by ID
-export const GetCourse = async (id: string): Promise<Course> => {
+export async function GetCourse(id: string): Promise<Course> {
 	try {
 		const response = await axios.get<Course>(`${GetBackendUrl(COURSE_API)}/${id}`);
 		const result = safeParse(CourseSchema, response.data);
@@ -142,7 +142,7 @@ export const GetCourse = async (id: string): Promise<Course> => {
 			throw new Error(`Failed to retrieve course: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -157,7 +157,7 @@ export async function GetCourseFromParams(params: URLSearchParams): Promise<Cour
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // POST - Create a course
-export const AddCourse = async (title: string, path: string): Promise<Course> => {
+export async function AddCourse(title: string, path: string): Promise<Course> {
 	try {
 		const response = await axios.post<Course>(
 			GetBackendUrl(COURSE_API),
@@ -179,12 +179,12 @@ export const AddCourse = async (title: string, path: string): Promise<Course> =>
 			throw new Error(`Failed to create course: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // PUT - Update a course
-export const UpdateCourse = async (course: Course): Promise<Course> => {
+export async function UpdateCourse(course: Course): Promise<Course> {
 	try {
 		const response = await axios.put<Course>(`${GetBackendUrl(COURSE_API)}/${course.id}`, course, {
 			headers: {
@@ -202,12 +202,12 @@ export const UpdateCourse = async (course: Course): Promise<Course> => {
 			throw new Error(`Failed to update course: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // DELETE - Delete a course
-export const DeleteCourse = async (id: string): Promise<boolean> => {
+export async function DeleteCourse(id: string): Promise<boolean> {
 	try {
 		await axios.delete(`${GetBackendUrl(COURSE_API)}/${id}`);
 		return true;
@@ -218,14 +218,14 @@ export const DeleteCourse = async (id: string): Promise<boolean> => {
 			throw new Error(`Failed to delete course: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Course Tags
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GET - Get a list of tags for a course
-export const GetCourseTags = async (courseId: string): Promise<CourseTag[]> => {
+export async function GetCourseTags(courseId: string): Promise<CourseTag[]> {
 	try {
 		const response = await axios.get<CourseTag[]>(`${GetBackendUrl(COURSE_API)}/${courseId}/tags`);
 		const result = safeParse(array(CourseTagSchema), response.data);
@@ -239,12 +239,12 @@ export const GetCourseTags = async (courseId: string): Promise<CourseTag[]> => {
 			throw new Error(`Failed to retrieve course tags: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // POST - Add a tag to a course. The tag will be created if it does not exist
-export const AddCourseTag = async (courseId: string, tag: string): Promise<CourseTag> => {
+export async function AddCourseTag(courseId: string, tag: string): Promise<CourseTag> {
 	try {
 		const response = await axios.post<CourseTag>(
 			`${GetBackendUrl(COURSE_API)}/${courseId}/tags/`,
@@ -266,12 +266,12 @@ export const AddCourseTag = async (courseId: string, tag: string): Promise<Cours
 			throw new Error(`Failed to add course tag: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // DELETE - Delete a course tag
-export const DeleteCourseTag = async (courseId: string, tagId: string): Promise<boolean> => {
+export async function DeleteCourseTag(courseId: string, tagId: string): Promise<boolean> {
 	try {
 		await axios.delete(`${GetBackendUrl(COURSE_API)}/${courseId}/tags/${tagId}`);
 		return true;
@@ -282,7 +282,7 @@ export const DeleteCourseTag = async (courseId: string, tagId: string): Promise<
 			throw new Error(`Failed to delete course tag: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Assets
@@ -292,10 +292,10 @@ export const DeleteCourseTag = async (courseId: string, tagId: string): Promise<
 // unpaginated list of assets for a course
 //
 // Requires a course ID
-export const GetCourseAssets = async (
+export async function GetCourseAssets(
 	courseId: string,
 	params?: AssetsGetParams
-): Promise<Pagination> => {
+): Promise<Pagination> {
 	try {
 		const response = await axios.get<Pagination>(
 			`${GetBackendUrl(COURSE_API)}/${courseId}/assets`,
@@ -312,16 +312,16 @@ export const GetCourseAssets = async (
 			throw new Error(`Failed to get course assets: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GET - Get all assets (not paginated) for a course. This calls GetAssets(...) until all assets
 // are returned
-export const GetAllCourseAssets = async (
+export async function GetAllCourseAssets(
 	courseId: string,
 	params?: AssetsGetParams
-): Promise<Asset[]> => {
+): Promise<Asset[]> {
 	let allAssets: Asset[] = [];
 	let page = 1;
 	let totalPages = 1;
@@ -350,12 +350,12 @@ export const GetAllCourseAssets = async (
 	} while (page <= totalPages);
 
 	return allAssets;
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // PUT - Update an asset
-export const UpdateAsset = async (asset: Asset): Promise<Asset> => {
+export async function UpdateAsset(asset: Asset): Promise<Asset> {
 	try {
 		const response = await axios.put<Asset>(`${GetBackendUrl(ASSET_API)}/${asset.id}`, asset, {
 			headers: {
@@ -374,14 +374,14 @@ export const UpdateAsset = async (asset: Asset): Promise<Asset> => {
 			throw new Error(`Failed to update asset: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Scans
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GET - Get a scan by course ID
-export const GetScan = async (courseId: string): Promise<Scan> => {
+export async function GetScan(courseId: string): Promise<Scan> {
 	try {
 		const response = await axios.get<Scan>(`${GetBackendUrl(SCAN_API)}/${courseId}`);
 		const result = safeParse(ScanSchema, response.data);
@@ -395,12 +395,12 @@ export const GetScan = async (courseId: string): Promise<Scan> => {
 			throw new Error(`Failed to get scan: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // POST - Create a scan for a course
-export const AddScan = async (courseId: string): Promise<Scan> => {
+export async function AddScan(courseId: string): Promise<Scan> {
 	try {
 		const response = await axios.post<Scan>(
 			GetBackendUrl(SCAN_API),
@@ -423,14 +423,14 @@ export const AddScan = async (courseId: string): Promise<Scan> => {
 			throw new Error(`Failed to add scan job: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Tags
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GET - Get a tag by ID or name
-export const GetTag = async (idOrName: string, params?: TagGetParams): Promise<Tag> => {
+export async function GetTag(idOrName: string, params?: TagGetParams): Promise<Tag> {
 	try {
 		const response = await axios.get<Tag>(`${GetBackendUrl(TAGS_API)}/${idOrName}`, { params });
 		const result = safeParse(TagSchema, response.data);
@@ -444,12 +444,12 @@ export const GetTag = async (idOrName: string, params?: TagGetParams): Promise<T
 			throw new Error(`Failed to get tag: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GET - Get a paginated list of tags
-export const GetTags = async (params?: TagsGetParams): Promise<Pagination> => {
+export async function GetTags(params?: TagsGetParams): Promise<Pagination> {
 	try {
 		const response = await axios.get<Pagination>(GetBackendUrl(TAGS_API), { params });
 		const result = safeParse(PaginationSchema, response.data);
@@ -463,13 +463,13 @@ export const GetTags = async (params?: TagsGetParams): Promise<Pagination> => {
 			throw new Error(`Failed to retrieve tags: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GET - Get all tags (not paginated). This calls GetTags(...) until all tags are
 // are returned
-export const GetAllTags = async (params?: CoursesGetParams): Promise<Tag[]> => {
+export async function GetAllTags(params?: CoursesGetParams): Promise<Tag[]> {
 	let allTags: Tag[] = [];
 	let page = 1;
 	let totalPages = 1;
@@ -495,12 +495,12 @@ export const GetAllTags = async (params?: CoursesGetParams): Promise<Tag[]> => {
 	} while (page <= totalPages);
 
 	return allTags;
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // POST - Create a tag
-export const AddTag = async (tag: string): Promise<Tag> => {
+export async function AddTag(tag: string): Promise<Tag> {
 	try {
 		const response = await axios.post<Tag>(
 			GetBackendUrl(TAGS_API),
@@ -523,12 +523,12 @@ export const AddTag = async (tag: string): Promise<Tag> => {
 			throw new Error(`Failed to add tag: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // PUT - Update a tag
-export const UpdateTag = async (tag: Tag): Promise<Tag> => {
+export async function UpdateTag(tag: Tag): Promise<Tag> {
 	try {
 		const response = await axios.put<Tag>(`${GetBackendUrl(TAGS_API)}/${tag.id}`, tag, {
 			headers: {
@@ -546,12 +546,12 @@ export const UpdateTag = async (tag: Tag): Promise<Tag> => {
 			throw new Error(`Failed to update tag: ${error}`);
 		}
 	}
-};
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // DELETE - Delete a tag
-export const DeleteTag = async (tagId: string): Promise<boolean> => {
+export async function DeleteTag(tagId: string): Promise<boolean> {
 	try {
 		await axios.delete(`${GetBackendUrl(TAGS_API)}/${tagId}`);
 		return true;
@@ -562,4 +562,4 @@ export const DeleteTag = async (tagId: string): Promise<boolean> => {
 			throw new Error(`Failed to delete course tag: ${error}`);
 		}
 	}
-};
+}
