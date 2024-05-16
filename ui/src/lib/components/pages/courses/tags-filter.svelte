@@ -4,9 +4,9 @@
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import { GetAllTags } from '$lib/api';
 	import type { Tag } from '$lib/types/models';
+	import { IsBrowser } from '$lib/utils';
 	import { ChevronRight, Search, Tag as TagIcon, X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
-	import { toast } from 'svelte-sonner';
 
 	// ----------------------
 	// Exports
@@ -38,6 +38,7 @@
 
 	// Get all tags
 	async function getTags(): Promise<boolean> {
+		if (!IsBrowser) return false;
 		try {
 			const response = await GetAllTags();
 
@@ -46,7 +47,6 @@
 
 			return true;
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : (error as string));
 			throw error;
 		}
 	}

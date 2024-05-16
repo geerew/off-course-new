@@ -14,7 +14,7 @@
 	// ----------------------
 
 	export let courseId: string;
-	export let assetRefresh: boolean;
+	export let refresh: boolean;
 
 	// ----------------------
 	// Variables
@@ -31,11 +31,12 @@
 	// Gets the assets + attachments for the given course. It will then build a chapter structure
 	// for the assets and selected the first asset that is not completed. If the course itself is
 	// completed, the first asset will be selected
+	//
+	// During a refresh there is a small delay to prevent flickering
 	async function getCourseChapters(courseId: string): Promise<boolean> {
-		// Set a timeout to prevent flickering following a refresh
-		const refreshPromise = new Promise((resolve) => setTimeout(resolve, assetRefresh ? 500 : 0));
+		const refreshPromise = new Promise((resolve) => setTimeout(resolve, refresh ? 500 : 0));
 
-		assetRefresh = false;
+		refresh = false;
 
 		try {
 			let response: Asset[];
@@ -69,8 +70,8 @@
 	// Reactive
 	// ----------------------
 
-	// Update course chapters when `assetRefresh` is set to true
-	$: if (assetRefresh) {
+	// Update course chapters when `refresh` is set to true
+	$: if (refresh) {
 		courseChapters = getCourseChapters(courseId);
 	}
 </script>

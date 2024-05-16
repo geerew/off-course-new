@@ -29,7 +29,7 @@ TODO
 
 ## Page -> Settings -> Courses -> Details
 
-- [ ] Fix issue with a page refresh happening after clicking the scan button
+- [x] Fix issue with a page refresh happening after clicking the scan button
 
 
 ## Page -> Courses

@@ -11,6 +11,7 @@
 	import Badge from '$components/ui/badge/badge.svelte';
 	import Button from '$components/ui/button/button.svelte';
 	import { AddScan, GetCourseFromParams } from '$lib/api';
+	import type { Course } from '$lib/types/models';
 	import {
 		CalendarPlus,
 		CalendarSearch,
@@ -29,7 +30,7 @@
 	// variables
 	// ----------------------
 
-	let course: Record<string, string> = {};
+	let fetchedCourse: Course;
 
 	// True when the course is being deleted
 	let openDeleteDialog = false;
@@ -43,17 +44,20 @@
 	// True when the tags need to be refreshed
 	let tagsRefresh = false;
 
+	let coursePromise = getCourse();
+
 	// ----------------------
 	// Functions
 	// ----------------------
 
 	// Lookup the course based upon the search params
-	async function getCourse() {
+	async function getCourse(): Promise<boolean> {
 		try {
 			const response = await GetCourseFromParams($page.url.searchParams);
 			if (!response) throw new Error('Course not found');
 
-			return response;
+			fetchedCourse = response;
+			return true;
 		} catch (error) {
 			throw error;
 		}
@@ -73,9 +77,9 @@
 </script>
 
 <div class="bg-background flex w-full flex-col gap-4 pb-10">
-	{#await getCourse()}
+	{#await coursePromise}
 		<Loading />
-	{:then data}
+	{:then _}
 		<!-- Course Details -->
 		<div class="bg-muted">
 			<div class="container flex flex-col gap-4 py-6 md:py-10">
@@ -85,46 +89,39 @@
 					>
 						<!-- Course title -->
 						<div class="text-center text-2xl font-bold md:text-start md:text-3xl">
-							{data.title}
+							{fetchedCourse.title}
 						</div>
 
 						<div class="flex flex-col gap-2.5">
 							<!-- Path -->
 							<div class="flex max-w-[30rem] flex-row items-center gap-2.5 md:max-w-full">
 								<Folder class="size-4 shrink-0" />
-								<span class="text-xs">{data.path}</span>
+								<span class="text-xs">{fetchedCourse.path}</span>
 							</div>
 
 							<!-- Created at -->
 							<div class="flex flex-row items-center gap-2.5">
 								<CalendarPlus class="size-4 shrink-0" />
-								<NiceDate date={data.createdAt} class="text-foreground text-xs" />
+								<NiceDate date={fetchedCourse.createdAt} class="text-foreground text-xs" />
 							</div>
 
 							<!-- Update at || scan status -->
 							<div class="flex flex-row items-center gap-2.5">
 								<CalendarSearch class="size-4 shrink-0" />
-								{#if !data.scanStatus}
-									<NiceDate date={data.updatedAt} class="text-foreground text-xs" />
+								{#if !fetchedCourse.scanStatus}
+									<NiceDate date={fetchedCourse.updatedAt} class="text-foreground text-xs" />
 								{:else}
 									<ScanStatus
-										courseId={data.id}
-										scanStatus={data.scanStatus}
+										courseId={fetchedCourse.id}
 										waitingText="Queued for scan"
 										processingText="Scanning"
 										class="text-foreground justify-start text-xs"
-										on:change={async (e) => {
-											Object.assign(data, e.detail);
+										on:empty={(e) => {
+											fetchedCourse = e.detail;
 
-											// Explicitly set the scan status
-											data.scanStatus = e.detail.scanStatus;
-
-											// Pull any changes
-											if (!data.scanStatus) {
-												assetRefresh = true;
-												cardRefresh = true;
-												tagsRefresh = true;
-											}
+											assetRefresh = true;
+											cardRefresh = true;
+											tagsRefresh = true;
 										}}
 									/>
 								{/if}
@@ -132,7 +129,7 @@
 
 							<div class="flex flex-row place-content-center gap-3 pt-3.5 md:place-content-start">
 								<!-- Availability -->
-								{#if data.available}
+								{#if fetchedCourse.available}
 									<Badge
 										class="bg-success text-success-foreground hover:bg-success items-center gap-1.5 rounded-sm"
 									>
@@ -150,14 +147,14 @@
 								{/if}
 
 								<!-- % completed -->
-								{#if !data.started}
+								{#if !fetchedCourse.started}
 									<Badge
 										class="bg-alt-1 hover:bg-alt-1 text-foreground items-center gap-1.5 rounded-sm"
 									>
 										<Circle class="size-4" />
 										Not Started
 									</Badge>
-								{:else if data.percent === 100}
+								{:else if fetchedCourse.percent === 100}
 									<Badge class="hover:bg-primary items-center gap-1.5 rounded-sm">
 										<CheckCircle2 class="size-4" />
 										Completed
@@ -168,7 +165,7 @@
 										class="hover:bg-secondary items-center gap-1.5 rounded-sm"
 									>
 										<PlayCircle class="size-4" />
-										{data.percent}% completed
+										{fetchedCourse.percent}% completed
 									</Badge>
 								{/if}
 							</div>
@@ -179,12 +176,12 @@
 							<Button
 								variant="outline"
 								class="hover:bg-primary bg-muted border-muted-foreground hover:text-primary-foreground hover:border-primary h-8 cursor-pointer gap-2 px-2.5"
-								href="/course?id={data.id}"
+								href="/course?id={fetchedCourse.id}"
 							>
 								<Play class="size-4" />
-								{#if data.percent === 0}
+								{#if fetchedCourse.percent === 0}
 									Start
-								{:else if data.percent === 100}
+								{:else if fetchedCourse.percent === 100}
 									Replay
 								{:else}
 									Resume
@@ -194,10 +191,10 @@
 							<Button
 								variant="outline"
 								class="hover:bg-primary bg-muted border-muted-foreground hover:text-primary-foreground hover:border-primary h-8 cursor-pointer gap-2 px-2.5"
-								disabled={data.scanStatus !== ''}
+								disabled={fetchedCourse.scanStatus !== ''}
 								on:click={async () => {
-									const newStatus = await startScan(data.id);
-									if (newStatus) data.scanStatus = newStatus;
+									const s = await startScan(fetchedCourse.id);
+									if (s) fetchedCourse.scanStatus = s;
 								}}
 							>
 								<FolderSearch class="size-4" />
@@ -208,7 +205,6 @@
 								variant="outline"
 								class="hover:bg-destructive bg-muted border-muted-foreground hover:border-destructive hover:text-destructive-foreground h-8 cursor-pointer gap-2 px-2.5"
 								on:click={() => {
-									course = { [data.id]: data.title };
 									openDeleteDialog = true;
 								}}
 							>
@@ -217,20 +213,24 @@
 							</Button>
 						</div>
 
-						<CourseDetailsTags courseId={data.id} bind:tagsRefresh />
+						<CourseDetailsTags courseId={fetchedCourse.id} bind:refresh={tagsRefresh} />
 					</div>
 
-					<CourseDetailsCard courseId={data.id} hasCard={data.hasCard} bind:cardRefresh />
+					<CourseDetailsCard
+						courseId={fetchedCourse.id}
+						hasCard={fetchedCourse.hasCard}
+						bind:refresh={cardRefresh}
+					/>
 				</div>
 			</div>
 		</div>
 
 		<!-- Course content -->
-		<CourseDetailsChapters courseId={data.id} bind:assetRefresh />
+		<CourseDetailsChapters courseId={fetchedCourse.id} bind:refresh={assetRefresh} />
 
 		<!-- Delete dialog -->
 		<DeleteCourseDialog
-			courses={course}
+			courses={{ [fetchedCourse.id]: fetchedCourse.title }}
 			bind:open={openDeleteDialog}
 			on:courseDeleted={() => {
 				goto('/settings/courses');

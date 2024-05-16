@@ -5,7 +5,7 @@
 	import { GetCourses } from '$lib/api';
 	import type { Course, CourseProgress, CoursesGetParams } from '$lib/types/models';
 	import type { PaginationParams } from '$lib/types/pagination';
-	import { toast } from 'svelte-sonner';
+	import { IsBrowser } from '$lib/utils';
 
 	// ----------------------
 	// Variables
@@ -41,6 +41,10 @@
 
 	// Get courses (paginated)
 	async function getCourses(): Promise<boolean> {
+		console.log('1');
+		if (!IsBrowser) return false;
+		console.log('2');
+
 		const params: CoursesGetParams = {
 			page: pagination.page,
 			perPage: pagination.perPage
@@ -69,7 +73,7 @@
 
 			return true;
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : (error as string));
+			// toast.error(error instanceof Error ? error.message : (error as string));
 			throw error;
 		}
 	}
@@ -103,7 +107,7 @@
 			{#await courses}
 				<Loading />
 			{:then _}
-				{#if fetchedCourses.length === 0}
+				{#if fetchedCourses && fetchedCourses.length === 0}
 					<div class="flex min-h-[6rem] w-full flex-grow flex-col items-center p-10">
 						<span class="text-muted-foreground">No courses.</span>
 					</div>

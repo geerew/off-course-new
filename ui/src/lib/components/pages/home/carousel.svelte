@@ -6,7 +6,6 @@
 	import * as Carousel from '$lib/components/ui/carousel';
 	import { CourseProgress, type Course, type CoursesGetParams } from '$lib/types/models';
 	import { ArrowLeft, ArrowRight } from 'lucide-svelte';
-	import { toast } from 'svelte-sonner';
 	import { writable } from 'svelte/store';
 	import theme from 'tailwindcss/defaultTheme';
 	import type { CarouselAPI } from '../../ui/carousel/context';
@@ -48,7 +47,6 @@
 
 			return true;
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : (error as string));
 			throw error;
 		}
 	}
@@ -277,7 +275,7 @@
 				</Carousel.Content>
 			</Carousel.Root>
 		{/if}
-	{:catch _}
-		<Err class="text-muted min-h-[6rem] p-5 text-sm" imgClass="size-6" />
+	{:catch error}
+		<Err class="text-muted min-h-[6rem] p-5 text-sm" imgClass="size-6" errorMessage={error} />
 	{/await}
 </div>

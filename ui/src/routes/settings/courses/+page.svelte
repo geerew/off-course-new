@@ -167,13 +167,9 @@
 			accessor: 'scanStatus',
 			cell: ({ row, value }) => {
 				if (!row.isData()) return value;
-				return createRender(ScanStatus, { courseId: row.original.id, scanStatus: value }).on(
-					'change',
-					(ev) => {
-						// row.original.scanStatus = ev.detail;
-						updateCourseInCourses(ev.detail);
-					}
-				);
+				return createRender(ScanStatus, { courseId: row.original.id }).on('empty', (e) => {
+					updateCourseInCourses(e.detail);
+				});
 			}
 		}),
 		table.column({
@@ -230,7 +226,7 @@
 	// ----------------------
 
 	// GET all courses from the backend. The response is paginated
-	async function getCourses() {
+	async function getCourses(): Promise<boolean> {
 		const orderBy = FlattenOrderBy($sortKeys);
 
 		try {
@@ -250,7 +246,6 @@
 
 			return true;
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : (error as string));
 			throw error;
 		}
 	}

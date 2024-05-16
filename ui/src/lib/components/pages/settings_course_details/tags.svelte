@@ -10,7 +10,7 @@
 	// Exports
 	// ----------------------
 	export let courseId: string;
-	export let tagsRefresh: boolean;
+	export let refresh: boolean;
 
 	// ----------------------
 	// Variables
@@ -40,11 +40,16 @@
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	// Gets the tags for this course
+	// Gets the tags for this course. During a refresh there is a small delay to prevent flickering
 	async function getTags(courseId: string): Promise<boolean> {
-		tagsRefresh = false;
+		const refreshPromise = new Promise((resolve) => setTimeout(resolve, refresh ? 500 : 0));
+
+		refresh = false;
 		try {
-			const response = await GetCourseTags(courseId);
+			let response: CourseTag[];
+
+			await Promise.all([(response = await GetCourseTags(courseId)), refreshPromise]);
+
 			fetchedTags = sortTags(response);
 			return true;
 		} catch (error) {
@@ -57,7 +62,7 @@
 	// Exports
 	// ----------------------
 
-	$: if (tagsRefresh) {
+	$: if (refresh) {
 		tags = getTags(courseId);
 	}
 </script>
@@ -77,7 +82,7 @@
 	</div>
 
 	{#await tags}
-		<Loading class="min-h-5 w-full p-1 py-2" loaderClass="size-6" />
+		<Loading class="min-h-1.5 w-full p-0" loaderClass="size-5" />
 	{:then _}
 		<!-- Tags -->
 		<div class="flex flex-row flex-wrap gap-2.5">

@@ -160,7 +160,7 @@
 	// ----------------------
 
 	// GET a paginated list of tags
-	async function getTags() {
+	async function getTags(): Promise<boolean> {
 		try {
 			const response = await GetTags({
 				orderBy: FlattenOrderBy($sortKeys),
@@ -185,7 +185,6 @@
 
 			return true;
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : (error as string));
 			throw error;
 		}
 	}
