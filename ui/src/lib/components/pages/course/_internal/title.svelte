@@ -2,7 +2,7 @@
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import * as Tooltip from '$components/ui/tooltip';
-	import { ATTACHMENT_API } from '$lib/api';
+	import { ATTACHMENT_API, GetBackendUrl } from '$lib/api';
 	import type { Asset } from '$lib/types/models';
 	import { cn, flyAndScale } from '$lib/utils';
 	import { CircleCheck, Download, FileCode, FileText, FileVideo, Paperclip } from 'lucide-svelte';
@@ -62,7 +62,7 @@
 							{@const lastAttachment = asset.attachments.length - 1 == i}
 							<DropdownMenu.Item
 								class="data-[highlighted]:text-background cursor-pointer justify-between gap-3 text-xs data-[highlighted]:bg-transparent data-[highlighted]:underline"
-								href={ATTACHMENT_API + '/' + attachment.id + '/serve'}
+								href={GetBackendUrl(ATTACHMENT_API) + '/' + attachment.id + '/serve'}
 								download
 							>
 								<div class="flex flex-row gap-1.5">

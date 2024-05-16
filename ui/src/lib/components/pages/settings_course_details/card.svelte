@@ -1,6 +1,6 @@
 <script lang="ts">
 	import * as Avatar from '$components/ui/avatar';
-	import { COURSE_API } from '$lib/api';
+	import { COURSE_API, GetBackendUrl } from '$lib/api';
 	import { Play } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
@@ -28,7 +28,7 @@
 		cardRefresh = false;
 
 		if (hasCard) {
-			cardSrc = `${COURSE_API}/${courseId}/card?b=${new Date().getTime()}`;
+			cardSrc = `${GetBackendUrl(COURSE_API)}/${courseId}/card?b=${new Date().getTime()}`;
 		} else {
 			cardSrc = '';
 		}

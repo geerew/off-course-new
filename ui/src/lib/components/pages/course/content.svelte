@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Video } from '$components/video';
-	import { ASSET_API } from '$lib/api';
+	import { ASSET_API, GetBackendUrl } from '$lib/api';
 	import type { Asset } from '$lib/types/models';
 	import { createEventDispatcher } from 'svelte';
 	import PrevNext from './_internal/prev-next.svelte';
@@ -61,7 +61,7 @@
 				/>
 			{:else if selectedAsset.assetType === 'html'}
 				<iframe
-					src="{ASSET_API}/{selectedAsset.id}/serve"
+					src="{GetBackendUrl(ASSET_API)}/{selectedAsset.id}/serve"
 					class="h-full w-full"
 					title={selectedAsset.title}
 				/>

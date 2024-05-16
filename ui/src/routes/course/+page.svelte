@@ -27,7 +27,7 @@
 	// ----------------------
 
 	// Lookup the course based upon the search params
-	const getCourse = async () => {
+	async function getCourse(): Promise<Course> {
 		try {
 			const course = await GetCourseFromParams($page.url.searchParams);
 			if (!course) throw new Error('Course not found');
@@ -53,7 +53,7 @@
 			toast.error(error instanceof Error ? error.message : (error as string));
 			throw error;
 		}
-	};
+	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

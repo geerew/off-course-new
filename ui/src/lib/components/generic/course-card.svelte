@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { AspectRatio } from '$components/ui/aspect-ratio';
-	import { COURSE_API } from '$lib/api';
+	import { COURSE_API, GetBackendUrl } from '$lib/api';
 	import type { Course } from '$lib/types/models';
 	import { createAvatar } from '@melt-ui/svelte';
 	import { Play } from 'lucide-svelte';
@@ -31,7 +31,7 @@
 	// Sets the src if the course has a card
 	function setSrc() {
 		if (course && course.hasCard) {
-			src.set(`${COURSE_API}/${course.id}/card?b=${new Date().getTime()}`);
+			src.set(`${GetBackendUrl(COURSE_API)}/${course.id}/card?b=${new Date().getTime()}`);
 		} else {
 			src.set('');
 		}

@@ -13,6 +13,13 @@
 	export let tagsRefresh: boolean;
 
 	// ----------------------
+	// Variables
+	// ----------------------
+
+	let fetchedTags: CourseTag[] = [];
+	let tags = getTags(courseId);
+
+	// ----------------------
 	// Functions
 	// ----------------------
 
@@ -34,12 +41,12 @@
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Gets the tags for this course
-	async function getTags(courseId: string): Promise<CourseTag[]> {
+	async function getTags(courseId: string): Promise<boolean> {
 		tagsRefresh = false;
 		try {
 			const response = await GetCourseTags(courseId);
-			if (!response) return [];
-			return sortTags(response);
+			fetchedTags = sortTags(response);
+			return true;
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : (error as string));
 			throw error;
@@ -53,22 +60,15 @@
 	$: if (tagsRefresh) {
 		tags = getTags(courseId);
 	}
-
-	// ----------------------
-	// Variables
-	// ----------------------
-
-	// Holds the tags for this course
-	let tags = getTags(courseId);
 </script>
 
 <div class="flex flex-col gap-3.5">
 	<div class="flex flex-row items-center gap-2">
 		<span class="font-bold">Tags</span>
-		{#await tags then data}
+		{#await tags then _}
 			<EditCourseTags
 				{courseId}
-				existingTags={data}
+				existingTags={fetchedTags}
 				on:updated={() => {
 					tags = getTags(courseId);
 				}}
@@ -78,10 +78,10 @@
 
 	{#await tags}
 		<Loading class="min-h-5 w-full p-1 py-2" loaderClass="size-6" />
-	{:then data}
+	{:then _}
 		<!-- Tags -->
 		<div class="flex flex-row flex-wrap gap-2.5">
-			{#each data as tag}
+			{#each fetchedTags as tag}
 				<div class="flex flex-row">
 					<!-- Tag -->
 					<Badge

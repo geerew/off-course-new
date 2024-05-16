@@ -3,7 +3,7 @@ TODO
 
 - [x] Use await
 - [x] Tidy Loading component
-
+- [ ] on scan, have a minimum 'load' of 1 second to stop flickering
 
 ## Page -> Settings -> Tags
 
@@ -26,6 +26,11 @@ TODO
 - [ ] Store table state in local storage/db
 - [x] Add table action `Add Tags`
 - [x] Use shadcn table
+
+## Page -> Settings -> Courses -> Details
+
+- [ ] Fix issue with a page refresh happening after clicking the scan button
+
 
 ## Page -> Courses
 

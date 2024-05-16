@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Progress from '$components/video/_internal/progress.svelte';
-	import { ASSET_API } from '$lib/api';
+	import { ASSET_API, GetBackendUrl } from '$lib/api';
 	import type { Asset } from '$lib/types/models';
 	import { Throttle } from '$lib/utils';
 	import { createEventDispatcher, onMount } from 'svelte';
@@ -178,7 +178,7 @@
 	class="ring-media-focus group/player aspect-video w-full overflow-hidden rounded-md data-[focus]:ring-4"
 	{title}
 	src={{
-		src: ASSET_API + '/' + src + '/serve',
+		src: GetBackendUrl(ASSET_API) + '/' + src + '/serve',
 		type: 'video/mp4'
 	}}
 	playsInline={true}

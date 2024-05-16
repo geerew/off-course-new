@@ -1,4 +1,4 @@
-import { PUBLIC_BACKEND } from '$env/static/public';
+import { PUBLIC_BACKEND_HOST, PUBLIC_BACKEND_PORT } from '$env/static/public';
 import { FileSystemSchema, type FileSystem } from '$lib/types/fileSystem';
 import {
 	AssetSchema,
@@ -22,23 +22,27 @@ import { array, safeParse } from 'valibot';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export const FS_API =
-	process.env.NODE_ENV === 'production' ? '/api/filesystem' : `${PUBLIC_BACKEND}/api/filesystem`;
+const isProduction = process.env.NODE_ENV === 'production';
 
-export const COURSE_API =
-	process.env.NODE_ENV === 'production' ? '/api/courses' : `${PUBLIC_BACKEND}/api/courses`;
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export const ASSET_API =
-	process.env.NODE_ENV === 'production' ? '/api/assets' : `${PUBLIC_BACKEND}/api/assets`;
+export const FS_API = '/api/filesystem';
+export const COURSE_API = '/api/courses';
+export const ASSET_API = '/api/assets';
+export const ATTACHMENT_API = '/api/attachments';
+export const TAGS_API = '/api/tags';
+export const SCAN_API = '/api/scans';
 
-export const ATTACHMENT_API =
-	process.env.NODE_ENV === 'production' ? '/api/attachments' : `${PUBLIC_BACKEND}/api/attachments`;
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export const TAGS_API =
-	process.env.NODE_ENV === 'production' ? '/api/tags' : `${PUBLIC_BACKEND}/api/tags`;
-
-export const SCAN_API =
-	process.env.NODE_ENV === 'production' ? '/api/scans' : `${PUBLIC_BACKEND}/api/scans`;
+// Get the backend URL based on whether the app is in production or development
+export const GetBackendUrl = (api: string) => {
+	if (isProduction) {
+		return api;
+	} else {
+		return `http://${PUBLIC_BACKEND_HOST}:${PUBLIC_BACKEND_PORT}${api}`;
+	}
+};
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // FileSystem
@@ -50,7 +54,7 @@ export const SCAN_API =
 // directories and files for this path are returned
 export const GetFileSystem = async (path?: string): Promise<FileSystem> => {
 	try {
-		let query = FS_API;
+		let query = GetBackendUrl(FS_API);
 		if (path) query += `/${window.btoa(encodeURIComponent(path))}`;
 
 		const response = await axios.get<FileSystem>(query);
@@ -75,7 +79,7 @@ export const GetFileSystem = async (path?: string): Promise<FileSystem> => {
 // courses
 export const GetCourses = async (params?: CoursesGetParams): Promise<Pagination> => {
 	try {
-		const response = await axios.get<Pagination>(COURSE_API, { params });
+		const response = await axios.get<Pagination>(GetBackendUrl(COURSE_API), { params });
 		const result = safeParse(PaginationSchema, response.data);
 
 		if (!result.success) throw new Error('Invalid response from server');
@@ -126,7 +130,7 @@ export const GetAllCourses = async (params?: CoursesGetParams): Promise<Course[]
 // GET - Get a course by ID
 export const GetCourse = async (id: string): Promise<Course> => {
 	try {
-		const response = await axios.get<Course>(`${COURSE_API}/${id}`);
+		const response = await axios.get<Course>(`${GetBackendUrl(COURSE_API)}/${id}`);
 		const result = safeParse(CourseSchema, response.data);
 
 		if (!result.success) throw new Error('Invalid response from server');
@@ -156,7 +160,7 @@ export async function GetCourseFromParams(params: URLSearchParams): Promise<Cour
 export const AddCourse = async (title: string, path: string): Promise<Course> => {
 	try {
 		const response = await axios.post<Course>(
-			COURSE_API,
+			GetBackendUrl(COURSE_API),
 			{ title, path },
 			{
 				headers: {
@@ -182,7 +186,7 @@ export const AddCourse = async (title: string, path: string): Promise<Course> =>
 // PUT - Update a course
 export const UpdateCourse = async (course: Course): Promise<Course> => {
 	try {
-		const response = await axios.put<Course>(`${COURSE_API}/${course.id}`, course, {
+		const response = await axios.put<Course>(`${GetBackendUrl(COURSE_API)}/${course.id}`, course, {
 			headers: {
 				'content-type': 'application/json'
 			}
@@ -205,7 +209,7 @@ export const UpdateCourse = async (course: Course): Promise<Course> => {
 // DELETE - Delete a course
 export const DeleteCourse = async (id: string): Promise<boolean> => {
 	try {
-		await axios.delete(`${COURSE_API}/${id}`);
+		await axios.delete(`${GetBackendUrl(COURSE_API)}/${id}`);
 		return true;
 	} catch (error) {
 		if (axios.isAxiosError(error)) {
@@ -223,7 +227,7 @@ export const DeleteCourse = async (id: string): Promise<boolean> => {
 // GET - Get a list of tags for a course
 export const GetCourseTags = async (courseId: string): Promise<CourseTag[]> => {
 	try {
-		const response = await axios.get<CourseTag[]>(`${COURSE_API}/${courseId}/tags`);
+		const response = await axios.get<CourseTag[]>(`${GetBackendUrl(COURSE_API)}/${courseId}/tags`);
 		const result = safeParse(array(CourseTagSchema), response.data);
 
 		if (!result.success) throw new Error('Invalid response from server');
@@ -243,7 +247,7 @@ export const GetCourseTags = async (courseId: string): Promise<CourseTag[]> => {
 export const AddCourseTag = async (courseId: string, tag: string): Promise<CourseTag> => {
 	try {
 		const response = await axios.post<CourseTag>(
-			`${COURSE_API}/${courseId}/tags/`,
+			`${GetBackendUrl(COURSE_API)}/${courseId}/tags/`,
 			{ tag },
 			{
 				headers: {
@@ -269,7 +273,7 @@ export const AddCourseTag = async (courseId: string, tag: string): Promise<Cours
 // DELETE - Delete a course tag
 export const DeleteCourseTag = async (courseId: string, tagId: string): Promise<boolean> => {
 	try {
-		await axios.delete(`${COURSE_API}/${courseId}/tags/${tagId}`);
+		await axios.delete(`${GetBackendUrl(COURSE_API)}/${courseId}/tags/${tagId}`);
 		return true;
 	} catch (error) {
 		if (axios.isAxiosError(error)) {
@@ -293,7 +297,10 @@ export const GetCourseAssets = async (
 	params?: AssetsGetParams
 ): Promise<Pagination> => {
 	try {
-		const response = await axios.get<Pagination>(`${COURSE_API}/${courseId}/assets`, { params });
+		const response = await axios.get<Pagination>(
+			`${GetBackendUrl(COURSE_API)}/${courseId}/assets`,
+			{ params }
+		);
 		const result = safeParse(PaginationSchema, response.data);
 
 		if (!result.success) throw new Error('Invalid response from server');
@@ -350,7 +357,7 @@ export const GetAllCourseAssets = async (
 // PUT - Update an asset
 export const UpdateAsset = async (asset: Asset): Promise<Asset> => {
 	try {
-		const response = await axios.put<Asset>(`${ASSET_API}/${asset.id}`, asset, {
+		const response = await axios.put<Asset>(`${GetBackendUrl(ASSET_API)}/${asset.id}`, asset, {
 			headers: {
 				'content-type': 'application/json'
 			}
@@ -376,7 +383,7 @@ export const UpdateAsset = async (asset: Asset): Promise<Asset> => {
 // GET - Get a scan by course ID
 export const GetScan = async (courseId: string): Promise<Scan> => {
 	try {
-		const response = await axios.get<Scan>(`${SCAN_API}/${courseId}`);
+		const response = await axios.get<Scan>(`${GetBackendUrl(SCAN_API)}/${courseId}`);
 		const result = safeParse(ScanSchema, response.data);
 
 		if (!result.success) throw new Error('Invalid response from server');
@@ -396,7 +403,7 @@ export const GetScan = async (courseId: string): Promise<Scan> => {
 export const AddScan = async (courseId: string): Promise<Scan> => {
 	try {
 		const response = await axios.post<Scan>(
-			SCAN_API,
+			GetBackendUrl(SCAN_API),
 			{ courseId },
 			{
 				headers: {
@@ -425,7 +432,7 @@ export const AddScan = async (courseId: string): Promise<Scan> => {
 // GET - Get a tag by ID or name
 export const GetTag = async (idOrName: string, params?: TagGetParams): Promise<Tag> => {
 	try {
-		const response = await axios.get<Tag>(`${TAGS_API}/${idOrName}`, { params });
+		const response = await axios.get<Tag>(`${GetBackendUrl(TAGS_API)}/${idOrName}`, { params });
 		const result = safeParse(TagSchema, response.data);
 
 		if (!result.success) throw new Error('Invalid response from server');
@@ -444,7 +451,7 @@ export const GetTag = async (idOrName: string, params?: TagGetParams): Promise<T
 // GET - Get a paginated list of tags
 export const GetTags = async (params?: TagsGetParams): Promise<Pagination> => {
 	try {
-		const response = await axios.get<Pagination>(TAGS_API, { params });
+		const response = await axios.get<Pagination>(GetBackendUrl(TAGS_API), { params });
 		const result = safeParse(PaginationSchema, response.data);
 
 		if (!result.success) throw new Error('Invalid response from server');
@@ -496,7 +503,7 @@ export const GetAllTags = async (params?: CoursesGetParams): Promise<Tag[]> => {
 export const AddTag = async (tag: string): Promise<Tag> => {
 	try {
 		const response = await axios.post<Tag>(
-			TAGS_API,
+			GetBackendUrl(TAGS_API),
 			{ tag },
 			{
 				headers: {
@@ -523,7 +530,7 @@ export const AddTag = async (tag: string): Promise<Tag> => {
 // PUT - Update a tag
 export const UpdateTag = async (tag: Tag): Promise<Tag> => {
 	try {
-		const response = await axios.put<Tag>(`${TAGS_API}/${tag.id}`, tag, {
+		const response = await axios.put<Tag>(`${GetBackendUrl(TAGS_API)}/${tag.id}`, tag, {
 			headers: {
 				'content-type': 'application/json'
 			}
@@ -546,7 +553,7 @@ export const UpdateTag = async (tag: Tag): Promise<Tag> => {
 // DELETE - Delete a tag
 export const DeleteTag = async (tagId: string): Promise<boolean> => {
 	try {
-		await axios.delete(`${TAGS_API}/${tagId}`);
+		await axios.delete(`${GetBackendUrl(TAGS_API)}/${tagId}`);
 		return true;
 	} catch (error) {
 		if (axios.isAxiosError(error)) {

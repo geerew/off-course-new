@@ -3,8 +3,8 @@
 	import * as Accordion from '$components/ui/accordion';
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
-	import { ATTACHMENT_API, GetAllCourseAssets } from '$lib/api';
-	import { type CourseChapters } from '$lib/types/models';
+	import { ATTACHMENT_API, GetAllCourseAssets, GetBackendUrl } from '$lib/api';
+	import { type Asset, type CourseChapters } from '$lib/types/models';
 	import { buildChapterStructure, cn } from '$lib/utils';
 	import { ChevronRight, Dot, Download } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
@@ -17,28 +17,45 @@
 	export let assetRefresh: boolean;
 
 	// ----------------------
+	// Variables
+	// ----------------------
+
+	let fectchedCourseChapters: CourseChapters = {};
+
+	let courseChapters = getCourseChapters(courseId);
+
+	// ----------------------
 	// Functions
 	// ----------------------
 
 	// Gets the assets + attachments for the given course. It will then build a chapter structure
 	// for the assets and selected the first asset that is not completed. If the course itself is
 	// completed, the first asset will be selected
-	const getCourseChapters = async (courseId: string): Promise<CourseChapters> => {
+	async function getCourseChapters(courseId: string): Promise<boolean> {
+		// Set a timeout to prevent flickering following a refresh
+		const refreshPromise = new Promise((resolve) => setTimeout(resolve, assetRefresh ? 500 : 0));
+
 		assetRefresh = false;
 
 		try {
-			const response = await GetAllCourseAssets(courseId, {
-				orderBy: 'chapter asc, prefix asc',
-				expand: true
-			});
-			if (!response) return {};
+			let response: Asset[];
 
-			return buildChapterStructure(response);
+			await Promise.all([
+				(response = await GetAllCourseAssets(courseId, {
+					orderBy: 'chapter asc, prefix asc',
+					expand: true
+				})),
+				refreshPromise
+			]);
+
+			fectchedCourseChapters = buildChapterStructure(response);
+
+			return true;
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : (error as string));
 			throw error;
 		}
-	};
+	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -47,12 +64,6 @@
 			return sum + currentAssets.length;
 		}, 0);
 	};
-
-	// ----------------------
-	// Variables
-	// ----------------------
-
-	let courseChapters = getCourseChapters(courseId);
 
 	// ----------------------
 	// Reactive
@@ -71,24 +82,24 @@
 
 	{#await courseChapters}
 		<Loading class="min-h-24" />
-	{:then data}
+	{:then _}
 		<!-- n chapters / n assets -->
 		<div class="flex flex-row items-center pb-4 pl-2.5">
 			<span class="text-muted-foreground text-sm">
-				{Object.keys(data).length}
-				{Object.keys(data).length ? 'chapters' : 'chapter'}
+				{Object.keys(fectchedCourseChapters).length}
+				{Object.keys(fectchedCourseChapters).length ? 'chapters' : 'chapter'}
 			</span>
 			<Dot class="text-muted-foreground size-5" />
 			<span class="text-muted-foreground text-sm">
-				{totalAssetCount(data)}
-				{totalAssetCount(data) ? 'assets' : 'asset'}
+				{totalAssetCount(fectchedCourseChapters)}
+				{totalAssetCount(fectchedCourseChapters) ? 'assets' : 'asset'}
 			</span>
 		</div>
 
 		<Accordion.Root class="border-muted/70 w-full rounded-lg border">
-			{#each Object.keys(data) as chapter, i}
-				{@const numAssets = data[chapter].length}
-				{@const lastChapter = Object.keys(data).length - 1 == i}
+			{#each Object.keys(fectchedCourseChapters) as chapter, i}
+				{@const numAssets = fectchedCourseChapters[chapter].length}
+				{@const lastChapter = Object.keys(fectchedCourseChapters).length - 1 == i}
 
 				<Accordion.Item
 					value={chapter}
@@ -111,8 +122,8 @@
 
 					<!-- Assets -->
 					<Accordion.Content class="flex flex-col">
-						{#each data[chapter] as asset, i}
-							{@const lastAsset = data[chapter].length - 1 == i}
+						{#each fectchedCourseChapters[chapter] as asset, i}
+							{@const lastAsset = fectchedCourseChapters[chapter].length - 1 == i}
 
 							<!-- Asset -->
 							<div class={cn(!lastAsset && 'border-muted/70 border-b')}>
@@ -168,7 +179,10 @@
 															{@const lastAttachment = asset.attachments.length - 1 == i}
 															<DropdownMenu.Item
 																class="cursor-pointer justify-between gap-3 text-xs"
-																href={ATTACHMENT_API + '/' + attachment.id + '/serve'}
+																href={GetBackendUrl(ATTACHMENT_API) +
+																	'/' +
+																	attachment.id +
+																	'/serve'}
 																download
 															>
 																<div class="flex flex-row gap-1.5">
