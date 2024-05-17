@@ -25,19 +25,38 @@
 	import { Render, Subscribe, createRender, createTable } from 'svelte-headless-table';
 	import { addHiddenColumns, addSortBy } from 'svelte-headless-table/plugins';
 	import { toast } from 'svelte-sonner';
-	import { writable } from 'svelte/store';
+	import { get, writable, type Writable } from 'svelte/store';
+
+	// ----------------------
+	// Types
+	// ----------------------
+
+	type rowProps = {
+		title: string;
+
+		// Used to determine if the checkbox is checked or not
+		checked: Writable<boolean>;
+
+		// Used to determine if a scan is in progress for this row
+		scanPoll: Writable<boolean>;
+
+		// True when an action is selected. Only ONE row can be selected at a time
+		rowAction: boolean;
+	};
 
 	// ----------------------
 	// Variables
 	// ----------------------
+
+	// Holds the current page of courses
 	const fetchedCourses = writable<Course[]>([]);
 
-	// Set when a single course is selected via the row action
-	let selectedCourse = <Record<string, string>>{};
+	// Populated during getCourses(). It holds the state of each row for the current page of
+	// the table + any rows that were checked on a previous page
+	let workingRows: Record<string, rowProps> = {};
 
-	// Set when courses are selected via the checkbox
-	const selectedCourses = writable<Record<string, string>>({});
-	const selectedCoursesCount = writable<number>(0);
+	// The number of rows that are checked
+	const checkedRowsCount = writable<number>(0);
 
 	let openDeleteDialog = false;
 	let openAddTagsDialog = false;
@@ -68,65 +87,36 @@
 		table.column({
 			header: () => {
 				return createRender(SelectAllCheckbox, {
-					selectedCount: selectedCoursesCount,
+					count: checkedRowsCount,
 					totalItems: pagination.totalItems
 				}).on('click', () => {
-					if (Object.keys($selectedCourses).length === 0) {
-						// Add all current fetched courses to selected courses
-						selectedCourses.set(
-							$fetchedCourses.reduce((acc, course) => ({ ...acc, [course.id]: course.title }), {})
-						);
+					const foundUnchecked = $fetchedCourses.find(
+						(course) => !get(workingRows[course.id].checked)
+					);
+
+					if (foundUnchecked) {
+						$fetchedCourses.forEach((course) => {
+							workingRows[course.id].checked.set(true);
+						});
 					} else {
-						// Search for an unchecked course on this page
-						const foundUncheckedTag = $fetchedCourses.find(
-							(course) => !$selectedCourses[course.id]
-						);
-
-						if (foundUncheckedTag) {
-							// Add all fetched courses on this page to selected courses
-							selectedCourses.update((courses) => {
-								const newTags = $fetchedCourses.reduce((acc, course) => {
-									if (!courses[course.id]) {
-										acc[course.id] = course.title;
-									}
-									return acc;
-								}, courses);
-
-								return newTags;
-							});
-						} else {
-							// All curses on this page are checked. Remove them from selected courses but keep the rest
-							selectedCourses.update((courses) => {
-								const newTags = { ...courses };
-								$fetchedCourses.forEach((course) => {
-									delete newTags[course.id];
-								});
-								return newTags;
-							});
-						}
+						$fetchedCourses.forEach((course) => {
+							workingRows[course.id].checked.set(false);
+						});
 					}
 
-					selectedCoursesToast();
+					rowsChange();
 				});
 			},
 			accessor: 'id',
-			cell: ({ value, row }) => {
+			cell: ({ value }) => {
 				return createRender(Checkbox, {
-					selected: selectedCourses,
-					id: value
+					checked: workingRows[value].checked
 				}).on('click', () => {
-					selectedCourses.update((courses) => {
-						if (courses[value]) {
-							delete courses[value];
-						} else {
-							if (row.isData()) {
-								courses[value] = row.original.title;
-							}
-						}
-						return { ...courses };
+					workingRows[value].checked.update((checked) => {
+						return !checked;
 					});
 
-					selectedCoursesToast();
+					rowsChange();
 				});
 			}
 		}),
@@ -167,7 +157,12 @@
 			accessor: 'scanStatus',
 			cell: ({ row, value }) => {
 				if (!row.isData()) return value;
-				return createRender(ScanStatus, { courseId: row.original.id }).on('empty', (e) => {
+
+				return createRender(ScanStatus, {
+					courseId: row.original.id,
+					initialStatus: row.original.scanStatus,
+					poll: workingRows[row.original.id].scanPoll
+				}).on('empty', (e) => {
 					updateCourseInCourses(e.detail);
 				});
 			}
@@ -181,17 +176,27 @@
 					disable: true
 				}
 			},
-			cell: ({ value, row }) => {
+			cell: ({ value }) => {
 				return createRender(CoursesRowAction, { course: value })
 					.on('delete', () => {
-						if (row.isData()) {
-							selectedCourse[value.id] = value.title;
-							openDeleteDialog = true;
-						}
+						// Set to false for all rows
+						Object.keys(workingRows).forEach((value) => {
+							workingRows[value].rowAction = false;
+						});
+
+						// Set to true for this row and open the delete dialog
+						workingRows[value.id].rowAction = true;
+						openDeleteDialog = true;
 					})
 					.on('scan', () => {
-						selectedCourse[value.id] = value.title;
-						startScans(selectedCourse);
+						// Set to false for all rows
+						Object.keys(workingRows).forEach((value) => {
+							workingRows[value].rowAction = false;
+						});
+
+						// Set to true for this row and start the scan
+						workingRows[value.id].rowAction = true;
+						startScans();
 					});
 			}
 		})
@@ -221,6 +226,9 @@
 			return { id: col.id.toString(), label: col.header.toString() };
 		});
 
+	// Start loading page 1 of the courses
+	let load = getCourses();
+
 	// ----------------------
 	// Functions
 	// ----------------------
@@ -236,7 +244,42 @@
 				perPage: pagination.perPage
 			});
 
-			fetchedCourses.set(response.items as Course[]);
+			if (!response) {
+				fetchedCourses.set([]);
+				pagination = { ...pagination, totalItems: 0, totalPages: 0 };
+				return true;
+			}
+
+			const courses = response.items as Course[];
+
+			// Find the rows that were checked and keep them
+			const keptRows = Object.keys(workingRows)
+				.filter((id) => get(workingRows[id].checked))
+				.reduce((acc, id) => {
+					return { ...acc, [id]: workingRows[id] };
+				}, {});
+
+			// Create a new working row for each row for the current page + any rows that were
+			// checked on previous pages
+			workingRows = {
+				...courses.reduce(
+					(acc, course) => ({
+						...acc,
+						[course.id]: {
+							title: course.title,
+							checked: writable(false),
+							scanPoll: course.scanStatus ? writable(true) : writable(false),
+							rowAction: false
+						}
+					}),
+					{}
+				),
+				...keptRows
+			};
+
+			rowsChange(false);
+
+			fetchedCourses.set(courses);
 
 			pagination = {
 				...pagination,
@@ -265,62 +308,86 @@
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	// Start a scan for a course
-	async function startScans(courses: Record<string, string>) {
-		try {
-			const ids = Object.keys(courses);
+	// Start scanning courses
+	async function startScans() {
+		const rows = getRowActionOrChecked();
 
+		try {
 			await Promise.all(
-				ids.map(async (id) => {
+				Object.keys(rows).map(async (id) => {
 					try {
 						await AddScan(id);
-						const course = $fetchedCourses.find((course) => course.id === id);
-
-						// Update the course so it reflects in the table
-						if (course) {
-							course.scanStatus = 'waiting';
-							updateCourseInCourses(course);
-						}
-
-						toast.success('Started scan for ' + courses[id]);
+						workingRows[id].scanPoll.set(true);
 					} catch (error) {
-						toast.error('Failed to start a scan for: ' + courses[id]);
+						toast.error('Failed to start a scan for: ' + workingRows[id]);
 					}
 				})
 			);
-
-			selectedCourses.set({});
-			selectedCourse = {};
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : (error as string));
+		} finally {
+			const rowAction = Object.keys(workingRows).find((id) => workingRows[id].rowAction);
+
+			if (rowAction) {
+				workingRows[rowAction].rowAction = false;
+			} else {
+				Object.keys(workingRows).forEach((id) => {
+					workingRows[id].checked.set(false);
+				});
+			}
+
+			rowsChange(false);
 		}
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	// Display a toast when a course is selected/deselected
-	function selectedCoursesToast() {
-		const count = Object.keys($selectedCourses).length;
-		let message = 'Selected ' + count + ' course' + (count > 1 ? 's' : '');
+	// Returns the row action item or all rows that are checked
+	function getRowActionOrChecked(): Record<string, rowProps> {
+		const rowAction = Object.keys(workingRows).find((id) => workingRows[id].rowAction);
 
-		if (count === 0) message = 'Deselected all courses';
-
-		toast.success(message, {
-			duration: 2000
-		});
+		if (rowAction) {
+			return { [rowAction]: workingRows[rowAction] };
+		} else {
+			return Object.keys(workingRows).reduce((acc, id) => {
+				if (get(workingRows[id].checked)) {
+					return { ...acc, [id]: workingRows[id] };
+				}
+				return acc;
+			}, {});
+		}
 	}
 
-	// ----------------------
-	// Variables
-	// ----------------------
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	$: selectedCoursesCount.set(Object.keys($selectedCourses).length);
+	// Update `checkedRowsCount` and optionally display a toast as rows are check/
+	// unchecked
+	function rowsChange(showToast = true) {
+		const count = Object.values(workingRows).filter((row) => get(row.checked)).length;
 
-	// ----------------------
-	// Variables
-	// ----------------------
+		checkedRowsCount.set(count);
 
-	let load = getCourses();
+		if (showToast) {
+			let message = 'Selected ' + count + ' course' + (count > 1 ? 's' : '');
+			if (count === 0) message = 'Deselected all courses';
+
+			toast.success(message, {
+				duration: 2000
+			});
+		}
+	}
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	// Build a map of course IDs to their titles
+	function buildIdTitleMap(): Record<string, string> {
+		const rows = getRowActionOrChecked();
+
+		return Object.keys(rows).reduce<Record<string, string>>((acc, id) => {
+			acc[id] = rows[id].title;
+			return acc;
+		}, {});
+	}
 </script>
 
 <div class="bg-background flex w-full flex-col gap-4 pb-10 pt-6">
@@ -339,13 +406,17 @@
 
 					<div class="flex w-full justify-end gap-2.5">
 						<CoursesTableActions
-							{selectedCoursesCount}
+							count={checkedRowsCount}
 							on:deselect={() => {
-								selectedCourses.set({});
-								selectedCoursesToast();
+								// Set all rows to unchecked
+								Object.keys(workingRows).forEach((id) => {
+									workingRows[id].checked.set(false);
+								});
+
+								rowsChange();
 							}}
 							on:scan={() => {
-								startScans($selectedCourses);
+								startScans();
 							}}
 							on:tags={() => {
 								openAddTagsDialog = true;
@@ -435,7 +506,7 @@
 									<Table.Row
 										{...rowAttrs}
 										data-row={row.id}
-										data-state={$selectedCourses[row.id] && 'selected'}
+										data-state={workingRows[row.id] && 'selected'}
 									>
 										{#each row.cells as cell (cell.id)}
 											<Subscribe attrs={cell.attrs()} let:attrs>
@@ -480,49 +551,55 @@
 </div>
 
 <!-- Delete dialog -->
-<DeleteCourseDialog
-	courses={Object.keys(selectedCourse).length > 0 ? selectedCourse : $selectedCourses}
-	bind:open={openDeleteDialog}
-	on:cancelled={() => {
-		selectedCourse = {};
-	}}
-	on:deleted={() => {
-		// It is possible we need to go back a page
-		const count = selectedCourse ? 1 : Object.keys($selectedCourses).length;
-		if (
-			pagination.page > 1 &&
-			Math.ceil((pagination.totalItems - count) / pagination.perPage) !== pagination.page
-		) {
-			pagination.page = pagination.page - 1;
-		}
-
-		if (Object.keys(selectedCourse).length > 0) {
-			// If a single course was deleted, remove it from the selected courses
-			selectedCourses.update((courses) => {
-				delete courses[Object.keys(selectedCourse)[0]];
-				return { ...courses };
+{#if openDeleteDialog}
+	<DeleteCourseDialog
+		courses={buildIdTitleMap()}
+		bind:open={openDeleteDialog}
+		on:cancelled={() => {
+			// Set to false for all rows
+			Object.keys(workingRows).forEach((id) => {
+				workingRows[id].rowAction = false;
 			});
+		}}
+		on:deleted={() => {
+			// It is possible we need to go back a page
+			const count = Object.keys(getRowActionOrChecked()).length;
+			if (
+				pagination.page > 1 &&
+				Math.ceil((pagination.totalItems - count) / pagination.perPage) !== pagination.page
+			) {
+				pagination.page = pagination.page - 1;
+			}
 
-			selectedCourse = {};
-		} else {
-			selectedCourses.set({});
-		}
+			// Clear all row state
+			const rowAction = Object.keys(workingRows).find((id) => workingRows[id].rowAction);
 
-		load = getCourses();
-	}}
-/>
+			if (rowAction) {
+				workingRows[rowAction].checked.set(false);
+				workingRows[rowAction].rowAction = false;
+			} else {
+				Object.keys(workingRows).forEach((id) => {
+					workingRows[id].checked.set(false);
+				});
+			}
+
+			load = getCourses();
+		}}
+	/>
+{/if}
 
 <!-- Add tags dialog -->
-<AddCourseTagsDialog
-	courseIds={Object.keys($selectedCourses)}
-	bind:open={openAddTagsDialog}
-	on:deleted={() => {
-		// It is possible that the user deleted the last course on this page,
-		// therefore we need to set the page to the previous one
-		if (pagination.page > 1 && (pagination.totalItems - 1) % pagination.perPage === 0)
-			pagination.page = pagination.page - 1;
+{#if openAddTagsDialog}
+	<AddCourseTagsDialog
+		courseIds={Object.keys(getRowActionOrChecked())}
+		bind:open={openAddTagsDialog}
+		on:updated={() => {
+			// Set checked to false for all rows
+			Object.keys(workingRows).forEach((id) => {
+				workingRows[id].checked.set(false);
+			});
 
-		selectedCourses.set({});
-		load = getCourses();
-	}}
-/>
+			rowsChange(false);
+		}}
+	/>
+{/if}

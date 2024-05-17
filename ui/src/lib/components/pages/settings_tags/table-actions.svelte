@@ -8,7 +8,7 @@
 	// ----------------------
 	// Exports
 	// ----------------------
-	export let selectedTagsCount: Writable<number>;
+	export let count: Writable<number>;
 
 	// ----------------------
 	// Variables
@@ -26,7 +26,7 @@
 
 	<DropdownMenu.Content class="flex flex-col text-sm" align="start" fitViewport={true}>
 		<DropdownMenu.Item
-			disabled={$selectedTagsCount === 0}
+			disabled={$count === 0}
 			class="cursor-pointer gap-2.5"
 			on:click={() => {
 				dispatch('deselect');
@@ -42,7 +42,7 @@
 		<DropdownMenu.Separator class="bg-muted my-1 -ml-1 -mr-1 block h-px" />
 
 		<DropdownMenu.Item
-			disabled={$selectedTagsCount === 0}
+			disabled={$count === 0}
 			class="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground cursor-pointer gap-2.5"
 			on:click={() => {
 				dispatch('delete');

@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -171,7 +170,6 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 				})
 			}
 
-			fmt.Println(pResult)
 			return c.Status(fiber.StatusOK).JSON(pResult)
 		} else {
 			whereClause = append(whereClause, squirrel.Eq{api.courseDao.Table() + ".id": courseIds})

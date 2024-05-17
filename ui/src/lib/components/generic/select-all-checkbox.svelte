@@ -7,7 +7,7 @@
 	// Exports
 	//----------------------
 
-	export let selectedCount: Writable<number>;
+	export let count: Writable<number>;
 	export let totalItems: number;
 
 	//----------------------
@@ -21,8 +21,7 @@
 	//----------------------
 
 	// Determine if the checkbox should be unchecked, checked or indeterminate
-	$: checkedOrIndeterminate =
-		$selectedCount === totalItems ? true : $selectedCount > 0 ? 'indeterminate' : false;
+	$: checkedOrIndeterminate = $count === totalItems ? true : $count > 0 ? 'indeterminate' : false;
 </script>
 
 <Checkbox

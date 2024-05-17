@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { GetCourse } from '$lib/api';
 	import type { ClassName } from '$lib/types/general';
+	import type { ScanStatus } from '$lib/types/models';
 	import { cn } from '$lib/utils';
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import type { Writable } from 'svelte/store';
 
 	let className: ClassName = undefined;
 
@@ -11,8 +13,13 @@
 	// Exports
 	// ----------------------
 	export let courseId: string;
+
+	export let initialStatus: ScanStatus;
+
+	export let poll: Writable<boolean>;
+
 	export let waitingText = 'queued';
-	export let processingText = 'processing';
+	export let processingText = 'scanning';
 	export { className as class };
 
 	// ----------------------
@@ -20,11 +27,11 @@
 	// ----------------------
 
 	// Current scan status
-	let scanStatus = '';
+	let scanStatus: ScanStatus = '';
 
 	// When the scanStatus is not empty, this will set. It is used to determine if we should stop
 	// polling during onDestroy()
-	let scanPoll = -1;
+	let pollInterval = -1;
 
 	// Dispatch events to as the status changes
 	const dispatch = createEventDispatcher();
@@ -36,8 +43,8 @@
 	// When the scan status is set to either waiting or processing, start polling for updates. As
 	// the status changes, we dispatch an event to the parent component to update the courses list.
 	// When the scan finishes, we clear the interval and set the status to an empty string.
-	function startPolling() {
-		scanPoll = setInterval(async () => {
+	function startPoll() {
+		pollInterval = setInterval(async () => {
 			try {
 				const response = await GetCourse(courseId);
 
@@ -51,34 +58,43 @@
 					dispatch('processing', response);
 				} else {
 					dispatch('empty', response);
-					clearInterval(scanPoll);
-					scanPoll = -1;
+					poll.set(false);
 				}
 			} catch (error) {
 				toast.error(error instanceof Error ? error.message : (error as string));
 
 				scanStatus = '';
-				clearInterval(scanPoll);
-				scanPoll = -1;
+				poll.set(false);
 			}
 		}, 1000);
 	}
 
 	// ----------------------
+	// Reactive
+	// ----------------------
+
+	// Start polling when the poll store is set to true and we are currently not polling
+	$: if ($poll && pollInterval === -1) {
+		startPoll();
+	}
+
+	// Stop polling when the poll store is set to false
+	$: if (!$poll) {
+		clearInterval(pollInterval);
+		pollInterval = -1;
+	}
+
+	$: scanStatus = initialStatus;
+
+	// ----------------------
 	// Lifecycle
 	// ----------------------
 
-	onMount(() => {
-		if (scanPoll === -1) {
-			startPolling();
+	onDestroy(() => {
+		if (pollInterval !== -1) {
+			clearInterval(pollInterval);
+			pollInterval = -1;
 		}
-
-		return () => {
-			if (scanPoll !== -1) {
-				clearInterval(scanPoll);
-				scanPoll = -1;
-			}
-		};
 	});
 </script>
 

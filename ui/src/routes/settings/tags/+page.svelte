@@ -12,19 +12,37 @@
 	import { Render, Subscribe, createRender, createTable } from 'svelte-headless-table';
 	import { addSortBy } from 'svelte-headless-table/plugins';
 	import { toast } from 'svelte-sonner';
-	import { writable } from 'svelte/store';
+	import { get, writable, type Writable } from 'svelte/store';
+
+	// ----------------------
+	// Types
+	// ----------------------
+
+	type rowProps = {
+		title: string;
+
+		// Used to determine if the checkbox is checked or not
+		checked: Writable<boolean>;
+
+		// True when an action is selected. Only ONE row can be selected at a time
+		rowAction: boolean;
+	};
 
 	// ----------------------
 	// Variables
 	// ----------------------
+
+	// Holds the current page of tags
 	const fetchedTags = writable<Tag[]>([]);
 
-	// Set when a single tag is selected via the row action
 	let selectedTag: Tag | undefined = undefined;
 
-	// Set when tags are selected via the checkbox
-	const selectedTags = writable<Record<string, string>>({});
-	const selectedTagsCount = writable<number>(0);
+	// Populated during getTags(). It holds the state of each row for the current page of
+	// the table + any rows that were checked on a previous page
+	let workingRows: Record<string, rowProps> = {};
+
+	// The number of rows that are checked
+	const checkedRowsCount = writable<number>(0);
 
 	// Dialogs
 	let openDeleteDialog = false;
@@ -50,63 +68,35 @@
 		table.column({
 			header: () => {
 				return createRender(SelectAllCheckbox, {
-					selectedCount: selectedTagsCount,
+					count: checkedRowsCount,
 					totalItems: pagination.totalItems
 				}).on('click', () => {
-					if (Object.keys($selectedTags).length === 0) {
-						// Add all current fetched tags to selected tags
-						selectedTags.set(
-							$fetchedTags.reduce((acc, tag) => ({ ...acc, [tag.id]: tag.tag }), {})
-						);
+					const foundUnchecked = $fetchedTags.find((tag) => !get(workingRows[tag.id].checked));
+
+					if (foundUnchecked) {
+						$fetchedTags.forEach((tag) => {
+							workingRows[tag.id].checked.set(true);
+						});
 					} else {
-						// Search for an unchecked tag on this page
-						const foundUncheckedTag = $fetchedTags.find((tag) => !$selectedTags[tag.id]);
-
-						if (foundUncheckedTag) {
-							// Add all fetched tags on this page to selected tags
-							selectedTags.update((tags) => {
-								const newTags = $fetchedTags.reduce((acc, tag) => {
-									if (!tags[tag.id]) {
-										acc[tag.id] = tag.tag;
-									}
-									return acc;
-								}, tags);
-
-								return newTags;
-							});
-						} else {
-							// All tags on this page are checked. Remove them from selected tags but keep the rest
-							selectedTags.update((tags) => {
-								const newTags = { ...tags };
-								$fetchedTags.forEach((tag) => {
-									delete newTags[tag.id];
-								});
-								return newTags;
-							});
-						}
+						$fetchedTags.forEach((tag) => {
+							workingRows[tag.id].checked.set(false);
+						});
 					}
 
-					selectedTagsToast();
+					rowsChange();
 				});
 			},
 			accessor: 'id',
 			cell: ({ value, row }) => {
 				return createRender(Checkbox, {
-					selected: selectedTags,
-					id: value
+					checked: workingRows[value].checked
 				}).on('click', () => {
-					selectedTags.update((tags) => {
-						if (tags[value]) {
-							delete tags[value];
-						} else {
-							if (row.isData()) {
-								tags[value] = row.original.tag;
-							}
-						}
-						return { ...tags };
+					// Flip the checked state for this row
+					workingRows[value].checked.update((checked) => {
+						return !checked;
 					});
 
-					selectedTagsToast();
+					rowsChange();
 				});
 			}
 		}),
@@ -130,11 +120,23 @@
 			cell: ({ value }) => {
 				return createRender(TagsRowAction, { tag: value })
 					.on('delete', () => {
-						selectedTag = value;
+						// Set to false for all rows
+						Object.keys(workingRows).forEach((value) => {
+							workingRows[value].rowAction = false;
+						});
+
+						// Set to true for this row and open the delete dialog
+						workingRows[value.id].rowAction = true;
 						openDeleteDialog = true;
 					})
 					.on('rename', () => {
-						selectedTag = value;
+						// Set to false for all rows
+						Object.keys(workingRows).forEach((value) => {
+							workingRows[value].rowAction = false;
+						});
+
+						// Set to true for this row and open the rename dialog
+						workingRows[value.id].rowAction = true;
 						openRenameDialog = true;
 					});
 			}
@@ -154,6 +156,9 @@
 		.map((col) => {
 			return { id: col.id.toString(), label: col.header.toString() };
 		});
+
+	// Start loading page 1 of the tags
+	let load = getTags();
 
 	// ----------------------
 	// Functions
@@ -175,6 +180,34 @@
 				return true;
 			}
 
+			const tags = response.items as Tag[];
+
+			// Find the rows that were checked and keep them
+			const keptRows = Object.keys(workingRows)
+				.filter((id) => get(workingRows[id].checked))
+				.reduce((acc, id) => {
+					return { ...acc, [id]: workingRows[id] };
+				}, {});
+
+			// Create a new working row for each row for the current page + any rows that were
+			// checked on previous pages
+			workingRows = {
+				...tags.reduce(
+					(acc, tag) => ({
+						...acc,
+						[tag.id]: {
+							title: tag.tag,
+							checked: writable(false),
+							rowAction: false
+						}
+					}),
+					{}
+				),
+				...keptRows
+			};
+
+			rowsChange(false);
+
 			fetchedTags.set(response.items as Tag[]);
 
 			pagination = {
@@ -191,31 +224,59 @@
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	// Display a toast when a tag is selected/deselected
-	function selectedTagsToast() {
-		const count = Object.keys($selectedTags).length;
-		let message = 'Selected ' + count + ' tag' + (count > 1 ? 's' : '');
+	// Returns the row action item or all rows that are checked
+	function getRowActionOrChecked(): Record<string, rowProps> {
+		const rowAction = Object.keys(workingRows).find((id) => workingRows[id].rowAction);
 
-		if (count === 0) {
-			message = 'Deselected all tags';
+		if (rowAction) {
+			return { [rowAction]: workingRows[rowAction] };
+		} else {
+			return Object.keys(workingRows).reduce((acc, id) => {
+				if (get(workingRows[id].checked)) {
+					return { ...acc, [id]: workingRows[id] };
+				}
+				return acc;
+			}, {});
 		}
-
-		toast.success(message, {
-			duration: 2000
-		});
 	}
 
-	// ----------------------
-	// Reactive
-	// ----------------------
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	$: selectedTagsCount.set(Object.keys($selectedTags).length);
+	// Update `checkedRowsCount` and optionally display a toast as rows are check/
+	// unchecked
+	function rowsChange(showToast = true) {
+		const count = Object.values(workingRows).filter((row) => get(row.checked)).length;
 
-	// ----------------------
-	// Variables
-	// ----------------------
+		checkedRowsCount.set(count);
 
-	let load = getTags();
+		if (showToast) {
+			let message = 'Selected ' + count + ' tag' + (count > 1 ? 's' : '');
+			if (count === 0) message = 'Deselected all tags';
+
+			toast.success(message, {
+				duration: 2000
+			});
+		}
+	}
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	// Build a map of tag IDs to their titles
+	function buildIdTitleMap(): Record<string, string> {
+		const rows = getRowActionOrChecked();
+
+		return Object.keys(rows).reduce<Record<string, string>>((acc, id) => {
+			acc[id] = rows[id].title;
+			return acc;
+		}, {});
+	}
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	function getRowActionAsTag() {
+		const rowAction = Object.keys(workingRows).find((id) => workingRows[id].rowAction);
+
+		if (rowAction) return $fetchedTags.find((tag) => tag.id === rowAction);
+	}
 </script>
 
 <div class="bg-background flex w-full flex-col gap-4 pb-10 pt-6">
@@ -228,13 +289,6 @@
 					<div class="flex">
 						<AddTagsDialog
 							on:added={() => {
-								// It is possible that the user deleted the last course on this page,
-								// therefore we need to set the page to the previous one
-								if (pagination.page > 1 && (pagination.totalItems - 1) % pagination.perPage === 0)
-									pagination.page = pagination.page - 1;
-
-								selectedTags.set({});
-
 								load = getTags();
 							}}
 						/>
@@ -242,10 +296,14 @@
 
 					<div class="flex w-full justify-end gap-2.5">
 						<TagsTableActions
-							{selectedTagsCount}
+							count={checkedRowsCount}
 							on:deselect={() => {
-								selectedTags.set({});
-								selectedTagsToast();
+								// Set all rows to unchecked
+								Object.keys(workingRows).forEach((id) => {
+									workingRows[id].checked.set(false);
+								});
+
+								rowsChange();
 							}}
 							on:delete={() => {
 								openDeleteDialog = true;
@@ -327,7 +385,7 @@
 									<Table.Row
 										{...rowAttrs}
 										data-row={row.id}
-										data-state={$selectedTags[row.id] && 'selected'}
+										data-state={workingRows[row.id] && 'selected'}
 									>
 										{#each row.cells as cell (cell.id)}
 											<Subscribe attrs={cell.attrs()} let:attrs>
@@ -372,48 +430,60 @@
 </div>
 
 <!-- Delete dialog -->
-<DeleteTagsDialog
-	tags={selectedTag ? { [selectedTag.id]: selectedTag.tag } : $selectedTags}
-	bind:open={openDeleteDialog}
-	on:cancelled={() => {
-		selectedTag = undefined;
-	}}
-	on:deleted={() => {
-		// It is possible we need to go back a page
-		const count = selectedTag ? 1 : Object.keys($selectedTags).length;
-		if (
-			pagination.page > 1 &&
-			Math.ceil((pagination.totalItems - count) / pagination.perPage) !== pagination.page
-		) {
-			pagination.page = pagination.page - 1;
-		}
-
-		if (selectedTag) {
-			// If a single tag was deleted, remove it from the selected tags
-			selectedTags.update((tags) => {
-				if (selectedTag) delete tags[selectedTag.id];
-				return { ...tags };
-			});
-
-			selectedTag = undefined;
-		} else {
-			selectedTags.set({});
-		}
-
-		load = getTags();
-	}}
-/>
-
-{#if selectedTag}
-	<RenameTagDialog
-		tag={selectedTag}
-		bind:open={openRenameDialog}
+{#if openDeleteDialog}
+	<DeleteTagsDialog
+		tags={buildIdTitleMap()}
+		bind:open={openDeleteDialog}
 		on:cancelled={() => {
-			selectedTag = undefined;
+			// Set to false for all rows
+			Object.keys(workingRows).forEach((id) => {
+				workingRows[id].rowAction = false;
+			});
 		}}
-		on:renamed={() => {
-			selectedTag = undefined;
+		on:deleted={() => {
+			// It is possible we need to go back a page
+			const count = Object.keys(getRowActionOrChecked()).length;
+			if (
+				pagination.page > 1 &&
+				Math.ceil((pagination.totalItems - count) / pagination.perPage) !== pagination.page
+			) {
+				pagination.page = pagination.page - 1;
+			}
+
+			// Clear all row state
+			const rowAction = Object.keys(workingRows).find((id) => workingRows[id].rowAction);
+
+			if (rowAction) {
+				workingRows[rowAction].checked.set(false);
+				workingRows[rowAction].rowAction = false;
+			} else {
+				Object.keys(workingRows).forEach((id) => {
+					workingRows[id].checked.set(false);
+				});
+			}
+
 			load = getTags();
 		}}
 	/>
+{/if}
+
+{#if openRenameDialog}
+	{#if (selectedTag = getRowActionAsTag())}
+		<RenameTagDialog
+			tag={selectedTag}
+			bind:open={openRenameDialog}
+			on:cancelled={() => {
+				Object.keys(workingRows).forEach((id) => {
+					workingRows[id].rowAction = false;
+				});
+			}}
+			on:renamed={() => {
+				Object.keys(workingRows).forEach((id) => {
+					workingRows[id].rowAction = false;
+				});
+
+				load = getTags();
+			}}
+		/>
+	{/if}
 {/if}

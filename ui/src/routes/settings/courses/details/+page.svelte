@@ -25,6 +25,7 @@
 		Trash2
 	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+	import { writable } from 'svelte/store';
 
 	// ----------------------
 	// variables
@@ -113,6 +114,8 @@
 								{:else}
 									<ScanStatus
 										courseId={fetchedCourse.id}
+										initialStatus={fetchedCourse.scanStatus}
+										poll={writable(true)}
 										waitingText="Queued for scan"
 										processingText="Scanning"
 										class="text-foreground justify-start text-xs"

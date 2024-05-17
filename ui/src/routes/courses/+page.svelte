@@ -41,9 +41,7 @@
 
 	// Get courses (paginated)
 	async function getCourses(): Promise<boolean> {
-		console.log('1');
 		if (!IsBrowser) return false;
-		console.log('2');
 
 		const params: CoursesGetParams = {
 			page: pagination.page,
