@@ -22,6 +22,7 @@ type Asset struct {
 	Chapter  string
 	Type     types.Asset
 	Path     string
+	Md5      string
 
 	// --------------------------------
 	// Not in this table, but added via a join

@@ -275,6 +275,7 @@ func (dao *AssetDao) data(a *models.Asset) map[string]any {
 		"chapter":    NilStr(a.Chapter),
 		"type":       NilStr(a.Type.String()),
 		"path":       NilStr(a.Path),
+		"md5":        NilStr(a.Md5),
 		"created_at": a.CreatedAt,
 		"updated_at": a.UpdatedAt,
 	}
@@ -299,6 +300,7 @@ func (dao *AssetDao) scanRow(scannable Scannable) (*models.Asset, error) {
 		&chapter,
 		&a.Type,
 		&a.Path,
+		&a.Md5,
 		&a.CreatedAt,
 		&a.UpdatedAt,
 		// Asset progress

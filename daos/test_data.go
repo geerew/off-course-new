@@ -220,6 +220,7 @@ func (builder *TestBuilder) newTestAssets(course *models.Course) []*models.Asset
 		a.Chapter = fmt.Sprintf("%d chapter %s", i+1, security.PseudorandomString(2))
 		a.Type = *types.NewAsset("mp4")
 		a.Path = fmt.Sprintf("%s/%s/%d %s.mp4", course.Path, a.Chapter, a.Prefix.Int16, a.Title)
+		a.Md5 = security.PseudorandomString(32)
 
 		if builder.db != nil {
 			dao := NewAssetDao(builder.db)
@@ -256,6 +257,7 @@ func (builder *TestBuilder) newTestAttachments(asset *models.Asset) []*models.At
 		a.AssetID = asset.ID
 		a.Title = security.PseudorandomString(6)
 		a.Path = fmt.Sprintf("%s/%d %s", filepath.Dir(asset.Path), asset.Prefix.Int16, a.Title)
+		a.Md5 = security.PseudorandomString(32)
 
 		if builder.db != nil {
 			dao := NewAttachmentDao(builder.db)

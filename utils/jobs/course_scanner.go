@@ -1,8 +1,10 @@
 package jobs
 
 import (
+	"crypto/md5"
 	"database/sql"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -196,19 +198,19 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 	assetsMap := assetMap{}
 	attachmentsMap := attachmentMap{}
 
-	for _, file := range files {
+	for _, filePath := range files {
 		// Get the fileName from the path (ex /path/to/file.txt -> file.txt)
-		fileName := filepath.Base(file)
+		fileName := filepath.Base(filePath)
 
 		// Get the fileDir from the path (ex /path/to/file.txt -> /path/to)
-		fileDir := filepath.Dir(file)
+		fileDir := filepath.Dir(filePath)
 		isRootDir := fileDir == course.Path
 
 		// Check if this file is a card. Only check when not yet set and the file exists at the
 		// course root
 		if cardPath == "" && isRootDir {
 			if isCard(fileName) {
-				cardPath = file
+				cardPath = filePath
 				continue
 			}
 		}
@@ -234,9 +236,25 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 		pfn := parseFileName(fileName)
 
 		if pfn == nil {
-			log.Debug().Str("file", file).Msg("ignoring file")
+			log.Debug().Str("file", filePath).Msg("ignoring file")
 			continue
 		}
+
+		// Generate an MD5 hash for the file
+		file, err := cs.appFs.Fs.Open(filePath)
+		if err != nil {
+			log.Err(err).Str("file", filePath).Msg("error opening file")
+			continue
+		}
+		defer file.Close()
+
+		hash := md5.New()
+		if _, err := io.Copy(hash, file); err != nil {
+			log.Err(err).Str("file", filePath).Msg("error hashing file")
+			continue
+		}
+
+		md5 := string(hash.Sum(nil))
 
 		if pfn.asset != nil {
 			// Check if we have an existing asset for this [chapter][prefix]
@@ -247,8 +265,9 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 				Prefix:   sql.NullInt16{Int16: int16(pfn.prefix), Valid: true},
 				CourseID: course.ID,
 				Chapter:  chapter,
-				Path:     file,
+				Path:     filePath,
 				Type:     *pfn.asset,
+				Md5:      md5,
 			}
 
 			if !exists {
@@ -261,7 +280,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 					newAsset.Type.IsHTML() && existing.Type.IsPDF() {
 					// Asset -> Replace the existing asset with the new asset and set the existing
 					// asset as an attachment
-					log.Debug().Str("file", file).Str("existing path", existing.Path).Msg("replacing existing asset")
+					log.Debug().Str("file", filePath).Str("existing path", existing.Path).Msg("replacing existing asset")
 
 					assetsMap[chapter][pfn.prefix] = newAsset
 
@@ -269,13 +288,15 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 						Title:    existing.Title + filepath.Ext(existing.Path),
 						Path:     existing.Path,
 						CourseID: course.ID,
+						Md5:      existing.Md5,
 					})
 				} else {
 					// Attachment -> This new asset has a lower priority than the existing asset
 					attachmentsMap[chapter][pfn.prefix] = append(attachmentsMap[chapter][pfn.prefix], &models.Attachment{
 						Title:    pfn.attachmentTitle,
-						Path:     file,
+						Path:     filePath,
 						CourseID: course.ID,
+						Md5:      md5,
 					})
 				}
 			}
@@ -283,8 +304,9 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 			// Attachment
 			attachmentsMap[chapter][pfn.prefix] = append(attachmentsMap[chapter][pfn.prefix], &models.Attachment{
 				Title:    pfn.attachmentTitle,
-				Path:     file,
+				Path:     filePath,
 				CourseID: course.ID,
+				Md5:      md5,
 			})
 		}
 	}

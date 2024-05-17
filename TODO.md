@@ -64,15 +64,13 @@ TODO
 - [ ] Change how frequently the course availability check is run
 - [ ] Support for FFMPEG path
 
-
-
 ## Search
 
 - [ ] Add search (https://discord.com/channels/1116682155809067049/1117779396992979024/1163925360228962385)
 
 ## Backend -> Assets and Attachments
 
-- [ ] Add column for md5sum of file
+- [x] Add column for md5sum of file
 
 ## Backend -> logs
 

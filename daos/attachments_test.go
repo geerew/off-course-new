@@ -154,10 +154,16 @@ func TestAttachment_Create(t *testing.T) {
 		attachment.Title = "Course 1"
 
 		// No path
-		require.ErrorContains(t, dao.Create(attachment), "NOT NULL constraint failed: attachments.path")
+		require.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
 		attachment.Path = ""
-		require.ErrorContains(t, dao.Create(attachment), "NOT NULL constraint failed: attachments.path")
+		require.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
 		attachment.Path = "/course 1/01 attachment"
+
+		// No md5
+		require.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
+		attachment.Md5 = ""
+		require.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
+		attachment.Md5 = "1234"
 
 		// Invalid course ID
 		require.ErrorContains(t, dao.Create(attachment), "FOREIGN KEY constraint failed")

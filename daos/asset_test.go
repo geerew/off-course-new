@@ -151,22 +151,28 @@ func TestAsset_Create(t *testing.T) {
 		asset.Title = "Course 1"
 
 		// No/invalid prefix
-		require.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.prefix")
+		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.prefix", dao.Table()))
 		asset.Prefix = sql.NullInt16{Int16: -1, Valid: true}
 		require.ErrorContains(t, dao.Create(asset), "prefix must be greater than 0")
 		asset.Prefix = sql.NullInt16{Int16: 1, Valid: true}
 
 		// No type
-		require.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.type")
+		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.type", dao.Table()))
 		asset.Type = types.Asset{}
-		require.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.type")
+		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.type", dao.Table()))
 		asset.Type = *types.NewAsset("mp4")
 
 		// No path
-		require.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.path")
+		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
 		asset.Path = ""
-		require.ErrorContains(t, dao.Create(asset), "NOT NULL constraint failed: assets.path")
+		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
 		asset.Path = "/course 1/01 asset"
+
+		// No md5
+		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
+		asset.Md5 = ""
+		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
+		asset.Md5 = "1234"
 
 		// Invalid Course ID
 		require.ErrorContains(t, dao.Create(asset), "FOREIGN KEY constraint failed")

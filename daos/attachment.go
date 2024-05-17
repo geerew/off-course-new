@@ -206,6 +206,7 @@ func (dao *AttachmentDao) data(a *models.Attachment) map[string]any {
 		"asset_id":   NilStr(a.AssetID),
 		"title":      NilStr(a.Title),
 		"path":       NilStr(a.Path),
+		"md5":        NilStr(a.Md5),
 		"created_at": a.CreatedAt,
 		"updated_at": a.UpdatedAt,
 	}
@@ -223,6 +224,7 @@ func (dao *AttachmentDao) scanRow(scannable Scannable) (*models.Attachment, erro
 		&a.AssetID,
 		&a.Title,
 		&a.Path,
+		&a.Md5,
 		&a.CreatedAt,
 		&a.UpdatedAt,
 	)
