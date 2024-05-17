@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/daos"
@@ -178,15 +177,12 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 		}
 	}
 
-	time.Sleep(3 * time.Second)
-
 	// Set the scan status to processing
 	scan.Status = types.NewScanStatus(types.ScanStatusProcessing)
 	err = cs.scanDao.Update(scan)
 	if err != nil {
 		return err
 	}
-	time.Sleep(3 * time.Second)
 
 	cardPath := ""
 
