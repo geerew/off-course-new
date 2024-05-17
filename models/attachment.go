@@ -1,10 +1,8 @@
 package models
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Defines a model for the table `attachments`
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Attachment defines the model for an attachment
+// Attachment defines the model for an attachment (table: attachments)
 type Attachment struct {
 	BaseModel
 

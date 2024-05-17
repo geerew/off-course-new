@@ -1,10 +1,8 @@
 package models
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Defines a model for the table `tags`
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Tag defines the model for a tag
+// Tag defines the model for a tag (table: tags)
 type Tag struct {
 	BaseModel
 

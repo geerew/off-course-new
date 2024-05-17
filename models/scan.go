@@ -1,8 +1,6 @@
 package models
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Defines a model for the table `scans`
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import (
 	"github.com/geerew/off-course/utils/types"
@@ -10,7 +8,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Scan defines the model for a scan
+// Scan defines the model for a scan  (table: scans)
 type Scan struct {
 	BaseModel
 

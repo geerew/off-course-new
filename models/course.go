@@ -1,8 +1,6 @@
 package models
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Defines a model for the table `courses`
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import (
 	"github.com/geerew/off-course/utils/types"
@@ -10,7 +8,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Course defines the model for a course
+// Course defines the model for a course  (table: courses)
 type Course struct {
 	BaseModel
 	Title     string

@@ -1,8 +1,6 @@
 package models
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Defines a model for the table `assets`
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import (
 	"database/sql"
@@ -12,7 +10,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Asset defines the model for an asset
+// Asset defines the model for an asset (table: assets)
 type Asset struct {
 	BaseModel
 

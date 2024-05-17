@@ -1,10 +1,8 @@
 package models
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Defines a model for the table `courses_tags`
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// CourseTag defines the model for a course tag
+// CourseTag defines the model for a course tag  (table: courses_tags)
 type CourseTag struct {
 	BaseModel
 

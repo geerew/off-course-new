@@ -78,6 +78,7 @@ type DatabaseParams struct {
 // SqliteDb defines an sqlite storage
 type SqliteDb struct {
 	db       *sql.DB
+	logsDb   *sql.DB
 	isDebug  bool
 	dataDir  string
 	appFs    *appFs.AppFs
@@ -110,7 +111,59 @@ func NewSqliteDB(config *SqliteDbConfig) *SqliteDb {
 
 // Bootstrap initializes an sqlite DB connection and migrates the models, if required
 func (s *SqliteDb) Bootstrap() error {
-	// Create the data dir (if it does not exist)
+	err := s.initLogDb()
+	if err != nil {
+		return err
+	}
+
+	// Initialize the data DB
+	err = s.initDataDb()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// initLogDb initializes the logs DB
+func (s *SqliteDb) initLogDb() error {
+	if err := s.appFs.Fs.MkdirAll(s.dataDir, os.ModePerm); err != nil {
+		return err
+	}
+
+	dsn := filepath.Join(s.dataDir, "logs.db")
+	if s.inMemory {
+		dsn = "file::memory:"
+	}
+
+	db, err := sql.Open("sqlite", dsn)
+	if err != nil {
+		return err
+	}
+
+	// TODO: make this better (use semaphore to block/continue)
+	db.SetMaxIdleConns(1)
+	db.SetMaxOpenConns(1)
+
+	if err := setPragma(db); err != nil {
+		return err
+	}
+
+	if err != nil {
+		return err
+	}
+
+	s.logsDb = db
+
+	// Do the migrate
+	return s.migrateLogs()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// initDataDb initializes the data DB
+func (s *SqliteDb) initDataDb() error {
 	if err := s.appFs.Fs.MkdirAll(s.dataDir, os.ModePerm); err != nil {
 		return err
 	}
@@ -129,39 +182,14 @@ func (s *SqliteDb) Bootstrap() error {
 	db.SetMaxIdleConns(1)
 	db.SetMaxOpenConns(1)
 
-	// Setup the default DB connection
-	//
-	// Note: busy_timeout needs to be set BEFORE journal_mode
-	_, err = db.Exec(`
-		PRAGMA busy_timeout       = 10000;
-		PRAGMA journal_mode       = WAL;
-		PRAGMA journal_size_limit = 200000000;
-		PRAGMA synchronous        = NORMAL;
-		PRAGMA foreign_keys       = ON;
-		PRAGMA cache_size         = -16000;
-	`)
-
-	if err != nil {
+	if err := setPragma(db); err != nil {
 		return err
 	}
 
 	s.db = db
 
 	// Do the migrate
-	if err := s.migrate(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// logQuery logs the SQL command if debug mode is enabled
-func (s *SqliteDb) logQuery(query string, args ...interface{}) {
-	if s.isDebug {
-		log.Debug().Msgf("SQL Query: %s; Arguments: %v", query, args)
-	}
+	return s.migrateBase()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -206,11 +234,17 @@ func (s *SqliteDb) RunInTransaction(txFunc func(*sql.Tx) error) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// logQuery logs the SQL command if debug mode is enabled
+func (s *SqliteDb) logQuery(query string, args ...interface{}) {
+	if s.isDebug {
+		log.Debug().Msgf("SQL Query: %s; Arguments: %v", query, args)
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Migrate runs the DB migrations
-func (s *SqliteDb) migrate() error {
-	// Disable goose logging
-	//
-	// TODO: Handle this better
+func (s *SqliteDb) migrateBase() error {
 	goose.SetLogger(goose.NopLogger())
 
 	goose.SetBaseFS(migrations.EmbedMigrations)
@@ -219,9 +253,45 @@ func (s *SqliteDb) migrate() error {
 		return err
 	}
 
-	if err := goose.Up(s.db, "."); err != nil {
+	if err := goose.Up(s.db, "data"); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Migrate runs the DB migrations
+func (s *SqliteDb) migrateLogs() error {
+	goose.SetLogger(goose.NopLogger())
+
+	goose.SetBaseFS(migrations.EmbedMigrations)
+
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		return err
+	}
+
+	if err := goose.Up(s.logsDb, "logs"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// setPragma sets the default PRAGMA values for the DB
+func setPragma(db *sql.DB) error {
+	// Note: busy_timeout needs to be set BEFORE journal_mode
+	_, err := db.Exec(`
+	PRAGMA busy_timeout       = 10000;
+	PRAGMA journal_mode       = WAL;
+	PRAGMA journal_size_limit = 200000000;
+	PRAGMA synchronous        = NORMAL;
+	PRAGMA foreign_keys       = ON;
+	PRAGMA cache_size         = -16000;
+`)
+
+	return err
 }
