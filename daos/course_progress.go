@@ -92,7 +92,7 @@ func (dao *CourseProgressDao) Get(courseId string, tx *sql.Tx) (*models.CoursePr
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// refresh does a refresh of the current course progress for the given ID
+// Refresh does a refresh of the current course progress for the given ID
 //
 // It calculates the number of assets, number of completed assets and number of video assets started. It
 // then calculates the percent complete and whether the course has been started or not.

@@ -30,7 +30,7 @@ func (b *BaseModel) SetId(id string) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// RefreshCreated updates the Created At field to the current date/time
+// RefreshCreatedAt updates the Created At field to the current date/time
 func (b *BaseModel) RefreshCreatedAt() {
 	b.CreatedAt = types.NowDateTime()
 }

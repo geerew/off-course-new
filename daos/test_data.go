@@ -69,7 +69,7 @@ func (builder *TestBuilder) Db(db database.Database) *TestBuilder {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// NumberOfCourses sets the number of courses
+// Courses sets the number of courses
 func (builder *TestBuilder) Courses(courses any) *TestBuilder {
 	switch c := courses.(type) {
 	case int:

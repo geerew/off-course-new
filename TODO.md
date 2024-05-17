@@ -76,3 +76,6 @@ TODO
 
 - [ ] Add a separate logs DB
 - [ ] Add logs
+
+## Makefile 
+- [ ] Remove -ST1003 from audit

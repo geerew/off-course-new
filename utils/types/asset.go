@@ -11,6 +11,8 @@ import (
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// AssetType defines the type of asset
 type AssetType string
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -79,6 +81,7 @@ func (a *Asset) SetHTML() {
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // IsHTML returns true is the asset is of type HTML
 func (a Asset) IsHTML() bool {
 	return a.s == AssetHTML

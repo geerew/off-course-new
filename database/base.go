@@ -96,7 +96,7 @@ type SqliteDbConfig struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// NewSqlite creates a new SqliteDb
+// NewSqliteDB creates a new SqliteDb
 func NewSqliteDB(config *SqliteDbConfig) *SqliteDb {
 	return &SqliteDb{
 		isDebug:  config.IsDebug,

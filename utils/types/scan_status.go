@@ -27,7 +27,7 @@ const (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ParseScanStatus creates a ScanStatus type with the status of
+// NewScanStatus creates a ScanStatus type with the status of
 // waiting
 func NewScanStatus(s ScanStatusType) ScanStatus {
 	switch s {

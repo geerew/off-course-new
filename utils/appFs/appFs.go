@@ -100,7 +100,7 @@ func (appFs AppFs) ReadDirFlat(path string, depth int) ([]string, error) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Available drives returns a string slice of available drives on this system. For non-wsl
+// AvailableDrives returns a string slice of available drives on this system. For non-wsl
 // systems `gopsutil` is used. For WSL systems, the string slice is generated manually
 func (appFs AppFs) AvailableDrives() ([]string, error) {
 	// Lookup system

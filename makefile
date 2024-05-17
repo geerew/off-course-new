@@ -1,15 +1,62 @@
-DISTROS="linux/amd64 darwin/amd64 windows/amd64"
-PACKAGES := $(shell go list ./... | grep -v /ui | grep -v /migrations)
-VERSION := $(shell cat VERSION)
+MAIN_PACKAGE_PATH := .
+BINARY_NAME := off-course
 
+
+## help: print this help message
+.PHONY: help
+help:
+	@echo 'Usage:'
+	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' |  sed -e 's/^/ /'
+
+# ==================================================================================== #
+# QUALITY CONTROL
+# ==================================================================================== #
+
+## tidy: format code and tidy modfile
+.PHONY: tidy
+tidy:
+	go fmt ./...
+	go mod tidy -v
+
+# audit: run quality control checks
+.PHONY: audit
+audit:
+	go mod verify
+	go vet ./...
+	go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-ST1003,-U1000 ./...
+	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+	go test -race -buildvcs -vet=off ./...
+
+# ==================================================================================== #
+# DEVELOPMENT
+# ==================================================================================== #
+
+## test: run all tests
 .PHONY: test
 test:
-	@go clean -testcache
-	@echo "mode: count" > coverage-all.out
-	@$(foreach pkg,$(PACKAGES),  \
-		go test -p=1 -cover -covermode=count -coverprofile=coverage.out ${pkg}; \
-		tail -n +2 coverage.out >> coverage-all.out;)
+	go test -v -race -buildvcs ./...
 
-.PHONY: test-cover
-test-cover: test
-	go tool cover -html=coverage-all.out -o coverage.html
+## test/cover: run all tests and display coverage
+.PHONY: test/cover
+test/cover:
+	go test -v -race -buildvcs -coverprofile=/tmp/coverage.out ./...
+	go tool cover -html=/tmp/coverage.out
+
+## build: build the application
+.PHONY: build
+build:
+	go build -o=dist/${BINARY_NAME} ${MAIN_PACKAGE_PATH}
+
+## run: run the  application
+.PHONY: run
+run: build
+	dist/${BINARY_NAME}
+
+## run/live: run the application with reloading on file changes
+.PHONY: run/live
+run/live:
+	go run github.com/cosmtrek/air@v1.43.0 \
+	--build.cmd "make build" --build.bin "dist/${BINARY_NAME}" --build.delay "100" \
+	--build.exclude_dir "" \
+	--build.include_ext "go, tpl, tmpl, html, css, scss, js, ts, sql, jpeg, jpg, gif, png, bmp, svg, webp, ico" \
+	--misc.clean_on_exit "true"

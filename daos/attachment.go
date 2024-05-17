@@ -149,7 +149,7 @@ func (dao *AttachmentDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) 
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// processOrderBy takes an array of strings representing orderBy clauses and returns a processed
+// ProcessOrderBy takes an array of strings representing orderBy clauses and returns a processed
 // version of this array
 //
 // It will creates a new list of valid table columns based upon columns() for the current

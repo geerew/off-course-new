@@ -22,7 +22,7 @@ const (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Result defines the return result of a pagination
+// PaginationResult defines the return result of a pagination
 type PaginationResult struct {
 	Page       int               `json:"page"`
 	PerPage    int               `json:"perPage"`
@@ -43,7 +43,7 @@ type Pagination struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// New creates and returns a pagination
+// NewFromApi creates and returns a pagination
 func NewFromApi(f *fiber.Ctx) *Pagination {
 	page := page(f)
 	perPage := perPage(f)
