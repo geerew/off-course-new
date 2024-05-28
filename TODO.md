@@ -27,10 +27,21 @@ TODO
 - [x] Add table action `Add Tags`
 - [x] Use shadcn table
 
+## Backend -> logs
+
+- [x] Add a separate logs DB
+- [ ] Update all logs (remove zerolog)
+- [ ] Support removing logs after n days
+
+## Page -> Settings -> Tags
+
+- [ ] Add table
+- [ ] Filters (log level, request type, etc)
+- [ ] Fix adding the same tag with different case (upper/lower/capital)
+
 ## Page -> Settings -> Courses -> Details
 
 - [x] Fix issue with a page refresh happening after clicking the scan button
-
 
 ## Page -> Courses
 
@@ -71,11 +82,6 @@ TODO
 ## Backend -> Assets and Attachments
 
 - [x] Add column for md5sum of file
-
-## Backend -> logs
-
-- [ ] Add a separate logs DB
-- [ ] Add logs
 
 ## Makefile 
 - [ ] Remove -ST1003 from audit

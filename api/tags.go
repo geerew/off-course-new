@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"log/slog"
 	"net/url"
 	"sort"
 	"strings"
@@ -13,12 +14,12 @@ import (
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
-	"github.com/rs/zerolog/log"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type tags struct {
+	logger       *slog.Logger
 	tagDao       *daos.TagDao
 	courseTagDao *daos.CourseTagDao
 }
@@ -43,23 +44,6 @@ type courseTag struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func bindTagsApi(router fiber.Router, db database.Database) {
-	api := tags{
-		tagDao:       daos.NewTagDao(db),
-		courseTagDao: daos.NewCourseTagDao(db),
-	}
-
-	subGroup := router.Group("/tags")
-
-	subGroup.Get("", api.getTags)
-	subGroup.Get("/:id", api.getTag)
-	subGroup.Post("", api.createTag)
-	subGroup.Put("/:id", api.updateTag)
-	subGroup.Delete("/:id", api.deleteTag)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 func (api *tags) getTags(c *fiber.Ctx) error {
 	expand := c.QueryBool("expand", false)
 	filter := c.Query("filter", "")
@@ -80,10 +64,7 @@ func (api *tags) getTags(c *fiber.Ctx) error {
 
 	tags, err := api.tagDao.List(dbParams, nil)
 	if err != nil {
-		log.Err(err).Msg("error looking up tags")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up tags - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up tags", err)
 	}
 
 	if filter != "" {
@@ -121,10 +102,7 @@ func (api *tags) getTags(c *fiber.Ctx) error {
 
 	pResult, err := dbParams.Pagination.BuildResult(tagResponseHelper(tags))
 	if err != nil {
-		log.Err(err).Msg("error building pagination result")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error building pagination result - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(pResult)
@@ -152,7 +130,7 @@ func (api *tags) getTag(c *fiber.Ctx) error {
 		id, err = url.QueryUnescape(id)
 
 		if err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, "invalid name parameter")
+			return errorResponse(c, fiber.StatusBadRequest, "Error decoding name parameter", err)
 		}
 	}
 
@@ -160,13 +138,10 @@ func (api *tags) getTag(c *fiber.Ctx) error {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Tag not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up tag")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up tag - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up tag", err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(tagResponseHelper([]*models.Tag{tag})[0])
@@ -178,16 +153,12 @@ func (api *tags) createTag(c *fiber.Ctx) error {
 	tag := new(models.Tag)
 
 	if err := c.BodyParser(tag); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "error parsing data - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
 	// Ensure there is a title and path
 	if tag.Tag == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "a tag is required",
-		})
+		return errorResponse(c, fiber.StatusBadRequest, "A tag is required", nil)
 	}
 
 	// Empty stuff that should not be set
@@ -195,16 +166,10 @@ func (api *tags) createTag(c *fiber.Ctx) error {
 
 	if err := api.tagDao.Create(tag, nil); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"message": "tag already exists - " + err.Error(),
-			})
+			return errorResponse(c, fiber.StatusBadRequest, "Tag already exists", err)
 		}
 
-		log.Err(err).Msg("error creating tag")
-
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error creating tag - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error creating tag", err)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(tagResponseHelper([]*models.Tag{tag})[0])
@@ -218,9 +183,7 @@ func (api *tags) updateTag(c *fiber.Ctx) error {
 	// Parse the request body to get the updated fields
 	reqTag := &tagResponse{}
 	if err := c.BodyParser(reqTag); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Failed to parse request body",
-		})
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
 	// Create an asset progress
@@ -231,27 +194,25 @@ func (api *tags) updateTag(c *fiber.Ctx) error {
 
 	// Update the asset progress
 	if err := api.tagDao.Update(tag); err != nil {
-		if err == sql.ErrNoRows || strings.HasPrefix(err.Error(), "constraint failed") {
-			return c.Status(fiber.StatusBadRequest).SendString("error updating tag - " + err.Error())
+		if err == sql.ErrNoRows {
+			return errorResponse(c, fiber.StatusBadRequest, "Invalid tag", err)
 		}
 
-		log.Err(err).Msg("error updating tag")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error updating tag - " + err.Error(),
-		})
+		if strings.HasPrefix(err.Error(), "constraint failed") {
+			return errorResponse(c, fiber.StatusBadRequest, "Duplicate tag", err)
+		}
+
+		return errorResponse(c, fiber.StatusInternalServerError, "Error updating tag", err)
 	}
 
 	// Get the updated asset
 	updatedTag, err := api.tagDao.Get(id, false, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Tag not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up tag")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up tag - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up tag", err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(tagResponseHelper([]*models.Tag{updatedTag})[0])
@@ -264,17 +225,14 @@ func (api *tags) deleteTag(c *fiber.Ctx) error {
 
 	err := api.tagDao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": id}}, nil)
 	if err != nil {
-		log.Err(err).Msg("error deleting tag")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error deleting tag - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting tag", err)
 	}
 
 	return c.Status(fiber.StatusNoContent).Send(nil)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// HELPER
+// Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func tagResponseHelper(tags []*models.Tag) []*tagResponse {

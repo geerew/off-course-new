@@ -28,10 +28,16 @@ type (
 // Database defines the interface for a database
 type Database interface {
 	Bootstrap() error
+
+	// Data
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
 	RunInTransaction(txFunc func(*sql.Tx) error) error
+
+	// Logs
+	ExecLog(query string, args ...interface{}) (sql.Result, error)
+	RunLogInTransaction(txFunc func(*sql.Tx) error) error
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -194,10 +200,17 @@ func (s *SqliteDb) initDataDb() error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Exec executes a query without returning any rows
+// Exec executes a data query
 func (s *SqliteDb) Exec(query string, args ...interface{}) (sql.Result, error) {
 	s.logQuery(query, args...)
 	return s.db.Exec(query, args...)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ExecLog executes a logs query
+func (s *SqliteDb) ExecLog(query string, args ...interface{}) (sql.Result, error) {
+	return s.logsDb.Exec(query, args...)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -220,6 +233,22 @@ func (s *SqliteDb) QueryRow(query string, args ...interface{}) *sql.Row {
 
 func (s *SqliteDb) RunInTransaction(txFunc func(*sql.Tx) error) error {
 	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	if err := txFunc(tx); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (s *SqliteDb) RunLogInTransaction(txFunc func(*sql.Tx) error) error {
+	tx, err := s.logsDb.Begin()
 	if err != nil {
 		return err
 	}

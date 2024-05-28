@@ -10,8 +10,8 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func bindUi(router fiber.Router, isProd bool) {
-	if isProd {
+func bindUi(router fiber.Router, config *RouterConfig) {
+	if config.IsProduction {
 		// Load static assets from binary in production
 		router.Use(filesystem.New(filesystem.Config{
 			Root: http.FS(ui.Assets()),

@@ -1,7 +1,11 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"flag"
+	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
@@ -11,12 +15,14 @@ import (
 	"github.com/geerew/off-course/api"
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
+	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/jobs"
+	"github.com/geerew/off-course/utils/logger"
 	"github.com/geerew/off-course/utils/pagination"
+	"github.com/geerew/off-course/utils/security"
+	"github.com/geerew/off-course/utils/types"
 	"github.com/robfig/cron/v3"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero"
 )
 
@@ -33,12 +39,12 @@ func main() {
 	flag.Parse()
 
 	// Global logger
-	cw := zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "2006-01-02T15:04:05"}
-	if !*isDebug {
-		log.Logger = log.Output(cw).Level(zerolog.InfoLevel)
-	} else {
-		log.Logger = log.Output(cw)
-	}
+	// cw := zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "2006-01-02T15:04:05"}
+	// if !*isDebug {
+	// 	log.Logger = log.Output(cw).Level(zerolog.InfoLevel)
+	// } else {
+	// 	log.Logger = log.Output(cw)
+	// }
 
 	// Create app filesystem
 	appFs := appFs.NewAppFs(afero.NewOsFs())
@@ -52,7 +58,13 @@ func main() {
 
 	// Bootstrap the store
 	if err := db.Bootstrap(); err != nil {
-		log.Fatal().Err(err).Msg("")
+		log.Fatal("Failed to bootstrap the database", err)
+	}
+
+	// Logger
+	logger, err := logger.InitLogger(loggerWriteFn(db))
+	if err != nil {
+		log.Fatal("Failed to initialize logger", err)
 	}
 
 	// Course scanner
@@ -67,6 +79,7 @@ func main() {
 	// Create router
 	router := api.New(&api.RouterConfig{
 		Db:            db,
+		Logger:        logger,
 		AppFs:         appFs,
 		CourseScanner: courseScanner,
 		Port:          *port,
@@ -75,8 +88,8 @@ func main() {
 
 	// TODO: Handle this better...
 	c := cron.New()
-	go func() { updateCourseAvailability(db) }()
-	c.AddFunc("@every 5m", func() { updateCourseAvailability(db) })
+	go func() { updateCourseAvailability(db, logger) }()
+	c.AddFunc("@every 5m", func() { updateCourseAvailability(db, logger) })
 	c.Start()
 
 	var wg sync.WaitGroup
@@ -94,23 +107,23 @@ func main() {
 	go func() {
 		defer wg.Done()
 		if err := router.Serve(); err != nil {
-			log.Error().Err(err).Msg("")
+			log.Fatal("Failed to start router", err)
 		}
 	}()
 
 	wg.Wait()
 
 	// TMP -> Delete all scans
-	_, err := db.Exec("DELETE FROM " + daos.NewScanDao(db).Table())
+	_, err = db.Exec("DELETE FROM " + daos.NewScanDao(db).Table())
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		log.Fatal("Failed to delete scans", err)
 	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func updateCourseAvailability(db database.Database) error {
-	log.Info().Msg("Updating course availability...")
+func updateCourseAvailability(db database.Database, logger *slog.Logger) error {
+	logger.Debug("Updating course availability")
 	const perPage = 100
 	var page = 1
 
@@ -145,7 +158,12 @@ func updateCourseAvailability(db database.Database) error {
 			// Update the course's availability in the database
 			err = courseDao.Update(course)
 			if err != nil {
-				log.Error().Err(err).Msgf("Failed to update availability for course %s", course.ID)
+				attrs := []any{
+					slog.String("course", course.Title),
+					slog.String("error", err.Error()),
+				}
+
+				logger.Error("Failed to update availability for course", attrs...)
 			}
 		}
 
@@ -153,4 +171,34 @@ func updateCourseAvailability(db database.Database) error {
 	}
 
 	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func loggerWriteFn(db database.Database) logger.WriteFn {
+	return func(ctx context.Context, logs []*logger.Log) error {
+
+		// Write accumulated logs
+		db.RunLogInTransaction(func(tx *sql.Tx) error {
+			model := &models.Log{}
+
+			for _, l := range logs {
+				model.ID = security.PseudorandomString(10)
+				model.Level = int(l.Level)
+				model.Message = l.Message
+				model.Data = l.Data
+				model.CreatedAt, _ = types.ParseDateTime(l.Time)
+				model.UpdatedAt = model.CreatedAt
+
+				if err := daos.NewLogDao(db).Write(model, tx); err != nil {
+					log.Println("Failed to write log", model, err)
+				}
+			}
+
+			return nil
+		})
+
+		return nil
+	}
+
 }

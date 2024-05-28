@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"mime"
 	"path/filepath"
 	"strconv"
@@ -16,13 +17,13 @@ import (
 	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type assets struct {
+	logger           *slog.Logger
 	appFs            *appFs.AppFs
 	assetDao         *daos.AssetDao
 	assetProgressDao *daos.AssetProgressDao
@@ -58,25 +59,6 @@ const maxInitialChunkSize = 1024 * 1024 * 5 // 5MB, adjust as needed
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func bindAssetsApi(router fiber.Router, appFs *appFs.AppFs, db database.Database) {
-	api := assets{
-		appFs:            appFs,
-		assetDao:         daos.NewAssetDao(db),
-		assetProgressDao: daos.NewAssetProgressDao(db),
-		attachmentDao:    daos.NewAttachmentDao(db),
-	}
-
-	subGroup := router.Group("/assets")
-
-	// Assets
-	subGroup.Get("", api.getAssets)
-	subGroup.Get("/:id", api.getAsset)
-	subGroup.Put("/:id", api.updateAsset)
-	subGroup.Get("/:id/serve", api.serveAsset)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 func (api *assets) getAssets(c *fiber.Ctx) error {
 	expand := c.QueryBool("expand", false)
 	orderBy := c.Query("orderBy", "created_at desc")
@@ -92,18 +74,12 @@ func (api *assets) getAssets(c *fiber.Ctx) error {
 
 	assets, err := api.assetDao.List(dbParams, nil)
 	if err != nil {
-		log.Err(err).Msg("error looking up assets")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up assets - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "error looking up assets", err)
 	}
 
 	pResult, err := dbParams.Pagination.BuildResult(assetResponseHelper(assets))
 	if err != nil {
-		log.Err(err).Msg("error building pagination result")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error building pagination result - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "error building pagination result", err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(pResult)
@@ -125,13 +101,10 @@ func (api *assets) getAsset(c *fiber.Ctx) error {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up asset")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up asset - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up asset", err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(assetResponseHelper([]*models.Asset{asset})[0])
@@ -145,9 +118,7 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 	// Parse the request body to get the updated fields
 	reqAsset := &assetResponse{}
 	if err := c.BodyParser(reqAsset); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Failed to parse request body",
-		})
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
 	// Create an asset progress
@@ -161,13 +132,10 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 	// Update the asset progress
 	if err := api.assetProgressDao.Update(ap, nil); err != nil {
 		if err == sql.ErrNoRows || strings.HasPrefix(err.Error(), "constraint failed: FOREIGN KEY constraint failed") {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusBadRequest, "Invalid course ID", nil)
 		}
 
-		log.Err(err).Msg("error updating asset")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error updating asset - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error updating asset", err)
 	}
 
 	// Get the updated asset
@@ -177,10 +145,7 @@ func (api *assets) updateAsset(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusNotFound).SendString("Not found")
 		}
 
-		log.Err(err).Msg("error looking up asset")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up asset - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up asset", err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(assetResponseHelper([]*models.Asset{asset})[0])
@@ -195,20 +160,15 @@ func (api *assets) serveAsset(c *fiber.Ctx) error {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up asset")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up asset - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up asset", err)
 	}
 
 	// Check for invalid path
 	if exists, err := afero.Exists(api.appFs.Fs, asset.Path); err != nil || !exists {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "asset does not exist",
-		})
+		return errorResponse(c, fiber.StatusBadRequest, "Asset does not exist", nil)
 	}
 
 	if asset.Type.IsVideo() {
@@ -217,14 +177,12 @@ func (api *assets) serveAsset(c *fiber.Ctx) error {
 		return handleHtml(c, api.appFs, asset)
 	}
 
-	// TODO: Handle pdf and HTML
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "done",
-	})
+	// TODO: Handle PDF
+	return c.Status(fiber.StatusOK).SendString("done")
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// HELPER
+// Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func assetResponseHelper(assets []*models.Asset) []*assetResponse {
@@ -262,19 +220,14 @@ func handleVideo(c *fiber.Ctx, appFs *appFs.AppFs, asset *models.Asset) error {
 	// Open the video
 	file, err := appFs.Fs.Open(asset.Path)
 	if err != nil {
-		log.Err(err).Str("path", asset.Path).Msg("error opening file")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "internal error - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error opening file", err)
 	}
 	defer file.Close()
 
 	// Get the file info
 	fileInfo, err := file.Stat()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "internal error - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error getting file info", err)
 	}
 
 	// Get the range header and return the entire video if there is no range header
@@ -299,9 +252,7 @@ func handleVideo(c *fiber.Ctx, appFs *appFs.AppFs, asset *models.Asset) error {
 	}
 
 	if start > end {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "range start cannot be greater than end",
-		})
+		return errorResponse(c, fiber.StatusBadRequest, "Range start cannot be greater than end", fmt.Errorf("range start is greater than end"))
 	}
 
 	// Setting required response headers
@@ -342,22 +293,16 @@ func handleHtml(c *fiber.Ctx, appFs *appFs.AppFs, asset *models.Asset) error {
 	// Open the HTML file
 	file, err := appFs.Fs.Open(asset.Path)
 	if err != nil {
-		log.Err(err).Str("path", asset.Path).Msg("error opening file")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "internal error - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error opening file", err)
 	}
 	defer file.Close()
 
 	// Read the content of the HTML file
 	content, err := afero.ReadAll(file)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "internal error - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error reading file", err)
 	}
 
 	c.Set(fiber.HeaderContentType, "text/html")
-
-	return c.Send(content)
+	return c.Status(fiber.StatusOK).Send(content)
 }

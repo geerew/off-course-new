@@ -3,16 +3,12 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/geerew/off-course/daos"
-	"github.com/geerew/off-course/database"
-	"github.com/geerew/off-course/utils/appFs"
-	"github.com/geerew/off-course/utils/jobs"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/require"
 )
@@ -21,12 +17,12 @@ import (
 
 func TestScans_GetScan(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
-		appFs, db, cs, _ := setup(t)
+		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(db).Courses(5).Scan().Build()
+		testData := daos.NewTestBuilder(t).Db(router.db).Courses(5).Scan().Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/scans/"+testData[2].ID, nil)
-		status, body, err := scansRequestHelper(appFs, db, cs, req)
+		status, body, err := requestHelper(router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -39,25 +35,22 @@ func TestScans_GetScan(t *testing.T) {
 	})
 
 	t.Run("404 (not found)", func(t *testing.T) {
-		appFs, db, cs, _ := setup(t)
+		router := setup(t)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/scans/test", nil)
-		status, _, err := scansRequestHelper(appFs, db, cs, req)
+		status, _, err := requestHelper(router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, cs, _ := setup(t)
+		router := setup(t)
 
-		f := fiber.New()
-		bindScansApi(f.Group("/api"), appFs, db, cs)
-
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewScanDao(db).Table())
+		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewScanDao(router.db).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/scans/test", nil)
-		status, _, err := scansRequestHelper(appFs, db, cs, req)
+		status, _, err := requestHelper(router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
@@ -67,14 +60,14 @@ func TestScans_GetScan(t *testing.T) {
 
 func TestScans_CreateScan(t *testing.T) {
 	t.Run("201 (created)", func(t *testing.T) {
-		appFs, db, cs, _ := setup(t)
+		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
 
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(fmt.Sprintf(`{"courseID": "%s"}`, testData[0].ID)))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := scansRequestHelper(appFs, db, cs, req)
+		status, body, err := requestHelper(router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, status)
 
@@ -85,70 +78,53 @@ func TestScans_CreateScan(t *testing.T) {
 	})
 
 	t.Run("400 (bind error)", func(t *testing.T) {
-		appFs, db, cs, _ := setup(t)
+		router := setup(t)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(`{`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := scansRequestHelper(appFs, db, cs, req)
+		status, body, err := requestHelper(router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		require.Contains(t, string(body), "error parsing data")
+		require.Contains(t, string(body), "Error parsing data")
 	})
 
 	t.Run("400 (invalid data)", func(t *testing.T) {
-		appFs, db, cs, _ := setup(t)
+		router := setup(t)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(`{"courseID": ""}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := scansRequestHelper(appFs, db, cs, req)
+		status, body, err := requestHelper(router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		require.Contains(t, string(body), "a course ID is required")
+		require.Contains(t, string(body), "A course ID is required")
 	})
 
 	t.Run("400 (invalid course id)", func(t *testing.T) {
-		appFs, db, cs, _ := setup(t)
+		router := setup(t)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(`{"courseID": "test"}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := scansRequestHelper(appFs, db, cs, req)
+		status, body, err := requestHelper(router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		require.Contains(t, string(body), "invalid course ID")
+		require.Contains(t, string(body), "Invalid course ID")
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		appFs, db, cs, _ := setup(t)
+		router := setup(t)
 
-		_, err := db.Exec("DROP TABLE IF EXISTS " + daos.NewScanDao(db).Table())
+		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewScanDao(router.db).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(`{"courseID": "test"}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := scansRequestHelper(appFs, db, cs, req)
+		status, body, err := requestHelper(router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
-		require.Contains(t, string(body), "error creating scan job")
+		require.Contains(t, string(body), "Error creating scan job")
 	})
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// HELPERS
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func scansRequestHelper(appFs *appFs.AppFs, db database.Database, cs *jobs.CourseScanner, req *http.Request) (int, []byte, error) {
-	f := fiber.New()
-	bindScansApi(f.Group("/api"), appFs, db, cs)
-
-	resp, err := f.Test(req)
-	if err != nil {
-		return -1, nil, err
-	}
-
-	b, _ := io.ReadAll(resp.Body)
-	return resp.StatusCode, b, err
 }

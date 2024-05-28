@@ -2,20 +2,20 @@ package api
 
 import (
 	"database/sql"
+	"log/slog"
 
 	"github.com/geerew/off-course/daos"
-	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/jobs"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
-	"github.com/rs/zerolog/log"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type scans struct {
+	logger        *slog.Logger
 	appFs         *appFs.AppFs
 	scanDao       *daos.ScanDao
 	courseScanner *jobs.CourseScanner
@@ -33,21 +33,6 @@ type scanResponse struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func bindScansApi(router fiber.Router, appFs *appFs.AppFs, db database.Database, courseScanner *jobs.CourseScanner) {
-	api := scans{
-		appFs:         appFs,
-		scanDao:       daos.NewScanDao(db),
-		courseScanner: courseScanner,
-	}
-
-	subGroup := router.Group("/scans")
-
-	subGroup.Get("/:courseId", api.getScan)
-	subGroup.Post("", api.createScan)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 func (api *scans) getScan(c *fiber.Ctx) error {
 	courseId := c.Params("courseId")
 
@@ -55,14 +40,10 @@ func (api *scans) getScan(c *fiber.Ctx) error {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Scan not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up scan")
-
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up scan - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up scan", err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(scanResponseHelper([]*models.Scan{scan})[0])
@@ -74,37 +55,27 @@ func (api *scans) createScan(c *fiber.Ctx) error {
 	scan := &models.Scan{}
 
 	if err := c.BodyParser(scan); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "error parsing data - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
 	if scan.CourseID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "a course ID is required",
-		})
+		return errorResponse(c, fiber.StatusBadRequest, "A course ID is required", nil)
 	}
 
 	scan, err := api.courseScanner.Add(scan.CourseID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"message": "invalid course ID",
-			})
+			return errorResponse(c, fiber.StatusBadRequest, "Invalid course ID", nil)
 		}
 
-		log.Err(err).Msg("error creating scan job")
-
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error creating scan job - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error creating scan job", err)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(scanResponseHelper([]*models.Scan{scan})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// HELPER
+// Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func scanResponseHelper(scans []*models.Scan) []*scanResponse {

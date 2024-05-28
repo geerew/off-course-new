@@ -2,6 +2,8 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"strings"
@@ -16,14 +18,16 @@ import (
 	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type courses struct {
-	appFs             *appFs.AppFs
+	logger *slog.Logger
+	appFs  *appFs.AppFs
+
+	// Dao
 	courseScanner     *jobs.CourseScanner
 	courseDao         *daos.CourseDao
 	courseProgressDao *daos.CourseProgressDao
@@ -60,46 +64,6 @@ type courseResponse struct {
 type courseTagResponse struct {
 	ID  string `json:"id"`
 	Tag string `json:"tag"`
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func bindCoursesApi(router fiber.Router, appFs *appFs.AppFs, db database.Database, courseScanner *jobs.CourseScanner) {
-	api := courses{
-		appFs:             appFs,
-		courseScanner:     courseScanner,
-		courseDao:         daos.NewCourseDao(db),
-		courseProgressDao: daos.NewCourseProgressDao(db),
-		assetDao:          daos.NewAssetDao(db),
-		attachmentDao:     daos.NewAttachmentDao(db),
-		tagDao:            daos.NewTagDao(db),
-		courseTagDao:      daos.NewCourseTagDao(db),
-	}
-
-	subGroup := router.Group("/courses")
-
-	// Courses
-	subGroup.Get("", api.getCourses)
-	subGroup.Get("/:id", api.getCourse)
-	subGroup.Post("", api.createCourse)
-	subGroup.Delete("/:id", api.deleteCourse)
-
-	// Card
-	subGroup.Head("/:id/card", api.getCard)
-	subGroup.Get("/:id/card", api.getCard)
-
-	// Assets
-	subGroup.Get("/:id/assets", api.getAssets)
-	subGroup.Get("/:id/assets/:asset", api.getAsset)
-
-	// Attachments
-	subGroup.Get("/:id/assets/:asset/attachments", api.getAssetAttachments)
-	subGroup.Get("/:id/assets/:asset/attachments/:attachment", api.getAssetAttachment)
-
-	// Tags
-	subGroup.Get("/:id/tags", api.getTags)
-	subGroup.Post("/:id/tags", api.createTag)
-	subGroup.Delete("/:id/tags/:tagId", api.deleteTag)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -148,26 +112,20 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 	if tags != "" {
 		unescapedTags, err := url.QueryUnescape(tags)
 		if err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, "invalid tags parameter")
+			return errorResponse(c, fiber.StatusBadRequest, "Invalid tags parameter", err)
 		}
 
 		tagList := strings.Split(unescapedTags, ",")
 
 		courseIds, err := api.courseTagDao.ListCourseIdsByTags(tagList, nil)
 		if err != nil {
-			log.Err(err).Msg("error looking up course ids by tags")
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": "error looking up courses by tags - " + err.Error(),
-			})
+			return errorResponse(c, fiber.StatusInternalServerError, "Error looking up courses by tags", err)
 		}
 
 		if len(courseIds) == 0 {
 			pResult, err := dbParams.Pagination.BuildResult(courseResponseHelper(nil))
 			if err != nil {
-				log.Err(err).Msg("error building pagination result")
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"message": "error building pagination result - " + err.Error(),
-				})
+				return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 			}
 
 			return c.Status(fiber.StatusOK).JSON(pResult)
@@ -180,7 +138,7 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 	if titles != "" {
 		unescapedTitles, err := url.QueryUnescape(titles)
 		if err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, "invalid titles parameter")
+			return errorResponse(c, fiber.StatusBadRequest, "Invalid titles parameter", err)
 		}
 
 		titleList := strings.Split(unescapedTitles, ",")
@@ -198,18 +156,12 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 	courses, err := api.courseDao.List(dbParams, nil)
 
 	if err != nil {
-		log.Err(err).Msg("error looking up courses")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up courses - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up courses", err)
 	}
 
 	pResult, err := dbParams.Pagination.BuildResult(courseResponseHelper(courses))
 	if err != nil {
-		log.Err(err).Msg("error building pagination result")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error building pagination result - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(pResult)
@@ -224,13 +176,10 @@ func (api *courses) getCourse(c *fiber.Ctx) error {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Course not found", fmt.Errorf("course not found"))
 		}
 
-		log.Err(err).Msg("error looking up course")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up course - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course", err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(courseResponseHelper([]*models.Course{course})[0])
@@ -242,16 +191,12 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 	course := new(models.Course)
 
 	if err := c.BodyParser(course); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "error parsing data - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
 	// Ensure there is a title and path
 	if course.Title == "" || course.Path == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "a title and path are required",
-		})
+		return errorResponse(c, fiber.StatusBadRequest, "A title and path are required", nil)
 	}
 
 	// Empty stuff that should not be set
@@ -259,9 +204,7 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 
 	// Validate the path
 	if exists, err := afero.DirExists(api.appFs.Fs, course.Path); err != nil || !exists {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "invalid course path",
-		})
+		return errorResponse(c, fiber.StatusBadRequest, "Invalid course path", err)
 	}
 
 	// Set the course to available
@@ -269,23 +212,15 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 
 	if err := api.courseDao.Create(course); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"message": "a course with this path already exists - " + err.Error(),
-			})
+			return errorResponse(c, fiber.StatusBadRequest, "A course with this path already exists", err)
 		}
 
-		log.Err(err).Msg("error creating course")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error creating course - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error creating course", err)
 	}
 
 	// Start a scan job
 	if scan, err := api.courseScanner.Add(course.ID); err != nil {
-		log.Err(err).Msg("error creating scan job")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error creating scan job - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error creating scan job", err)
 	} else {
 		course.ScanStatus = scan.Status.String()
 	}
@@ -300,11 +235,7 @@ func (api *courses) deleteCourse(c *fiber.Ctx) error {
 
 	err := api.courseDao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": id}}, nil)
 	if err != nil {
-		log.Err(err).Msg("error deleting course")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error deleting course - " + err.Error(),
-		})
-
+		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting course", err)
 	}
 
 	return c.Status(fiber.StatusNoContent).Send(nil)
@@ -319,23 +250,19 @@ func (api *courses) getCard(c *fiber.Ctx) error {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Course not found")
+			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up course")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up course - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course", err)
 	}
 
 	if course.CardPath == "" {
-		return c.Status(fiber.StatusNotFound).SendString("Course has no card")
+		return errorResponse(c, fiber.StatusNotFound, "Course has no card", nil)
 	}
 
 	_, err = api.appFs.Fs.Stat(course.CardPath)
 	if os.IsNotExist(err) {
-		log.Err(err).Str("card", course.CardPath).Msg("card not found on disk")
-		return c.Status(fiber.StatusNotFound).SendString("Course card not found")
+		return errorResponse(c, fiber.StatusNotFound, "Course card not found", nil)
 	}
 
 	// The fiber function sendFile(...) does not support using a custom FS. Therefore, use
@@ -354,13 +281,10 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 	_, err := api.courseDao.Get(id, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up course")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up course - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course", err)
 	}
 
 	dbParams := &database.DatabaseParams{
@@ -375,18 +299,12 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 
 	assets, err := api.assetDao.List(dbParams, nil)
 	if err != nil {
-		log.Err(err).Msg("error looking up assets")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up assets - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up assets", err)
 	}
 
 	pResult, err := dbParams.Pagination.BuildResult(assetResponseHelper(assets))
 	if err != nil {
-		log.Err(err).Msg("error building pagination result")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error building pagination result - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(pResult)
@@ -402,13 +320,10 @@ func (api *courses) getAsset(c *fiber.Ctx) error {
 	_, err := api.courseDao.Get(id, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up course")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up course - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course", err)
 	}
 
 	// TODO: support attachments orderby
@@ -421,17 +336,14 @@ func (api *courses) getAsset(c *fiber.Ctx) error {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up asset")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up asset - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up asset", err)
 	}
 
 	if asset.CourseID != id {
-		return c.Status(fiber.StatusBadRequest).SendString("Asset does not belong to course")
+		return errorResponse(c, fiber.StatusBadRequest, "Asset does not belong to course", nil)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(assetResponseHelper([]*models.Asset{asset})[0])
@@ -448,30 +360,24 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 	_, err := api.courseDao.Get(id, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up course")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up course - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course", err)
 	}
 
 	// Get the asset
 	asset, err := api.assetDao.Get(assetId, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up asset")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up asset - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up asset", err)
 	}
 
 	if asset.CourseID != id {
-		return c.Status(fiber.StatusBadRequest).SendString("Asset does not belong to course")
+		return errorResponse(c, fiber.StatusBadRequest, "Asset does not belong to course", nil)
 	}
 
 	dbParams := &database.DatabaseParams{
@@ -482,18 +388,12 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 
 	attachments, err := api.attachmentDao.List(dbParams, nil)
 	if err != nil {
-		log.Err(err).Msg("error looking up attachments")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up attachments - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up attachments", err)
 	}
 
 	pResult, err := dbParams.Pagination.BuildResult(attachmentResponseHelper(attachments))
 	if err != nil {
-		log.Err(err).Msg("error building pagination result")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error building pagination result - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(pResult)
@@ -510,47 +410,38 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 	_, err := api.courseDao.Get(id, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up course")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up course - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course", err)
 	}
 
 	// Get the asset
 	asset, err := api.assetDao.Get(assetId, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up asset")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up asset - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up asset", err)
 	}
 
 	if asset.CourseID != id {
-		return c.Status(fiber.StatusBadRequest).SendString("Asset does not belong to course")
+		return errorResponse(c, fiber.StatusBadRequest, "Asset does not belong to course", nil)
 	}
 
 	// Get the attachment
 	attachment, err := api.attachmentDao.Get(attachmentId, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Attachment not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up attachment")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up attachment - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up attachment", err)
 	}
 
 	if attachment.AssetID != assetId {
-		return c.Status(fiber.StatusBadRequest).SendString("Attachment does not belong to asset")
+		return errorResponse(c, fiber.StatusBadRequest, "Attachment does not belong to asset", nil)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(attachmentResponseHelper([]*models.Attachment{attachment})[0])
@@ -565,13 +456,10 @@ func (api *courses) getTags(c *fiber.Ctx) error {
 	_, err := api.courseDao.Get(id, nil, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).SendString("Not found")
+			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
 		}
 
-		log.Err(err).Msg("error looking up course")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up course - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course", err)
 	}
 
 	dbParams := &database.DatabaseParams{
@@ -581,10 +469,7 @@ func (api *courses) getTags(c *fiber.Ctx) error {
 
 	tags, err := api.courseTagDao.List(dbParams, nil)
 	if err != nil {
-		log.Err(err).Msg("error looking up course tags")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error looking up course tags - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course tags", err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(courseTagResponseHelper(tags))
@@ -597,9 +482,7 @@ func (api *courses) createTag(c *fiber.Ctx) error {
 	courseTag := new(models.CourseTag)
 
 	if err := c.BodyParser(courseTag); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "error parsing data - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
 	// Empty stuff that should not be set
@@ -608,9 +491,7 @@ func (api *courses) createTag(c *fiber.Ctx) error {
 
 	// Ensure there is a tag
 	if courseTag.Tag == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "a tag is required",
-		})
+		return errorResponse(c, fiber.StatusBadRequest, "A tag is required", nil)
 	}
 
 	// Set the course ID
@@ -618,16 +499,10 @@ func (api *courses) createTag(c *fiber.Ctx) error {
 
 	if err := api.courseTagDao.Create(courseTag, nil); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"message": "a tag for this course already exists - " + err.Error(),
-			})
-
+			return errorResponse(c, fiber.StatusBadRequest, "A tag for this course already exists", err)
 		}
 
-		log.Err(err).Msg("error creating course tag")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error creating course tag - " + err.Error(),
-		})
+		return errorResponse(c, fiber.StatusInternalServerError, "Error creating course tag", err)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(courseTagResponseHelper([]*models.CourseTag{courseTag})[0])
@@ -641,18 +516,14 @@ func (api *courses) deleteTag(c *fiber.Ctx) error {
 
 	err := api.courseTagDao.Delete(&database.DatabaseParams{Where: squirrel.And{squirrel.Eq{"course_id": courseId}, squirrel.Eq{"id": tagId}}}, nil)
 	if err != nil {
-		log.Err(err).Msg("error deleting course tag")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "error deleting course tag - " + err.Error(),
-		})
-
+		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting course tag", err)
 	}
 
 	return c.Status(fiber.StatusNoContent).Send(nil)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// HELPER
+// Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func courseResponseHelper(courses []*models.Course) []*courseResponse {
