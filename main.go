@@ -70,7 +70,7 @@ func main() {
 
 	// Create router
 	router := api.New(&api.RouterConfig{
-		Db:            dbManager.DataDb,
+		DbManager:     dbManager,
 		Logger:        logger,
 		AppFs:         appFs,
 		CourseScanner: courseScanner,
