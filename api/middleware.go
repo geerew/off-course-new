@@ -33,22 +33,19 @@ func loggerMiddleware(config *RouterConfig) func(c *fiber.Ctx) error {
 			)
 		}
 
-		// Get the host and extract the port
-		host := string(c.Request().Host())
-		port := ""
-		if strings.Contains(host, ":") {
-			port = strings.Split(host, ":")[1]
-		}
-
 		method := strings.ToUpper(c.Method())
+
 		attrs = append(
 			attrs,
 			slog.Int("status", c.Response().StatusCode()),
 			slog.String("method", method),
-			slog.String("port", port),
 		)
 
-		message := method + " " + c.OriginalURL()
+		// Get the port
+		host := string(c.Request().Host())
+		if strings.Contains(host, ":") {
+			attrs = append(attrs, slog.String("port", strings.Split(host, ":")[1]))
+		}
 
 		// Determine if the response is an error
 		isErrorResponse := err != nil
@@ -67,6 +64,8 @@ func loggerMiddleware(config *RouterConfig) func(c *fiber.Ctx) error {
 				}
 			}
 		}
+
+		message := method + " " + c.OriginalURL()
 
 		if isErrorResponse {
 			config.Logger.Error(message, attrs...)

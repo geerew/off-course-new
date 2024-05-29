@@ -115,7 +115,7 @@ func main() {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func updateCourseAvailability(db database.Database, logger *slog.Logger) error {
-	logger.Debug("Updating course availability")
+	logger.Debug("Updating course availability", slog.String("type", "cron"))
 	const perPage = 100
 	var page = 1
 
@@ -151,6 +151,7 @@ func updateCourseAvailability(db database.Database, logger *slog.Logger) error {
 			err = courseDao.Update(course)
 			if err != nil {
 				attrs := []any{
+					slog.String("type", "cron"),
 					slog.String("course", course.Title),
 					slog.String("error", err.Error()),
 				}

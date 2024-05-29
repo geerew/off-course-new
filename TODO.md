@@ -33,6 +33,11 @@ TODO
 - [ ] Update all logs (remove zerolog)
 - [ ] Support removing logs after n days
 
+## Page -> Settings -> Logs
+
+- [x] Add table
+- [ ] Filters
+
 ## Page -> Settings -> Tags
 
 - [ ] Add table

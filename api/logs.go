@@ -3,6 +3,7 @@ package api
 import (
 	"log/slog"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
@@ -31,7 +32,10 @@ type logResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func (api *logs) getLogs(c *fiber.Ctx) error {
+	minLevel := c.QueryInt("level", -4)
+
 	dbParams := &database.DatabaseParams{
+		Where:      squirrel.GtOrEq{api.logDao.Table() + ".level": minLevel},
 		Pagination: pagination.NewFromApi(c),
 	}
 
@@ -56,10 +60,11 @@ func logsResponseHelper(logs []*models.Log) []*logResponse {
 
 	for _, log := range logs {
 		responses = append(responses, &logResponse{
-			ID:      log.ID,
-			Level:   log.Level,
-			Message: log.Message,
-			Data:    log.Data,
+			ID:        log.ID,
+			Level:     log.Level,
+			Message:   log.Message,
+			Data:      log.Data,
+			CreatedAt: log.CreatedAt,
 		})
 	}
 

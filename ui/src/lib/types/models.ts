@@ -1,4 +1,5 @@
 import {
+	any,
 	array,
 	boolean,
 	merge,
@@ -6,6 +7,7 @@ import {
 	object,
 	optional,
 	picklist,
+	record,
 	string,
 	type Output
 } from 'valibot';
@@ -207,4 +209,26 @@ export type Scan = Output<typeof ScanSchema>;
 
 export type ScanPostParams = {
 	courseId: string;
+};
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Log
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+export const LogSchema = object({
+	id: string(),
+	level: number(),
+	message: string(),
+	data: record(string(), any()),
+	createdAt: string()
+});
+
+export type Log = Output<typeof LogSchema>;
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+export type LogsGetParams = {
+	level?: number;
+	page?: number;
+	perPage?: number;
 };

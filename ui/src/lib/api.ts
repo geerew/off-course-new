@@ -11,6 +11,7 @@ import {
 	type Course,
 	type CourseTag,
 	type CoursesGetParams,
+	type LogsGetParams,
 	type Scan,
 	type Tag,
 	type TagGetParams,
@@ -32,6 +33,7 @@ export const ASSET_API = '/api/assets';
 export const ATTACHMENT_API = '/api/attachments';
 export const TAGS_API = '/api/tags';
 export const SCAN_API = '/api/scans';
+export const LOG_API = '/api/logs';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -560,6 +562,27 @@ export async function DeleteTag(tagId: string): Promise<boolean> {
 			throw error;
 		} else {
 			throw new Error(`Failed to delete course tag: ${error}`);
+		}
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Logs
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GET - Get a paginated list of logs
+export async function GetLogs(params?: LogsGetParams): Promise<Pagination> {
+	try {
+		const response = await axios.get<Pagination>(GetBackendUrl(LOG_API), { params });
+		const result = safeParse(PaginationSchema, response.data);
+
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to retrieve logs: ${error}`);
 		}
 	}
 }

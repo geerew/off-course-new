@@ -46,6 +46,61 @@ func TestLogs_GetLogs(t *testing.T) {
 		require.Len(t, logResponses, 5)
 	})
 
+	t.Run("200 (min level)", func(t *testing.T) {
+		router := setup(t)
+
+		logDao := daos.NewLogDao(router.config.DbManager.LogsDb)
+
+		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{}, Level: -4, Message: "debug log"}, nil))
+		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{}, Level: 0, Message: "info log"}, nil))
+		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{}, Level: 4, Message: "warn log"}, nil))
+		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{}, Level: 8, Message: "error log"}, nil))
+
+		// ----------------------------
+		// All
+		// ----------------------------
+		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?level=-4", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, logResponses := unmarshalHelper[logResponse](t, body)
+		require.Equal(t, 4, int(paginationResp.TotalItems))
+		require.Len(t, logResponses, 4)
+
+		// ----------------------------
+		// Info and above
+		// ----------------------------
+		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?level=0", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, logResponses = unmarshalHelper[logResponse](t, body)
+		require.Equal(t, 3, int(paginationResp.TotalItems))
+		require.Len(t, logResponses, 3)
+
+		// ----------------------------
+		// Warn and above
+		// ----------------------------
+		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?level=4", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, logResponses = unmarshalHelper[logResponse](t, body)
+		require.Equal(t, 2, int(paginationResp.TotalItems))
+		require.Len(t, logResponses, 2)
+
+		// ----------------------------
+		// Error only
+		// ----------------------------
+		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?level=8", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, logResponses = unmarshalHelper[logResponse](t, body)
+		require.Equal(t, 1, int(paginationResp.TotalItems))
+		require.Len(t, logResponses, 1)
+	})
+
 	t.Run("200 (pagination)", func(t *testing.T) {
 		router := setup(t)
 

@@ -15,10 +15,6 @@ export const settings = [
 		href: '/settings/courses'
 	},
 	{
-		title: 'Files',
-		href: '/settings/files'
-	},
-	{
 		title: 'Tags',
 		href: '/settings/tags'
 	},
