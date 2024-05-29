@@ -3,7 +3,6 @@ package daos
 import "testing"
 
 func Test_IsValidOrderBy(t *testing.T) {
-
 	t.Run("with wildcard", func(t *testing.T) {
 		validTableColumns := []string{
 			"courses.*",

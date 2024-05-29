@@ -7,23 +7,22 @@ import (
 
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
-	"github.com/geerew/off-course/utils/appFs"
 	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func AssetProgressSetup(t *testing.T) (*appFs.AppFs, *AssetProgressDao, database.Database) {
-	appFs, db := setup(t)
-	apDao := NewAssetProgressDao(db)
-	return appFs, apDao, db
+func assetProgressSetup(t *testing.T) (*AssetProgressDao, database.Database) {
+	dbManager := setup(t)
+	apDao := NewAssetProgressDao(dbManager.DataDb)
+	return apDao, dbManager.DataDb
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestAssetProgress_Create(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, dao, db := AssetProgressSetup(t)
+		dao, db := assetProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
@@ -44,7 +43,7 @@ func TestAssetProgress_Create(t *testing.T) {
 	})
 
 	t.Run("duplicate asset id", func(t *testing.T) {
-		_, dao, db := AssetProgressSetup(t)
+		dao, db := assetProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
@@ -61,7 +60,7 @@ func TestAssetProgress_Create(t *testing.T) {
 	})
 
 	t.Run("constraint errors", func(t *testing.T) {
-		_, dao, db := AssetProgressSetup(t)
+		dao, db := assetProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
@@ -98,7 +97,7 @@ func TestAssetProgress_Create(t *testing.T) {
 
 func TestAssetProgress_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
-		_, dao, db := AssetProgressSetup(t)
+		dao, db := assetProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(3).Assets(1).Build()
 
@@ -115,7 +114,7 @@ func TestAssetProgress_Get(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, dao, _ := AssetProgressSetup(t)
+		dao, _ := assetProgressSetup(t)
 
 		ap, err := dao.Get("1234", nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -123,7 +122,7 @@ func TestAssetProgress_Get(t *testing.T) {
 	})
 
 	t.Run("empty id", func(t *testing.T) {
-		_, dao, _ := AssetProgressSetup(t)
+		dao, _ := assetProgressSetup(t)
 
 		ap, err := dao.Get("", nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -131,7 +130,7 @@ func TestAssetProgress_Get(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := AssetProgressSetup(t)
+		dao, db := assetProgressSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -145,7 +144,7 @@ func TestAssetProgress_Get(t *testing.T) {
 
 func TestAssetProgress_Update(t *testing.T) {
 	t.Run("update", func(t *testing.T) {
-		_, dao, db := AssetProgressSetup(t)
+		dao, db := assetProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
@@ -214,7 +213,7 @@ func TestAssetProgress_Update(t *testing.T) {
 	})
 
 	t.Run("empty id", func(t *testing.T) {
-		_, dao, db := AssetProgressSetup(t)
+		dao, db := assetProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
@@ -232,7 +231,7 @@ func TestAssetProgress_Update(t *testing.T) {
 	})
 
 	t.Run("invalid asset id", func(t *testing.T) {
-		_, dao, db := AssetProgressSetup(t)
+		dao, db := assetProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
@@ -249,7 +248,7 @@ func TestAssetProgress_Update(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := AssetProgressSetup(t)
+		dao, db := assetProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
@@ -272,7 +271,7 @@ func TestAssetProgress_Update(t *testing.T) {
 
 func TestAssetProgress_DeleteCascade(t *testing.T) {
 	t.Run("course", func(t *testing.T) {
-		_, dao, db := AssetProgressSetup(t)
+		dao, db := assetProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
@@ -295,7 +294,7 @@ func TestAssetProgress_DeleteCascade(t *testing.T) {
 	})
 
 	t.Run("asset", func(t *testing.T) {
-		_, dao, db := AssetProgressSetup(t)
+		dao, db := assetProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 

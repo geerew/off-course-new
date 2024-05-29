@@ -9,24 +9,23 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
-	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func scanSetup(t *testing.T) (*appFs.AppFs, *ScanDao, database.Database) {
-	appFs, db := setup(t)
-	scanDao := NewScanDao(db)
-	return appFs, scanDao, db
+func scanSetup(t *testing.T) (*ScanDao, database.Database) {
+	dbManager := setup(t)
+	scanDao := NewScanDao(dbManager.DataDb)
+	return scanDao, dbManager.DataDb
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestScan_Create(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, dao, db := scanSetup(t)
+		dao, db := scanSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 		s := &models.Scan{CourseID: testData[0].Course.ID}
@@ -44,7 +43,7 @@ func TestScan_Create(t *testing.T) {
 	})
 
 	t.Run("duplicate course id", func(t *testing.T) {
-		_, dao, db := scanSetup(t)
+		dao, db := scanSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 		s := &models.Scan{CourseID: testData[0].Course.ID}
@@ -57,7 +56,7 @@ func TestScan_Create(t *testing.T) {
 	})
 
 	t.Run("constraint errors", func(t *testing.T) {
-		_, dao, db := scanSetup(t)
+		dao, db := scanSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
@@ -81,7 +80,7 @@ func TestScan_Create(t *testing.T) {
 
 func TestScan_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
-		_, dao, db := scanSetup(t)
+		dao, db := scanSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
@@ -92,7 +91,7 @@ func TestScan_Get(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, dao, _ := scanSetup(t)
+		dao, _ := scanSetup(t)
 
 		s, err := dao.Get("1234")
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -100,7 +99,7 @@ func TestScan_Get(t *testing.T) {
 	})
 
 	t.Run("empty id", func(t *testing.T) {
-		_, dao, _ := scanSetup(t)
+		dao, _ := scanSetup(t)
 
 		s, err := dao.Get("")
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -108,7 +107,7 @@ func TestScan_Get(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := scanSetup(t)
+		dao, db := scanSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -122,7 +121,7 @@ func TestScan_Get(t *testing.T) {
 
 func TestScan_Update(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, dao, db := scanSetup(t)
+		dao, db := scanSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 		require.True(t, testData[0].Scan.Status.IsWaiting())
@@ -150,14 +149,14 @@ func TestScan_Update(t *testing.T) {
 	})
 
 	t.Run("empty id", func(t *testing.T) {
-		_, dao, _ := scanSetup(t)
+		dao, _ := scanSetup(t)
 
 		err := dao.Update(&models.Scan{})
 		require.ErrorIs(t, err, ErrEmptyId)
 	})
 
 	t.Run("invalid id", func(t *testing.T) {
-		_, dao, db := scanSetup(t)
+		dao, db := scanSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 		testData[0].Scan.ID = "1234"
@@ -167,7 +166,7 @@ func TestScan_Update(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := scanSetup(t)
+		dao, db := scanSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -182,7 +181,7 @@ func TestScan_Update(t *testing.T) {
 
 func TestScan_Delete(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, dao, db := scanSetup(t)
+		dao, db := scanSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 		err := dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": testData[0].ID}}, nil)
@@ -190,14 +189,14 @@ func TestScan_Delete(t *testing.T) {
 	})
 
 	t.Run("no db params", func(t *testing.T) {
-		_, dao, _ := scanSetup(t)
+		dao, _ := scanSetup(t)
 
 		err := dao.Delete(nil, nil)
 		require.ErrorIs(t, err, ErrMissingWhere)
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := scanSetup(t)
+		dao, db := scanSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -210,7 +209,7 @@ func TestScan_Delete(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestScan_DeleteCascade(t *testing.T) {
-	_, dao, db := scanSetup(t)
+	dao, db := scanSetup(t)
 
 	testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
@@ -229,7 +228,7 @@ func TestScan_DeleteCascade(t *testing.T) {
 
 func TestScan_NextScan(t *testing.T) {
 	t.Run("first", func(t *testing.T) {
-		_, dao, db := scanSetup(t)
+		dao, db := scanSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
@@ -240,7 +239,7 @@ func TestScan_NextScan(t *testing.T) {
 	})
 
 	t.Run("next", func(t *testing.T) {
-		_, dao, db := scanSetup(t)
+		dao, db := scanSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(3).Scan().Build()
 
@@ -256,7 +255,7 @@ func TestScan_NextScan(t *testing.T) {
 	})
 
 	t.Run("empty", func(t *testing.T) {
-		_, dao, _ := scanSetup(t)
+		dao, _ := scanSetup(t)
 
 		scan, err := dao.Next()
 		require.Nil(t, err)
@@ -264,7 +263,7 @@ func TestScan_NextScan(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := scanSetup(t)
+		dao, db := scanSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)

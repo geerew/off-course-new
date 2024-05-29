@@ -14,20 +14,21 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func setup(t *testing.T) (*appFs.AppFs, database.Database) {
+func setup(t *testing.T) *database.DatabaseManager {
 	loggerHook := zltest.New(t)
 	log.Logger = zerolog.New(loggerHook).Level(zerolog.DebugLevel)
 
 	appFs := appFs.NewAppFs(afero.NewMemMapFs())
 
-	db := database.NewSqliteDB(&database.SqliteDbConfig{
+	dbManager, err := database.NewDBManager(&database.DatabaseConfig{
 		IsDebug:  false,
 		DataDir:  "./oc_data",
 		AppFs:    appFs,
 		InMemory: true,
 	})
 
-	require.NoError(t, db.Bootstrap(), "Failed to bootstrap database")
+	require.Nil(t, err)
+	require.NotNil(t, dbManager)
 
-	return appFs, db
+	return dbManager
 }

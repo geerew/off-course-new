@@ -8,24 +8,23 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
-	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func attachmentSetup(t *testing.T) (*appFs.AppFs, *AttachmentDao, database.Database) {
-	appFs, db := setup(t)
-	attachmentDao := NewAttachmentDao(db)
-	return appFs, attachmentDao, db
+func attachmentSetup(t *testing.T) (*AttachmentDao, database.Database) {
+	dbManager := setup(t)
+	attachmentDao := NewAttachmentDao(dbManager.DataDb)
+	return attachmentDao, dbManager.DataDb
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestAttachment_Count(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
-		_, dao, _ := attachmentSetup(t)
+		dao, _ := attachmentSetup(t)
 
 		count, err := dao.Count(nil)
 		require.Nil(t, err)
@@ -33,7 +32,7 @@ func TestAttachment_Count(t *testing.T) {
 	})
 
 	t.Run("entries", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		NewTestBuilder(t).Db(db).Courses(5).Assets(1).Attachments(1).Build()
 
@@ -43,7 +42,7 @@ func TestAttachment_Count(t *testing.T) {
 	})
 
 	t.Run("where", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(3).Assets(1).Attachments(2).Build()
 
@@ -77,7 +76,7 @@ func TestAttachment_Count(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -91,7 +90,7 @@ func TestAttachment_Count(t *testing.T) {
 
 func TestAttachment_Create(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		testData := NewTestBuilder(t).Courses(1).Assets(1).Attachments(1).Build()
 
@@ -120,7 +119,7 @@ func TestAttachment_Create(t *testing.T) {
 	})
 
 	t.Run("duplicate paths", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Attachments(1).Build()
 
@@ -130,7 +129,7 @@ func TestAttachment_Create(t *testing.T) {
 	})
 
 	t.Run("constraints", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
@@ -182,7 +181,7 @@ func TestAttachment_Create(t *testing.T) {
 
 func TestAttachment_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(2).Assets(1).Attachments(1).Build()
 
@@ -192,7 +191,7 @@ func TestAttachment_Get(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, dao, _ := attachmentSetup(t)
+		dao, _ := attachmentSetup(t)
 
 		c, err := dao.Get("1234", nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -200,7 +199,7 @@ func TestAttachment_Get(t *testing.T) {
 	})
 
 	t.Run("empty id", func(t *testing.T) {
-		_, dao, _ := attachmentSetup(t)
+		dao, _ := attachmentSetup(t)
 
 		c, err := dao.Get("", nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -208,7 +207,7 @@ func TestAttachment_Get(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -222,7 +221,7 @@ func TestAttachment_Get(t *testing.T) {
 
 func TestAttachment_List(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
-		_, dao, _ := attachmentSetup(t)
+		dao, _ := attachmentSetup(t)
 
 		assets, err := dao.List(nil, nil)
 		require.Nil(t, err)
@@ -230,7 +229,7 @@ func TestAttachment_List(t *testing.T) {
 	})
 
 	t.Run("found", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		NewTestBuilder(t).Db(db).Courses(5).Assets(1).Attachments(1).Build()
 
@@ -241,7 +240,7 @@ func TestAttachment_List(t *testing.T) {
 	})
 
 	t.Run("orderby", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(3).Assets(1).Attachments(1).Build()
 
@@ -274,7 +273,7 @@ func TestAttachment_List(t *testing.T) {
 	})
 
 	t.Run("where", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(3).Assets(2).Attachments(2).Build()
 
@@ -312,7 +311,7 @@ func TestAttachment_List(t *testing.T) {
 	})
 
 	t.Run("pagination", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Attachments(17).Build()
 
@@ -342,7 +341,7 @@ func TestAttachment_List(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -356,7 +355,7 @@ func TestAttachment_List(t *testing.T) {
 
 func TestAttachment_Delete(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Attachments(1).Build()
 		err := dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": testData[0].Assets[0].Attachments[0].ID}}, nil)
@@ -364,14 +363,14 @@ func TestAttachment_Delete(t *testing.T) {
 	})
 
 	t.Run("no db params", func(t *testing.T) {
-		_, dao, _ := attachmentSetup(t)
+		dao, _ := attachmentSetup(t)
 
 		err := dao.Delete(nil, nil)
 		require.ErrorIs(t, err, ErrMissingWhere)
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -385,7 +384,7 @@ func TestAttachment_Delete(t *testing.T) {
 
 func TestAttachment_DeleteCascade(t *testing.T) {
 	t.Run("delete course", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(2).Assets(1).Attachments(1).Build()
 
@@ -401,7 +400,7 @@ func TestAttachment_DeleteCascade(t *testing.T) {
 	})
 
 	t.Run("delete asset", func(t *testing.T) {
-		_, dao, db := attachmentSetup(t)
+		dao, db := attachmentSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(2).Assets(1).Attachments(1).Build()
 

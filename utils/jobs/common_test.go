@@ -21,19 +21,20 @@ func setupCourseScanner(t *testing.T) (*CourseScanner, database.Database, *zltes
 
 	appFs := appFs.NewAppFs(afero.NewMemMapFs())
 
-	db := database.NewSqliteDB(&database.SqliteDbConfig{
+	dbManager, err := database.NewDBManager(&database.DatabaseConfig{
 		IsDebug:  false,
 		DataDir:  "./oc_data",
 		AppFs:    appFs,
 		InMemory: true,
 	})
 
-	require.NoError(t, db.Bootstrap(), "Failed to bootstrap database")
+	require.Nil(t, err)
+	require.NotNil(t, dbManager)
 
 	courseScanner := NewCourseScanner(&CourseScannerConfig{
-		Db:    db,
+		Db:    dbManager.DataDb,
 		AppFs: appFs,
 	})
 
-	return courseScanner, db, loggerHook
+	return courseScanner, dbManager.DataDb, loggerHook
 }

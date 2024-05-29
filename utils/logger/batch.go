@@ -95,6 +95,15 @@ func (h *BatchHandler) Enabled(ctx context.Context, level slog.Level) bool {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// SetLevel updates the handler options level to the specified one.
+func (h *BatchHandler) SetLevel(level slog.Level) {
+	h.mux.Lock()
+	h.options.Level = level
+	h.mux.Unlock()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // WithGroup returns a new BatchHandler that starts a group
 //
 // All logger attributes will be resolved under the specified group name
@@ -179,14 +188,14 @@ func (h *BatchHandler) Handle(ctx context.Context, r slog.Record) error {
 
 	h.mux.Lock()
 	h.logs = append(h.logs, log)
-	// totalLogs  := len(h.logs)
+	totalLogs := len(h.logs)
 	h.mux.Unlock()
 
-	// if totalLogs >= h.options.BatchSize {
-	// 	if err := h.options.WriteFn(ctx); err != nil {
-	// 		return err
-	// 	}
-	// }
+	if totalLogs >= h.options.BatchSize {
+		if err := h.WriteAll(ctx); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

@@ -14,9 +14,9 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func courseTagSetup(t *testing.T) (*CourseTagDao, database.Database) {
-	_, db := setup(t)
-	courseTagDao := NewCourseTagDao(db)
-	return courseTagDao, db
+	dbManager := setup(t)
+	courseTagDao := NewCourseTagDao(dbManager.DataDb)
+	return courseTagDao, dbManager.DataDb
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -372,7 +372,7 @@ func TestCourseTag_Delete(t *testing.T) {
 	})
 
 	t.Run("no db params", func(t *testing.T) {
-		_, dao, _ := scanSetup(t)
+		dao, _ := courseTagSetup(t)
 
 		err := dao.Delete(nil, nil)
 		require.ErrorIs(t, err, ErrMissingWhere)

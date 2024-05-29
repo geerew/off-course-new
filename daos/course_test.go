@@ -9,7 +9,6 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
-	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/stretchr/testify/require"
@@ -17,17 +16,17 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func courseSetup(t *testing.T) (*appFs.AppFs, *CourseDao, database.Database) {
-	appFs, db := setup(t)
-	courseDao := NewCourseDao(db)
-	return appFs, courseDao, db
+func courseSetup(t *testing.T) (*CourseDao, database.Database) {
+	dbManager := setup(t)
+	courseDao := NewCourseDao(dbManager.DataDb)
+	return courseDao, dbManager.DataDb
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestCourse_Count(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
-		_, dao, _ := courseSetup(t)
+		dao, _ := courseSetup(t)
 
 		count, err := dao.Count(nil)
 		require.Nil(t, err)
@@ -35,7 +34,7 @@ func TestCourse_Count(t *testing.T) {
 	})
 
 	t.Run("entries", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		NewTestBuilder(t).Db(db).Courses(5).Build()
 
@@ -45,7 +44,7 @@ func TestCourse_Count(t *testing.T) {
 	})
 
 	t.Run("where", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(3).Build()
 
@@ -72,7 +71,7 @@ func TestCourse_Count(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -86,7 +85,7 @@ func TestCourse_Count(t *testing.T) {
 
 func TestCourse_Create(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, dao, _ := courseSetup(t)
+		dao, _ := courseSetup(t)
 
 		testData := NewTestBuilder(t).Courses(1).Build()
 
@@ -112,7 +111,7 @@ func TestCourse_Create(t *testing.T) {
 	})
 
 	t.Run("duplicate paths", func(t *testing.T) {
-		_, dao, _ := courseSetup(t)
+		dao, _ := courseSetup(t)
 
 		testData := NewTestBuilder(t).Courses(1).Build()
 
@@ -124,7 +123,7 @@ func TestCourse_Create(t *testing.T) {
 	})
 
 	t.Run("constraints", func(t *testing.T) {
-		_, dao, _ := courseSetup(t)
+		dao, _ := courseSetup(t)
 
 		// No title
 		c := &models.Course{}
@@ -148,7 +147,7 @@ func TestCourse_Create(t *testing.T) {
 
 func TestCourse_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(2).Assets(1).Build()
 
@@ -226,7 +225,7 @@ func TestCourse_Get(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, dao, _ := courseSetup(t)
+		dao, _ := courseSetup(t)
 
 		c, err := dao.Get("1234", nil, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -234,7 +233,7 @@ func TestCourse_Get(t *testing.T) {
 	})
 
 	t.Run("empty id", func(t *testing.T) {
-		_, dao, _ := courseSetup(t)
+		dao, _ := courseSetup(t)
 
 		c, err := dao.Get("", nil, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -242,7 +241,7 @@ func TestCourse_Get(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -256,7 +255,7 @@ func TestCourse_Get(t *testing.T) {
 
 func TestCourse_List(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
-		_, dao, _ := courseSetup(t)
+		dao, _ := courseSetup(t)
 
 		courses, err := dao.List(nil, nil)
 		require.Nil(t, err)
@@ -264,7 +263,7 @@ func TestCourse_List(t *testing.T) {
 	})
 
 	t.Run("found", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(5).Assets(2).Build()
 
@@ -350,7 +349,7 @@ func TestCourse_List(t *testing.T) {
 	})
 
 	t.Run("orderby", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(3).Build()
 
@@ -416,7 +415,7 @@ func TestCourse_List(t *testing.T) {
 	})
 
 	t.Run("where", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(3).Build()
 
@@ -450,7 +449,7 @@ func TestCourse_List(t *testing.T) {
 	})
 
 	t.Run("pagination", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(17).Build()
 
@@ -480,7 +479,7 @@ func TestCourse_List(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -494,7 +493,7 @@ func TestCourse_List(t *testing.T) {
 
 func TestCourse_Update(t *testing.T) {
 	t.Run("card path", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 		require.Empty(t, testData[0].CardPath)
@@ -509,7 +508,7 @@ func TestCourse_Update(t *testing.T) {
 	})
 
 	t.Run("available", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 		require.False(t, testData[0].Available)
@@ -524,14 +523,14 @@ func TestCourse_Update(t *testing.T) {
 	})
 
 	t.Run("empty id", func(t *testing.T) {
-		_, dao, _ := courseSetup(t)
+		dao, _ := courseSetup(t)
 
 		err := dao.Update(&models.Course{})
 		require.ErrorIs(t, err, ErrEmptyId)
 	})
 
 	t.Run("invalid id", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 		testData[0].ID = "1234"
@@ -539,7 +538,7 @@ func TestCourse_Update(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -555,7 +554,7 @@ func TestCourse_Update(t *testing.T) {
 
 func TestCourse_Delete(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
@@ -564,14 +563,14 @@ func TestCourse_Delete(t *testing.T) {
 	})
 
 	t.Run("no db params", func(t *testing.T) {
-		_, dao, _ := courseSetup(t)
+		dao, _ := courseSetup(t)
 
 		err := dao.Delete(nil, nil)
 		require.ErrorIs(t, err, ErrMissingWhere)
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -585,7 +584,7 @@ func TestCourse_Delete(t *testing.T) {
 
 func TestCourse_ClassifyPaths(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses([]string{"course 1", "course 2", "course 3"}).Build()
 
@@ -606,7 +605,7 @@ func TestCourse_ClassifyPaths(t *testing.T) {
 	})
 
 	t.Run("no paths", func(t *testing.T) {
-		_, dao, _ := courseSetup(t)
+		dao, _ := courseSetup(t)
 
 		result, err := dao.ClassifyPaths([]string{})
 		require.Nil(t, err)
@@ -614,7 +613,7 @@ func TestCourse_ClassifyPaths(t *testing.T) {
 	})
 
 	t.Run("empty path", func(t *testing.T) {
-		_, dao, _ := courseSetup(t)
+		dao, _ := courseSetup(t)
 
 		result, err := dao.ClassifyPaths([]string{"", "", ""})
 		require.Nil(t, err)
@@ -622,7 +621,7 @@ func TestCourse_ClassifyPaths(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := courseSetup(t)
+		dao, db := courseSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)

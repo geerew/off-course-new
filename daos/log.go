@@ -49,6 +49,9 @@ func (dao *LogDao) Write(l *models.Log, tx *sql.Tx) error {
 		l.RefreshId()
 	}
 
+	l.RefreshCreatedAt()
+	l.UpdatedAt = l.CreatedAt
+
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.Table()).
@@ -59,10 +62,68 @@ func (dao *LogDao) Write(l *models.Log, tx *sql.Tx) error {
 	if tx != nil {
 		_, err = tx.Exec(query, args...)
 	} else {
-		_, err = dao.db.ExecLog(query, args...)
+		_, err = dao.db.Exec(query, args...)
 	}
 
 	return err
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// List selects logs
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *LogDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Log, error) {
+	generic := NewGenericDao(dao.db, dao)
+
+	if dbParams == nil {
+		dbParams = &database.DatabaseParams{}
+	}
+
+	// Always override the order by to created_at
+	dbParams.OrderBy = []string{dao.Table() + ".created_at DESC"}
+
+	// Default the columns if not specified
+	if len(dbParams.Columns) == 0 {
+		dbParams.Columns = dao.columns()
+	}
+
+	rows, err := generic.List(dbParams, tx)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var logs []*models.Log
+
+	for rows.Next() {
+		log, err := dao.scanRow(rows)
+		if err != nil {
+			return nil, err
+		}
+
+		logs = append(logs, log)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return logs, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Delete deletes logs based upon the where clause
+//
+// `tx` allows for the function to be run within a transaction
+func (dao *LogDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
+	if dbParams == nil || dbParams.Where == nil {
+		return ErrMissingWhere
+	}
+
+	generic := NewGenericDao(dao.db, dao)
+	return generic.Delete(dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -102,8 +163,8 @@ func (dao *LogDao) data(a *models.Log) map[string]any {
 	return map[string]any{
 		"id":         a.ID,
 		"level":      a.Level,
+		"message":    NilStr(a.Message),
 		"data":       a.Data,
-		"message":    a.Message,
 		"created_at": a.CreatedAt,
 		"updated_at": a.UpdatedAt,
 	}
@@ -118,8 +179,8 @@ func (dao *LogDao) scanRow(scannable Scannable) (*models.Log, error) {
 	err := scannable.Scan(
 		&l.ID,
 		&l.Level,
-		&l.Data,
 		&l.Message,
+		&l.Data,
 		&l.CreatedAt,
 		&l.UpdatedAt,
 	)

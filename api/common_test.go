@@ -19,17 +19,18 @@ import (
 func setup(t *testing.T) *Router {
 	appFs := appFs.NewAppFs(afero.NewMemMapFs())
 
-	db := database.NewSqliteDB(&database.SqliteDbConfig{
+	dbManager, err := database.NewDBManager(&database.DatabaseConfig{
 		IsDebug:  false,
 		DataDir:  "./oc_data",
 		AppFs:    appFs,
 		InMemory: true,
 	})
 
-	require.NoError(t, db.Bootstrap(), "Failed to bootstrap database")
+	require.Nil(t, err)
+	require.NotNil(t, dbManager)
 
 	courseScanner := jobs.NewCourseScanner(&jobs.CourseScannerConfig{
-		Db:    db,
+		Db:    dbManager.DataDb,
 		AppFs: appFs,
 	})
 
@@ -37,7 +38,7 @@ func setup(t *testing.T) *Router {
 	require.NoError(t, err, "Failed to initialize logger")
 
 	config := &RouterConfig{
-		Db:            db,
+		Db:            dbManager.DataDb,
 		AppFs:         appFs,
 		CourseScanner: courseScanner,
 		Logger:        loggy,

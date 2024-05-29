@@ -8,7 +8,6 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
-	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/stretchr/testify/require"
@@ -16,17 +15,17 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func assetSetup(t *testing.T) (*appFs.AppFs, *AssetDao, database.Database) {
-	appFs, db := setup(t)
-	assetDao := NewAssetDao(db)
-	return appFs, assetDao, db
+func assetSetup(t *testing.T) (*AssetDao, database.Database) {
+	dbManager := setup(t)
+	assetDao := NewAssetDao(dbManager.DataDb)
+	return assetDao, dbManager.DataDb
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestAsset_Count(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
-		_, dao, _ := assetSetup(t)
+		dao, _ := assetSetup(t)
 
 		count, err := dao.Count(nil)
 		require.Nil(t, err)
@@ -34,7 +33,7 @@ func TestAsset_Count(t *testing.T) {
 	})
 
 	t.Run("entries", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		NewTestBuilder(t).Db(db).Courses(5).Assets(1).Build()
 
@@ -44,7 +43,7 @@ func TestAsset_Count(t *testing.T) {
 	})
 
 	t.Run("where", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(3).Assets(2).Build()
 
@@ -78,7 +77,7 @@ func TestAsset_Count(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -92,7 +91,7 @@ func TestAsset_Count(t *testing.T) {
 
 func TestAsset_Create(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		testData := NewTestBuilder(t).Courses(1).Assets(1).Build()
 
@@ -123,7 +122,7 @@ func TestAsset_Create(t *testing.T) {
 	})
 
 	t.Run("duplicate paths", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
@@ -133,7 +132,7 @@ func TestAsset_Create(t *testing.T) {
 	})
 
 	t.Run("constraints", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
@@ -187,7 +186,7 @@ func TestAsset_Create(t *testing.T) {
 
 func TestAsset_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(2).Assets(1).Attachments(2).Build()
 
@@ -243,7 +242,7 @@ func TestAsset_Get(t *testing.T) {
 	})
 
 	t.Run("orderby", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(3).Assets(1).Attachments(2).Build()
 
@@ -291,7 +290,7 @@ func TestAsset_Get(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, dao, _ := assetSetup(t)
+		dao, _ := assetSetup(t)
 
 		c, err := dao.Get("1234", nil, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -299,7 +298,7 @@ func TestAsset_Get(t *testing.T) {
 	})
 
 	t.Run("empty id", func(t *testing.T) {
-		_, dao, _ := assetSetup(t)
+		dao, _ := assetSetup(t)
 
 		c, err := dao.Get("", nil, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -307,7 +306,7 @@ func TestAsset_Get(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -321,7 +320,7 @@ func TestAsset_Get(t *testing.T) {
 
 func TestAsset_List(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
-		_, dao, _ := assetSetup(t)
+		dao, _ := assetSetup(t)
 
 		assets, err := dao.List(nil, nil)
 		require.Nil(t, err)
@@ -329,7 +328,7 @@ func TestAsset_List(t *testing.T) {
 	})
 
 	t.Run("found", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(5).Assets(2).Attachments(3).Build()
 
@@ -401,7 +400,7 @@ func TestAsset_List(t *testing.T) {
 	})
 
 	t.Run("orderby", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(3).Assets(1).Attachments(2).Build()
 
@@ -450,7 +449,7 @@ func TestAsset_List(t *testing.T) {
 	})
 
 	t.Run("where", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(3).Assets(2).Build()
 
@@ -484,7 +483,7 @@ func TestAsset_List(t *testing.T) {
 	})
 
 	t.Run("pagination", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(17).Build()
 
@@ -514,7 +513,7 @@ func TestAsset_List(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -528,7 +527,7 @@ func TestAsset_List(t *testing.T) {
 
 func TestAsset_Delete(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 		err := dao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": testData[0].Assets[0].ID}}, nil)
@@ -536,14 +535,14 @@ func TestAsset_Delete(t *testing.T) {
 	})
 
 	t.Run("no db params", func(t *testing.T) {
-		_, dao, _ := assetSetup(t)
+		dao, _ := assetSetup(t)
 
 		err := dao.Delete(nil, nil)
 		require.ErrorIs(t, err, ErrMissingWhere)
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := assetSetup(t)
+		dao, db := assetSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -556,7 +555,7 @@ func TestAsset_Delete(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestAsset_DeleteCascade(t *testing.T) {
-	_, dao, db := assetSetup(t)
+	dao, db := assetSetup(t)
 
 	testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 

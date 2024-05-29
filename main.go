@@ -38,38 +38,30 @@ func main() {
 	isDebug := flag.Bool("debug", false, "verbose")
 	flag.Parse()
 
-	// Global logger
-	// cw := zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "2006-01-02T15:04:05"}
-	// if !*isDebug {
-	// 	log.Logger = log.Output(cw).Level(zerolog.InfoLevel)
-	// } else {
-	// 	log.Logger = log.Output(cw)
-	// }
-
 	// Create app filesystem
 	appFs := appFs.NewAppFs(afero.NewOsFs())
 
-	// Create DB
-	db := database.NewSqliteDB(&database.SqliteDbConfig{
-		IsDebug: *isDebug,
-		DataDir: "./oc_data",
-		AppFs:   appFs,
+	// Create the database manager, which will create the data/logs databases
+	dbManager, err := database.NewDBManager(&database.DatabaseConfig{
+		IsDebug:  *isDebug,
+		DataDir:  "./oc_data",
+		AppFs:    appFs,
+		InMemory: false,
 	})
 
-	// Bootstrap the store
-	if err := db.Bootstrap(); err != nil {
-		log.Fatal("Failed to bootstrap the database", err)
+	if err != nil {
+		log.Fatal("Failed to create database manager", err)
 	}
 
 	// Logger
-	logger, err := logger.InitLogger(loggerWriteFn(db))
+	logger, err := logger.InitLogger(loggerWriteFn(dbManager.LogsDb))
 	if err != nil {
 		log.Fatal("Failed to initialize logger", err)
 	}
 
 	// Course scanner
 	courseScanner := jobs.NewCourseScanner(&jobs.CourseScannerConfig{
-		Db:    db,
+		Db:    dbManager.DataDb,
 		AppFs: appFs,
 	})
 
@@ -78,7 +70,7 @@ func main() {
 
 	// Create router
 	router := api.New(&api.RouterConfig{
-		Db:            db,
+		Db:            dbManager.DataDb,
 		Logger:        logger,
 		AppFs:         appFs,
 		CourseScanner: courseScanner,
@@ -88,8 +80,8 @@ func main() {
 
 	// TODO: Handle this better...
 	c := cron.New()
-	go func() { updateCourseAvailability(db, logger) }()
-	c.AddFunc("@every 5m", func() { updateCourseAvailability(db, logger) })
+	go func() { updateCourseAvailability(dbManager.DataDb, logger) }()
+	c.AddFunc("@every 5m", func() { updateCourseAvailability(dbManager.DataDb, logger) })
 	c.Start()
 
 	var wg sync.WaitGroup
@@ -114,7 +106,7 @@ func main() {
 	wg.Wait()
 
 	// TMP -> Delete all scans
-	_, err = db.Exec("DELETE FROM " + daos.NewScanDao(db).Table())
+	_, err = dbManager.DataDb.Exec("DELETE FROM " + daos.NewScanDao(dbManager.DataDb).Table())
 	if err != nil {
 		log.Fatal("Failed to delete scans", err)
 	}
@@ -175,11 +167,12 @@ func updateCourseAvailability(db database.Database, logger *slog.Logger) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// loggerWriteFn returns a logger.WriteFn that writes logs to the database
 func loggerWriteFn(db database.Database) logger.WriteFn {
 	return func(ctx context.Context, logs []*logger.Log) error {
 
 		// Write accumulated logs
-		db.RunLogInTransaction(func(tx *sql.Tx) error {
+		db.RunInTransaction(func(tx *sql.Tx) error {
 			model := &models.Log{}
 
 			for _, l := range logs {

@@ -8,24 +8,23 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
-	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func tagSetup(t *testing.T) (*appFs.AppFs, *TagDao, database.Database) {
-	appFs, db := setup(t)
-	tagDao := NewTagDao(db)
-	return appFs, tagDao, db
+func tagSetup(t *testing.T) (*TagDao, database.Database) {
+	dbManager := setup(t)
+	tagDao := NewTagDao(dbManager.DataDb)
+	return tagDao, dbManager.DataDb
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestTag_Count(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		count, err := dao.Count(nil)
 		require.Nil(t, err)
@@ -33,7 +32,7 @@ func TestTag_Count(t *testing.T) {
 	})
 
 	t.Run("entries", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		// Add test_tags into the database
 		for _, tag := range test_tags {
@@ -46,7 +45,7 @@ func TestTag_Count(t *testing.T) {
 	})
 
 	t.Run("where", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		// Add test_tags into the database
 		for _, tag := range test_tags {
@@ -83,7 +82,7 @@ func TestTag_Count(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := tagSetup(t)
+		dao, db := tagSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -97,7 +96,7 @@ func TestTag_Count(t *testing.T) {
 
 func TestTag_Create(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		tag := &models.Tag{
 			Tag: "JavaScript",
@@ -108,7 +107,7 @@ func TestTag_Create(t *testing.T) {
 	})
 
 	t.Run("duplicate tags", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		tag := &models.Tag{
 			Tag: "JavaScript",
@@ -122,7 +121,7 @@ func TestTag_Create(t *testing.T) {
 	})
 
 	t.Run("constraints", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		// Empty tag ID
 		tag := &models.Tag{}
@@ -138,7 +137,7 @@ func TestTag_Create(t *testing.T) {
 
 func TestTag_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
-		_, dao, db := tagSetup(t)
+		dao, db := tagSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses([]string{"course 1", "course 2"}).Tags([]string{"Go", "TypeScript"}).Build()
 
@@ -181,7 +180,7 @@ func TestTag_Get(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		c, err := dao.Get("1234", false, nil, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -189,7 +188,7 @@ func TestTag_Get(t *testing.T) {
 	})
 
 	t.Run("empty id", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		c, err := dao.Get("", false, nil, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -197,7 +196,7 @@ func TestTag_Get(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := tagSetup(t)
+		dao, db := tagSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -211,7 +210,7 @@ func TestTag_Get(t *testing.T) {
 
 func TestTag_List(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		tags, err := dao.List(nil, nil)
 		require.Nil(t, err)
@@ -219,7 +218,7 @@ func TestTag_List(t *testing.T) {
 	})
 
 	t.Run("found", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		NewTestBuilder(t).Db(dao.db).Courses([]string{"course 1"}).Tags([]string{"PHP", "Go"}).Build()
 		NewTestBuilder(t).Db(dao.db).Courses([]string{"course 2"}).Tags([]string{"Go", "C"}).Build()
@@ -257,7 +256,7 @@ func TestTag_List(t *testing.T) {
 	})
 
 	t.Run("orderby", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		testData := NewTestBuilder(t).
 			Db(dao.db).
@@ -303,7 +302,7 @@ func TestTag_List(t *testing.T) {
 	})
 
 	t.Run("where", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		for _, tag := range test_tags {
 			require.Nil(t, dao.Create(&models.Tag{Tag: tag}, nil))
@@ -332,7 +331,7 @@ func TestTag_List(t *testing.T) {
 	})
 
 	t.Run("pagination", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		for _, tag := range test_tags {
 			require.Nil(t, dao.Create(&models.Tag{Tag: tag}, nil))
@@ -362,7 +361,7 @@ func TestTag_List(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := tagSetup(t)
+		dao, db := tagSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -376,7 +375,7 @@ func TestTag_List(t *testing.T) {
 
 func TestTag_Update(t *testing.T) {
 	t.Run("tag", func(t *testing.T) {
-		_, dao, db := tagSetup(t)
+		dao, db := tagSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Tags([]string{"Go"}).Build()
 
@@ -394,14 +393,14 @@ func TestTag_Update(t *testing.T) {
 	})
 
 	t.Run("empty id", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		err := dao.Update(&models.Tag{})
 		require.ErrorIs(t, err, ErrEmptyId)
 	})
 
 	t.Run("invalid id", func(t *testing.T) {
-		_, dao, db := tagSetup(t)
+		dao, db := tagSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Tags(1).Build()
 
@@ -413,7 +412,7 @@ func TestTag_Update(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := tagSetup(t)
+		dao, db := tagSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Tags(1).Build()
 
@@ -432,7 +431,7 @@ func TestTag_Update(t *testing.T) {
 
 func TestTag_Delete(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, dao, _ := tagSetup(t)
+		dao, _ := tagSetup(t)
 
 		// Add test_tags into the database
 		for _, tag := range test_tags {
@@ -444,14 +443,14 @@ func TestTag_Delete(t *testing.T) {
 	})
 
 	t.Run("no db params", func(t *testing.T) {
-		_, dao, _ := scanSetup(t)
+		dao, _ := tagSetup(t)
 
 		err := dao.Delete(nil, nil)
 		require.ErrorIs(t, err, ErrMissingWhere)
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := tagSetup(t)
+		dao, db := tagSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)

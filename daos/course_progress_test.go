@@ -9,23 +9,22 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
-	"github.com/geerew/off-course/utils/appFs"
 	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func CourseProgressSetup(t *testing.T) (*appFs.AppFs, *CourseProgressDao, database.Database) {
-	appFs, db := setup(t)
-	cpDao := NewCourseProgressDao(db)
-	return appFs, cpDao, db
+func CourseProgressSetup(t *testing.T) (*CourseProgressDao, database.Database) {
+	dbManager := setup(t)
+	cpDao := NewCourseProgressDao(dbManager.DataDb)
+	return cpDao, dbManager.DataDb
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestCourseProgress_Create(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		_, dao, db := CourseProgressSetup(t)
+		dao, db := CourseProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
@@ -40,7 +39,7 @@ func TestCourseProgress_Create(t *testing.T) {
 	})
 
 	t.Run("duplicate course id", func(t *testing.T) {
-		_, dao, db := CourseProgressSetup(t)
+		dao, db := CourseProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
@@ -52,7 +51,7 @@ func TestCourseProgress_Create(t *testing.T) {
 	})
 
 	t.Run("constraint errors", func(t *testing.T) {
-		_, dao, db := CourseProgressSetup(t)
+		dao, db := CourseProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
@@ -81,7 +80,7 @@ func TestCourseProgress_Create(t *testing.T) {
 
 func TestCourseProgress_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
-		_, dao, db := CourseProgressSetup(t)
+		dao, db := CourseProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 
@@ -91,7 +90,7 @@ func TestCourseProgress_Get(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, dao, _ := CourseProgressSetup(t)
+		dao, _ := CourseProgressSetup(t)
 
 		cp, err := dao.Get("1234", nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -99,7 +98,7 @@ func TestCourseProgress_Get(t *testing.T) {
 	})
 
 	t.Run("empty id", func(t *testing.T) {
-		_, dao, _ := CourseProgressSetup(t)
+		dao, _ := CourseProgressSetup(t)
 
 		cp, err := dao.Get("", nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
@@ -107,7 +106,7 @@ func TestCourseProgress_Get(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := CourseProgressSetup(t)
+		dao, db := CourseProgressSetup(t)
 
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
@@ -121,7 +120,7 @@ func TestCourseProgress_Get(t *testing.T) {
 
 func TestCourseProgress_Update(t *testing.T) {
 	t.Run("status", func(t *testing.T) {
-		_, dao, db := CourseProgressSetup(t)
+		dao, db := CourseProgressSetup(t)
 
 		// Create a course with 2 assets
 		apDao := NewAssetProgressDao(db)
@@ -211,7 +210,7 @@ func TestCourseProgress_Update(t *testing.T) {
 	})
 
 	t.Run("empty id", func(t *testing.T) {
-		_, dao, db := CourseProgressSetup(t)
+		dao, db := CourseProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 		origCp, err := dao.Get(testData[0].ID, nil)
@@ -224,7 +223,7 @@ func TestCourseProgress_Update(t *testing.T) {
 	})
 
 	t.Run("db error", func(t *testing.T) {
-		_, dao, db := CourseProgressSetup(t)
+		dao, db := CourseProgressSetup(t)
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 		origCp, err := dao.Get(testData[0].ID, nil)
@@ -241,7 +240,7 @@ func TestCourseProgress_Update(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestCourseProgress_DeleteCascade(t *testing.T) {
-	_, dao, db := CourseProgressSetup(t)
+	dao, db := CourseProgressSetup(t)
 
 	testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 

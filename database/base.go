@@ -2,15 +2,10 @@ package database
 
 import (
 	"database/sql"
-	"os"
-	"path/filepath"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/geerew/off-course/migrations"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
-	"github.com/pressly/goose/v3"
-	"github.com/rs/zerolog/log"
 	_ "modernc.org/sqlite"
 )
 
@@ -27,17 +22,11 @@ type (
 
 // Database defines the interface for a database
 type Database interface {
-	Bootstrap() error
-
-	// Data
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
+	Begin(opts *sql.TxOptions) (*sql.Tx, error)
 	RunInTransaction(txFunc func(*sql.Tx) error) error
-
-	// Logs
-	ExecLog(query string, args ...interface{}) (sql.Result, error)
-	RunLogInTransaction(txFunc func(*sql.Tx) error) error
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -81,246 +70,59 @@ type DatabaseParams struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// SqliteDb defines an sqlite storage
-type SqliteDb struct {
-	db       *sql.DB
-	logsDb   *sql.DB
-	isDebug  bool
-	dataDir  string
-	appFs    *appFs.AppFs
-	inMemory bool
+// DatabaseManager manages the database connections
+type DatabaseManager struct {
+	DataDb Database
+	LogsDb Database
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// SqliteDbConfig defines the config when creating a new sqlite storage
-type SqliteDbConfig struct {
-	IsDebug  bool
-	DataDir  string
-	AppFs    *appFs.AppFs
-	InMemory bool
+// DatabaseConfig defines the configuration for a database
+type DatabaseConfig struct {
+	IsDebug    bool
+	DataDir    string
+	DSN        string
+	MigrateDir string
+	AppFs      *appFs.AppFs
+	InMemory   bool
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// NewSqliteDB creates a new SqliteDb
-func NewSqliteDB(config *SqliteDbConfig) *SqliteDb {
-	return &SqliteDb{
-		isDebug:  config.IsDebug,
-		dataDir:  config.DataDir,
-		appFs:    config.AppFs,
-		inMemory: config.InMemory,
-	}
-}
+// NewDBManager returns a new DBManager
+func NewDBManager(config *DatabaseConfig) (*DatabaseManager, error) {
+	manager := &DatabaseManager{}
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Bootstrap initializes an sqlite DB connection and migrates the models, if required
-func (s *SqliteDb) Bootstrap() error {
-	err := s.initLogDb()
-	if err != nil {
-		return err
+	dataConfig := &DatabaseConfig{
+		IsDebug:    config.IsDebug,
+		DataDir:    config.DataDir,
+		DSN:        "data.db",
+		MigrateDir: "data",
+		AppFs:      config.AppFs,
+		InMemory:   config.InMemory,
 	}
 
-	// Initialize the data DB
-	err = s.initDataDb()
-	if err != nil {
-		return err
+	if dataDb, err := NewSqliteDB(dataConfig); err != nil {
+		return nil, err
+	} else {
+		manager.DataDb = dataDb
 	}
 
-	return nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// initLogDb initializes the logs DB
-func (s *SqliteDb) initLogDb() error {
-	if err := s.appFs.Fs.MkdirAll(s.dataDir, os.ModePerm); err != nil {
-		return err
+	logsConfig := &DatabaseConfig{
+		IsDebug:    config.IsDebug,
+		DataDir:    config.DataDir,
+		DSN:        "logs.db",
+		MigrateDir: "logs",
+		AppFs:      config.AppFs,
+		InMemory:   config.InMemory,
 	}
 
-	dsn := filepath.Join(s.dataDir, "logs.db")
-	if s.inMemory {
-		dsn = "file::memory:"
+	if logsDB, err := NewSqliteDB(logsConfig); err != nil {
+		return nil, err
+	} else {
+		manager.LogsDb = logsDB
 	}
 
-	db, err := sql.Open("sqlite", dsn)
-	if err != nil {
-		return err
-	}
-
-	// TODO: make this better (use semaphore to block/continue)
-	db.SetMaxIdleConns(1)
-	db.SetMaxOpenConns(1)
-
-	if err := setPragma(db); err != nil {
-		return err
-	}
-
-	if err != nil {
-		return err
-	}
-
-	s.logsDb = db
-
-	// Do the migrate
-	return s.migrateLogs()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// initDataDb initializes the data DB
-func (s *SqliteDb) initDataDb() error {
-	if err := s.appFs.Fs.MkdirAll(s.dataDir, os.ModePerm); err != nil {
-		return err
-	}
-
-	dsn := filepath.Join(s.dataDir, "data.db")
-	if s.inMemory {
-		dsn = "file::memory:"
-	}
-
-	db, err := sql.Open("sqlite", dsn)
-	if err != nil {
-		return err
-	}
-
-	// TODO: make this better (use semaphore to block/continue)
-	db.SetMaxIdleConns(1)
-	db.SetMaxOpenConns(1)
-
-	if err := setPragma(db); err != nil {
-		return err
-	}
-
-	s.db = db
-
-	// Do the migrate
-	return s.migrateBase()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Exec executes a data query
-func (s *SqliteDb) Exec(query string, args ...interface{}) (sql.Result, error) {
-	s.logQuery(query, args...)
-	return s.db.Exec(query, args...)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// ExecLog executes a logs query
-func (s *SqliteDb) ExecLog(query string, args ...interface{}) (sql.Result, error) {
-	return s.logsDb.Exec(query, args...)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Query executes a query that returns rows, typically a SELECT
-func (s *SqliteDb) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	s.logQuery(query, args...)
-	return s.db.Query(query, args...)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// QueryRow executes a query that is expected to return at most one row
-func (s *SqliteDb) QueryRow(query string, args ...interface{}) *sql.Row {
-	s.logQuery(query, args...)
-	return s.db.QueryRow(query, args...)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func (s *SqliteDb) RunInTransaction(txFunc func(*sql.Tx) error) error {
-	tx, err := s.db.Begin()
-	if err != nil {
-		return err
-	}
-
-	if err := txFunc(tx); err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	return tx.Commit()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func (s *SqliteDb) RunLogInTransaction(txFunc func(*sql.Tx) error) error {
-	tx, err := s.logsDb.Begin()
-	if err != nil {
-		return err
-	}
-
-	if err := txFunc(tx); err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	return tx.Commit()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// logQuery logs the SQL command if debug mode is enabled
-func (s *SqliteDb) logQuery(query string, args ...interface{}) {
-	if s.isDebug {
-		log.Debug().Msgf("SQL Query: %s; Arguments: %v", query, args)
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Migrate runs the DB migrations
-func (s *SqliteDb) migrateBase() error {
-	goose.SetLogger(goose.NopLogger())
-
-	goose.SetBaseFS(migrations.EmbedMigrations)
-
-	if err := goose.SetDialect("sqlite3"); err != nil {
-		return err
-	}
-
-	if err := goose.Up(s.db, "data"); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Migrate runs the DB migrations
-func (s *SqliteDb) migrateLogs() error {
-	goose.SetLogger(goose.NopLogger())
-
-	goose.SetBaseFS(migrations.EmbedMigrations)
-
-	if err := goose.SetDialect("sqlite3"); err != nil {
-		return err
-	}
-
-	if err := goose.Up(s.logsDb, "logs"); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// setPragma sets the default PRAGMA values for the DB
-func setPragma(db *sql.DB) error {
-	// Note: busy_timeout needs to be set BEFORE journal_mode
-	_, err := db.Exec(`
-	PRAGMA busy_timeout       = 10000;
-	PRAGMA journal_mode       = WAL;
-	PRAGMA journal_size_limit = 200000000;
-	PRAGMA synchronous        = NORMAL;
-	PRAGMA foreign_keys       = ON;
-	PRAGMA cache_size         = -16000;
-`)
-
-	return err
+	return manager, nil
 }
