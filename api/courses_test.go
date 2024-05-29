@@ -39,7 +39,7 @@ func TestCourses_GetCourses(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		daos.NewTestBuilder(t).Db(router.db).Courses(5).Build()
+		daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(5).Build()
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
 		require.NoError(t, err)
@@ -53,8 +53,8 @@ func TestCourses_GetCourses(t *testing.T) {
 	t.Run("200 (availability)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(3).Build()
-		courseDao := daos.NewCourseDao(router.db)
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(3).Build()
+		courseDao := daos.NewCourseDao(router.config.DbManager.DataDb)
 
 		// ----------------------------
 		// All unavailable
@@ -96,7 +96,7 @@ func TestCourses_GetCourses(t *testing.T) {
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(5).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(5).Build()
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -126,7 +126,7 @@ func TestCourses_GetCourses(t *testing.T) {
 	t.Run("200 (pagination)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(17).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(17).Build()
 
 		// ----------------------------
 		// Get the first page (10 courses)
@@ -171,10 +171,10 @@ func TestCourses_GetCourses(t *testing.T) {
 	t.Run("200 (progress)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(2).Build()
 
 		// Set the first course as started (by marking the first asset as started)
-		apDao := daos.NewAssetProgressDao(router.db)
+		apDao := daos.NewAssetProgressDao(router.config.DbManager.DataDb)
 		ap := &models.AssetProgress{
 			AssetID:  testData[0].Assets[0].ID,
 			VideoPos: 10,
@@ -253,9 +253,9 @@ func TestCourses_GetCourses(t *testing.T) {
 	t.Run("200 (tags)", func(t *testing.T) {
 		router := setup(t)
 
-		course1 := daos.NewTestBuilder(t).Db(router.db).Courses([]string{"course 1"}).Tags([]string{"Go", "Data Structures"}).Build()[0]
-		course2 := daos.NewTestBuilder(t).Db(router.db).Courses([]string{"course 2"}).Tags([]string{"Data Structures", "TypeScript", "PHP"}).Build()[0]
-		course3 := daos.NewTestBuilder(t).Db(router.db).Courses([]string{"course 3"}).Tags([]string{"Go", "Data Structures", "PHP"}).Build()[0]
+		course1 := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses([]string{"course 1"}).Tags([]string{"Go", "Data Structures"}).Build()[0]
+		course2 := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses([]string{"course 2"}).Tags([]string{"Data Structures", "TypeScript", "PHP"}).Build()[0]
+		course3 := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses([]string{"course 3"}).Tags([]string{"Go", "Data Structures", "PHP"}).Build()[0]
 
 		// ------------------
 		// Not defined
@@ -336,7 +336,7 @@ func TestCourses_GetCourses(t *testing.T) {
 	t.Run("200 (titles)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses([]string{"course 1", "course 2", "course 3"}).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses([]string{"course 1", "course 2", "course 3"}).Build()
 
 		// ------------------
 		// Not defined
@@ -402,7 +402,7 @@ func TestCourses_GetCourses(t *testing.T) {
 		router := setup(t)
 
 		// Drop the courses table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/", nil))
@@ -417,7 +417,7 @@ func TestCourses_GetCourse(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(3).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(3).Build()
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[2].ID, nil))
 		require.NoError(t, err)
@@ -432,7 +432,7 @@ func TestCourses_GetCourse(t *testing.T) {
 	t.Run("200 (availability)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(3).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(3).Build()
 
 		// ----------------------------
 		// Unavailable
@@ -450,7 +450,7 @@ func TestCourses_GetCourse(t *testing.T) {
 		// ----------------------------
 		// Available
 		// ----------------------------
-		courseDao := daos.NewCourseDao(router.db)
+		courseDao := daos.NewCourseDao(router.config.DbManager.DataDb)
 		testData[2].Available = true
 		require.Nil(t, courseDao.Update(testData[2].Course))
 
@@ -475,7 +475,7 @@ func TestCourses_GetCourse(t *testing.T) {
 	t.Run("500 (internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/test", nil))
@@ -491,7 +491,7 @@ func TestCourses_CreateCourse(t *testing.T) {
 		router := setup(t)
 
 		testData := daos.NewTestBuilder(t).Courses(1).Build()
-		router.appFs.Fs.MkdirAll(testData[0].Path, os.ModePerm)
+		router.config.AppFs.Fs.MkdirAll(testData[0].Path, os.ModePerm)
 
 		postData := fmt.Sprintf(`{"title": "%s", "path": "%s" }`, testData[0].Title, testData[0].Path)
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(postData))
@@ -563,7 +563,7 @@ func TestCourses_CreateCourse(t *testing.T) {
 		router := setup(t)
 
 		coursePath := "/course 1/"
-		router.appFs.Fs.MkdirAll(coursePath, os.ModePerm)
+		router.config.AppFs.Fs.MkdirAll(coursePath, os.ModePerm)
 
 		postData := fmt.Sprintf(`{"title": "course 1", "path": "%s" }`, coursePath)
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(postData))
@@ -584,11 +584,11 @@ func TestCourses_CreateCourse(t *testing.T) {
 		router := setup(t)
 
 		// Drop the courses table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		coursePath := "/course 1/"
-		router.appFs.Fs.MkdirAll(coursePath, os.ModePerm)
+		router.config.AppFs.Fs.MkdirAll(coursePath, os.ModePerm)
 
 		postData := fmt.Sprintf(`{"title": "course 1", "path": "%s" }`, coursePath)
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(postData))
@@ -604,11 +604,11 @@ func TestCourses_CreateCourse(t *testing.T) {
 		router := setup(t)
 
 		// Drop scan table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewScanDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewScanDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		coursePath := "/course 1/"
-		router.appFs.Fs.MkdirAll(coursePath, os.ModePerm)
+		router.config.AppFs.Fs.MkdirAll(coursePath, os.ModePerm)
 
 		postData := fmt.Sprintf(`{"title": "course 1", "path": "%s" }`, coursePath)
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(postData))
@@ -627,12 +627,12 @@ func TestCourses_DeleteCourse(t *testing.T) {
 	t.Run("204 (deleted)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(3).Assets(3).Attachments(3).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(3).Assets(3).Attachments(3).Build()
 
-		courseDao := daos.NewCourseDao(router.db)
-		scanDao := daos.NewScanDao(router.db)
-		assetsDao := daos.NewAssetDao(router.db)
-		attachmentsDao := daos.NewAttachmentDao(router.db)
+		courseDao := daos.NewCourseDao(router.config.DbManager.DataDb)
+		scanDao := daos.NewScanDao(router.config.DbManager.DataDb)
+		assetsDao := daos.NewAssetDao(router.config.DbManager.DataDb)
+		attachmentsDao := daos.NewAttachmentDao(router.config.DbManager.DataDb)
 
 		// ----------------------------
 		// Delete course 3
@@ -653,12 +653,12 @@ func TestCourses_DeleteCourse(t *testing.T) {
 		require.ErrorIs(t, err, sql.ErrNoRows)
 
 		// Assets
-		count, err := assetsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.NewAssetDao(router.db).Table() + ".course_id": testData[2].ID}})
+		count, err := assetsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.NewAssetDao(router.config.DbManager.DataDb).Table() + ".course_id": testData[2].ID}})
 		require.Nil(t, err)
 		require.Zero(t, count)
 
 		// Attachments
-		count, err = attachmentsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.NewAttachmentDao(router.db).Table() + ".course_id": testData[2].ID}})
+		count, err = attachmentsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.NewAttachmentDao(router.config.DbManager.DataDb).Table() + ".course_id": testData[2].ID}})
 		require.Nil(t, err)
 		require.Zero(t, count)
 	})
@@ -675,7 +675,7 @@ func TestCourses_DeleteCourse(t *testing.T) {
 		router := setup(t)
 
 		// Drop the table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodDelete, "/api/courses/test", nil))
@@ -690,16 +690,16 @@ func TestCourses_GetCard(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
-		courseDao := daos.NewCourseDao(router.db)
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
+		courseDao := daos.NewCourseDao(router.config.DbManager.DataDb)
 
 		// Update card path
 		testData[0].CardPath = "/" + testData[0].Path + "/card.png"
 		require.Nil(t, courseDao.Update(testData[0].Course))
 
 		// Create
-		router.appFs.Fs.MkdirAll("/"+testData[0].Path, os.ModePerm)
-		require.Nil(t, afero.WriteFile(router.appFs.Fs, testData[0].CardPath, []byte("test"), os.ModePerm))
+		router.config.AppFs.Fs.MkdirAll("/"+testData[0].Path, os.ModePerm)
+		require.Nil(t, afero.WriteFile(router.config.AppFs.Fs, testData[0].CardPath, []byte("test"), os.ModePerm))
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/card", nil))
 		require.NoError(t, err)
@@ -719,7 +719,7 @@ func TestCourses_GetCard(t *testing.T) {
 	t.Run("404 (no card)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/card", nil))
 		require.NoError(t, err)
@@ -730,8 +730,8 @@ func TestCourses_GetCard(t *testing.T) {
 	t.Run("404 (card not found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
-		courseDao := daos.NewCourseDao(router.db)
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
+		courseDao := daos.NewCourseDao(router.config.DbManager.DataDb)
 
 		// Update card path
 		testData[0].CardPath = "/" + testData[0].Path + "/card.png"
@@ -747,7 +747,7 @@ func TestCourses_GetCard(t *testing.T) {
 		router := setup(t)
 
 		// Drop the table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/test/card", nil))
@@ -762,7 +762,7 @@ func TestCourses_GetAssets(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Build()
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets", nil))
 		require.NoError(t, err)
@@ -776,7 +776,7 @@ func TestCourses_GetAssets(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(3).Attachments(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(3).Attachments(2).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/?orderBy=created_at%20asc", nil)
 		status, body, err := requestHelper(router, req)
@@ -810,7 +810,7 @@ func TestCourses_GetAssets(t *testing.T) {
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(3).Attachments(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(3).Attachments(2).Build()
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -845,7 +845,7 @@ func TestCourses_GetAssets(t *testing.T) {
 		// ----------------------------
 		// CREATED_AT ASC + ATTACHMENTS.TITLE DESC
 		// ----------------------------
-		attDao := daos.NewAttachmentDao(router.db)
+		attDao := daos.NewAttachmentDao(router.config.DbManager.DataDb)
 
 		req = httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/?expand=true&orderBy=created_at%20asc,"+attDao.Table()+".created_at%20desc", nil)
 		status, body, err = requestHelper(router, req)
@@ -863,7 +863,7 @@ func TestCourses_GetAssets(t *testing.T) {
 	t.Run("200 (pagination)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Assets(17).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Assets(17).Build()
 
 		// ------------------------
 		// Get the first page (10 assets)
@@ -919,7 +919,7 @@ func TestCourses_GetAssets(t *testing.T) {
 	t.Run("500 (course internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/test/assets", nil))
@@ -930,9 +930,9 @@ func TestCourses_GetAssets(t *testing.T) {
 	t.Run("500 (asset internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
 
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/", nil))
@@ -947,7 +947,7 @@ func TestCourses_GetAsset(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(3).Attachments(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(3).Attachments(2).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[1].ID, nil)
 		status, body, err := requestHelper(router, req)
@@ -981,7 +981,7 @@ func TestCourses_GetAsset(t *testing.T) {
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(3).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(3).Build()
 
 		// Request an asset that does not belong to the course
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[1].Assets[0].ID, nil)
@@ -1002,7 +1002,7 @@ func TestCourses_GetAsset(t *testing.T) {
 	t.Run("404 (asset not found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/test_asset", nil)
 		status, _, err := requestHelper(router, req)
@@ -1014,7 +1014,7 @@ func TestCourses_GetAsset(t *testing.T) {
 		router := setup(t)
 
 		// Drop the courses table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/test_course/assets/test_asset", nil)
@@ -1026,10 +1026,10 @@ func TestCourses_GetAsset(t *testing.T) {
 	t.Run("500 (asset internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
 
 		// Drop the assets table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/test_asset", nil)
@@ -1045,7 +1045,7 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(2).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/"+testData[1].Assets[1].ID+"/attachments", nil)
 		status, body, err := requestHelper(router, req)
@@ -1060,7 +1060,7 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(2).Attachments(3).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(2).Attachments(3).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/assets/"+testData[1].Assets[0].ID+"/attachments?orderBy=created_at%20asc", nil)
 		status, body, err := requestHelper(router, req)
@@ -1079,7 +1079,7 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(2).Attachments(3).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(2).Attachments(3).Build()
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -1117,7 +1117,7 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 	t.Run("200 (pagination)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Assets(1).Attachments(17).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Assets(1).Attachments(17).Build()
 
 		// ----------------------------
 		// Get the first page (10 attachments)
@@ -1175,7 +1175,7 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 		router := setup(t)
 
 		// Drop the courses table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/test_course/assets/test_asset/attachments", nil)
@@ -1188,7 +1188,7 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 	t.Run("404 (asset not found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/1234/attachments", nil)
 		status, _, err := requestHelper(router, req)
@@ -1200,10 +1200,10 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 	t.Run("500 (asset lookup internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
 
 		// Drop the assets table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/1234/attachments", nil)
@@ -1216,7 +1216,7 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(2).Attachments(5).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(2).Attachments(5).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[1].Assets[0].ID+"/attachments", nil)
 		status, body, err := requestHelper(router, req)
@@ -1228,10 +1228,10 @@ func TestCourses_GetAssetAttachments(t *testing.T) {
 	t.Run("500 (attachments lookup internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Assets(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Assets(1).Build()
 
 		// Drop the attachments table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[0].ID+"/attachments", nil)
@@ -1248,7 +1248,7 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(5).Attachments(3).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(5).Attachments(3).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[0].ID+"/attachments/"+testData[0].Assets[0].Attachments[2].ID, nil)
 		status, body, err := requestHelper(router, req)
@@ -1265,7 +1265,7 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(5).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(5).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[1].Assets[0].ID+"/attachments/test_attachment", nil)
 		status, body, err := requestHelper(router, req)
@@ -1277,7 +1277,7 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("400 (invalid attachment for course)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(5).Attachments(3).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(5).Attachments(3).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[0].ID+"/attachments/"+testData[0].Assets[1].Attachments[2].ID, nil)
 		status, body, err := requestHelper(router, req)
@@ -1298,7 +1298,7 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("404 (asset not found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
 		status, _, err := requestHelper(router, req)
@@ -1309,7 +1309,7 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("404 (attachment not found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(5).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(5).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[2].ID+"/attachments/test_attachment", nil)
 		status, _, err := requestHelper(router, req)
@@ -1320,10 +1320,10 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("500 (course internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
 
 		// Drop the courses table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
@@ -1335,10 +1335,10 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("500 (asset internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
 
 		// Drop the assets table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/test_asset/attachments/test_attachment", nil)
@@ -1350,10 +1350,10 @@ func TestCourses_GetAssetAttachment(t *testing.T) {
 	t.Run("500 (attachments internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Assets(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Assets(1).Build()
 
 		// Drop the attachments table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/assets/"+testData[0].Assets[0].ID+"/attachments/test_attachment", nil)
@@ -1369,7 +1369,7 @@ func TestCourses_GetTags(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Build()
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/tags", nil))
 		require.NoError(t, err)
@@ -1384,7 +1384,7 @@ func TestCourses_GetTags(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Tags([]string{"Go", "C", "JavaScript", "TypeScript", "Java", "Python"}).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Tags([]string{"Go", "C", "JavaScript", "TypeScript", "Java", "Python"}).Build()
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[1].ID+"/tags", nil))
 		require.NoError(t, err)
@@ -1410,7 +1410,7 @@ func TestCourses_GetTags(t *testing.T) {
 	t.Run("500 (course internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/test/tags", nil))
@@ -1421,9 +1421,9 @@ func TestCourses_GetTags(t *testing.T) {
 	t.Run("500 (courses_tags internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
 
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseTagDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewCourseTagDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/tags/", nil))
@@ -1438,7 +1438,7 @@ func TestCourses_CreateTag(t *testing.T) {
 	t.Run("201 (created)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
 
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/"+testData[0].ID+"/tags", strings.NewReader(`{"tag": "Go" }`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
@@ -1457,7 +1457,7 @@ func TestCourses_CreateTag(t *testing.T) {
 	t.Run("400 (bind error)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
 
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/"+testData[0].ID+"/tags", strings.NewReader(`{`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
@@ -1471,7 +1471,7 @@ func TestCourses_CreateTag(t *testing.T) {
 	t.Run("400 (invalid data)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
 
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/"+testData[0].ID+"/tags", strings.NewReader(`{"tag": ""}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
@@ -1485,7 +1485,7 @@ func TestCourses_CreateTag(t *testing.T) {
 	t.Run("400 (existing tag)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
 
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/"+testData[0].ID+"/tags", strings.NewReader(`{"tag": "Go"}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
@@ -1504,9 +1504,9 @@ func TestCourses_CreateTag(t *testing.T) {
 	t.Run("500 (internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
 
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseTagDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewCourseTagDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/"+testData[0].ID+"/tags", strings.NewReader(`{"tag": "Go"}`))
@@ -1525,9 +1525,9 @@ func TestCourses_DeleteTag(t *testing.T) {
 	t.Run("204 (deleted)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(3).Tags([]string{"Go", "C", "JavaScript", "TypeScript", "Java", "Python"}).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(3).Tags([]string{"Go", "C", "JavaScript", "TypeScript", "Java", "Python"}).Build()
 
-		courseTagDao := daos.NewCourseTagDao(router.db)
+		courseTagDao := daos.NewCourseTagDao(router.config.DbManager.DataDb)
 
 		// Delete the third tag from the second course
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodDelete, "/api/courses/"+testData[1].ID+"/tags/"+testData[1].Tags[2].ID, nil))
@@ -1551,10 +1551,10 @@ func TestCourses_DeleteTag(t *testing.T) {
 	t.Run("204 (invalid tag for course)", func(t *testing.T) {
 		router := setup(t)
 
-		course1 := daos.NewTestBuilder(t).Db(router.db).Courses(1).Tags([]string{"Go"}).Build()
-		course2 := daos.NewTestBuilder(t).Db(router.db).Courses(1).Tags([]string{"C"}).Build()
+		course1 := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Tags([]string{"Go"}).Build()
+		course2 := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Tags([]string{"C"}).Build()
 
-		courseTagDao := daos.NewCourseTagDao(router.db)
+		courseTagDao := daos.NewCourseTagDao(router.config.DbManager.DataDb)
 
 		// Delete the course2 tag from course1
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodDelete, "/api/courses/"+course1[0].ID+"/tags/"+course2[0].Tags[0].ID, nil))
@@ -1578,9 +1578,9 @@ func TestCourses_DeleteTag(t *testing.T) {
 		router := setup(t)
 
 		// Drop the table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseTagDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewCourseTagDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
-		_, err = router.db.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.db).Table())
+		_, err = router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewCourseDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodDelete, "/api/courses/test/tags/test", nil))

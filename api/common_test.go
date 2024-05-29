@@ -38,7 +38,7 @@ func setup(t *testing.T) *Router {
 	require.NoError(t, err, "Failed to initialize logger")
 
 	config := &RouterConfig{
-		Db:            dbManager.DataDb,
+		DbManager:     dbManager,
 		AppFs:         appFs,
 		CourseScanner: courseScanner,
 		Logger:        loggy,

@@ -20,11 +20,11 @@ func TestFsPath(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		router.appFs.Fs.MkdirAll("/", os.ModePerm)
-		router.appFs.Fs.MkdirAll("/dir1", os.ModePerm)
-		router.appFs.Fs.Create("/file1")
-		router.appFs.Fs.Create("/file2")
-		router.appFs.Fs.Create("/file3")
+		router.config.AppFs.Fs.MkdirAll("/", os.ModePerm)
+		router.config.AppFs.Fs.MkdirAll("/dir1", os.ModePerm)
+		router.config.AppFs.Fs.Create("/file1")
+		router.config.AppFs.Fs.Create("/file2")
+		router.config.AppFs.Fs.Create("/file3")
 
 		req := httptest.NewRequest(http.MethodGet, "/api/filesystem/"+utils.EncodeString("/"), nil)
 		status, body, err := requestHelper(router, req)
@@ -43,19 +43,19 @@ func TestFsPath(t *testing.T) {
 	t.Run("200 (path classifications)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses([]string{"course 1", "course 2", "course 3"}).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses([]string{"course 1", "course 2", "course 3"}).Build()
 
 		// Create directories for the courses above
 		for _, data := range testData {
-			router.appFs.Fs.MkdirAll(data.Path, os.ModePerm)
+			router.config.AppFs.Fs.MkdirAll(data.Path, os.ModePerm)
 		}
 
 		// Create additional directories at the root
-		router.appFs.Fs.MkdirAll("/dir1", os.ModePerm)
-		router.appFs.Fs.MkdirAll("/dir2", os.ModePerm)
+		router.config.AppFs.Fs.MkdirAll("/dir1", os.ModePerm)
+		router.config.AppFs.Fs.MkdirAll("/dir2", os.ModePerm)
 
 		// Create sub-directory for course 3
-		router.appFs.Fs.MkdirAll(testData[2].Path+"/dir1", os.ModePerm)
+		router.config.AppFs.Fs.MkdirAll(testData[2].Path+"/dir1", os.ModePerm)
 
 		// ----------------------------
 		// Get / (test ancestors and none)

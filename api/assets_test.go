@@ -37,7 +37,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		router := setup(t)
 
 		// Create 10 assets
-		daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(5).Attachments(2).Build()
+		daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(5).Attachments(2).Build()
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
 		require.NoError(t, err)
@@ -65,7 +65,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		router := setup(t)
 
 		// Create 10 assets
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(5).Attachments(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(5).Attachments(2).Build()
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -94,7 +94,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		// ----------------------------
 		// CREATED_AT ASC + ATTACHMENTS.TITLE DESC
 		// ----------------------------
-		attDao := daos.NewAttachmentDao(router.db)
+		attDao := daos.NewAttachmentDao(router.config.DbManager.DataDb)
 
 		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/assets/?expand=true&orderBy=created_at%20asc,"+attDao.Table()+".created_at%20desc", nil))
 		require.NoError(t, err)
@@ -112,7 +112,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		router := setup(t)
 
 		// 18 assets
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(3).Assets(6).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(3).Assets(6).Build()
 
 		// ----------------------------
 		// Get the first page (10 assets)
@@ -159,7 +159,7 @@ func TestAssets_GetAssets(t *testing.T) {
 		router := setup(t)
 
 		// Drop the table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/assets/", nil))
@@ -174,7 +174,7 @@ func TestAssets_GetAsset(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(5).Attachments(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(5).Attachments(2).Build()
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[1].Assets[3].ID, nil))
 		require.NoError(t, err)
@@ -217,7 +217,7 @@ func TestAssets_GetAsset(t *testing.T) {
 		router := setup(t)
 
 		// Drop the table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/assets/test", nil))
@@ -232,7 +232,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Assets(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Assets(1).Build()
 
 		// ----------------------------
 		// Update the video position
@@ -334,7 +334,7 @@ func TestAssets_UpdateAsset(t *testing.T) {
 		router := setup(t)
 
 		// Drop the table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodPut, "/api/assets/test", strings.NewReader(`{"id": "1234567"}`))
@@ -352,11 +352,11 @@ func TestAssets_ServeAsset(t *testing.T) {
 	t.Run("200 (full video)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Assets(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Assets(2).Build()
 
 		// Create asset
-		require.Nil(t, router.appFs.Fs.MkdirAll(filepath.Dir(testData[0].Assets[1].Path), os.ModePerm))
-		require.Nil(t, afero.WriteFile(router.appFs.Fs, testData[0].Assets[1].Path, []byte("video"), os.ModePerm))
+		require.Nil(t, router.config.AppFs.Fs.MkdirAll(filepath.Dir(testData[0].Assets[1].Path), os.ModePerm))
+		require.Nil(t, afero.WriteFile(router.config.AppFs.Fs, testData[0].Assets[1].Path, []byte("video"), os.ModePerm))
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[0].Assets[1].ID+"/serve", nil))
 		require.NoError(t, err)
@@ -367,11 +367,11 @@ func TestAssets_ServeAsset(t *testing.T) {
 	t.Run("200 (stream video)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Assets(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Assets(2).Build()
 
 		// Create asset
-		require.Nil(t, router.appFs.Fs.MkdirAll(filepath.Dir(testData[0].Assets[1].Path), os.ModePerm))
-		require.Nil(t, afero.WriteFile(router.appFs.Fs, testData[0].Assets[1].Path, []byte("video"), os.ModePerm))
+		require.Nil(t, router.config.AppFs.Fs.MkdirAll(filepath.Dir(testData[0].Assets[1].Path), os.ModePerm))
+		require.Nil(t, afero.WriteFile(router.config.AppFs.Fs, testData[0].Assets[1].Path, []byte("video"), os.ModePerm))
 
 		req := httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[0].Assets[1].ID+"/serve", nil)
 		req.Header.Add("Range", "bytes=0-")
@@ -391,15 +391,15 @@ func TestAssets_ServeAsset(t *testing.T) {
 		testData[0].Assets[0].Path = strings.Replace(testData[0].Assets[0].Path, ".mp4", ".html", 1)
 		testData[0].Assets[0].Type = *types.NewAsset("html")
 
-		coursesDao := daos.NewCourseDao(router.db)
-		assetsDao := daos.NewAssetDao(router.db)
+		coursesDao := daos.NewCourseDao(router.config.DbManager.DataDb)
+		assetsDao := daos.NewAssetDao(router.config.DbManager.DataDb)
 
 		require.Nil(t, coursesDao.Create(testData[0].Course))
 		require.Nil(t, assetsDao.Create(testData[0].Assets[0]))
 
 		// Create asset
-		require.Nil(t, router.appFs.Fs.MkdirAll(filepath.Dir(testData[0].Assets[0].Path), os.ModePerm))
-		require.Nil(t, afero.WriteFile(router.appFs.Fs, testData[0].Assets[0].Path, []byte("html data"), os.ModePerm))
+		require.Nil(t, router.config.AppFs.Fs.MkdirAll(filepath.Dir(testData[0].Assets[0].Path), os.ModePerm))
+		require.Nil(t, afero.WriteFile(router.config.AppFs.Fs, testData[0].Assets[0].Path, []byte("html data"), os.ModePerm))
 
 		req := httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[0].Assets[0].ID+"/serve", nil)
 
@@ -412,7 +412,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 	t.Run("400 (invalid path)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Assets(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Assets(2).Build()
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[0].Assets[1].ID+"/serve", nil))
 		require.NoError(t, err)
@@ -423,11 +423,11 @@ func TestAssets_ServeAsset(t *testing.T) {
 	t.Run("400 (invalid video range)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Assets(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Assets(2).Build()
 
 		// Create asset
-		require.Nil(t, router.appFs.Fs.MkdirAll(filepath.Dir(testData[0].Assets[1].Path), os.ModePerm))
-		require.Nil(t, afero.WriteFile(router.appFs.Fs, testData[0].Assets[1].Path, []byte("video"), os.ModePerm))
+		require.Nil(t, router.config.AppFs.Fs.MkdirAll(filepath.Dir(testData[0].Assets[1].Path), os.ModePerm))
+		require.Nil(t, afero.WriteFile(router.config.AppFs.Fs, testData[0].Assets[1].Path, []byte("video"), os.ModePerm))
 
 		req := httptest.NewRequest(http.MethodGet, "/api/assets/"+testData[0].Assets[1].ID+"/serve", nil)
 		req.Header.Add("Range", "bytes=10-1")
@@ -449,7 +449,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 	t.Run("500 (internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAssetDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/assets/test/serve", nil))

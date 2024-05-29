@@ -14,13 +14,8 @@ import (
 
 // Router defines a router
 type Router struct {
-	db            database.Database
-	logger        *slog.Logger
-	appFs         *appFs.AppFs
-	courseScanner *jobs.CourseScanner
-	router        *fiber.App
-	port          string
-	isProduction  bool
+	router *fiber.App
+	config *RouterConfig
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -28,7 +23,7 @@ type Router struct {
 // RouterConfig defines the router config when creating a new
 // router
 type RouterConfig struct {
-	Db            database.Database
+	DbManager     *database.DatabaseManager
 	Logger        *slog.Logger
 	AppFs         *appFs.AppFs
 	CourseScanner *jobs.CourseScanner
@@ -41,13 +36,8 @@ type RouterConfig struct {
 // New creates a new router
 func New(config *RouterConfig) *Router {
 	return &Router{
-		db:            config.Db,
-		logger:        config.Logger,
-		appFs:         config.AppFs,
-		courseScanner: config.CourseScanner,
-		router:        initRouter(config),
-		port:          config.Port,
-		isProduction:  config.IsProduction,
+		router: initRouter(config),
+		config: config,
 	}
 
 }
@@ -56,7 +46,7 @@ func New(config *RouterConfig) *Router {
 
 // Serve serves the API and UI
 func (router *Router) Serve() error {
-	return router.router.Listen(router.port)
+	return router.router.Listen(router.config.Port)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -85,14 +75,15 @@ func initRouter(config *RouterConfig) *fiber.App {
 
 // initRoutes initializes the routes
 func initRoutes(config *RouterConfig, router fiber.Router) {
-	courseDao := daos.NewCourseDao(config.Db)
-	courseProgressDao := daos.NewCourseProgressDao(config.Db)
-	assetDao := daos.NewAssetDao(config.Db)
-	assetProgressDao := daos.NewAssetProgressDao(config.Db)
-	attachmentDao := daos.NewAttachmentDao(config.Db)
-	tagDao := daos.NewTagDao(config.Db)
-	courseTagDao := daos.NewCourseTagDao(config.Db)
-	scanDao := daos.NewScanDao(config.Db)
+	courseDao := daos.NewCourseDao(config.DbManager.DataDb)
+	courseProgressDao := daos.NewCourseProgressDao(config.DbManager.DataDb)
+	assetDao := daos.NewAssetDao(config.DbManager.DataDb)
+	assetProgressDao := daos.NewAssetProgressDao(config.DbManager.DataDb)
+	attachmentDao := daos.NewAttachmentDao(config.DbManager.DataDb)
+	tagDao := daos.NewTagDao(config.DbManager.DataDb)
+	courseTagDao := daos.NewCourseTagDao(config.DbManager.DataDb)
+	scanDao := daos.NewScanDao(config.DbManager.DataDb)
+	logDao := daos.NewLogDao(config.DbManager.LogsDb)
 
 	// ----------------------
 	// Filesystem
@@ -177,7 +168,7 @@ func initRoutes(config *RouterConfig, router fiber.Router) {
 	// ----------------------
 	tagsApi := tags{
 		logger:       config.Logger,
-		tagDao:       daos.NewTagDao(config.Db),
+		tagDao:       tagDao,
 		courseTagDao: courseTagDao,
 	}
 
@@ -201,6 +192,17 @@ func initRoutes(config *RouterConfig, router fiber.Router) {
 	scans := router.Group("/scans")
 	scans.Get("/:courseId", scansApi.getScan)
 	scans.Post("", scansApi.createScan)
+
+	// ----------------------
+	// Logs
+	// ----------------------
+	logsApi := logs{
+		logger: config.Logger,
+		logDao: logDao,
+	}
+
+	logs := router.Group("/logs")
+	logs.Get("/", logsApi.getLogs)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

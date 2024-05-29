@@ -33,7 +33,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(2).Attachments(2).Build()
+		daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(2).Attachments(2).Build()
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
 		require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(2).Attachments(4).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(2).Attachments(4).Build()
 
 		// ----------------------------
 		// CREATED_AT ASC
@@ -83,7 +83,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 	t.Run("200 (pagination)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(2).Attachments(4).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(2).Attachments(4).Build()
 
 		// ----------------------------
 		// Get the first page (10 attachments)
@@ -130,7 +130,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		router := setup(t)
 
 		// Drop the table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
@@ -145,7 +145,7 @@ func TestAttachments_GetAttachment(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(2).Attachments(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(2).Attachments(2).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/attachments/"+testData[1].Assets[1].Attachments[0].ID, nil)
 		status, body, err := requestHelper(router, req)
@@ -172,7 +172,7 @@ func TestAttachments_GetAttachment(t *testing.T) {
 		router := setup(t)
 
 		// Drop the table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/test", nil))
@@ -187,11 +187,11 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 	t.Run("200 (ok)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(2).Attachments(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(2).Attachments(2).Build()
 
 		// Create attachment file
-		require.Nil(t, router.appFs.Fs.MkdirAll(filepath.Dir(testData[1].Assets[0].Attachments[0].Path), os.ModePerm))
-		require.Nil(t, afero.WriteFile(router.appFs.Fs, testData[1].Assets[0].Attachments[0].Path, []byte("hello"), os.ModePerm))
+		require.Nil(t, router.config.AppFs.Fs.MkdirAll(filepath.Dir(testData[1].Assets[0].Attachments[0].Path), os.ModePerm))
+		require.Nil(t, afero.WriteFile(router.config.AppFs.Fs, testData[1].Assets[0].Attachments[0].Path, []byte("hello"), os.ModePerm))
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/"+testData[1].Assets[0].Attachments[0].ID+"/serve", nil))
 		require.NoError(t, err)
@@ -202,7 +202,7 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 	t.Run("400 (invalid path)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(2).Assets(2).Attachments(2).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(2).Attachments(2).Build()
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/"+testData[1].Assets[0].Attachments[0].ID+"/serve", nil))
 		require.NoError(t, err)
@@ -222,7 +222,7 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 		router := setup(t)
 
 		// Drop the table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/test/serve", nil))

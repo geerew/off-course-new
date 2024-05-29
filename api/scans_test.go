@@ -19,7 +19,7 @@ func TestScans_GetScan(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(5).Scan().Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(5).Scan().Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/scans/"+testData[2].ID, nil)
 		status, body, err := requestHelper(router, req)
@@ -46,7 +46,7 @@ func TestScans_GetScan(t *testing.T) {
 	t.Run("500 (internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewScanDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewScanDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/scans/test", nil)
@@ -62,7 +62,7 @@ func TestScans_CreateScan(t *testing.T) {
 	t.Run("201 (created)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Build()
 
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(fmt.Sprintf(`{"courseID": "%s"}`, testData[0].ID)))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
@@ -116,7 +116,7 @@ func TestScans_CreateScan(t *testing.T) {
 	t.Run("500 (internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewScanDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewScanDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(`{"courseID": "test"}`))

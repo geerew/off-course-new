@@ -45,7 +45,7 @@ func TestTags_GetTags(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		daos.NewTestBuilder(t).Db(router.db).Courses(2).Tags([]string{"PHP", "Go", "Java", "TypeScript", "JavaScript"}).Build()
+		daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Tags([]string{"PHP", "Go", "Java", "TypeScript", "JavaScript"}).Build()
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/", nil))
 		require.NoError(t, err)
@@ -75,7 +75,7 @@ func TestTags_GetTags(t *testing.T) {
 		router := setup(t)
 
 		daos.NewTestBuilder(t).
-			Db(router.db).
+			Db(router.config.DbManager.DataDb).
 			Courses([]string{"course 1", "course 2"}).
 			Tags([]string{"PHP", "Go", "Java", "TypeScript", "JavaScript"}).
 			Build()
@@ -107,7 +107,7 @@ func TestTags_GetTags(t *testing.T) {
 		// ----------------------------
 		// CREATED_AT ASC + COURSES.TITLE DESC
 		// ----------------------------
-		courseDao := daos.NewCourseDao(router.db)
+		courseDao := daos.NewCourseDao(router.config.DbManager.DataDb)
 
 		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/?expand=true&orderBy=created_at%20asc,"+courseDao.Table()+".title%20desc", nil))
 		require.NoError(t, err)
@@ -125,7 +125,7 @@ func TestTags_GetTags(t *testing.T) {
 		router := setup(t)
 
 		daos.NewTestBuilder(t).
-			Db(router.db).
+			Db(router.config.DbManager.DataDb).
 			Courses(1).
 			Tags([]string{"slightly", "light", "lighter", "highlight", "ghoul", "lightning", "delight"}).
 			Build()
@@ -192,7 +192,7 @@ func TestTags_GetTags(t *testing.T) {
 		// Case insensitive
 		// ----------------------------
 		daos.NewTestBuilder(t).
-			Db(router.db).
+			Db(router.config.DbManager.DataDb).
 			Courses(1).
 			Tags([]string{"Slight"}).
 			Build()
@@ -213,7 +213,7 @@ func TestTags_GetTags(t *testing.T) {
 		router := setup(t)
 
 		for _, tag := range test_tags {
-			require.Nil(t, daos.NewTagDao(router.db).Create(&models.Tag{Tag: tag}, nil))
+			require.Nil(t, daos.NewTagDao(router.config.DbManager.DataDb).Create(&models.Tag{Tag: tag}, nil))
 		}
 
 		// ----------------------------
@@ -260,7 +260,7 @@ func TestTags_GetTags(t *testing.T) {
 		router := setup(t)
 
 		// Drop the courses table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/", nil))
@@ -275,7 +275,7 @@ func TestTags_GetTag(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(3).Tags([]string{"Go", "PHP"}).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(3).Tags([]string{"Go", "PHP"}).Build()
 
 		// By ID
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/"+testData[1].Tags[1].TagId, nil))
@@ -325,7 +325,7 @@ func TestTags_GetTag(t *testing.T) {
 	t.Run("500 (internal error)", func(t *testing.T) {
 		router := setup(t)
 
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/test", nil))
@@ -402,7 +402,7 @@ func TestTags_CreateTag(t *testing.T) {
 		router := setup(t)
 
 		// Drop the courses table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{"tag": "test"}`))
@@ -421,9 +421,9 @@ func TestTags_UpdateTag(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Tags([]string{"Go", "PHP"}).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Tags([]string{"Go", "PHP"}).Build()
 
-		tagDao := daos.NewTagDao(router.db)
+		tagDao := daos.NewTagDao(router.config.DbManager.DataDb)
 
 		goTag, err := tagDao.Get(testData[0].Tags[0].TagId, false, nil, nil)
 		require.Nil(t, err)
@@ -476,9 +476,9 @@ func TestTags_UpdateTag(t *testing.T) {
 	t.Run("400 (duplicate)", func(t *testing.T) {
 		router := setup(t)
 
-		testData := daos.NewTestBuilder(t).Db(router.db).Courses(1).Tags([]string{"Go", "PHP"}).Build()
+		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Tags([]string{"Go", "PHP"}).Build()
 
-		tagDao := daos.NewTagDao(router.db)
+		tagDao := daos.NewTagDao(router.config.DbManager.DataDb)
 
 		tag, err := tagDao.Get(testData[0].Tags[0].TagId, false, nil, nil)
 		require.Nil(t, err)
@@ -503,7 +503,7 @@ func TestTags_UpdateTag(t *testing.T) {
 		router := setup(t)
 
 		// Drop the table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodPut, "/api/tags/test", strings.NewReader(`{"id": "1234567"}`))
@@ -524,11 +524,11 @@ func TestTags_DeleteTag(t *testing.T) {
 		tags := []*models.Tag{}
 		for _, taggy := range test_tags {
 			tag := &models.Tag{Tag: taggy}
-			require.Nil(t, daos.NewTagDao(router.db).Create(tag, nil))
+			require.Nil(t, daos.NewTagDao(router.config.DbManager.DataDb).Create(tag, nil))
 			tags = append(tags, tag)
 		}
 
-		tagsDao := daos.NewTagDao(router.db)
+		tagsDao := daos.NewTagDao(router.config.DbManager.DataDb)
 
 		// ----------------------------
 		// Delete tag 3
@@ -537,7 +537,7 @@ func TestTags_DeleteTag(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNoContent, status)
 
-		result, err := tagsDao.List(&database.DatabaseParams{Where: squirrel.Eq{daos.NewTagDao(router.db).Table() + ".id": tags[2].ID}}, nil)
+		result, err := tagsDao.List(&database.DatabaseParams{Where: squirrel.Eq{daos.NewTagDao(router.config.DbManager.DataDb).Table() + ".id": tags[2].ID}}, nil)
 		require.Nil(t, err)
 		require.Zero(t, len(result))
 
@@ -572,7 +572,7 @@ func TestTags_DeleteTag(t *testing.T) {
 		router := setup(t)
 
 		// Drop the table
-		_, err := router.db.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(router.db).Table())
+		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
 		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodDelete, "/api/tags/test", nil))
