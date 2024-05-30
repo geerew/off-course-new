@@ -50,6 +50,8 @@ type PathContents struct {
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// SetLogger sets the logger for the filesystem
 func (appFs *AppFs) SetLogger(l *slog.Logger) {
 	appFs.logger = l
 }

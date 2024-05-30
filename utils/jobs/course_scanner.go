@@ -162,22 +162,21 @@ func (cs *CourseScanner) Worker(processor CourseScannerProcessorFn, processingDo
 			}
 
 			// Cleanup
-			if job != nil {
-				if err := cs.scanDao.Delete(&database.DatabaseParams{Where: sq.Eq{"id": job.ID}}, nil); err != nil {
-					cs.logger.Error(
-						"Failed to delete scan job",
-						loggerType,
-						slog.String("error", err.Error()),
-						slog.String("job", job.ID),
-					)
+			if err := cs.scanDao.Delete(&database.DatabaseParams{Where: sq.Eq{"id": job.ID}}, nil); err != nil {
+				cs.logger.Error(
+					"Failed to delete scan job",
+					loggerType,
+					slog.String("error", err.Error()),
+					slog.String("job", job.ID),
+				)
 
-					if processingDone != nil {
-						processingDone <- true
-					}
-
-					break
+				if processingDone != nil {
+					processingDone <- true
 				}
+
+				break
 			}
+
 		}
 	}
 }

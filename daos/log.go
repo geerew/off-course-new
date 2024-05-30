@@ -10,7 +10,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// LogDao is the data access object for assets
+// LogDao is the data access object for logs
 type LogDao struct {
 	db    database.Database
 	table string
@@ -18,7 +18,7 @@ type LogDao struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// NewAssetDao returns a new AssetDao
+// NewLogDao returns a new LogDao
 func NewLogDao(db database.Database) *LogDao {
 	return &LogDao{
 		db:    db,
@@ -43,7 +43,7 @@ func (dao *LogDao) Count(params *database.DatabaseParams) (int, error) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Create inserts a new asset
+// Write inserts a new log
 func (dao *LogDao) Write(l *models.Log, tx *sql.Tx) error {
 	if l.ID == "" {
 		l.RefreshId()
@@ -172,7 +172,7 @@ func (dao *LogDao) data(a *models.Log) map[string]any {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// scanRow scans an asset row
+// scanRow scans a log row
 func (dao *LogDao) scanRow(scannable Scannable) (*models.Log, error) {
 	var l models.Log
 
