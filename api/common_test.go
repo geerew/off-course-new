@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"sync"
 	"testing"
 
 	"github.com/geerew/off-course/database"
@@ -16,10 +17,19 @@ import (
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-func setup(t *testing.T) *Router {
-	appFs := appFs.NewAppFs(afero.NewMemMapFs())
 
-	dbManager, err := database.NewDBManager(&database.DatabaseConfig{
+func setup(t *testing.T) *Router {
+	// Logger
+	var logs []*logger.Log
+	var logsMux sync.Mutex
+	loggy, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
+	require.NoError(t, err, "Failed to initialize logger")
+
+	// Filesystem
+	appFs := appFs.NewAppFs(afero.NewMemMapFs(), loggy)
+
+	// DB
+	dbManager, err := database.NewSqliteDBManager(&database.DatabaseConfig{
 		IsDebug:  false,
 		DataDir:  "./oc_data",
 		AppFs:    appFs,
@@ -29,14 +39,14 @@ func setup(t *testing.T) *Router {
 	require.Nil(t, err)
 	require.NotNil(t, dbManager)
 
+	// Course scanner
 	courseScanner := jobs.NewCourseScanner(&jobs.CourseScannerConfig{
-		Db:    dbManager.DataDb,
-		AppFs: appFs,
+		Db:     dbManager.DataDb,
+		AppFs:  appFs,
+		Logger: loggy,
 	})
 
-	loggy, err := logger.InitLogger(logger.BasicWriteFn())
-	require.NoError(t, err, "Failed to initialize logger")
-
+	// Router
 	config := &RouterConfig{
 		DbManager:     dbManager,
 		AppFs:         appFs,

@@ -1,13 +1,12 @@
 package daos
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/utils/appFs"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"github.com/rzajac/zltest"
+	"github.com/geerew/off-course/utils/logger"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
@@ -15,12 +14,17 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func setup(t *testing.T) *database.DatabaseManager {
-	loggerHook := zltest.New(t)
-	log.Logger = zerolog.New(loggerHook).Level(zerolog.DebugLevel)
+	// Logger
+	var logs []*logger.Log
+	var logsMux sync.Mutex
+	loggy, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
+	require.NoError(t, err, "Failed to initialize logger")
 
-	appFs := appFs.NewAppFs(afero.NewMemMapFs())
+	// Filesystem
+	appFs := appFs.NewAppFs(afero.NewMemMapFs(), loggy)
 
-	dbManager, err := database.NewDBManager(&database.DatabaseConfig{
+	// DB
+	dbManager, err := database.NewSqliteDBManager(&database.DatabaseConfig{
 		IsDebug:  false,
 		DataDir:  "./oc_data",
 		AppFs:    appFs,

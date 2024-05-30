@@ -100,11 +100,11 @@ func TestAttachment_Create(t *testing.T) {
 
 		// Create the asset
 		assetDao := NewAssetDao(db)
-		err := assetDao.Create(testData[0].Assets[0])
+		err := assetDao.Create(testData[0].Assets[0], nil)
 		require.Nil(t, err)
 
 		// Create the attachment
-		err = dao.Create(testData[0].Assets[0].Attachments[0])
+		err = dao.Create(testData[0].Assets[0].Attachments[0], nil)
 		require.Nil(t, err)
 
 		newA, err := dao.Get(testData[0].Assets[0].Attachments[0].ID, nil)
@@ -124,7 +124,7 @@ func TestAttachment_Create(t *testing.T) {
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Attachments(1).Build()
 
 		// Create the attachment (again)
-		err := dao.Create(testData[0].Assets[0].Attachments[0])
+		err := dao.Create(testData[0].Assets[0].Attachments[0], nil)
 		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.path", dao.Table()))
 	})
 
@@ -135,45 +135,45 @@ func TestAttachment_Create(t *testing.T) {
 
 		// No course ID
 		attachment := &models.Attachment{}
-		require.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table()))
+		require.ErrorContains(t, dao.Create(attachment, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table()))
 		attachment.CourseID = ""
-		require.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table()))
+		require.ErrorContains(t, dao.Create(attachment, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table()))
 		attachment.CourseID = "1234"
 
 		// No asset ID
-		require.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", dao.Table()))
+		require.ErrorContains(t, dao.Create(attachment, nil), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", dao.Table()))
 		attachment.AssetID = ""
-		require.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", dao.Table()))
+		require.ErrorContains(t, dao.Create(attachment, nil), fmt.Sprintf("NOT NULL constraint failed: %s.asset_id", dao.Table()))
 		attachment.AssetID = "1234"
 
 		// No title
-		require.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table()))
+		require.ErrorContains(t, dao.Create(attachment, nil), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table()))
 		attachment.Title = ""
-		require.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table()))
+		require.ErrorContains(t, dao.Create(attachment, nil), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table()))
 		attachment.Title = "Course 1"
 
 		// No path
-		require.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
+		require.ErrorContains(t, dao.Create(attachment, nil), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
 		attachment.Path = ""
-		require.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
+		require.ErrorContains(t, dao.Create(attachment, nil), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
 		attachment.Path = "/course 1/01 attachment"
 
 		// No md5
-		require.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
+		require.ErrorContains(t, dao.Create(attachment, nil), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
 		attachment.Md5 = ""
-		require.ErrorContains(t, dao.Create(attachment), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
+		require.ErrorContains(t, dao.Create(attachment, nil), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
 		attachment.Md5 = "1234"
 
 		// Invalid course ID
-		require.ErrorContains(t, dao.Create(attachment), "FOREIGN KEY constraint failed")
+		require.ErrorContains(t, dao.Create(attachment, nil), "FOREIGN KEY constraint failed")
 		attachment.CourseID = testData[0].ID
 
 		// Invalid asset ID
-		require.ErrorContains(t, dao.Create(attachment), "FOREIGN KEY constraint failed")
+		require.ErrorContains(t, dao.Create(attachment, nil), "FOREIGN KEY constraint failed")
 		attachment.AssetID = testData[0].Assets[0].ID
 
 		// Success
-		require.Nil(t, dao.Create(attachment))
+		require.Nil(t, dao.Create(attachment, nil))
 	})
 }
 

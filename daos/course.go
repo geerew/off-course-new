@@ -155,7 +155,7 @@ func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mo
 // Update updates a course
 //
 // Note: Only `card_path` and `available` can be updated
-func (dao *CourseDao) Update(course *models.Course) error {
+func (dao *CourseDao) Update(course *models.Course, tx *sql.Tx) error {
 	if course.ID == "" {
 		return ErrEmptyId
 	}
@@ -171,7 +171,12 @@ func (dao *CourseDao) Update(course *models.Course) error {
 		Where("id = ?", course.ID).
 		ToSql()
 
-	_, err := dao.db.Exec(query, args...)
+	execFn := dao.db.Exec
+	if tx != nil {
+		execFn = tx.Exec
+	}
+
+	_, err := execFn(query, args...)
 	return err
 }
 

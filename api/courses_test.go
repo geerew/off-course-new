@@ -75,10 +75,10 @@ func TestCourses_GetCourses(t *testing.T) {
 		// Several available
 		// ----------------------------
 		testData[0].Available = true
-		require.Nil(t, courseDao.Update(testData[0].Course))
+		require.Nil(t, courseDao.Update(testData[0].Course, nil))
 
 		testData[2].Available = true
-		require.Nil(t, courseDao.Update(testData[2].Course))
+		require.Nil(t, courseDao.Update(testData[2].Course, nil))
 
 		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/?orderBy=created_at%20asc", nil))
 		require.NoError(t, err)
@@ -452,7 +452,7 @@ func TestCourses_GetCourse(t *testing.T) {
 		// ----------------------------
 		courseDao := daos.NewCourseDao(router.config.DbManager.DataDb)
 		testData[2].Available = true
-		require.Nil(t, courseDao.Update(testData[2].Course))
+		require.Nil(t, courseDao.Update(testData[2].Course, nil))
 
 		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[2].ID, nil))
 		require.NoError(t, err)
@@ -695,7 +695,7 @@ func TestCourses_GetCard(t *testing.T) {
 
 		// Update card path
 		testData[0].CardPath = "/" + testData[0].Path + "/card.png"
-		require.Nil(t, courseDao.Update(testData[0].Course))
+		require.Nil(t, courseDao.Update(testData[0].Course, nil))
 
 		// Create
 		router.config.AppFs.Fs.MkdirAll("/"+testData[0].Path, os.ModePerm)
@@ -735,7 +735,7 @@ func TestCourses_GetCard(t *testing.T) {
 
 		// Update card path
 		testData[0].CardPath = "/" + testData[0].Path + "/card.png"
-		require.Nil(t, courseDao.Update(testData[0].Course))
+		require.Nil(t, courseDao.Update(testData[0].Course, nil))
 
 		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/courses/"+testData[0].ID+"/card", nil))
 		require.NoError(t, err)

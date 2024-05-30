@@ -8,8 +8,6 @@ import (
 	"reflect"
 	"strconv"
 	"time"
-
-	"github.com/rs/zerolog/log"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -101,29 +99,28 @@ func EncodeString(p string) string {
 //
 // The function uses maps to optimize lookup operations and determine differences between the
 // slices.
-func DiffStructs[T any](left, right []T, key string) ([]T, []T) {
+func DiffStructs[T any](left, right []T, key string) ([]T, []T, error) {
 	leftDiff := []T{}
 	rightDiff := []T{}
 
 	// Check if the slices contain structs or pointers to structs
 	if len(left) > 0 && !IsStructWithKey(left[0], key) || len(right) > 0 && !IsStructWithKey(right[0], key) {
-		log.Error().Msg("invalid struct or invalid key")
-		return nil, nil
+		return nil, nil, fmt.Errorf("invalid struct or key")
 	}
 
 	// Both are empty
 	if len(left) == 0 && len(right) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	// Left is empty, return right
 	if len(left) == 0 {
-		return nil, right
+		return nil, right, nil
 	}
 
 	// Right is empty, return left
 	if len(right) == 0 {
-		return left, nil
+		return left, nil, nil
 	}
 
 	leftMap := make(map[string]T)
@@ -157,7 +154,7 @@ func DiffStructs[T any](left, right []T, key string) ([]T, []T) {
 		}
 	}
 
-	return leftDiff, rightDiff
+	return leftDiff, rightDiff, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

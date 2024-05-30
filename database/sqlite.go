@@ -11,8 +11,8 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// SQLiteDB defines an sqlite database
-type SQLiteDB struct {
+// SqliteDb defines an sqlite database
+type SqliteDb struct {
 	DB     *sql.DB
 	config *DatabaseConfig
 }
@@ -20,8 +20,8 @@ type SQLiteDB struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // NewSqliteDB creates a new SqliteDb
-func NewSqliteDB(config *DatabaseConfig) (*SQLiteDB, error) {
-	sqliteDB := &SQLiteDB{
+func NewSqliteDB(config *DatabaseConfig) (*SqliteDb, error) {
+	sqliteDB := &SqliteDb{
 		config: config,
 	}
 
@@ -41,7 +41,7 @@ func NewSqliteDB(config *DatabaseConfig) (*SQLiteDB, error) {
 // Query executes a query that returns rows, typically a SELECT statement
 //
 // It implements the Database interface
-func (db *SQLiteDB) Query(query string, args ...interface{}) (*sql.Rows, error) {
+func (db *SqliteDb) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	return db.DB.Query(query, args...)
 }
 
@@ -50,7 +50,7 @@ func (db *SQLiteDB) Query(query string, args ...interface{}) (*sql.Rows, error) 
 // QueryRow executes a query that is expected to return at most one row
 //
 // It implements the Database interface
-func (db *SQLiteDB) QueryRow(query string, args ...interface{}) *sql.Row {
+func (db *SqliteDb) QueryRow(query string, args ...interface{}) *sql.Row {
 	return db.DB.QueryRow(query, args...)
 }
 
@@ -59,7 +59,7 @@ func (db *SQLiteDB) QueryRow(query string, args ...interface{}) *sql.Row {
 // Exec executes a query without returning any rows
 //
 // It implements the Database interface
-func (db *SQLiteDB) Exec(query string, args ...interface{}) (sql.Result, error) {
+func (db *SqliteDb) Exec(query string, args ...interface{}) (sql.Result, error) {
 	return db.DB.Exec(query, args...)
 }
 
@@ -68,7 +68,7 @@ func (db *SQLiteDB) Exec(query string, args ...interface{}) (sql.Result, error) 
 // Begin starts a new transaction
 //
 // It implements the Database interface
-func (db *SQLiteDB) Begin(opts *sql.TxOptions) (*sql.Tx, error) {
+func (db *SqliteDb) Begin(opts *sql.TxOptions) (*sql.Tx, error) {
 	return db.DB.Begin()
 }
 
@@ -77,7 +77,7 @@ func (db *SQLiteDB) Begin(opts *sql.TxOptions) (*sql.Tx, error) {
 // RunInTransaction runs a function in a transaction
 //
 // It implements the Database interface
-func (db *SQLiteDB) RunInTransaction(txFunc func(*sql.Tx) error) error {
+func (db *SqliteDb) RunInTransaction(txFunc func(*sql.Tx) error) error {
 	tx, err := db.DB.Begin()
 	if err != nil {
 		return err
@@ -94,13 +94,14 @@ func (db *SQLiteDB) RunInTransaction(txFunc func(*sql.Tx) error) error {
 		}
 	}()
 
-	return txFunc(tx)
+	err = txFunc(tx)
+	return err
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // bootstrap initializes the sqlite database connect and sets db.DB
-func (db *SQLiteDB) bootstrap() error {
+func (db *SqliteDb) bootstrap() error {
 	if err := db.config.AppFs.Fs.MkdirAll(db.config.DataDir, os.ModePerm); err != nil {
 		return err
 	}
@@ -131,7 +132,7 @@ func (db *SQLiteDB) bootstrap() error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // migrate runs the goose migrations
-func (db *SQLiteDB) migrate() error {
+func (db *SqliteDb) migrate() error {
 	goose.SetLogger(goose.NopLogger())
 
 	goose.SetBaseFS(migrations.EmbedMigrations)
@@ -150,7 +151,7 @@ func (db *SQLiteDB) migrate() error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // setPragma sets the default PRAGMA values for the DB
-func (db *SQLiteDB) setPragma() error {
+func (db *SqliteDb) setPragma() error {
 	// Note: busy_timeout needs to be set BEFORE journal_mode
 	_, err := db.Exec(`
 	PRAGMA busy_timeout       = 10000;

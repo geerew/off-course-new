@@ -90,8 +90,8 @@ type DatabaseConfig struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// NewDBManager returns a new DBManager
-func NewDBManager(config *DatabaseConfig) (*DatabaseManager, error) {
+// NewSqliteDBManager returns a new DatabaseManager
+func NewSqliteDBManager(config *DatabaseConfig) (*DatabaseManager, error) {
 	manager := &DatabaseManager{}
 
 	dataConfig := &DatabaseConfig{

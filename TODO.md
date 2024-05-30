@@ -4,6 +4,7 @@ TODO
 - [x] Use await
 - [x] Tidy Loading component
 - [ ] on scan, have a minimum 'load' of 1 second to stop flickering
+- [ ] Every DAO should support tx
 
 ## Page -> Settings -> Tags
 
@@ -30,7 +31,7 @@ TODO
 ## Backend -> logs
 
 - [x] Add a separate logs DB
-- [ ] Update all logs (remove zerolog)
+- [x] Update all logs (remove zerolog)
 - [ ] Support removing logs after n days
 
 ## Page -> Settings -> Logs

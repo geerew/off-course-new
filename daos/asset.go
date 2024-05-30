@@ -45,7 +45,7 @@ func (dao *AssetDao) Count(params *database.DatabaseParams) (int, error) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Create inserts a new asset
-func (dao *AssetDao) Create(a *models.Asset) error {
+func (dao *AssetDao) Create(a *models.Asset, tx *sql.Tx) error {
 	if a.Prefix.Valid && a.Prefix.Int16 < 0 {
 		return ErrInvalidPrefix
 	}
@@ -63,7 +63,12 @@ func (dao *AssetDao) Create(a *models.Asset) error {
 		SetMap(dao.data(a)).
 		ToSql()
 
-	_, err := dao.db.Exec(query, args...)
+	execFn := dao.db.Exec
+	if tx != nil {
+		execFn = tx.Exec
+	}
+
+	_, err := execFn(query, args...)
 
 	return err
 }

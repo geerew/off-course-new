@@ -4,9 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"github.com/rzajac/zltest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -74,10 +71,6 @@ func Test_EncodeString(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func Test_DiffStructs(t *testing.T) {
-	// Set test logger
-	loggerHook := zltest.New(t)
-	log.Logger = zerolog.New(loggerHook)
-
 	// Struct for testing
 	type testStruct struct {
 		ID    int
@@ -85,31 +78,29 @@ func Test_DiffStructs(t *testing.T) {
 	}
 
 	t.Run("not a struct empty", func(t *testing.T) {
-		leftDiff, rightDiff := DiffStructs([]string{"left"}, []string{"right"}, "")
+		leftDiff, rightDiff, err := DiffStructs([]string{"left"}, []string{"right"}, "")
+
+		require.Error(t, err)
+		require.EqualError(t, err, "invalid struct or key")
 		require.Nil(t, leftDiff)
 		require.Nil(t, rightDiff)
-
-		loggerHook.LastEntry().ExpMsg("invalid struct or invalid key")
-		loggerHook.LastEntry().ExpLevel(zerolog.ErrorLevel)
-		loggerHook.Reset()
 	})
 
 	t.Run("invalid key", func(t *testing.T) {
-		leftDiff, rightDiff := DiffStructs(
+		leftDiff, rightDiff, err := DiffStructs(
 			[]testStruct{{ID: 0, Title: "Test"}},
 			[]testStruct{{ID: 0, Title: "Test"}},
 			"Name")
 
+		require.Error(t, err)
+		require.EqualError(t, err, "invalid struct or key")
 		require.Nil(t, leftDiff)
 		require.Nil(t, rightDiff)
-
-		loggerHook.LastEntry().ExpMsg("invalid struct or invalid key")
-		loggerHook.LastEntry().ExpLevel(zerolog.ErrorLevel)
-		loggerHook.Reset()
 	})
 
 	t.Run("both empty", func(t *testing.T) {
-		leftDiff, rightDiff := DiffStructs[testStruct](nil, nil, "")
+		leftDiff, rightDiff, err := DiffStructs[testStruct](nil, nil, "")
+		require.Nil(t, err)
 		require.Nil(t, leftDiff)
 		require.Nil(t, rightDiff)
 	})
@@ -121,7 +112,8 @@ func Test_DiffStructs(t *testing.T) {
 			right = append(right, &testStruct{ID: i, Title: "Test"})
 		}
 
-		leftDiff, rightDiff := DiffStructs(nil, right, "ID")
+		leftDiff, rightDiff, err := DiffStructs(nil, right, "ID")
+		require.Nil(t, err)
 		require.Empty(t, leftDiff)
 		require.Len(t, rightDiff, 5)
 	})
@@ -133,7 +125,8 @@ func Test_DiffStructs(t *testing.T) {
 			left = append(left, &testStruct{ID: i, Title: "Test"})
 		}
 
-		leftDiff, rightDiff := DiffStructs(left, nil, "ID")
+		leftDiff, rightDiff, err := DiffStructs(left, nil, "ID")
+		require.Nil(t, err)
 		require.Len(t, leftDiff, 5)
 		require.Empty(t, rightDiff)
 	})
@@ -147,7 +140,8 @@ func Test_DiffStructs(t *testing.T) {
 			right = append(right, &testStruct{ID: i, Title: "Test"})
 		}
 
-		leftDiff, rightDiff := DiffStructs(left, right, "ID")
+		leftDiff, rightDiff, err := DiffStructs(left, right, "ID")
+		require.Nil(t, err)
 		require.Empty(t, leftDiff)
 		require.Empty(t, rightDiff)
 	})
@@ -161,7 +155,8 @@ func Test_DiffStructs(t *testing.T) {
 			right = append(right, &testStruct{ID: i + 5, Title: "Test"})
 		}
 
-		leftDiff, rightDiff := DiffStructs(left, right, "ID")
+		leftDiff, rightDiff, err := DiffStructs(left, right, "ID")
+		require.Nil(t, err)
 		require.Len(t, leftDiff, 5)
 		require.Len(t, rightDiff, 5)
 	})
@@ -181,7 +176,8 @@ func Test_DiffStructs(t *testing.T) {
 		// Give right 1 from left. This means left now only has 4 that right does not have
 		right = append(right, left[0])
 
-		leftDiff, rightDiff := DiffStructs(left, right, "ID")
+		leftDiff, rightDiff, err := DiffStructs(left, right, "ID")
+		require.Nil(t, err)
 		require.Len(t, leftDiff, 4)
 		require.Len(t, rightDiff, 3)
 	})
@@ -198,13 +194,15 @@ func Test_DiffStructs(t *testing.T) {
 		// Give left 1 extra
 		left = append(left, &testStruct{ID: 5, Title: "Test"})
 
-		leftDiff, rightDiff := DiffStructs(left, right, "ID")
+		leftDiff, rightDiff, err := DiffStructs(left, right, "ID")
+		require.Nil(t, err)
 		require.Len(t, leftDiff, 1)
 		require.Zero(t, len(rightDiff))
 
 		// Give right 1 extra (plus the new left one)
 		right = append(right, left[len(left)-1], &testStruct{ID: 6, Title: "Test"})
-		leftDiff, rightDiff = DiffStructs(left, right, "ID")
+		leftDiff, rightDiff, err = DiffStructs(left, right, "ID")
+		require.Nil(t, err)
 		require.Zero(t, len(leftDiff))
 		require.Len(t, rightDiff, 1)
 	})

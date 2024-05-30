@@ -395,7 +395,7 @@ func TestAssets_ServeAsset(t *testing.T) {
 		assetsDao := daos.NewAssetDao(router.config.DbManager.DataDb)
 
 		require.Nil(t, coursesDao.Create(testData[0].Course))
-		require.Nil(t, assetsDao.Create(testData[0].Assets[0]))
+		require.Nil(t, assetsDao.Create(testData[0].Assets[0], nil))
 
 		// Create asset
 		require.Nil(t, router.config.AppFs.Fs.MkdirAll(filepath.Dir(testData[0].Assets[0].Path), os.ModePerm))

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -17,16 +18,26 @@ import (
 	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/types"
-	"github.com/rs/zerolog/log"
 )
+
+var (
+	loggerType = slog.String("type", "course_scanner")
+)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// CourseScannerProcessorFn is a function that processes a course scan job
+type CourseScannerProcessorFn func(*CourseScanner, *models.Scan) error
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // CourseScanner scans a course and finds assets and attachments
 type CourseScanner struct {
-	appFs     *appFs.AppFs
+	appFs  *appFs.AppFs
+	db     database.Database
+	logger *slog.Logger
+
 	jobSignal chan bool
-	finished  bool
 
 	// Required DAOs
 	courseDao     *daos.CourseDao
@@ -39,8 +50,9 @@ type CourseScanner struct {
 
 // CourseScannerConfig is the config for a CourseScanner
 type CourseScannerConfig struct {
-	Db    database.Database
-	AppFs *appFs.AppFs
+	Db     database.Database
+	AppFs  *appFs.AppFs
+	Logger *slog.Logger
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -48,13 +60,14 @@ type CourseScannerConfig struct {
 // NewCourseScanner creates a new CourseScanner
 func NewCourseScanner(config *CourseScannerConfig) *CourseScanner {
 	return &CourseScanner{
+		appFs:         config.AppFs,
+		db:            config.Db,
+		logger:        config.Logger,
+		jobSignal:     make(chan bool, 1),
 		courseDao:     daos.NewCourseDao(config.Db),
 		scanDao:       daos.NewScanDao(config.Db),
 		assetDao:      daos.NewAssetDao(config.Db),
 		attachmentDao: daos.NewAttachmentDao(config.Db),
-		appFs:         config.AppFs,
-		jobSignal:     make(chan bool, 1),
-		finished:      false,
 	}
 }
 
@@ -62,7 +75,6 @@ func NewCourseScanner(config *CourseScannerConfig) *CourseScanner {
 
 // Add inserts a course scan job into the db
 func (cs *CourseScanner) Add(courseId string) (*models.Scan, error) {
-
 	// Check if the course exists
 	course, err := cs.courseDao.Get(courseId, nil, nil)
 	if err != nil {
@@ -71,7 +83,11 @@ func (cs *CourseScanner) Add(courseId string) (*models.Scan, error) {
 
 	// Do nothing when a scan job is already in progress
 	if course.ScanStatus != "" {
-		log.Debug().Str("path", course.Path).Msg("scan already in progress")
+		cs.logger.Debug(
+			"Scan already in progress",
+			loggerType,
+			slog.String("path", course.Path),
+		)
 		return nil, nil
 	}
 
@@ -87,7 +103,11 @@ func (cs *CourseScanner) Add(courseId string) (*models.Scan, error) {
 	default:
 	}
 
-	log.Info().Str("path", course.Path).Msg("added scan job")
+	cs.logger.Info(
+		"Added scan job",
+		loggerType,
+		slog.String("path", course.Path),
+	)
 
 	return scan, nil
 }
@@ -95,35 +115,68 @@ func (cs *CourseScanner) Add(courseId string) (*models.Scan, error) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Worker processes jobs out of the DB sequentially
-func (cs *CourseScanner) Worker(processor func(*CourseScanner, *models.Scan) error) {
-	log.Info().Msg("Started course scanner worker")
+func (cs *CourseScanner) Worker(processor CourseScannerProcessorFn, processingDone chan bool) {
+	cs.logger.Debug("Started course scanner worker", loggerType)
 
 	for {
 		<-cs.jobSignal
 		for {
 			// Get the next scan
-			nextScan, err := cs.scanDao.Next()
+			job, err := cs.scanDao.Next()
 			if err != nil {
-				log.Error().Err(err).Msg("error looking up next scan job")
-				break
-			} else if nextScan == nil {
-				log.Info().Msg("finished processing all scan jobs")
+				cs.logger.Error(
+					"Failed to look up next scan job",
+					loggerType,
+					slog.String("error", err.Error()),
+				)
+
+				if processingDone != nil {
+					processingDone <- true
+				}
+
 				break
 			}
 
-			log.Info().Str("job", nextScan.ID).Str("path", nextScan.CoursePath).Msg("processing scan job")
+			if job == nil {
+				if processingDone != nil {
+					processingDone <- true
+				}
+				cs.logger.Debug("Finished processing all jobs", loggerType)
+				break
+			}
 
-			err = processor(cs, nextScan)
+			cs.logger.Info(
+				"Processing scan job",
+				loggerType,
+				slog.String("job", job.ID),
+				slog.String("path", job.CoursePath),
+			)
+
+			// Process the job
+			err = processor(cs, job)
 			if err != nil {
-				log.Error().Str("job", nextScan.ID).Err(err).Msg("error processing scan job")
-			} else {
-				log.Info().Str("job", nextScan.ID).Str("path", nextScan.CoursePath).Msg("finished processing scan job")
+				cs.logger.Error(
+					"Failed to process scan job",
+					slog.String("error", err.Error()),
+				)
 			}
 
 			// Cleanup
-			if err := cs.scanDao.Delete(&database.DatabaseParams{Where: sq.Eq{"id": nextScan.ID}}, nil); err != nil {
-				log.Error().Str("job", nextScan.ID).Err(err).Msg("error deleting scan job")
-				break
+			if job != nil {
+				if err := cs.scanDao.Delete(&database.DatabaseParams{Where: sq.Eq{"id": job.ID}}, nil); err != nil {
+					cs.logger.Error(
+						"Failed to delete scan job",
+						loggerType,
+						slog.String("error", err.Error()),
+						slog.String("job", job.ID),
+					)
+
+					if processingDone != nil {
+						processingDone <- true
+					}
+
+					break
+				}
 			}
 		}
 	}
@@ -131,6 +184,7 @@ func (cs *CourseScanner) Worker(processor func(*CourseScanner, *models.Scan) err
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// assetMap and attachmentMap are maps to hold encountered assets and attachments
 type assetMap map[string]map[int]*models.Asset
 type attachmentMap map[string]map[int][]*models.Attachment
 
@@ -145,7 +199,17 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 	// Get the course for this scan
 	course, err := cs.courseDao.Get(scan.CourseID, nil, nil)
 	if err != nil {
-		log.Debug().Str("course", scan.CourseID).Msg("ignoring scan job as the course no longer exists")
+		// If the course does not exist, we can ignore this job
+		if err == sql.ErrNoRows {
+			cs.logger.Debug(
+				"Ignoring scan job as the course no longer exists",
+				loggerType,
+				slog.String("path", scan.CoursePath),
+			)
+
+			return nil
+		}
+
 		return err
 	}
 
@@ -154,17 +218,21 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 	_, err = cs.appFs.Fs.Stat(course.Path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Debug().Str("path", course.Path).Msg("ignoring scan job as the course path does not exist")
+			cs.logger.Debug(
+				"Ignoring scan job as the course path does not exist",
+				loggerType,
+				slog.String("path", scan.CoursePath),
+			)
 
 			if course.Available {
 				course.Available = false
-				err = cs.courseDao.Update(course)
+				err = cs.courseDao.Update(course, nil)
 				if err != nil {
 					return err
 				}
 			}
 
-			return errors.New("course unavailable")
+			return nil
 		}
 
 		return err
@@ -173,7 +241,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 	// If the course is currently marked as unavailable, set it as available
 	if !course.Available {
 		course.Available = true
-		err := cs.courseDao.Update(course)
+		err := cs.courseDao.Update(course, nil)
 		if err != nil {
 			return err
 		}
@@ -236,22 +304,26 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 		pfn := parseFileName(fileName)
 
 		if pfn == nil {
-			log.Debug().Str("file", filePath).Msg("ignoring file")
+			cs.logger.Debug(
+				"Ignoring file during scan job",
+				loggerType,
+				slog.String("path", scan.CoursePath),
+				slog.String("file", filePath),
+			)
+
 			continue
 		}
 
 		// Generate an MD5 hash for the file
 		file, err := cs.appFs.Fs.Open(filePath)
 		if err != nil {
-			log.Err(err).Str("file", filePath).Msg("error opening file")
-			continue
+			return err
 		}
 		defer file.Close()
 
 		hash := md5.New()
 		if _, err := io.Copy(hash, file); err != nil {
-			log.Err(err).Str("file", filePath).Msg("error hashing file")
-			continue
+			return err
 		}
 
 		md5 := string(hash.Sum(nil))
@@ -280,7 +352,13 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 					newAsset.Type.IsHTML() && existing.Type.IsPDF() {
 					// Asset -> Replace the existing asset with the new asset and set the existing
 					// asset as an attachment
-					log.Debug().Str("file", filePath).Str("existing path", existing.Path).Msg("replacing existing asset")
+
+					cs.logger.Debug(
+						"Replacing existing asset with new asset",
+						loggerType,
+						slog.String("path", scan.CoursePath),
+						slog.String("file", filePath),
+					)
 
 					assetsMap[chapter][pfn.prefix] = newAsset
 
@@ -313,50 +391,55 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 
 	course.CardPath = cardPath
 
-	// Convert the assets map to a slice
-	assets := make([]*models.Asset, 0, len(files))
-	for _, chapterMap := range assetsMap {
-		for _, asset := range chapterMap {
-			assets = append(assets, asset)
+	// Run in a transaction so it all commits, or it rolls back
+	err = cs.db.RunInTransaction(func(tx *sql.Tx) error {
+		// Convert the assets map to a slice
+		assets := make([]*models.Asset, 0, len(files))
+		for _, chapterMap := range assetsMap {
+			for _, asset := range chapterMap {
+				assets = append(assets, asset)
+			}
 		}
-	}
 
-	// Update the assets in DB
-	if len(assets) > 0 {
-		err = updateAssets(cs.assetDao, course.ID, assets)
-		if err != nil {
-			return err
+		// Update the assets in DB
+		if len(assets) > 0 {
+			err = updateAssets(cs.assetDao, tx, course.ID, assets)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	// Convert the attachments map to a slice
-	attachments := []*models.Attachment{}
-	for chapter, attachmentMap := range attachmentsMap {
-		for prefix, potentialAttachments := range attachmentMap {
-			// Only add attachments when there is an assert
-			if asset, exists := assetsMap[chapter][prefix]; exists {
-				for _, attachment := range potentialAttachments {
-					attachment.AssetID = asset.ID
-					attachments = append(attachments, attachment)
+		// Convert the attachments map to a slice
+		attachments := []*models.Attachment{}
+		for chapter, attachmentMap := range attachmentsMap {
+			for prefix, potentialAttachments := range attachmentMap {
+				// Only add attachments when there is an assert
+				if asset, exists := assetsMap[chapter][prefix]; exists {
+					for _, attachment := range potentialAttachments {
+						attachment.AssetID = asset.ID
+						attachments = append(attachments, attachment)
+					}
 				}
 			}
 		}
-	}
 
-	// Update the attachments in DB
-	if len(attachments) > 0 {
-		err = updateAttachments(cs.attachmentDao, course.ID, attachments)
-		if err != nil {
+		// Update the attachments in DB
+		if len(attachments) > 0 {
+			err = updateAttachments(cs.attachmentDao, tx, course.ID, attachments)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Update the course (card_path, updated_at)
+		if err = cs.courseDao.Update(course, tx); err != nil {
 			return err
 		}
-	}
 
-	// Update the course (card_path, updated_at)
-	if err = cs.courseDao.Update(course); err != nil {
-		return err
-	}
+		return nil
+	})
 
-	return nil
+	return err
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -476,37 +559,36 @@ func isCard(fileName string) bool {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// updateAssets updates the assets in the DB, by comparing the assets found on disk to the assets
-// found in the DB. It will insert new assets and delete assets which no longer exist
-func updateAssets(assetDao *daos.AssetDao, courseId string, assets []*models.Asset) error {
-
+// updateAssets updates the assets in the DB (in a transaction), by comparing the assets found on disk
+// to the assets found in the DB. It will insert new assets and delete assets which no longer exist
+func updateAssets(assetDao *daos.AssetDao, tx *sql.Tx, courseId string, assets []*models.Asset) error {
 	// Get existing assets
 	dbParams := &database.DatabaseParams{
 		Where: sq.Eq{assetDao.Table() + ".course_id": courseId},
 	}
 
-	existingAssets, err := assetDao.List(dbParams, nil)
+	existingAssets, err := assetDao.List(dbParams, tx)
 	if err != nil {
 		return err
 	}
 
 	// Compare the assets found on disk to assets found in DB
-	toAdd, toDelete := utils.DiffStructs(assets, existingAssets, "Path")
+	toAdd, toDelete, err := utils.DiffStructs(assets, existingAssets, "Path")
+	if err != nil {
+		return err
+	}
 
 	// Add the missing assets
 	for _, asset := range toAdd {
-		err := assetDao.Create(asset)
-		if err != nil {
-			log.Err(err).Str("path", asset.Path).Msg("error creating asset")
+		if err := assetDao.Create(asset, tx); err != nil {
 			return err
 		}
 	}
 
 	// Delete the irrelevant assets
 	for _, asset := range toDelete {
-		err := assetDao.Delete(&database.DatabaseParams{Where: sq.Eq{"id": asset.ID}}, nil)
+		err := assetDao.Delete(&database.DatabaseParams{Where: sq.Eq{"id": asset.ID}}, tx)
 		if err != nil {
-			log.Err(err).Str("path", asset.Path).Msg("error deleting asset")
 			return err
 		}
 	}
@@ -531,38 +613,37 @@ func updateAssets(assetDao *daos.AssetDao, courseId string, assets []*models.Ass
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// updateAttachments updates the attachments in the DB, by comparing the attachments found on disk
-// to the attachments found in the DB. It will insert new attachments and delete attachments which
-// no longer exist
-func updateAttachments(attachmentDao *daos.AttachmentDao, courseId string, attachments []*models.Attachment) error {
-
+// updateAttachments updates the attachments in the DB (in a transaction), by comparing the attachments
+// found on disk to the attachments found in the DB. It will insert new attachments and delete attachments
+// which no longer exist
+func updateAttachments(attachmentDao *daos.AttachmentDao, tx *sql.Tx, courseId string, attachments []*models.Attachment) error {
 	// Get existing attachments
 	dbParams := &database.DatabaseParams{
 		Where: sq.Eq{attachmentDao.Table() + ".course_id": courseId},
 	}
 
-	existingAttachments, err := attachmentDao.List(dbParams, nil)
+	existingAttachments, err := attachmentDao.List(dbParams, tx)
 	if err != nil {
 		return err
 	}
 
 	// Compare the attachments found on disk to attachments found in DB
-	toAdd, toDelete := utils.DiffStructs(attachments, existingAttachments, "Path")
+	toAdd, toDelete, err := utils.DiffStructs(attachments, existingAttachments, "Path")
+	if err != nil {
+		return err
+	}
 
 	// Add the missing attachments
 	for _, attachment := range toAdd {
-		err := attachmentDao.Create(attachment)
-		if err != nil {
-			log.Err(err).Str("path", attachment.Path).Msg("error creating attachment")
+		if err := attachmentDao.Create(attachment, tx); err != nil {
 			return err
 		}
 	}
 
 	// Delete the irrelevant attachments
 	for _, attachment := range toDelete {
-		err := attachmentDao.Delete(&database.DatabaseParams{Where: sq.Eq{"id": attachment.ID}}, nil)
+		err := attachmentDao.Delete(&database.DatabaseParams{Where: sq.Eq{"id": attachment.ID}}, tx)
 		if err != nil {
-			log.Err(err).Str("path", attachment.Path).Msg("error deleting attachment")
 			return err
 		}
 	}

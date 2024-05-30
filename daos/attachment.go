@@ -44,7 +44,7 @@ func (dao *AttachmentDao) Count(params *database.DatabaseParams) (int, error) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Create inserts a new attachment
-func (dao *AttachmentDao) Create(a *models.Attachment) error {
+func (dao *AttachmentDao) Create(a *models.Attachment, tx *sql.Tx) error {
 	if a.ID == "" {
 		a.RefreshId()
 	}
@@ -58,7 +58,12 @@ func (dao *AttachmentDao) Create(a *models.Attachment) error {
 		SetMap(dao.data(a)).
 		ToSql()
 
-	_, err := dao.db.Exec(query, args...)
+	execFn := dao.db.Exec
+	if tx != nil {
+		execFn = tx.Exec
+	}
+
+	_, err := execFn(query, args...)
 
 	return err
 }

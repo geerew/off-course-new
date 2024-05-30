@@ -173,7 +173,7 @@ func TestCourse_Get(t *testing.T) {
 
 		// Set to started
 		testData[1].Available = true
-		require.Nil(t, dao.Update(testData[1].Course))
+		require.Nil(t, dao.Update(testData[1].Course, nil))
 
 		c, err = dao.Get(testData[1].ID, nil, nil)
 		require.Nil(t, err)
@@ -186,42 +186,6 @@ func TestCourse_Get(t *testing.T) {
 		require.True(t, c.StartedAt.IsZero())
 		require.Zero(t, c.Percent)
 		require.True(t, c.CompletedAt.IsZero())
-
-		// Get course progress
-		// cpDao := NewCourseProgressDao(db)
-		// origCp, err := cpDao.Get(testData[1].ID, nil)
-		// require.Nil(t, err)
-
-		// Update
-		// err = cpDao.Update(origCp)
-		// require.Nil(t, err)
-
-		// updatedCp, err :=  cpDao.Get(testData[1].ID, nil)
-		// require.Nil(t, err)
-		// require.True(t, updatedCp.Started)
-		// require.False(t, updatedCp.StartedAt.IsZero())
-
-		// 		// Set to started
-		// 		_, err = UpdateCourseProgressStarted(db, testData[1].ID, true)
-		// 		require.Nil(t, err)
-
-		// 		c, err = GetCourse(db, testData[1].ID)
-		// 		require.Nil(t, err)
-		// 		require.True(t, c.Started)
-		// 		require.False(t, c.StartedAt.IsZero())
-		// 		require.Zero(t, c.Percent)
-		// 		require.True(t, c.CompletedAt.IsZero())
-
-		// 		// Mark asset as completed (only 1 asset so the course will be 100%)
-		// 		_, err = UpdateAssetProgressCompleted(db, testData[1].Assets[0].ID, true)
-		// 		require.Nil(t, err)
-
-		// 		c, err = GetCourse(db, testData[1].ID)
-		// 		require.Nil(t, err)
-		// 		require.True(t, c.Started)
-		// 		require.False(t, c.StartedAt.IsZero())
-		// 		require.Equal(t, 100, c.Percent)
-		// 		require.False(t, c.CompletedAt.IsZero())
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -294,7 +258,7 @@ func TestCourse_List(t *testing.T) {
 
 		// Set course 1 as available
 		testData[0].Available = true
-		require.Nil(t, dao.Update(testData[0].Course))
+		require.Nil(t, dao.Update(testData[0].Course, nil))
 
 		// Find available courses
 		result, err = dao.List(&database.DatabaseParams{Where: squirrel.And{squirrel.Eq{dao.Table() + ".available": true}}}, nil)
@@ -500,7 +464,7 @@ func TestCourse_Update(t *testing.T) {
 
 		// Update the card path
 		testData[0].CardPath = "/path/to/card.jpg"
-		require.Nil(t, dao.Update(testData[0].Course))
+		require.Nil(t, dao.Update(testData[0].Course, nil))
 
 		c, err := dao.Get(testData[0].ID, nil, nil)
 		require.Nil(t, err)
@@ -515,7 +479,7 @@ func TestCourse_Update(t *testing.T) {
 
 		// Update the availability
 		testData[0].Available = true
-		require.Nil(t, dao.Update(testData[0].Course))
+		require.Nil(t, dao.Update(testData[0].Course, nil))
 
 		c, err := dao.Get(testData[0].ID, nil, nil)
 		require.Nil(t, err)
@@ -525,7 +489,7 @@ func TestCourse_Update(t *testing.T) {
 	t.Run("empty id", func(t *testing.T) {
 		dao, _ := courseSetup(t)
 
-		err := dao.Update(&models.Course{})
+		err := dao.Update(&models.Course{}, nil)
 		require.ErrorIs(t, err, ErrEmptyId)
 	})
 
@@ -534,7 +498,7 @@ func TestCourse_Update(t *testing.T) {
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 		testData[0].ID = "1234"
-		require.Nil(t, dao.Update(testData[0].Course))
+		require.Nil(t, dao.Update(testData[0].Course, nil))
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -545,7 +509,7 @@ func TestCourse_Update(t *testing.T) {
 
 		testData := NewTestBuilder(t).Courses(1).Build()
 
-		err = dao.Update(testData[0].Course)
+		err = dao.Update(testData[0].Course, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }

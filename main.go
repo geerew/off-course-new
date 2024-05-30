@@ -39,39 +39,42 @@ func main() {
 	flag.Parse()
 
 	// Create app filesystem
-	appFs := appFs.NewAppFs(afero.NewOsFs())
+	appFs := appFs.NewAppFs(afero.NewOsFs(), nil)
 
 	// Create the database manager, which will create the data/logs databases
-	dbManager, err := database.NewDBManager(&database.DatabaseConfig{
+	dbManager, err := database.NewSqliteDBManager(&database.DatabaseConfig{
 		IsDebug:  *isDebug,
 		DataDir:  "./oc_data",
 		AppFs:    appFs,
 		InMemory: false,
 	})
-
 	if err != nil {
 		log.Fatal("Failed to create database manager", err)
 	}
 
 	// Logger
-	logger, err := logger.InitLogger(loggerWriteFn(dbManager.LogsDb))
+	loggy, err := logger.InitLogger(loggerWriteFn(dbManager.LogsDb), 200)
 	if err != nil {
 		log.Fatal("Failed to initialize logger", err)
 	}
 
+	// Update the appFs logger
+	appFs.SetLogger(loggy)
+
 	// Course scanner
 	courseScanner := jobs.NewCourseScanner(&jobs.CourseScannerConfig{
-		Db:    dbManager.DataDb,
-		AppFs: appFs,
+		Db:     dbManager.DataDb,
+		AppFs:  appFs,
+		Logger: loggy,
 	})
 
 	// Start the worker (pass in the func that will process the job)
-	go courseScanner.Worker(jobs.CourseProcessor)
+	courseScanner.Worker(jobs.CourseProcessor, nil)
 
 	// Create router
 	router := api.New(&api.RouterConfig{
 		DbManager:     dbManager,
-		Logger:        logger,
+		Logger:        loggy,
 		AppFs:         appFs,
 		CourseScanner: courseScanner,
 		Port:          *port,
@@ -80,8 +83,8 @@ func main() {
 
 	// TODO: Handle this better...
 	c := cron.New()
-	go func() { updateCourseAvailability(dbManager.DataDb, logger) }()
-	c.AddFunc("@every 5m", func() { updateCourseAvailability(dbManager.DataDb, logger) })
+	go func() { updateCourseAvailability(dbManager.DataDb, loggy) }()
+	c.AddFunc("@every 5m", func() { updateCourseAvailability(dbManager.DataDb, loggy) })
 	c.Start()
 
 	var wg sync.WaitGroup
@@ -148,7 +151,7 @@ func updateCourseAvailability(db database.Database, logger *slog.Logger) error {
 			}
 
 			// Update the course's availability in the database
-			err = courseDao.Update(course)
+			err = courseDao.Update(course, nil)
 			if err != nil {
 				attrs := []any{
 					slog.String("type", "cron"),

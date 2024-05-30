@@ -100,7 +100,7 @@ func TestAsset_Create(t *testing.T) {
 		require.Nil(t, courseDao.Create(testData[0].Course))
 
 		// Create the asset
-		err := dao.Create(testData[0].Assets[0])
+		err := dao.Create(testData[0].Assets[0], nil)
 		require.Nil(t, err)
 
 		newA, err := dao.Get(testData[0].Assets[0].ID, nil, nil)
@@ -127,7 +127,7 @@ func TestAsset_Create(t *testing.T) {
 		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
 
 		// Create the asset (again)
-		err := dao.Create(testData[0].Assets[0])
+		err := dao.Create(testData[0].Assets[0], nil)
 		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.path", dao.Table()))
 	})
 
@@ -138,47 +138,47 @@ func TestAsset_Create(t *testing.T) {
 
 		// No course ID
 		asset := &models.Asset{}
-		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table()))
+		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table()))
 		asset.CourseID = ""
-		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table()))
+		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table()))
 		asset.CourseID = "1234"
 
 		// No title
-		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table()))
+		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table()))
 		asset.Title = ""
-		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table()))
+		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table()))
 		asset.Title = "Course 1"
 
 		// No/invalid prefix
-		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.prefix", dao.Table()))
+		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.prefix", dao.Table()))
 		asset.Prefix = sql.NullInt16{Int16: -1, Valid: true}
-		require.ErrorContains(t, dao.Create(asset), "prefix must be greater than 0")
+		require.ErrorContains(t, dao.Create(asset, nil), "prefix must be greater than 0")
 		asset.Prefix = sql.NullInt16{Int16: 1, Valid: true}
 
 		// No type
-		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.type", dao.Table()))
+		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.type", dao.Table()))
 		asset.Type = types.Asset{}
-		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.type", dao.Table()))
+		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.type", dao.Table()))
 		asset.Type = *types.NewAsset("mp4")
 
 		// No path
-		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
+		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
 		asset.Path = ""
-		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
+		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
 		asset.Path = "/course 1/01 asset"
 
 		// No md5
-		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
+		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
 		asset.Md5 = ""
-		require.ErrorContains(t, dao.Create(asset), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
+		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
 		asset.Md5 = "1234"
 
 		// Invalid Course ID
-		require.ErrorContains(t, dao.Create(asset), "FOREIGN KEY constraint failed")
+		require.ErrorContains(t, dao.Create(asset, nil), "FOREIGN KEY constraint failed")
 
 		// Success
 		asset.CourseID = testData[0].ID
-		require.Nil(t, dao.Create(asset))
+		require.Nil(t, dao.Create(asset, nil))
 	})
 }
 

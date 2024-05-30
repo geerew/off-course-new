@@ -225,7 +225,7 @@ func (builder *TestBuilder) newTestAssets(course *models.Course) []*models.Asset
 		if builder.db != nil {
 			dao := NewAssetDao(builder.db)
 
-			err := dao.Create(a)
+			err := dao.Create(a, nil)
 			require.Nil(builder.t, err)
 
 			time.Sleep(time.Millisecond * 1)
@@ -262,7 +262,7 @@ func (builder *TestBuilder) newTestAttachments(asset *models.Asset) []*models.At
 		if builder.db != nil {
 			dao := NewAttachmentDao(builder.db)
 
-			err := dao.Create(a)
+			err := dao.Create(a, nil)
 			require.Nil(builder.t, err)
 
 			time.Sleep(time.Millisecond * 1)
