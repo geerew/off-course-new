@@ -80,9 +80,9 @@ func NilWriteFn() WriteFn {
 //
 // Example:
 //
-//		var logs []*logger.Log
-//	 var logsMux sync.Mutex
-//		loggy, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
+//	var logs []*logger.Log
+//	var logsMux sync.Mutex
+//	loggy, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
 func TestWriteFn(logs *[]*Log, mux *sync.Mutex) WriteFn {
 
 	return func(ctx context.Context, newLogs []*Log) error {

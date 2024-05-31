@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/geerew/off-course/utils/types"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/host"
 	"github.com/spf13/afero"
@@ -17,7 +18,7 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 var (
-	loggerType = slog.String("type", "filesystem")
+	loggerType = slog.String("type", types.LogTypeFileSystem.String())
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

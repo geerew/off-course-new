@@ -19,11 +19,11 @@ func setup(t *testing.T) (*AppFs, *[]*logger.Log) {
 	// Logger
 	var logs []*logger.Log
 	var logsMux sync.Mutex
-	loggy, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
+	logger, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
 	require.NoError(t, err, "Failed to initialize logger")
 
 	// Filesystem
-	appFs := NewAppFs(afero.NewMemMapFs(), loggy)
+	appFs := NewAppFs(afero.NewMemMapFs(), logger)
 
 	return appFs, &logs
 }

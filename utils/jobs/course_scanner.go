@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	loggerType = slog.String("type", "course_scanner")
+	loggerType = slog.String("type", types.LogTypeCourseScanner.String())
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
