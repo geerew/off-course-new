@@ -47,7 +47,11 @@ test/cover:
 build:
 	go build -o=dist/${BINARY_NAME} ${MAIN_PACKAGE_PATH}
 
-## run: run the  application
+## dev: run in dev
+dev:
+	go run main.go
+
+## run: build and run the application
 .PHONY: run
 run: build
 	dist/${BINARY_NAME}
