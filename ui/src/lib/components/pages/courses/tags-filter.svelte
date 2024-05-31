@@ -4,7 +4,7 @@
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import { GetAllTags } from '$lib/api';
 	import type { Tag } from '$lib/types/models';
-	import { IsBrowser } from '$lib/utils';
+	import { IsBrowser, cn } from '$lib/utils';
 	import { ChevronRight, Search, Tag as TagIcon, X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -87,7 +87,7 @@
 			}}
 		>
 			<div class="flex items-center gap-1.5">
-				<TagIcon class="size-3" />
+				<TagIcon class={cn('size-3', Object.keys(filterTags).length > 0 && 'text-primary')} />
 				<span>Tags</span>
 			</div>
 

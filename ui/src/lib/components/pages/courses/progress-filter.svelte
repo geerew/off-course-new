@@ -2,6 +2,7 @@
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import { CourseProgress } from '$lib/types/models';
+	import { cn } from '$lib/utils';
 	import { ChevronRight, Loader2 } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -29,8 +30,8 @@
 			}}
 		>
 			<div class="flex items-center gap-1.5">
-				<Loader2 class="size-3" />
-				<span>Progress</span>
+				<Loader2 class={cn('size-3', progress && 'text-primary')} />
+				<span>Progress </span>
 			</div>
 
 			<ChevronRight class="size-3 duration-200 group-data-[state=open]:rotate-90" />

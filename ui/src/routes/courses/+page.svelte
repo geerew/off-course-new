@@ -107,10 +107,14 @@
 			{:then _}
 				{#if fetchedCourses && fetchedCourses.length === 0}
 					<div class="flex min-h-[6rem] w-full flex-grow flex-col items-center p-10">
-						<span class="text-muted-foreground">No courses.</span>
+						{#if filterTitles.length > 0 || filterTags.length > 0 || filterProgress}
+							<span class="text-muted-foreground">No courses found with the selected filters.</span>
+						{:else}
+							<span class="text-muted-foreground">No courses.</span>
+						{/if}
 					</div>
 				{:else}
-					<div class="flex flex-col gap-5 pb-5">
+					<div class="flex w-full flex-col items-center gap-5 pb-5">
 						<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
 							{#each fetchedCourses as course}
 								<Card.Root class="group relative h-full">
