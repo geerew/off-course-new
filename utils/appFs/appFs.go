@@ -18,7 +18,7 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 var (
-	loggerType = slog.String("type", types.LogTypeFileSystem.String())
+	loggerType = slog.Any("type", types.LogTypeFileSystem)
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

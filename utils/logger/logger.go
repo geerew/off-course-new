@@ -24,7 +24,7 @@ type Log struct {
 // InitLogger initializes a logger with a batch handler
 //
 // During testing, the batchSize should be set to 1 to ensure that logs are written immediately
-func InitLogger(writeFn WriteFn, batchSize int) (*slog.Logger, error) {
+func InitLogger(writeFn WriteFn, batchSize int) (*slog.Logger, chan bool, error) {
 	duration := 3 * time.Second
 	ticker := time.NewTicker(duration)
 	done := make(chan bool)
@@ -41,6 +41,7 @@ func InitLogger(writeFn WriteFn, batchSize int) (*slog.Logger, error) {
 		for {
 			select {
 			case <-done:
+				handler.WriteAll(ctx)
 				return
 			case <-ticker.C:
 				handler.WriteAll(ctx)
@@ -50,7 +51,7 @@ func InitLogger(writeFn WriteFn, batchSize int) (*slog.Logger, error) {
 
 	logger := slog.New(handler)
 
-	return logger, nil
+	return logger, done, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -82,9 +83,8 @@ func NilWriteFn() WriteFn {
 //
 //	var logs []*logger.Log
 //	var logsMux sync.Mutex
-//	loggy, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
+//	loggy, done, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
 func TestWriteFn(logs *[]*Log, mux *sync.Mutex) WriteFn {
-
 	return func(ctx context.Context, newLogs []*Log) error {
 		mux.Lock()
 		defer mux.Unlock()

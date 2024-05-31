@@ -18,11 +18,11 @@ func setupSqliteDB(t *testing.T) (*DatabaseManager, []*logger.Log) {
 	// Logger
 	var logs []*logger.Log
 	var logsMux sync.Mutex
-	loggy, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
+	logger, _, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
 	require.NoError(t, err, "Failed to initialize logger")
 
 	// Filesystem
-	appFs := appFs.NewAppFs(afero.NewMemMapFs(), loggy)
+	appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
 
 	// DB
 	dbManager, err := NewSqliteDBManager(&DatabaseConfig{
@@ -46,10 +46,10 @@ func setupSqliteDB(t *testing.T) (*DatabaseManager, []*logger.Log) {
 
 func TestSqliteDb_Bootstrap(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		loggy, err := logger.InitLogger(logger.NilWriteFn(), 1)
+		logger, _, err := logger.InitLogger(logger.NilWriteFn(), 1)
 		require.Nil(t, err)
 
-		appFs := appFs.NewAppFs(afero.NewMemMapFs(), loggy)
+		appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
 
 		db, err := NewSqliteDB(&DatabaseConfig{
 			IsDebug:    false,
@@ -66,10 +66,10 @@ func TestSqliteDb_Bootstrap(t *testing.T) {
 	})
 
 	t.Run("error creating data dir", func(t *testing.T) {
-		loggy, err := logger.InitLogger(logger.NilWriteFn(), 1)
+		logger, _, err := logger.InitLogger(logger.NilWriteFn(), 1)
 		require.Nil(t, err)
 
-		appFs := appFs.NewAppFs(afero.NewReadOnlyFs(afero.NewMemMapFs()), loggy)
+		appFs := appFs.NewAppFs(afero.NewReadOnlyFs(afero.NewMemMapFs()), logger)
 
 		db, err := NewSqliteDB(&DatabaseConfig{
 			IsDebug:    false,
@@ -86,10 +86,10 @@ func TestSqliteDb_Bootstrap(t *testing.T) {
 	})
 
 	t.Run("invalid migration", func(t *testing.T) {
-		loggy, err := logger.InitLogger(logger.NilWriteFn(), 1)
+		logger, _, err := logger.InitLogger(logger.NilWriteFn(), 1)
 		require.Nil(t, err)
 
-		appFs := appFs.NewAppFs(afero.NewMemMapFs(), loggy)
+		appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
 
 		db, err := NewSqliteDB(&DatabaseConfig{
 			IsDebug:    false,

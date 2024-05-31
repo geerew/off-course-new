@@ -19,7 +19,7 @@ func setup(t *testing.T) (*AppFs, *[]*logger.Log) {
 	// Logger
 	var logs []*logger.Log
 	var logsMux sync.Mutex
-	logger, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
+	logger, _, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
 	require.NoError(t, err, "Failed to initialize logger")
 
 	// Filesystem

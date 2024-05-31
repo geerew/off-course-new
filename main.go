@@ -51,7 +51,7 @@ func main() {
 	}
 
 	// Logger
-	logger, err := logger.InitLogger(loggerWriteFn(dbManager.LogsDb), 200)
+	logger, loggerDone, err := logger.InitLogger(loggerWriteFn(dbManager.LogsDb), 200)
 	if err != nil {
 		log.Fatal("Failed to initialize logger", err)
 	}
@@ -103,11 +103,14 @@ func main() {
 
 	wg.Wait()
 
-	// TMP -> Delete all scans
+	// Delete all scans
 	_, err = dbManager.DataDb.Exec("DELETE FROM " + daos.NewScanDao(dbManager.DataDb).Table())
 	if err != nil {
 		log.Fatal("Failed to delete scans", err)
 	}
+
+	// Close the logger, which will write any remaining logs
+	close(loggerDone)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -17,11 +17,11 @@ func setup(t *testing.T) *database.DatabaseManager {
 	// Logger
 	var logs []*logger.Log
 	var logsMux sync.Mutex
-	loggy, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
+	logger, _, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
 	require.NoError(t, err, "Failed to initialize logger")
 
 	// Filesystem
-	appFs := appFs.NewAppFs(afero.NewMemMapFs(), loggy)
+	appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
 
 	// DB
 	dbManager, err := database.NewSqliteDBManager(&database.DatabaseConfig{
