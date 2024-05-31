@@ -11,6 +11,7 @@ import (
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/pagination"
+	"github.com/geerew/off-course/utils/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -99,6 +100,59 @@ func TestLogs_GetLogs(t *testing.T) {
 		paginationResp, logResponses = unmarshalHelper[logResponse](t, body)
 		require.Equal(t, 1, int(paginationResp.TotalItems))
 		require.Len(t, logResponses, 1)
+	})
+
+	t.Run("200 (types)", func(t *testing.T) {
+		router := setup(t)
+
+		logDao := daos.NewLogDao(router.config.DbManager.LogsDb)
+
+		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{"type": types.LogTypeRequest.String()}, Level: -4, Message: "log 1"}, nil))
+		time.Sleep(1 * time.Millisecond)
+		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{"type": types.LogTypeRequest.String()}, Level: 0, Message: "log 2"}, nil))
+		time.Sleep(1 * time.Millisecond)
+		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{"type": types.LogTypeDB.String()}, Level: 4, Message: "log 3"}, nil))
+		time.Sleep(1 * time.Millisecond)
+		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{"type": types.LogTypeCourseScanner.String()}, Level: 8, Message: "log 4"}, nil))
+
+		// ----------------------------
+		// Request
+		// ----------------------------
+		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?types="+types.LogTypeRequest.String(), nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, logResponses := unmarshalHelper[logResponse](t, body)
+		require.Equal(t, 2, int(paginationResp.TotalItems))
+		require.Len(t, logResponses, 2)
+		require.Equal(t, "log 2", logResponses[0].Message)
+		require.Equal(t, "log 1", logResponses[1].Message)
+
+		// ----------------------------
+		// Database and course scanner
+		// ----------------------------
+		typesQuery := url.QueryEscape(types.LogTypeDB.String() + "," + types.LogTypeCourseScanner.String())
+		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?types="+typesQuery, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, logResponses = unmarshalHelper[logResponse](t, body)
+		require.Equal(t, 2, int(paginationResp.TotalItems))
+		require.Len(t, logResponses, 2)
+		require.Equal(t, "log 4", logResponses[0].Message)
+		require.Equal(t, "log 3", logResponses[1].Message)
+
+		// ----------------------------
+		// Database
+		// ----------------------------
+		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?types="+types.LogTypeDB.String(), nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		paginationResp, logResponses = unmarshalHelper[logResponse](t, body)
+		require.Equal(t, 1, int(paginationResp.TotalItems))
+		require.Len(t, logResponses, 1)
+		require.Equal(t, "log 3", logResponses[0].Message)
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {

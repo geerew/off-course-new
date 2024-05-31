@@ -1,7 +1,10 @@
 package api
 
 import (
+	"fmt"
 	"log/slog"
+	"net/url"
+	"strings"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/daos"
@@ -33,15 +36,42 @@ type logResponse struct {
 
 func (api *logs) getLogs(c *fiber.Ctx) error {
 	minLevel := c.QueryInt("level", -4)
+	types := c.Query("types", "")
 
 	dbParams := &database.DatabaseParams{
-		Where:      squirrel.GtOrEq{api.logDao.Table() + ".level": minLevel},
 		Pagination: pagination.NewFromApi(c),
 	}
+
+	whereClause := squirrel.And{}
+
+	// Minimum log level
+	whereClause = append(whereClause, squirrel.GtOrEq{api.logDao.Table() + ".level": minLevel})
+
+	// Logs types
+	if types != "" {
+		unescapedTypes, err := url.QueryUnescape(types)
+		if err != nil {
+			return errorResponse(c, fiber.StatusBadRequest, "Invalid types parameter", err)
+		}
+
+		typesList := strings.Split(unescapedTypes, ",")
+
+		types := []string{}
+		for _, t := range typesList {
+			types = append(types, strings.TrimSpace(t))
+		}
+
+		whereClause = append(whereClause, squirrel.Eq{"JSON_EXTRACT(data, '$.type')": types})
+	}
+
+	dbParams.Where = whereClause
+
+	fmt.Println(dbParams.Where)
 
 	logs, err := api.logDao.List(dbParams, nil)
 
 	if err != nil {
+		fmt.Println(err)
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up logs", err)
 	}
 

@@ -93,22 +93,9 @@ func TestLog_Write(t *testing.T) {
 			require.Nil(t, dao.Write(&models.Log{Data: map[string]any{}, Level: 0, Message: fmt.Sprintf("log %d", i+1)}, nil))
 		}
 
-		// newC, err := dao.Get(testData[0].ID, nil, nil)
-		// require.Nil(t, err)
-		// require.NotEmpty(t, newC.ID)
-		// require.Equal(t, testData[0].Title, newC.Title)
-		// require.Equal(t, testData[0].Path, newC.Path)
-		// require.Empty(t, newC.CardPath)
-		// require.False(t, newC.Available)
-		// require.False(t, newC.CreatedAt.IsZero())
-		// require.False(t, newC.UpdatedAt.IsZero())
-		// //Scan status
-		// require.Empty(t, newC.ScanStatus)
-		// // Progress
-		// require.False(t, newC.Started)
-		// require.True(t, newC.StartedAt.IsZero())
-		// require.Zero(t, newC.Percent)
-		// require.True(t, newC.CompletedAt.IsZero())
+		result, err := dao.List(nil, nil)
+		require.Nil(t, err)
+		require.Len(t, result, 2)
 	})
 
 	t.Run("constraints", func(t *testing.T) {
@@ -125,114 +112,6 @@ func TestLog_Write(t *testing.T) {
 		require.Nil(t, dao.Write(log, nil))
 	})
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// func TestLog_Get(t *testing.T) {
-// 	t.Run("found", func(t *testing.T) {
-// 		dao, db := logSetup(t)
-
-// 		testData := NewTestBuilder(t).Db(db).Courses(2).Assets(1).Build()
-
-// 		c, err := dao.Get(testData[1].ID, nil, nil)
-// 		require.Nil(t, err)
-// 		require.Equal(t, testData[1].ID, c.ID)
-// 		require.Empty(t, testData[1].ScanStatus)
-
-// 		// ----------------------------
-// 		// scan
-// 		// ----------------------------
-// 		scanDao := NewScanDao(db)
-// 		require.Nil(t, scanDao.Create(&models.Scan{CourseID: testData[1].ID}))
-
-// 		c, err = dao.Get(testData[1].ID, nil, nil)
-// 		require.Nil(t, err)
-// 		require.Equal(t, string(types.ScanStatusWaiting), c.ScanStatus)
-
-// 		// ----------------------------
-// 		// Availability
-// 		// ----------------------------
-// 		require.False(t, c.Available)
-
-// 		// Set to started
-// 		testData[1].Available = true
-// 		require.Nil(t, dao.Update(testData[1].Course))
-
-// 		c, err = dao.Get(testData[1].ID, nil, nil)
-// 		require.Nil(t, err)
-// 		require.True(t, c.Available)
-
-// 		// ----------------------------
-// 		// Progress
-// 		// ----------------------------
-// 		require.False(t, c.Started)
-// 		require.True(t, c.StartedAt.IsZero())
-// 		require.Zero(t, c.Percent)
-// 		require.True(t, c.CompletedAt.IsZero())
-
-// 		// Get course progress
-// 		// cpDao := NewCourseProgressDao(db)
-// 		// origCp, err := cpDao.Get(testData[1].ID, nil)
-// 		// require.Nil(t, err)
-
-// 		// Update
-// 		// err = cpDao.Update(origCp)
-// 		// require.Nil(t, err)
-
-// 		// updatedCp, err :=  cpDao.Get(testData[1].ID, nil)
-// 		// require.Nil(t, err)
-// 		// require.True(t, updatedCp.Started)
-// 		// require.False(t, updatedCp.StartedAt.IsZero())
-
-// 		// 		// Set to started
-// 		// 		_, err = UpdateCourseProgressStarted(db, testData[1].ID, true)
-// 		// 		require.Nil(t, err)
-
-// 		// 		c, err = GetCourse(db, testData[1].ID)
-// 		// 		require.Nil(t, err)
-// 		// 		require.True(t, c.Started)
-// 		// 		require.False(t, c.StartedAt.IsZero())
-// 		// 		require.Zero(t, c.Percent)
-// 		// 		require.True(t, c.CompletedAt.IsZero())
-
-// 		// 		// Mark asset as completed (only 1 asset so the course will be 100%)
-// 		// 		_, err = UpdateAssetProgressCompleted(db, testData[1].Assets[0].ID, true)
-// 		// 		require.Nil(t, err)
-
-// 		// 		c, err = GetCourse(db, testData[1].ID)
-// 		// 		require.Nil(t, err)
-// 		// 		require.True(t, c.Started)
-// 		// 		require.False(t, c.StartedAt.IsZero())
-// 		// 		require.Equal(t, 100, c.Percent)
-// 		// 		require.False(t, c.CompletedAt.IsZero())
-// 	})
-
-// 	t.Run("not found", func(t *testing.T) {
-// 		dao, _ := logSetup(t)
-
-// 		c, err := dao.Get("1234", nil, nil)
-// 		require.ErrorIs(t, err, sql.ErrNoRows)
-// 		require.Nil(t, c)
-// 	})
-
-// 	t.Run("empty id", func(t *testing.T) {
-// 		dao, _ := logSetup(t)
-
-// 		c, err := dao.Get("", nil, nil)
-// 		require.ErrorIs(t, err, sql.ErrNoRows)
-// 		require.Nil(t, c)
-// 	})
-
-// 	t.Run("db error", func(t *testing.T) {
-// 		dao, db := logSetup(t)
-
-// 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
-// 		require.Nil(t, err)
-
-// 		_, err = dao.Get("1234", nil, nil)
-// 		require.ErrorContains(t, err, "no such table: "+dao.Table())
-// 	})
-// }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
