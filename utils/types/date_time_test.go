@@ -9,7 +9,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestNowDateTime(t *testing.T) {
+func TestDateTime_NowDateTime(t *testing.T) {
 	now := time.Now().UTC().Format("2006-01-02 15:04:05")
 	dt := NowDateTime()
 	require.Contains(t, dt.String(), now)
@@ -17,7 +17,7 @@ func TestNowDateTime(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestParseDateTime(t *testing.T) {
+func TestDateTime_ParseDateTime(t *testing.T) {
 
 	nowTime := time.Now().UTC()
 	nowDateTime, _ := ParseDateTime(nowTime)
@@ -45,7 +45,7 @@ func TestParseDateTime(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestTime(t *testing.T) {
+func TestDateTime_Time(t *testing.T) {
 	str := "2023-02-28 11:23:45.678Z"
 
 	expected, err := time.Parse(DefaultDateLayout, str)
@@ -60,7 +60,7 @@ func TestTime(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestDateTimeIsZero(t *testing.T) {
+func TestDateTime_IsZero(t *testing.T) {
 	dt0 := DateTime{}
 	require.True(t, dt0.IsZero())
 
@@ -70,7 +70,7 @@ func TestDateTimeIsZero(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestDateTimeString(t *testing.T) {
+func TestDateTime_String(t *testing.T) {
 	dt0 := DateTime{}
 	require.Empty(t, dt0.String())
 
@@ -82,7 +82,7 @@ func TestDateTimeString(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestDateTimeMarshalJSON(t *testing.T) {
+func TestDateTime_MarshalJSON(t *testing.T) {
 	tests := []struct {
 		date     string
 		expected string
@@ -103,7 +103,7 @@ func TestDateTimeMarshalJSON(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestDateTimeUnmarshalJSON(t *testing.T) {
+func TestDateTime_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		date     string
 		expected string
@@ -124,7 +124,7 @@ func TestDateTimeUnmarshalJSON(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestDateTimeValue(t *testing.T) {
+func TestDateTime_Value(t *testing.T) {
 	tests := []struct {
 		value    any
 		expected string
@@ -147,7 +147,7 @@ func TestDateTimeValue(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestDateTimeScan(t *testing.T) {
+func TestDateTime_Scan(t *testing.T) {
 	now := time.Now().UTC().Format("2006-01-02 15:04:05")
 
 	tests := []struct {

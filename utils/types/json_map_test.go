@@ -7,7 +7,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestJsonMapMarshalJSON(t *testing.T) {
+func TestJsonMap_MarshalJSON(t *testing.T) {
 	scenarios := []struct {
 		json     JsonMap
 		expected string
@@ -32,7 +32,7 @@ func TestJsonMapMarshalJSON(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestJsonMapValue(t *testing.T) {
+func TestJsonMap_Value(t *testing.T) {
 	scenarios := []struct {
 		json     JsonMap
 		expected driver.Value
@@ -57,7 +57,7 @@ func TestJsonMapValue(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestJsonMapScan(t *testing.T) {
+func TestJsonMap_Scan(t *testing.T) {
 	scenarios := []struct {
 		value       any
 		expectError bool
