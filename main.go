@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"flag"
 	"log"
-	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
@@ -13,16 +12,15 @@ import (
 	"syscall"
 
 	"github.com/geerew/off-course/api"
+	"github.com/geerew/off-course/cron"
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/jobs"
 	"github.com/geerew/off-course/utils/logger"
-	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/security"
 	"github.com/geerew/off-course/utils/types"
-	"github.com/robfig/cron/v3"
 	"github.com/spf13/afero"
 )
 
@@ -53,39 +51,36 @@ func main() {
 	}
 
 	// Logger
-	loggy, err := logger.InitLogger(loggerWriteFn(dbManager.LogsDb), 200)
+	logger, err := logger.InitLogger(loggerWriteFn(dbManager.LogsDb), 200)
 	if err != nil {
 		log.Fatal("Failed to initialize logger", err)
 	}
 
 	// Update the appFs logger
-	appFs.SetLogger(loggy)
+	appFs.SetLogger(logger)
 
 	// Course scanner
 	courseScanner := jobs.NewCourseScanner(&jobs.CourseScannerConfig{
 		Db:     dbManager.DataDb,
 		AppFs:  appFs,
-		Logger: loggy,
+		Logger: logger,
 	})
 
 	// Start the worker (pass in the func that will process the job)
-	courseScanner.Worker(jobs.CourseProcessor, nil)
+	go courseScanner.Worker(jobs.CourseProcessor, nil)
+
+	// Initialize cron jobs
+	cron.InitCron(dbManager.DataDb, logger)
 
 	// Create router
 	router := api.New(&api.RouterConfig{
 		DbManager:     dbManager,
-		Logger:        loggy,
+		Logger:        logger,
 		AppFs:         appFs,
 		CourseScanner: courseScanner,
 		Port:          *port,
 		IsProduction:  isProduction,
 	})
-
-	// TODO: Handle this better...
-	c := cron.New()
-	go func() { updateCourseAvailability(dbManager.DataDb, loggy) }()
-	c.AddFunc("@every 5m", func() { updateCourseAvailability(dbManager.DataDb, loggy) })
-	c.Start()
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -117,64 +112,9 @@ func main() {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func updateCourseAvailability(db database.Database, logger *slog.Logger) error {
-	logger.Debug("Updating course availability", slog.String("type", "cron"))
-	const perPage = 100
-	var page = 1
-
-	// This will be updated after the first fetch
-	var totalPages = 1
-
-	courseDao := daos.NewCourseDao(db)
-
-	for page <= totalPages {
-		p := pagination.New(page, perPage)
-		paginationParams := &database.DatabaseParams{Pagination: p}
-
-		// Fetch a batch of courses
-		courses, err := courseDao.List(paginationParams, nil)
-		if err != nil {
-			return err
-		}
-
-		// Update total pages after the first fetch
-		if page == 1 {
-			totalPages = p.TotalPages()
-		}
-
-		// Process each course in the batch
-		for _, course := range courses {
-			course.Available = false
-			_, err := os.Stat(course.Path)
-			if err == nil {
-				course.Available = true
-			}
-
-			// Update the course's availability in the database
-			err = courseDao.Update(course, nil)
-			if err != nil {
-				attrs := []any{
-					slog.String("type", "cron"),
-					slog.String("course", course.Title),
-					slog.String("error", err.Error()),
-				}
-
-				logger.Error("Failed to update availability for course", attrs...)
-			}
-		}
-
-		page++
-	}
-
-	return nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // loggerWriteFn returns a logger.WriteFn that writes logs to the database
 func loggerWriteFn(db database.Database) logger.WriteFn {
 	return func(ctx context.Context, logs []*logger.Log) error {
-
 		// Write accumulated logs
 		db.RunInTransaction(func(tx *sql.Tx) error {
 			model := &models.Log{}
@@ -197,5 +137,4 @@ func loggerWriteFn(db database.Database) logger.WriteFn {
 
 		return nil
 	}
-
 }
