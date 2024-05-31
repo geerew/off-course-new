@@ -4,7 +4,8 @@ TODO
 - [x] Use await
 - [x] Tidy Loading component
 - [ ] on scan, have a minimum 'load' of 1 second to stop flickering
-- [ ] Every DAO should support tx
+- [x] Every DAO should support tx
+- [ ] Fix theme
 
 ## Page -> Settings -> Tags
 

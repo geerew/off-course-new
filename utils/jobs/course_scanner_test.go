@@ -145,7 +145,7 @@ func Test_Worker(t *testing.T) {
 		<-processingDone
 
 		// Assert the scan job was deleted from the DB
-		s, err := scanner.scanDao.Get(testData[0].ID)
+		s, err := scanner.scanDao.Get(testData[0].ID, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		require.Nil(t, s)
 
@@ -178,7 +178,7 @@ func Test_Worker(t *testing.T) {
 
 		// Assert the scan job was deleted from the DB
 		for _, course := range testData {
-			s, err := scanner.scanDao.Get(course.ID)
+			s, err := scanner.scanDao.Get(course.ID, nil)
 			require.ErrorIs(t, err, sql.ErrNoRows)
 			require.Nil(t, s)
 		}
@@ -848,7 +848,7 @@ func Test_UpdateAssets(t *testing.T) {
 		require.Nil(t, err)
 
 		dbParams := &database.DatabaseParams{Where: squirrel.Eq{assetDao.Table() + ".course_id": testData[0].ID}}
-		count, err := scanner.assetDao.Count(dbParams)
+		count, err := scanner.assetDao.Count(dbParams, nil)
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 	})
@@ -872,7 +872,7 @@ func Test_UpdateAssets(t *testing.T) {
 		err := updateAssets(scanner.assetDao, nil, testData[0].ID, testData[0].Assets[:10])
 		require.Nil(t, err)
 
-		count, err := scanner.assetDao.Count(dbParams)
+		count, err := scanner.assetDao.Count(dbParams, nil)
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 
@@ -885,7 +885,7 @@ func Test_UpdateAssets(t *testing.T) {
 		err = updateAssets(scanner.assetDao, nil, testData[0].ID, testData[0].Assets)
 		require.Nil(t, err)
 
-		count, err = scanner.assetDao.Count(dbParams)
+		count, err = scanner.assetDao.Count(dbParams, nil)
 		require.Nil(t, err)
 		require.Equal(t, 12, count)
 
@@ -911,7 +911,7 @@ func Test_UpdateAssets(t *testing.T) {
 		err := updateAssets(scanner.assetDao, nil, testData[0].ID, testData[0].Assets)
 		require.Nil(t, err)
 
-		count, err := scanner.assetDao.Count(dbParams)
+		count, err := scanner.assetDao.Count(dbParams, nil)
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 
@@ -923,7 +923,7 @@ func Test_UpdateAssets(t *testing.T) {
 		err = updateAssets(scanner.assetDao, nil, testData[0].ID, testData[0].Assets)
 		require.Nil(t, err)
 
-		count, err = scanner.assetDao.Count(dbParams)
+		count, err = scanner.assetDao.Count(dbParams, nil)
 		require.Nil(t, err)
 		require.Equal(t, 8, count)
 	})
@@ -953,7 +953,7 @@ func Test_UpdateAttachments(t *testing.T) {
 		err := updateAttachments(scanner.attachmentDao, nil, testData[0].ID, testData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
-		count, err := scanner.attachmentDao.Count(&database.DatabaseParams{Where: squirrel.Eq{attDao.Table() + ".course_id": testData[0].ID}})
+		count, err := scanner.attachmentDao.Count(&database.DatabaseParams{Where: squirrel.Eq{attDao.Table() + ".course_id": testData[0].ID}}, nil)
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 	})
@@ -977,7 +977,7 @@ func Test_UpdateAttachments(t *testing.T) {
 		err := updateAttachments(scanner.attachmentDao, nil, testData[0].ID, testData[0].Assets[0].Attachments[:10])
 		require.Nil(t, err)
 
-		count, err := scanner.attachmentDao.Count(dbParams)
+		count, err := scanner.attachmentDao.Count(dbParams, nil)
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 
@@ -987,7 +987,7 @@ func Test_UpdateAttachments(t *testing.T) {
 		err = updateAttachments(scanner.attachmentDao, nil, testData[0].ID, testData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
-		count, err = scanner.attachmentDao.Count(dbParams)
+		count, err = scanner.attachmentDao.Count(dbParams, nil)
 		require.Nil(t, err)
 		require.Equal(t, 12, count)
 	})
@@ -1008,7 +1008,7 @@ func Test_UpdateAttachments(t *testing.T) {
 		err := updateAttachments(scanner.attachmentDao, nil, testData[0].ID, testData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
-		count, err := scanner.attachmentDao.Count(dbParams)
+		count, err := scanner.attachmentDao.Count(dbParams, nil)
 		require.Nil(t, err)
 		require.Equal(t, 10, count)
 
@@ -1020,7 +1020,7 @@ func Test_UpdateAttachments(t *testing.T) {
 		err = updateAttachments(scanner.attachmentDao, nil, testData[0].ID, testData[0].Assets[0].Attachments)
 		require.Nil(t, err)
 
-		count, err = scanner.attachmentDao.Count(dbParams)
+		count, err = scanner.attachmentDao.Count(dbParams, nil)
 		require.Nil(t, err)
 		require.Equal(t, 8, count)
 

@@ -160,7 +160,7 @@ func TestCourse_Get(t *testing.T) {
 		// scan
 		// ----------------------------
 		scanDao := NewScanDao(db)
-		require.Nil(t, scanDao.Create(&models.Scan{CourseID: testData[1].ID}))
+		require.Nil(t, scanDao.Create(&models.Scan{CourseID: testData[1].ID}, nil))
 
 		c, err = dao.Get(testData[1].ID, nil, nil)
 		require.Nil(t, err)
@@ -242,7 +242,7 @@ func TestCourse_List(t *testing.T) {
 
 		// Create a scan for course 2
 		scanDao := NewScanDao(db)
-		require.Nil(t, scanDao.Create(&models.Scan{CourseID: testData[1].ID}))
+		require.Nil(t, scanDao.Create(&models.Scan{CourseID: testData[1].ID}, nil))
 
 		result, err = dao.List(nil, nil)
 		require.Nil(t, err)
@@ -342,13 +342,13 @@ func TestCourse_List(t *testing.T) {
 		scanDao := NewScanDao(db)
 
 		testData[1].Scan = &models.Scan{CourseID: testData[1].ID}
-		require.Nil(t, scanDao.Create(testData[1].Scan))
+		require.Nil(t, scanDao.Create(testData[1].Scan, nil))
 		testData[2].Scan = &models.Scan{CourseID: testData[2].ID}
-		require.Nil(t, scanDao.Create(testData[2].Scan))
+		require.Nil(t, scanDao.Create(testData[2].Scan, nil))
 
 		// Set course 3 to processing
 		testData[2].Scan.Status = types.NewScanStatus(types.ScanStatusProcessing)
-		require.Nil(t, scanDao.Update(testData[2].Scan))
+		require.Nil(t, scanDao.Update(testData[2].Scan, nil))
 
 		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{scanDao.Table() + ".status desc"}}, nil)
 		require.Nil(t, err)

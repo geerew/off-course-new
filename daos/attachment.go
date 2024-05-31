@@ -36,9 +36,9 @@ func (dao *AttachmentDao) Table() string {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of attachments
-func (dao *AttachmentDao) Count(params *database.DatabaseParams) (int, error) {
+func (dao *AttachmentDao) Count(params *database.DatabaseParams, tx *sql.Tx) (int, error) {
 	generic := NewGenericDao(dao.db, dao)
-	return generic.Count(params, nil)
+	return generic.Count(params, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

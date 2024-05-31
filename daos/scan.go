@@ -37,7 +37,7 @@ func (dao *ScanDao) Table() string {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Create inserts a new scan
-func (dao *ScanDao) Create(s *models.Scan) error {
+func (dao *ScanDao) Create(s *models.Scan, tx *sql.Tx) error {
 	if s.ID == "" {
 		s.RefreshId()
 	}
@@ -58,7 +58,12 @@ func (dao *ScanDao) Create(s *models.Scan) error {
 		SetMap(dao.data(s)).
 		ToSql()
 
-	_, err := dao.db.Exec(query, args...)
+	execFn := dao.db.Exec
+	if tx != nil {
+		execFn = tx.Exec
+	}
+
+	_, err := execFn(query, args...)
 
 	return err
 }
@@ -66,7 +71,7 @@ func (dao *ScanDao) Create(s *models.Scan) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Get selects a scan with the given course ID
-func (dao *ScanDao) Get(courseId string) (*models.Scan, error) {
+func (dao *ScanDao) Get(courseId string, tx *sql.Tx) (*models.Scan, error) {
 	generic := NewGenericDao(dao.db, dao)
 
 	dbParams := &database.DatabaseParams{
@@ -74,7 +79,7 @@ func (dao *ScanDao) Get(courseId string) (*models.Scan, error) {
 		Where:   squirrel.Eq{dao.Table() + ".course_id": courseId},
 	}
 
-	row, err := generic.Get(dbParams, nil)
+	row, err := generic.Get(dbParams, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +97,7 @@ func (dao *ScanDao) Get(courseId string) (*models.Scan, error) {
 // Update updates a scan
 //
 // Note: Only the `status` can be updated
-func (dao *ScanDao) Update(scan *models.Scan) error {
+func (dao *ScanDao) Update(scan *models.Scan, tx *sql.Tx) error {
 	if scan.ID == "" {
 		return ErrEmptyId
 	}
@@ -107,7 +112,12 @@ func (dao *ScanDao) Update(scan *models.Scan) error {
 		Where("id = ?", scan.ID).
 		ToSql()
 
-	_, err := dao.db.Exec(query, args...)
+	execFn := dao.db.Exec
+	if tx != nil {
+		execFn = tx.Exec
+	}
+
+	_, err := execFn(query, args...)
 	return err
 }
 
@@ -128,7 +138,7 @@ func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Next returns the next scan whose status is `waiting“
-func (dao *ScanDao) Next() (*models.Scan, error) {
+func (dao *ScanDao) Next(tx *sql.Tx) (*models.Scan, error) {
 	generic := NewGenericDao(dao.db, dao)
 
 	dbParams := &database.DatabaseParams{
@@ -137,7 +147,7 @@ func (dao *ScanDao) Next() (*models.Scan, error) {
 		OrderBy: []string{"created_at ASC"},
 	}
 
-	row, err := generic.Get(dbParams, nil)
+	row, err := generic.Get(dbParams, tx)
 	if err != nil {
 		return nil, err
 	}

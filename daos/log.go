@@ -36,9 +36,9 @@ func (dao *LogDao) Table() string {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of logs
-func (dao *LogDao) Count(params *database.DatabaseParams) (int, error) {
+func (dao *LogDao) Count(params *database.DatabaseParams, tx *sql.Tx) (int, error) {
 	generic := NewGenericDao(dao.db, dao)
-	return generic.Count(params, nil)
+	return generic.Count(params, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -30,10 +30,10 @@ func TestScan_Create(t *testing.T) {
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 		s := &models.Scan{CourseID: testData[0].Course.ID}
 
-		err := dao.Create(s)
+		err := dao.Create(s, nil)
 		require.Nil(t, err, "Failed to create scan")
 
-		newS, err := dao.Get(s.CourseID)
+		newS, err := dao.Get(s.CourseID, nil)
 		require.Nil(t, err)
 		require.Equal(t, s.ID, newS.ID)
 		require.True(t, newS.Status.IsWaiting())
@@ -48,10 +48,10 @@ func TestScan_Create(t *testing.T) {
 		testData := NewTestBuilder(t).Db(db).Courses(1).Build()
 		s := &models.Scan{CourseID: testData[0].Course.ID}
 
-		err := dao.Create(s)
+		err := dao.Create(s, nil)
 		require.Nil(t, err)
 
-		err = dao.Create(s)
+		err = dao.Create(s, nil)
 		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.course_id", dao.Table()))
 	})
 
@@ -62,17 +62,17 @@ func TestScan_Create(t *testing.T) {
 
 		// Missing course ID
 		s := &models.Scan{}
-		require.ErrorContains(t, dao.Create(s), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table()))
+		require.ErrorContains(t, dao.Create(s, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table()))
 		s.CourseID = ""
-		require.ErrorContains(t, dao.Create(s), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table()))
+		require.ErrorContains(t, dao.Create(s, nil), fmt.Sprintf("NOT NULL constraint failed: %s.course_id", dao.Table()))
 		s.CourseID = "1234"
 
 		// Invalid Course ID
-		require.ErrorContains(t, dao.Create(s), "FOREIGN KEY constraint failed")
+		require.ErrorContains(t, dao.Create(s, nil), "FOREIGN KEY constraint failed")
 		s.CourseID = testData[0].Course.ID
 
 		// Success
-		require.Nil(t, dao.Create(s))
+		require.Nil(t, dao.Create(s, nil))
 	})
 }
 
@@ -84,7 +84,7 @@ func TestScan_Get(t *testing.T) {
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
-		s, err := dao.Get(testData[0].Course.ID)
+		s, err := dao.Get(testData[0].Course.ID, nil)
 		require.Nil(t, err)
 		require.Equal(t, testData[0].Scan.ID, s.ID)
 		require.Equal(t, testData[0].Course.Path, s.CoursePath)
@@ -93,7 +93,7 @@ func TestScan_Get(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		dao, _ := scanSetup(t)
 
-		s, err := dao.Get("1234")
+		s, err := dao.Get("1234", nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		require.Nil(t, s)
 	})
@@ -101,7 +101,7 @@ func TestScan_Get(t *testing.T) {
 	t.Run("empty id", func(t *testing.T) {
 		dao, _ := scanSetup(t)
 
-		s, err := dao.Get("")
+		s, err := dao.Get("", nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 		require.Nil(t, s)
 	})
@@ -112,7 +112,7 @@ func TestScan_Get(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
-		_, err = dao.Get("1234")
+		_, err = dao.Get("1234", nil)
 		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
@@ -130,9 +130,9 @@ func TestScan_Update(t *testing.T) {
 		// Set to Processing
 		// ----------------------------
 		testData[0].Scan.Status = types.NewScanStatus(types.ScanStatusProcessing)
-		require.Nil(t, dao.Update(testData[0].Scan))
+		require.Nil(t, dao.Update(testData[0].Scan, nil))
 
-		updatedScan, err := dao.Get(testData[0].Course.ID)
+		updatedScan, err := dao.Get(testData[0].Course.ID, nil)
 		require.Nil(t, err)
 		require.False(t, updatedScan.Status.IsWaiting())
 
@@ -141,9 +141,9 @@ func TestScan_Update(t *testing.T) {
 		// ----------------------------
 		time.Sleep(1 * time.Millisecond)
 		testData[0].Scan.Status = types.NewScanStatus(types.ScanStatusWaiting)
-		require.Nil(t, dao.Update(testData[0].Scan))
+		require.Nil(t, dao.Update(testData[0].Scan, nil))
 
-		updatedScan, err = dao.Get(testData[0].Course.ID)
+		updatedScan, err = dao.Get(testData[0].Course.ID, nil)
 		require.Nil(t, err)
 		require.True(t, updatedScan.Status.IsWaiting())
 	})
@@ -151,7 +151,7 @@ func TestScan_Update(t *testing.T) {
 	t.Run("empty id", func(t *testing.T) {
 		dao, _ := scanSetup(t)
 
-		err := dao.Update(&models.Scan{})
+		err := dao.Update(&models.Scan{}, nil)
 		require.ErrorIs(t, err, ErrEmptyId)
 	})
 
@@ -161,7 +161,7 @@ func TestScan_Update(t *testing.T) {
 		testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 		testData[0].Scan.ID = "1234"
 
-		err := dao.Update(testData[0].Scan)
+		err := dao.Update(testData[0].Scan, nil)
 		require.Nil(t, err)
 	})
 
@@ -172,7 +172,7 @@ func TestScan_Update(t *testing.T) {
 		require.Nil(t, err)
 
 		testData := NewTestBuilder(t).Courses(1).Scan().Build()
-		err = dao.Update(testData[0].Scan)
+		err = dao.Update(testData[0].Scan, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
@@ -219,7 +219,7 @@ func TestScan_DeleteCascade(t *testing.T) {
 	require.Nil(t, err)
 
 	// Check the scan was deleted
-	s, err := dao.Get(testData[0].ID)
+	s, err := dao.Get(testData[0].ID, nil)
 	require.ErrorIs(t, err, sql.ErrNoRows)
 	require.Nil(t, s)
 }
@@ -232,7 +232,7 @@ func TestScan_NextScan(t *testing.T) {
 
 		testData := NewTestBuilder(t).Db(db).Courses(1).Scan().Build()
 
-		s, err := dao.Next()
+		s, err := dao.Next(nil)
 		require.Nil(t, err)
 		require.Equal(t, testData[0].Scan.ID, s.ID)
 		require.Equal(t, testData[0].Path, s.CoursePath)
@@ -245,9 +245,9 @@ func TestScan_NextScan(t *testing.T) {
 
 		// Update the the first scan to processing
 		testData[0].Scan.Status = types.NewScanStatus(types.ScanStatusProcessing)
-		require.Nil(t, dao.Update(testData[0].Scan))
+		require.Nil(t, dao.Update(testData[0].Scan, nil))
 
-		s, err := dao.Next()
+		s, err := dao.Next(nil)
 		require.Nil(t, err)
 		require.Equal(t, testData[1].Scan.ID, s.ID)
 		require.Equal(t, testData[1].Path, s.CoursePath)
@@ -257,7 +257,7 @@ func TestScan_NextScan(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		dao, _ := scanSetup(t)
 
-		scan, err := dao.Next()
+		scan, err := dao.Next(nil)
 		require.Nil(t, err)
 		require.Nil(t, scan)
 	})
@@ -268,7 +268,7 @@ func TestScan_NextScan(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
-		_, err = dao.Next()
+		_, err = dao.Next(nil)
 		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }

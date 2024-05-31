@@ -649,16 +649,16 @@ func TestCourses_DeleteCourse(t *testing.T) {
 		// ----------------------------
 
 		// Scan
-		_, err = scanDao.Get(testData[2].ID)
+		_, err = scanDao.Get(testData[2].ID, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 
 		// Assets
-		count, err := assetsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.NewAssetDao(router.config.DbManager.DataDb).Table() + ".course_id": testData[2].ID}})
+		count, err := assetsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.NewAssetDao(router.config.DbManager.DataDb).Table() + ".course_id": testData[2].ID}}, nil)
 		require.Nil(t, err)
 		require.Zero(t, count)
 
 		// Attachments
-		count, err = attachmentsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.NewAttachmentDao(router.config.DbManager.DataDb).Table() + ".course_id": testData[2].ID}})
+		count, err = attachmentsDao.Count(&database.DatabaseParams{Where: squirrel.Eq{daos.NewAttachmentDao(router.config.DbManager.DataDb).Table() + ".course_id": testData[2].ID}}, nil)
 		require.Nil(t, err)
 		require.Zero(t, count)
 	})

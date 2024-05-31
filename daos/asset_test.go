@@ -27,7 +27,7 @@ func TestAsset_Count(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
 		dao, _ := assetSetup(t)
 
-		count, err := dao.Count(nil)
+		count, err := dao.Count(nil, nil)
 		require.Nil(t, err)
 		require.Zero(t, count)
 	})
@@ -37,7 +37,7 @@ func TestAsset_Count(t *testing.T) {
 
 		NewTestBuilder(t).Db(db).Courses(5).Assets(1).Build()
 
-		count, err := dao.Count(nil)
+		count, err := dao.Count(nil, nil)
 		require.Nil(t, err)
 		require.Equal(t, count, 5)
 	})
@@ -50,28 +50,28 @@ func TestAsset_Count(t *testing.T) {
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table() + ".id": testData[0].Assets[1].ID}})
+		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table() + ".id": testData[0].Assets[1].ID}}, nil)
 		require.Nil(t, err)
 		require.Equal(t, 1, count)
 
 		// ----------------------------
 		// NOT EQUALS ID
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table() + ".id": testData[0].Assets[1].ID}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table() + ".id": testData[0].Assets[1].ID}}, nil)
 		require.Nil(t, err)
 		require.Equal(t, 5, count)
 
 		// ----------------------------
 		// EQUALS COURSE_ID
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table() + ".course_id": testData[1].ID}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table() + ".course_id": testData[1].ID}}, nil)
 		require.Nil(t, err)
 		require.Equal(t, 2, count)
 
 		// ----------------------------
 		// ERROR
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{"": ""}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{"": ""}}, nil)
 		require.ErrorContains(t, err, "syntax error")
 		require.Zero(t, count)
 	})
@@ -82,7 +82,7 @@ func TestAsset_Count(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
-		_, err = dao.Count(nil)
+		_, err = dao.Count(nil, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }

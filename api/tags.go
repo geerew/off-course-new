@@ -193,7 +193,7 @@ func (api *tags) updateTag(c *fiber.Ctx) error {
 	}
 
 	// Update the asset progress
-	if err := api.tagDao.Update(tag); err != nil {
+	if err := api.tagDao.Update(tag, nil); err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusBadRequest, "Invalid tag", err)
 		}

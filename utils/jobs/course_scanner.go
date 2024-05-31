@@ -93,7 +93,7 @@ func (cs *CourseScanner) Add(courseId string) (*models.Scan, error) {
 
 	// Add the job
 	scan := &models.Scan{CourseID: courseId, Status: types.NewScanStatus(types.ScanStatusWaiting)}
-	if err := cs.scanDao.Create(scan); err != nil {
+	if err := cs.scanDao.Create(scan, nil); err != nil {
 		return nil, err
 	}
 
@@ -122,7 +122,7 @@ func (cs *CourseScanner) Worker(processor CourseScannerProcessorFn, processingDo
 		<-cs.jobSignal
 		for {
 			// Get the next scan
-			job, err := cs.scanDao.Next()
+			job, err := cs.scanDao.Next(nil)
 			if err != nil {
 				cs.logger.Error(
 					"Failed to look up next scan job",
@@ -248,7 +248,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 
 	// Set the scan status to processing
 	scan.Status = types.NewScanStatus(types.ScanStatusProcessing)
-	err = cs.scanDao.Update(scan)
+	err = cs.scanDao.Update(scan, nil)
 	if err != nil {
 		return err
 	}

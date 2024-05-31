@@ -37,9 +37,9 @@ func (dao *TagDao) Table() string {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of tags
-func (dao *TagDao) Count(params *database.DatabaseParams) (int, error) {
+func (dao *TagDao) Count(params *database.DatabaseParams, tx *sql.Tx) (int, error) {
 	generic := NewGenericDao(dao.db, dao)
-	return generic.Count(params, nil)
+	return generic.Count(params, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -204,7 +204,7 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*model
 // Update updates a tag
 //
 // Note: Only `tag` can be updated
-func (dao *TagDao) Update(tag *models.Tag) error {
+func (dao *TagDao) Update(tag *models.Tag, tx *sql.Tx) error {
 	if tag.ID == "" {
 		return ErrEmptyId
 	}
@@ -219,7 +219,12 @@ func (dao *TagDao) Update(tag *models.Tag) error {
 		Where("id = ?", tag.ID).
 		ToSql()
 
-	_, err := dao.db.Exec(query, args...)
+	execFn := dao.db.Exec
+	if tx != nil {
+		execFn = tx.Exec
+	}
+
+	_, err := execFn(query, args...)
 	return err
 }
 

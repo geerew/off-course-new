@@ -25,7 +25,7 @@ func TestCourseTag_Count(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
 		dao, _ := courseTagSetup(t)
 
-		count, err := dao.Count(nil)
+		count, err := dao.Count(nil, nil)
 		require.Nil(t, err)
 		require.Zero(t, count)
 	})
@@ -35,7 +35,7 @@ func TestCourseTag_Count(t *testing.T) {
 
 		NewTestBuilder(t).Db(db).Courses(2).Tags(6).Build()
 
-		count, err := dao.Count(nil)
+		count, err := dao.Count(nil, nil)
 		require.Nil(t, err)
 		require.Equal(t, count, 12)
 	})
@@ -51,28 +51,28 @@ func TestCourseTag_Count(t *testing.T) {
 		// ----------------------------
 		// EQUALS
 		// ----------------------------
-		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{courseDao.Table() + ".title": testData[1].Course.Title}})
+		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{courseDao.Table() + ".title": testData[1].Course.Title}}, nil)
 		require.Nil(t, err)
 		require.Equal(t, 5, count)
 
 		// ----------------------------
 		// NOT EQUALS
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{tagDao.Table() + ".tag": "Go"}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{tagDao.Table() + ".tag": "Go"}}, nil)
 		require.Nil(t, err)
 		require.Equal(t, 8, count)
 
 		// ----------------------------
 		//  STARTS WITH (Java%)
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Like{tagDao.Table() + ".tag": "Java%"}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Like{tagDao.Table() + ".tag": "Java%"}}, nil)
 		require.Nil(t, err)
 		require.Equal(t, 4, count)
 
 		// ----------------------------
 		// ERROR
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{"": ""}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{"": ""}}, nil)
 		require.ErrorContains(t, err, "syntax error")
 		require.Zero(t, count)
 	})
@@ -83,7 +83,7 @@ func TestCourseTag_Count(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
-		_, err = dao.Count(nil)
+		_, err = dao.Count(nil, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }

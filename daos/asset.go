@@ -37,9 +37,9 @@ func (dao *AssetDao) Table() string {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of assets
-func (dao *AssetDao) Count(params *database.DatabaseParams) (int, error) {
+func (dao *AssetDao) Count(params *database.DatabaseParams, tx *sql.Tx) (int, error) {
 	generic := NewGenericDao(dao.db, dao)
-	return generic.Count(params, nil)
+	return generic.Count(params, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

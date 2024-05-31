@@ -36,7 +36,7 @@ type scanResponse struct {
 func (api *scans) getScan(c *fiber.Ctx) error {
 	courseId := c.Params("courseId")
 
-	scan, err := api.scanDao.Get(courseId)
+	scan, err := api.scanDao.Get(courseId, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {

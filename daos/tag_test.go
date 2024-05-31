@@ -26,7 +26,7 @@ func TestTag_Count(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
 		dao, _ := tagSetup(t)
 
-		count, err := dao.Count(nil)
+		count, err := dao.Count(nil, nil)
 		require.Nil(t, err)
 		require.Zero(t, count)
 	})
@@ -39,7 +39,7 @@ func TestTag_Count(t *testing.T) {
 			require.Nil(t, dao.Create(&models.Tag{Tag: tag}, nil))
 		}
 
-		count, err := dao.Count(nil)
+		count, err := dao.Count(nil, nil)
 		require.Nil(t, err)
 		require.Equal(t, count, len(test_tags))
 	})
@@ -55,28 +55,28 @@ func TestTag_Count(t *testing.T) {
 		// ----------------------------
 		// EQUALS
 		// ----------------------------
-		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table() + ".tag": test_tags[0]}})
+		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table() + ".tag": test_tags[0]}}, nil)
 		require.Nil(t, err)
 		require.Equal(t, 1, count)
 
 		// ----------------------------
 		// NOT EQUALS
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table() + ".tag": test_tags[0]}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table() + ".tag": test_tags[0]}}, nil)
 		require.Nil(t, err)
 		require.Equal(t, 19, count)
 
 		// ----------------------------
 		//  STARTS WITH (Java%)
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Like{dao.Table() + ".tag": "Java%"}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Like{dao.Table() + ".tag": "Java%"}}, nil)
 		require.Nil(t, err)
 		require.Equal(t, 2, count)
 
 		// ----------------------------
 		// ERROR
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{"": ""}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{"": ""}}, nil)
 		require.ErrorContains(t, err, "syntax error")
 		require.Zero(t, count)
 	})
@@ -87,7 +87,7 @@ func TestTag_Count(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
-		_, err = dao.Count(nil)
+		_, err = dao.Count(nil, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
@@ -385,7 +385,7 @@ func TestTag_Update(t *testing.T) {
 
 		// Update the tag
 		tag.Tag = "go"
-		require.Nil(t, dao.Update(tag))
+		require.Nil(t, dao.Update(tag, nil))
 
 		updatedTag, err := dao.Get(testData[0].Tags[0].TagId, false, nil, nil)
 		require.Nil(t, err)
@@ -395,7 +395,7 @@ func TestTag_Update(t *testing.T) {
 	t.Run("empty id", func(t *testing.T) {
 		dao, _ := tagSetup(t)
 
-		err := dao.Update(&models.Tag{})
+		err := dao.Update(&models.Tag{}, nil)
 		require.ErrorIs(t, err, ErrEmptyId)
 	})
 
@@ -408,7 +408,7 @@ func TestTag_Update(t *testing.T) {
 		require.Nil(t, err)
 
 		tag.ID = "1234"
-		require.Nil(t, dao.Update(tag))
+		require.Nil(t, dao.Update(tag, nil))
 	})
 
 	t.Run("db error", func(t *testing.T) {
@@ -422,7 +422,7 @@ func TestTag_Update(t *testing.T) {
 		_, err = db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
-		err = dao.Update(tag)
+		err = dao.Update(tag, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }

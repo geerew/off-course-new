@@ -193,7 +193,7 @@ func (builder *TestBuilder) newTestScan(courseId string) *models.Scan {
 	if builder.db != nil {
 		dao := NewScanDao(builder.db)
 
-		err := dao.Create(s)
+		err := dao.Create(s, nil)
 		require.Nil(builder.t, err)
 
 		time.Sleep(time.Millisecond * 1)

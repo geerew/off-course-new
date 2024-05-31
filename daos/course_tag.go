@@ -36,7 +36,7 @@ func (dao *CourseTagDao) Table() string {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of course-tags
-func (dao *CourseTagDao) Count(dbParams *database.DatabaseParams) (int, error) {
+func (dao *CourseTagDao) Count(dbParams *database.DatabaseParams, tx *sql.Tx) (int, error) {
 	generic := NewGenericDao(dao.db, dao)
 	return generic.Count(dbParams, nil)
 }

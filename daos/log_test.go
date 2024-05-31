@@ -26,7 +26,7 @@ func TestLog_Count(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
 		dao, _ := logSetup(t)
 
-		count, err := dao.Count(nil)
+		count, err := dao.Count(nil, nil)
 		require.Nil(t, err)
 		require.Zero(t, count)
 	})
@@ -38,7 +38,7 @@ func TestLog_Count(t *testing.T) {
 			require.Nil(t, dao.Write(&models.Log{Data: map[string]any{}, Level: 0, Message: fmt.Sprintf("log %d", i+1)}, nil))
 		}
 
-		count, err := dao.Count(nil)
+		count, err := dao.Count(nil, nil)
 		require.Nil(t, err)
 		require.Equal(t, count, 2)
 	})
@@ -53,21 +53,21 @@ func TestLog_Count(t *testing.T) {
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table() + ".message": "log 1"}})
+		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table() + ".message": "log 1"}}, nil)
 		require.Nil(t, err)
 		require.Equal(t, 1, count)
 
 		// ----------------------------
 		// NOT EQUALS ID
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table() + ".message": "log 1"}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table() + ".message": "log 1"}}, nil)
 		require.Nil(t, err)
 		require.Equal(t, 1, count)
 
 		// ----------------------------
 		// ERROR
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{"": ""}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{"": ""}}, nil)
 		require.ErrorContains(t, err, "syntax error")
 		require.Zero(t, count)
 	})
@@ -78,7 +78,7 @@ func TestLog_Count(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
-		_, err = dao.Count(nil)
+		_, err = dao.Count(nil, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
