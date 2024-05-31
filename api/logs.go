@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"log/slog"
 	"net/url"
 	"strings"
@@ -66,12 +65,9 @@ func (api *logs) getLogs(c *fiber.Ctx) error {
 
 	dbParams.Where = whereClause
 
-	fmt.Println(dbParams.Where)
-
 	logs, err := api.logDao.List(dbParams, nil)
 
 	if err != nil {
-		fmt.Println(err)
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up logs", err)
 	}
 
