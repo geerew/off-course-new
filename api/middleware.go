@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 )
@@ -20,7 +21,7 @@ func loggerMiddleware(config *RouterConfig) func(c *fiber.Ctx) error {
 
 		attrs := make([]any, 0, 15)
 
-		attrs = append(attrs, slog.String("type", "request"))
+		attrs = append(attrs, slog.Any("type", types.LogTypeRequest))
 
 		if !started.IsZero() {
 			attrs = append(attrs, slog.Float64("execTime", float64(time.Since(started))/float64(time.Millisecond)))
