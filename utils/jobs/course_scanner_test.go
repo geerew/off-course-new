@@ -27,7 +27,7 @@ func setupCourseScanner(t *testing.T) (*CourseScanner, *database.DatabaseManager
 	// Logger
 	var logs []*logger.Log
 	var logsMux sync.Mutex
-	loggy, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
+	loggy, _, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
 	require.NoError(t, err, "Failed to initialize logger")
 
 	// Filesystem
