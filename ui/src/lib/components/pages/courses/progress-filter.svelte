@@ -19,7 +19,7 @@
 	const dispatchEvent = createEventDispatcher();
 </script>
 
-<DropdownMenu.Root closeOnItemClick={false} typeahead={false}>
+<DropdownMenu.Root typeahead={false}>
 	<DropdownMenu.Trigger asChild let:builder>
 		<Button
 			builders={[builder]}

@@ -30,10 +30,6 @@
 		</Button>
 	</Popover.Trigger>
 
-	<!-- z-50 min-w-[8rem] rounded-md border bg-popover p-1 text-popover-foreground shadow-md
-	focus:outline-none flex flex-col text-sm z-50 w-72 rounded-md border bg-popover p-4
-	text-popover-foreground shadow-md outline-none flex flex-col text-sm -->
-
 	<Popover.Content
 		class="flex w-auto min-w-[8rem] flex-col text-sm"
 		align="end"

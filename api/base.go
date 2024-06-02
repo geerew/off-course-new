@@ -2,9 +2,12 @@ package api
 
 import (
 	"log/slog"
+	"net/url"
+	"strings"
 
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
+	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/jobs"
 	"github.com/gofiber/fiber/v2"
@@ -218,4 +221,15 @@ func errorResponse(c *fiber.Ctx, status int, message string, err error) error {
 	}
 
 	return c.Status(status).JSON(resp)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func filter(s string) ([]string, error) {
+	unescaped, err := url.QueryUnescape(s)
+	if err != nil {
+		return nil, err
+	}
+
+	return utils.Map(strings.Split(unescaped, ","), strings.TrimSpace), nil
 }

@@ -1,27 +1,21 @@
 <script lang="ts">
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
+	import { LogLevel } from '$lib/types/models';
 	import { ChevronRight, Tag } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	// ----------------------
 	// Exports
 	// ----------------------
-	export let level: number | undefined = -4;
+	export let levels: LogLevel[] = [];
 
 	// ----------------------
 	// Variables
 	// ----------------------
 
 	// As the progress change, dispatch an event
-	const dispatchEvent = createEventDispatcher<Record<'change', number>>();
-
-	const levels: Record<string, number> = {
-		DEBUG: -4,
-		INFO: 0,
-		WARNING: 4,
-		ERROR: 8
-	};
+	const dispatchEvent = createEventDispatcher();
 </script>
 
 <DropdownMenu.Root closeOnItemClick={false} typeahead={false}>
@@ -36,7 +30,7 @@
 		>
 			<div class="flex items-center gap-1.5">
 				<Tag class="size-3" />
-				<span>Min Log Level</span>
+				<span>Log Level</span>
 			</div>
 
 			<ChevronRight class="size-3 duration-200 group-data-[state=open]:rotate-90" />
@@ -49,23 +43,19 @@
 		align="start"
 	>
 		<div class="max-h-40 overflow-y-scroll">
-			{#each Object.keys(levels) as l}
+			{#each Object.values(LogLevel) as l}
+				<!---->
 				<DropdownMenu.CheckboxItem
 					class="data-[highlighted]:bg-alt-1/40 cursor-pointer"
-					checked={level === levels[l]}
-					on:click={(e) => {
-						if (levels[l] === level) {
-							e.preventDefault();
-						}
-					}}
+					checked={levels.find((level) => level === l) ? true : false}
 					onCheckedChange={(checked) => {
 						if (checked) {
-							level = levels[l];
+							levels = [...levels, l];
 						} else {
-							level = undefined;
+							levels = levels.filter((level) => level !== l);
 						}
 
-						dispatchEvent('change', levels[l]);
+						dispatchEvent('change', l);
 					}}
 				>
 					{l}

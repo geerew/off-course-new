@@ -2,8 +2,6 @@ package api
 
 import (
 	"log/slog"
-	"net/url"
-	"strings"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/daos"
@@ -34,8 +32,9 @@ type logResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func (api *logs) getLogs(c *fiber.Ctx) error {
-	minLevel := c.QueryInt("level", -4)
+	levels := c.Query("levels", "")
 	types := c.Query("types", "")
+	messages := c.Query("messages", "")
 
 	dbParams := &database.DatabaseParams{
 		Pagination: pagination.NewFromApi(c),
@@ -43,24 +42,39 @@ func (api *logs) getLogs(c *fiber.Ctx) error {
 
 	whereClause := squirrel.And{}
 
-	// Minimum log level
-	whereClause = append(whereClause, squirrel.GtOrEq{api.logDao.Table() + ".level": minLevel})
+	// Log levels
+	if levels != "" {
+		filtered, err := filter(levels)
+		if err != nil {
+			return errorResponse(c, fiber.StatusBadRequest, "Invalid levels parameter", err)
+		}
 
-	// Logs types
+		whereClause = append(whereClause, squirrel.Eq{api.logDao.Table() + ".level": filtered})
+	}
+
+	// Log types
 	if types != "" {
-		unescapedTypes, err := url.QueryUnescape(types)
+		filtered, err := filter(types)
 		if err != nil {
 			return errorResponse(c, fiber.StatusBadRequest, "Invalid types parameter", err)
 		}
 
-		typesList := strings.Split(unescapedTypes, ",")
+		whereClause = append(whereClause, squirrel.Eq{"JSON_EXTRACT(data, '$.type')": filtered})
+	}
 
-		types := []string{}
-		for _, t := range typesList {
-			types = append(types, strings.TrimSpace(t))
+	// Log message
+	if messages != "" {
+		filtered, err := filter(messages)
+		if err != nil {
+			return errorResponse(c, fiber.StatusBadRequest, "Invalid messages parameter", err)
 		}
 
-		whereClause = append(whereClause, squirrel.Eq{"JSON_EXTRACT(data, '$.type')": types})
+		orClause := squirrel.Or{}
+		for _, message := range filtered {
+			orClause = append(orClause, squirrel.Like{api.logDao.Table() + ".message": "%" + message + "%"})
+		}
+
+		whereClause = append(whereClause, orClause)
 	}
 
 	dbParams.Where = whereClause

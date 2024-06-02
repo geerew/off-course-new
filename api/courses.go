@@ -110,14 +110,12 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 
 	// Filter based on tags
 	if tags != "" {
-		unescapedTags, err := url.QueryUnescape(tags)
+		filtered, err := filter(tags)
 		if err != nil {
 			return errorResponse(c, fiber.StatusBadRequest, "Invalid tags parameter", err)
 		}
 
-		tagList := strings.Split(unescapedTags, ",")
-
-		courseIds, err := api.courseTagDao.ListCourseIdsByTags(tagList, nil)
+		courseIds, err := api.courseTagDao.ListCourseIdsByTags(filtered, nil)
 		if err != nil {
 			return errorResponse(c, fiber.StatusInternalServerError, "Error looking up courses by tags", err)
 		}
@@ -136,15 +134,13 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 
 	// Filter based on titles
 	if titles != "" {
-		unescapedTitles, err := url.QueryUnescape(titles)
+		filtered, err := filter(titles)
 		if err != nil {
 			return errorResponse(c, fiber.StatusBadRequest, "Invalid titles parameter", err)
 		}
 
-		titleList := strings.Split(unescapedTitles, ",")
-
 		orClause := squirrel.Or{}
-		for _, title := range titleList {
+		for _, title := range filtered {
 			orClause = append(orClause, squirrel.Like{api.courseDao.Table() + ".title": "%" + title + "%"})
 		}
 

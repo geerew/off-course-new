@@ -194,3 +194,15 @@ func ValueToString(v reflect.Value) string {
 		return ""
 	}
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Map is a generic function that takes a slice of type T and a function that
+// maps T to type V. It returns a new slice of type V with the mapped values.
+func Map[T, V any](ts []T, fn func(T) V) []V {
+	result := make([]V, len(ts))
+	for i, t := range ts {
+		result[i] = fn(t)
+	}
+	return result
+}

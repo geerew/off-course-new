@@ -1,1 +1,1 @@
-export { default as LogsMinLogLevel } from './min-log-level.svelte';
+export { default as LogsFilter } from './filter.svelte';
