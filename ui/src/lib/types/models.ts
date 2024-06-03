@@ -228,9 +228,9 @@ export type Log = Output<typeof LogSchema>;
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 export type LogsGetParams = {
+	messages?: string;
 	levels?: string;
 	types?: string;
-	messages?: string;
 	page?: number;
 	perPage?: number;
 };
@@ -238,10 +238,10 @@ export type LogsGetParams = {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 export enum LogLevel {
-	DEBUG = 'DEBUG',
-	INFO = 'INFO',
-	WARN = 'WARN',
-	ERROR = 'ERROR'
+	DEBUG = 'debug',
+	INFO = 'info',
+	WARN = 'warn',
+	ERROR = 'error'
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

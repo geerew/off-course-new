@@ -86,7 +86,7 @@
 			<!-- Progress -->
 			{#if filterProgress}
 				{#if filterTitles.length > 0}
-					<Separator orientation="vertical" class="bg-alt-1/60 h-8" />
+					<Separator orientation="vertical" class="bg-alt-1 h-6" />
 				{/if}
 
 				<div class="flex flex-row" data-progress={filterProgress}>
@@ -116,7 +116,7 @@
 			<!-- Tags -->
 			{#if Object.keys(filterTags).length > 0}
 				{#if filterTitles.length > 0 || filterProgress}
-					<Separator orientation="vertical" class="bg-alt-1/60 h-8" />
+					<Separator orientation="vertical" class="bg-alt-1 h-6" />
 				{/if}
 
 				{#each Object.keys(filterTags) as id}

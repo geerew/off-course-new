@@ -40,7 +40,7 @@ TODO
 ## Page -> Settings -> Logs
 
 - [x] Add table
-- [ ] Filter by data.type
+- [x] Filter by data.type
 - [ ] Filter by data 
 
 ## Page -> Settings -> Tags

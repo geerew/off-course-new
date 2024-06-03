@@ -31,6 +31,13 @@ type logResponse struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func (api *logs) getLogTypes(c *fiber.Ctx) error {
+	types := types.AllLogTypes()
+	return c.Status(fiber.StatusOK).JSON(types)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func (api *logs) getLogs(c *fiber.Ctx) error {
 	levels := c.Query("levels", "")
 	types := c.Query("types", "")

@@ -86,7 +86,7 @@
 				e.stopPropagation();
 			}}
 		>
-			<div class="flex items-center gap-1.5">
+			<div class="flex items-center gap-2">
 				<TagIcon class={cn('size-3', Object.keys(filterTags).length > 0 && 'text-primary')} />
 				<span>Tags</span>
 			</div>

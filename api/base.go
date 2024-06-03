@@ -206,6 +206,7 @@ func initRoutes(config *RouterConfig, router fiber.Router) {
 
 	logs := router.Group("/logs")
 	logs.Get("/", logsApi.getLogs)
+	logs.Get("/types", logsApi.getLogTypes)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

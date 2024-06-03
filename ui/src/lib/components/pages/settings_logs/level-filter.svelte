@@ -2,13 +2,14 @@
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import { LogLevel } from '$lib/types/models';
-	import { ChevronRight, Tag } from 'lucide-svelte';
+	import { cn } from '$lib/utils';
+	import { ChevronRight, ScrollText } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	// ----------------------
 	// Exports
 	// ----------------------
-	export let levels: LogLevel[] = [];
+	export let filterLevels: LogLevel[] = [];
 
 	// ----------------------
 	// Variables
@@ -28,8 +29,8 @@
 				e.stopPropagation();
 			}}
 		>
-			<div class="flex items-center gap-1.5">
-				<Tag class="size-3" />
+			<div class="flex items-center gap-2">
+				<ScrollText class={cn('size-3', Object.keys(filterLevels).length > 0 && 'text-primary')} />
 				<span>Log Level</span>
 			</div>
 
@@ -47,12 +48,12 @@
 				<!---->
 				<DropdownMenu.CheckboxItem
 					class="data-[highlighted]:bg-alt-1/40 cursor-pointer"
-					checked={levels.find((level) => level === l) ? true : false}
+					checked={filterLevels.find((level) => level === l) ? true : false}
 					onCheckedChange={(checked) => {
 						if (checked) {
-							levels = [...levels, l];
+							filterLevels = [...filterLevels, l];
 						} else {
-							levels = levels.filter((level) => level !== l);
+							filterLevels = filterLevels.filter((level) => level !== l);
 						}
 
 						dispatchEvent('change', l);

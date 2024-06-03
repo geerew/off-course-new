@@ -22,6 +22,9 @@
 	// The levels to filter on
 	let filterLevels: LogLevel[] = [];
 
+	// The types to filter on
+	let filterTypes: string[] = [];
+
 	// Pagination
 	let pagination: PaginationParams = {
 		page: 1,
@@ -89,6 +92,10 @@
 				params.messages = filterMessages.join(',');
 			}
 
+			if (filterTypes && filterTypes.length > 0) {
+				params.types = filterTypes.join(',');
+			}
+
 			const response = await GetLogs(params);
 
 			if (!response) {
@@ -125,9 +132,15 @@
 				pagination.page = 1;
 				load = getLogs();
 			}}
+			on:filterTypes={(ev) => {
+				filterTypes = ev.detail;
+				pagination.page = 1;
+				load = getLogs();
+			}}
 			on:clear={() => {
 				filterMessages = [];
 				filterLevels = [];
+				filterTypes = [];
 				pagination.page = 1;
 				load = getLogs();
 			}}
@@ -175,7 +188,13 @@
 										<div
 											class="flex w-full flex-grow flex-col place-content-center items-center p-5"
 										>
-											<p class="text-muted-foreground text-center text-sm">No logs found.</p>
+											{#if filterMessages.length > 0 || filterLevels.length > 0 || filterTypes.length > 0}
+												<span class="text-muted-foreground"
+													>No logs found with the selected filters.</span
+												>
+											{:else}
+												<span class="text-muted-foreground">No logs.</span>
+											{/if}
 										</div>
 									</Table.Cell>
 								</Table.Row>

@@ -4,23 +4,25 @@
 	import Separator from '$components/ui/separator/separator.svelte';
 	import type { LogLevel } from '$lib/types/models';
 	import { cn } from '$lib/utils';
-	import { Filter, ScrollText, Text, X } from 'lucide-svelte';
+	import { Filter, ScrollText, Text, Type, X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
-	import LogLevelFilter from './log-level-filter.svelte';
+	import LevelFilter from './level-filter.svelte';
 	import MessageFilter from './message-filter.svelte';
+	import TypeFilter from './type-filter.svelte';
 
 	// ----------------------
 	// Variables
 	// ----------------------
 	let filterMessages: string[] = [];
 	let filterLevels: LogLevel[] = [];
+	let filterTypes: string[] = [];
 
 	const dispatchEvent = createEventDispatcher();
 
 	// ----------------------
 	// Reactive
 	// ----------------------
-	$: isFiltering = filterMessages.length > 0 || filterLevels.length > 0;
+	$: isFiltering = filterMessages.length > 0 || filterLevels.length > 0 || filterTypes.length > 0;
 </script>
 
 <!-- Filters -->
@@ -32,10 +34,17 @@
 		}}
 	/>
 
-	<LogLevelFilter
-		bind:levels={filterLevels}
+	<LevelFilter
+		bind:filterLevels
 		on:change={(e) => {
 			dispatchEvent('filterLevels', filterLevels);
+		}}
+	/>
+
+	<TypeFilter
+		bind:filterTypes
+		on:change={(e) => {
+			dispatchEvent('filterTypes', filterTypes);
 		}}
 	/>
 </div>
@@ -48,7 +57,7 @@
 		</div>
 
 		<div class="flex flex-row items-center gap-2">
-			<!-- Titles -->
+			<!-- Messages -->
 			{#each filterMessages as message}
 				<div class="flex flex-row" data-message={message}>
 					<Badge
@@ -75,36 +84,69 @@
 				</div>
 			{/each}
 
-			<!-- Progress -->
-			{#each filterLevels as level}
+			<!-- Levels -->
+			{#if filterLevels.length > 0}
 				{#if filterMessages.length > 0}
-					<Separator orientation="vertical" class="bg-alt-1/60 h-8" />
+					<Separator orientation="vertical" class="bg-alt-1 h-6" />
 				{/if}
+				{#each filterLevels as level}
+					<div class="flex flex-row" data-level={level}>
+						<Badge
+							class={cn(
+								'bg-alt-1/60 hover:bg-alt-1/60 text-foreground h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none'
+							)}
+						>
+							<ScrollText class="size-3" />
+							<span>{level}</span>
+						</Badge>
 
-				<div class="flex flex-row" data-level={level}>
-					<Badge
-						class={cn(
-							'bg-alt-1/60 hover:bg-alt-1/60 text-foreground h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none'
-						)}
-					>
-						<ScrollText class="size-3" />
-						<span>{level}</span>
-					</Badge>
+						<Button
+							class={cn(
+								'bg-alt-1/60 hover:bg-destructive inline-flex h-6 items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5 duration-200'
+							)}
+							on:click={() => {
+								filterLevels = filterLevels.filter((t) => t !== level);
+								filterLevels = [...filterLevels];
+								dispatchEvent('filterLevels', filterLevels);
+							}}
+						>
+							<X class="size-3" />
+						</Button>
+					</div>
+				{/each}
+			{/if}
 
-					<Button
-						class={cn(
-							'bg-alt-1/60 hover:bg-destructive inline-flex h-6 items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5 duration-200'
-						)}
-						on:click={() => {
-							filterLevels = filterLevels.filter((t) => t !== level);
-							filterLevels = [...filterLevels];
-							dispatchEvent('filterLevels', filterLevels);
-						}}
-					>
-						<X class="size-3" />
-					</Button>
-				</div>
-			{/each}
+			<!-- Types -->
+			{#if filterTypes.length > 0}
+				{#if filterMessages.length > 0 || filterLevels.length > 0}
+					<Separator orientation="vertical" class="bg-alt-1 h-6" />
+				{/if}
+				{#each filterTypes as t}
+					<div class="flex flex-row" data-type={t}>
+						<Badge
+							class={cn(
+								'bg-alt-1/60 hover:bg-alt-1/60 text-foreground h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none'
+							)}
+						>
+							<Type class="size-3" />
+							<span>{t}</span>
+						</Badge>
+
+						<Button
+							class={cn(
+								'bg-alt-1/60 hover:bg-destructive inline-flex h-6 items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5 duration-200'
+							)}
+							on:click={() => {
+								filterTypes = filterTypes.filter((type) => type !== t);
+								filterTypes = [...filterTypes];
+								dispatchEvent('filterTypes', filterTypes);
+							}}
+						>
+							<X class="size-3" />
+						</Button>
+					</div>
+				{/each}
+			{/if}
 
 			<Button
 				class={cn(
@@ -113,6 +155,7 @@
 				on:click={() => {
 					filterMessages = [];
 					filterLevels = [];
+					filterTypes = [];
 					dispatchEvent('clear');
 				}}
 			>

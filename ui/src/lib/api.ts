@@ -19,7 +19,7 @@ import {
 } from '$lib/types/models';
 import { PaginationSchema, type Pagination } from '$lib/types/pagination';
 import axios from 'axios';
-import { array, safeParse } from 'valibot';
+import { array, safeParse, string } from 'valibot';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -583,6 +583,23 @@ export async function GetLogs(params?: LogsGetParams): Promise<Pagination> {
 			throw error;
 		} else {
 			throw new Error(`Failed to retrieve logs: ${error}`);
+		}
+	}
+}
+
+// GET - Get a list of log types
+export async function GetLogTypes(): Promise<string[]> {
+	try {
+		const response = await axios.get<string[]>(`${GetBackendUrl(LOG_API)}/types`);
+		const result = safeParse(array(string()), response.data);
+
+		if (!result.success) throw new Error('Invalid response from server');
+		return result.output;
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			throw error;
+		} else {
+			throw new Error(`Failed to retrieve log types: ${error}`);
 		}
 	}
 }

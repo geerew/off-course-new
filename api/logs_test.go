@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -261,4 +262,20 @@ func TestLogs_GetLogs(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestLogs_GetLogTypes(t *testing.T) {
+	router := setup(t)
+
+	status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/types", nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, status)
+
+	var typesResp []string
+	err = json.Unmarshal(body, &typesResp)
+	require.Nil(t, err)
+
+	require.Equal(t, typesResp, types.AllLogTypes())
 }

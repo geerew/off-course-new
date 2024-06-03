@@ -20,7 +20,7 @@
 		id="tags-input"
 		bind:this={inputEl}
 		class="placeholder-muted-foreground/60 text-foreground border-alt-1/60 w-full rounded-md border border-none bg-inherit px-7 text-sm focus-visible:outline-none focus-visible:ring-0"
-		placeholder="Filter messages"
+		placeholder="Filter messages..."
 		bind:value={messageValue}
 		on:keydown={(e) => {
 			if (e.key === 'Enter' && messageValue.trim().length > 0) {

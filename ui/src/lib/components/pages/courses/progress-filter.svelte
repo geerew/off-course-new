@@ -29,7 +29,7 @@
 				e.stopPropagation();
 			}}
 		>
-			<div class="flex items-center gap-1.5">
+			<div class="flex items-center gap-2">
 				<Loader2 class={cn('size-3', progress && 'text-primary')} />
 				<span>Progress </span>
 			</div>
