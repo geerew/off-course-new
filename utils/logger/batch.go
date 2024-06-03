@@ -10,6 +10,10 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// BeforeAddFn is a function that is invoked every time before a new log is added to the batch
+// queue
+type BeforeAddFn func(ctx context.Context, log *Log) bool
+
 // WriteFn is a function that processes a batch of logs
 type WriteFn func(context.Context, []*Log) error
 
@@ -19,6 +23,12 @@ type WriteFn func(context.Context, []*Log) error
 type BatchOptions struct {
 	// WriteFn processes the batched logs
 	WriteFn WriteFn
+
+	// BeforeAddFunc is optional function that is invoked every time
+	// before a new log is added to the batch queue
+	//
+	// Return false to skip adding the log into the batch queue
+	BeforeAddFn BeforeAddFn
 
 	// Level reports the minimum level to log. Lower levels are discarded. If not set or nil,
 	// it defaults to [slog.LevelInfo]
@@ -185,6 +195,10 @@ func (h *BatchHandler) Handle(ctx context.Context, r slog.Record) error {
 		Level:   r.Level,
 		Message: r.Message,
 		Data:    types.JsonMap(data),
+	}
+
+	if h.options.BeforeAddFn != nil && !h.options.BeforeAddFn(ctx, log) {
+		return nil
 	}
 
 	h.mux.Lock()

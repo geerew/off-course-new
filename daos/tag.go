@@ -1,7 +1,6 @@
 package daos
 
 import (
-	"database/sql"
 	"slices"
 
 	"github.com/Masterminds/squirrel"
@@ -37,7 +36,7 @@ func (dao *TagDao) Table() string {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of tags
-func (dao *TagDao) Count(params *database.DatabaseParams, tx *sql.Tx) (int, error) {
+func (dao *TagDao) Count(params *database.DatabaseParams, tx *database.Tx) (int, error) {
 	generic := NewGenericDao(dao.db, dao)
 	return generic.Count(params, tx)
 }
@@ -47,7 +46,7 @@ func (dao *TagDao) Count(params *database.DatabaseParams, tx *sql.Tx) (int, erro
 // Create inserts a new tag
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *TagDao) Create(t *models.Tag, tx *sql.Tx) error {
+func (dao *TagDao) Create(t *models.Tag, tx *database.Tx) error {
 	execFn := dao.db.Exec
 	if tx != nil {
 		execFn = tx.Exec
@@ -76,7 +75,7 @@ func (dao *TagDao) Create(t *models.Tag, tx *sql.Tx) error {
 // Get selects a tag with the given ID or name
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Tag, error) {
+func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams, tx *database.Tx) (*models.Tag, error) {
 	generic := NewGenericDao(dao.db, dao)
 
 	tagDbParams := &database.DatabaseParams{
@@ -128,7 +127,7 @@ func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams
 // List selects tags
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Tag, error) {
+func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Tag, error) {
 	generic := NewGenericDao(dao.db, dao)
 
 	if dbParams == nil {
@@ -204,7 +203,7 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*model
 // Update updates a tag
 //
 // Note: Only `tag` can be updated
-func (dao *TagDao) Update(tag *models.Tag, tx *sql.Tx) error {
+func (dao *TagDao) Update(tag *models.Tag, tx *database.Tx) error {
 	if tag.ID == "" {
 		return ErrEmptyId
 	}
@@ -233,7 +232,7 @@ func (dao *TagDao) Update(tag *models.Tag, tx *sql.Tx) error {
 // Delete deletes a tag based upon the where clause
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *TagDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
+func (dao *TagDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere
 	}

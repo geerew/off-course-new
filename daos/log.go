@@ -1,8 +1,6 @@
 package daos
 
 import (
-	"database/sql"
-
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
@@ -36,7 +34,7 @@ func (dao *LogDao) Table() string {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of logs
-func (dao *LogDao) Count(params *database.DatabaseParams, tx *sql.Tx) (int, error) {
+func (dao *LogDao) Count(params *database.DatabaseParams, tx *database.Tx) (int, error) {
 	generic := NewGenericDao(dao.db, dao)
 	return generic.Count(params, tx)
 }
@@ -44,7 +42,7 @@ func (dao *LogDao) Count(params *database.DatabaseParams, tx *sql.Tx) (int, erro
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Write inserts a new log
-func (dao *LogDao) Write(l *models.Log, tx *sql.Tx) error {
+func (dao *LogDao) Write(l *models.Log, tx *database.Tx) error {
 	if l.ID == "" {
 		l.RefreshId()
 	}
@@ -58,12 +56,12 @@ func (dao *LogDao) Write(l *models.Log, tx *sql.Tx) error {
 		SetMap(dao.data(l)).
 		ToSql()
 
-	var err error
+	execFn := dao.db.Exec
 	if tx != nil {
-		_, err = tx.Exec(query, args...)
-	} else {
-		_, err = dao.db.Exec(query, args...)
+		execFn = tx.Exec
 	}
+
+	_, err := execFn(query, args...)
 
 	return err
 }
@@ -73,7 +71,7 @@ func (dao *LogDao) Write(l *models.Log, tx *sql.Tx) error {
 // List selects logs
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *LogDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Log, error) {
+func (dao *LogDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Log, error) {
 	generic := NewGenericDao(dao.db, dao)
 
 	if dbParams == nil {
@@ -117,7 +115,7 @@ func (dao *LogDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*model
 // Delete deletes logs based upon the where clause
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *LogDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
+func (dao *LogDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere
 	}

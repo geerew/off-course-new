@@ -1,9 +1,7 @@
 package database
 
 import (
-	"database/sql"
 	"fmt"
-	"sync"
 	"testing"
 
 	"github.com/geerew/off-course/utils/appFs"
@@ -14,11 +12,12 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func setupSqliteDB(t *testing.T) (*DatabaseManager, []*logger.Log) {
+func setupSqliteDB(t *testing.T) *DatabaseManager {
 	// Logger
-	var logs []*logger.Log
-	var logsMux sync.Mutex
-	logger, _, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
+	logger, _, err := logger.InitLogger(&logger.BatchOptions{
+		BatchSize: 1,
+		WriteFn:   logger.NilWriteFn(),
+	})
 	require.NoError(t, err, "Failed to initialize logger")
 
 	// Filesystem
@@ -39,14 +38,17 @@ func setupSqliteDB(t *testing.T) (*DatabaseManager, []*logger.Log) {
 	_, err = dbManager.DataDb.Exec("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
 	require.Nil(t, err)
 
-	return dbManager, logs
+	return dbManager
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestSqliteDb_Bootstrap(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		logger, _, err := logger.InitLogger(logger.NilWriteFn(), 1)
+		logger, _, err := logger.InitLogger(&logger.BatchOptions{
+			BatchSize: 1,
+			WriteFn:   logger.NilWriteFn(),
+		})
 		require.Nil(t, err)
 
 		appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
@@ -66,7 +68,10 @@ func TestSqliteDb_Bootstrap(t *testing.T) {
 	})
 
 	t.Run("error creating data dir", func(t *testing.T) {
-		logger, _, err := logger.InitLogger(logger.NilWriteFn(), 1)
+		logger, _, err := logger.InitLogger(&logger.BatchOptions{
+			BatchSize: 1,
+			WriteFn:   logger.NilWriteFn(),
+		})
 		require.Nil(t, err)
 
 		appFs := appFs.NewAppFs(afero.NewReadOnlyFs(afero.NewMemMapFs()), logger)
@@ -86,7 +91,10 @@ func TestSqliteDb_Bootstrap(t *testing.T) {
 	})
 
 	t.Run("invalid migration", func(t *testing.T) {
-		logger, _, err := logger.InitLogger(logger.NilWriteFn(), 1)
+		logger, _, err := logger.InitLogger(&logger.BatchOptions{
+			BatchSize: 1,
+			WriteFn:   logger.NilWriteFn(),
+		})
 		require.Nil(t, err)
 
 		appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
@@ -109,7 +117,7 @@ func TestSqliteDb_Bootstrap(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestSqliteDb_Query(t *testing.T) {
-	dbManager, _ := setupSqliteDB(t)
+	dbManager := setupSqliteDB(t)
 
 	_, err := dbManager.DataDb.Exec("INSERT INTO test (name) VALUES ('test')")
 	require.Nil(t, err)
@@ -133,7 +141,7 @@ func TestSqliteDb_Query(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestSqliteDb_QueryRow(t *testing.T) {
-	dbManager, _ := setupSqliteDB(t)
+	dbManager := setupSqliteDB(t)
 
 	_, err := dbManager.DataDb.Exec("INSERT INTO test (name) VALUES ('test')")
 	require.Nil(t, err)
@@ -149,7 +157,7 @@ func TestSqliteDb_QueryRow(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestSqliteDb_Exec(t *testing.T) {
-	dbManager, _ := setupSqliteDB(t)
+	dbManager := setupSqliteDB(t)
 
 	result, err := dbManager.DataDb.Exec("INSERT INTO test (name) VALUES ('test')")
 	require.Nil(t, err)
@@ -162,7 +170,7 @@ func TestSqliteDb_Exec(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestSqliteDb_Begin(t *testing.T) {
-	dbManager, _ := setupSqliteDB(t)
+	dbManager := setupSqliteDB(t)
 
 	tx, err := dbManager.DataDb.Begin(nil)
 	require.Nil(t, err)
@@ -184,9 +192,9 @@ func TestSqliteDb_Begin(t *testing.T) {
 func TestSqliteDb_RunInTransaction(t *testing.T) {
 
 	t.Run(("error"), func(t *testing.T) {
-		dbManager, _ := setupSqliteDB(t)
+		dbManager := setupSqliteDB(t)
 
-		err := dbManager.DataDb.RunInTransaction(func(tx *sql.Tx) error {
+		err := dbManager.DataDb.RunInTransaction(func(tx *Tx) error {
 			_, err := tx.Exec("INSERT INTO test (name) VALUES ('test')")
 			if err != nil {
 				return err
@@ -209,9 +217,9 @@ func TestSqliteDb_RunInTransaction(t *testing.T) {
 	})
 
 	t.Run(("success"), func(t *testing.T) {
-		dbManager, _ := setupSqliteDB(t)
+		dbManager := setupSqliteDB(t)
 
-		err := dbManager.DataDb.RunInTransaction(func(tx *sql.Tx) error {
+		err := dbManager.DataDb.RunInTransaction(func(tx *Tx) error {
 			_, err := tx.Exec("INSERT INTO test (name) VALUES ('test')")
 			if err != nil {
 				return err

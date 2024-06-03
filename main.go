@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"flag"
 	"log"
 	"os"
@@ -51,12 +50,18 @@ func main() {
 	}
 
 	// Logger
-	logger, loggerDone, err := logger.InitLogger(loggerWriteFn(dbManager.LogsDb), 200)
+	logger, loggerDone, err := logger.InitLogger(&logger.BatchOptions{
+		BatchSize:   200,
+		BeforeAddFn: loggerBeforeAddFunc(dbManager.LogsDb),
+		WriteFn:     loggerWriteFn(dbManager.LogsDb),
+	})
+
 	if err != nil {
 		log.Fatal("Failed to initialize logger", err)
 	}
 
-	// Update the appFs logger
+	// Set loggers
+	dbManager.DataDb.SetLogger(logger)
 	appFs.SetLogger(logger)
 
 	// Course scanner
@@ -115,11 +120,36 @@ func main() {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// loggerBeforeAddFunc is a logger.BeforeAddFn
+func loggerBeforeAddFunc(db database.Database) logger.BeforeAddFn {
+	logsDao := daos.NewLogDao(db)
+
+	return func(ctx context.Context, log *logger.Log) bool {
+		// Skip calls to the logs API
+		if strings.HasPrefix(log.Message, "GET /api/logs/") {
+			return false
+		}
+
+		// This should never happen as the logsDb should be nil, but in the event it is not, skip
+		// logging log writes as it will cause an infinite loop
+		if strings.HasPrefix(log.Message, "INSERT INTO "+logsDao.Table()) ||
+			strings.HasPrefix(log.Message, "SELECT "+logsDao.Table()) ||
+			strings.HasPrefix(log.Message, "UPDATE "+logsDao.Table()) ||
+			strings.HasPrefix(log.Message, "DELETE FROM "+logsDao.Table()) {
+			return false
+		}
+
+		return true
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // loggerWriteFn returns a logger.WriteFn that writes logs to the database
 func loggerWriteFn(db database.Database) logger.WriteFn {
 	return func(ctx context.Context, logs []*logger.Log) error {
 		// Write accumulated logs
-		db.RunInTransaction(func(tx *sql.Tx) error {
+		db.RunInTransaction(func(tx *database.Tx) error {
 			model := &models.Log{}
 
 			for _, l := range logs {

@@ -17,7 +17,10 @@ func setup(t *testing.T) *database.DatabaseManager {
 	// Logger
 	var logs []*logger.Log
 	var logsMux sync.Mutex
-	logger, _, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
+	logger, _, err := logger.InitLogger(&logger.BatchOptions{
+		BatchSize: 1,
+		WriteFn:   logger.TestWriteFn(&logs, &logsMux),
+	})
 	require.NoError(t, err, "Failed to initialize logger")
 
 	// Filesystem

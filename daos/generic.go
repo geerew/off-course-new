@@ -30,7 +30,7 @@ func NewGenericDao(db database.Database, caller daoer) *GenericDao {
 // Count returns the number of rows in a table
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *GenericDao) Count(dbParams *database.DatabaseParams, tx *sql.Tx) (int, error) {
+func (dao *GenericDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
 	queryRowFn := dao.db.QueryRow
 	if tx != nil {
 		queryRowFn = tx.QueryRow
@@ -56,7 +56,7 @@ func (dao *GenericDao) Count(dbParams *database.DatabaseParams, tx *sql.Tx) (int
 // Get returns a row from a table
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *GenericDao) Get(dbParams *database.DatabaseParams, tx *sql.Tx) (*sql.Row, error) {
+func (dao *GenericDao) Get(dbParams *database.DatabaseParams, tx *database.Tx) (*sql.Row, error) {
 	queryRowFn := dao.db.QueryRow
 	if tx != nil {
 		queryRowFn = tx.QueryRow
@@ -95,7 +95,7 @@ func (dao *GenericDao) Get(dbParams *database.DatabaseParams, tx *sql.Tx) (*sql.
 // List returns rows from a table
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *GenericDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) (*sql.Rows, error) {
+func (dao *GenericDao) List(dbParams *database.DatabaseParams, tx *database.Tx) (*sql.Rows, error) {
 	queryFn := dao.db.Query
 	if tx != nil {
 		queryFn = tx.Query
@@ -148,7 +148,7 @@ func (dao *GenericDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) (*sql
 // Delete deletes a row from a table based upon a where clause
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *GenericDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
+func (dao *GenericDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere
 	}

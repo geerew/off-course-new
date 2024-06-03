@@ -391,7 +391,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 	course.CardPath = cardPath
 
 	// Run in a transaction so it all commits, or it rolls back
-	err = cs.db.RunInTransaction(func(tx *sql.Tx) error {
+	err = cs.db.RunInTransaction(func(tx *database.Tx) error {
 		// Convert the assets map to a slice
 		assets := make([]*models.Asset, 0, len(files))
 		for _, chapterMap := range assetsMap {
@@ -560,7 +560,7 @@ func isCard(fileName string) bool {
 
 // updateAssets updates the assets in the DB (in a transaction), by comparing the assets found on disk
 // to the assets found in the DB. It will insert new assets and delete assets which no longer exist
-func updateAssets(assetDao *daos.AssetDao, tx *sql.Tx, courseId string, assets []*models.Asset) error {
+func updateAssets(assetDao *daos.AssetDao, tx *database.Tx, courseId string, assets []*models.Asset) error {
 	// Get existing assets
 	dbParams := &database.DatabaseParams{
 		Where: sq.Eq{assetDao.Table() + ".course_id": courseId},
@@ -615,7 +615,7 @@ func updateAssets(assetDao *daos.AssetDao, tx *sql.Tx, courseId string, assets [
 // updateAttachments updates the attachments in the DB (in a transaction), by comparing the attachments
 // found on disk to the attachments found in the DB. It will insert new attachments and delete attachments
 // which no longer exist
-func updateAttachments(attachmentDao *daos.AttachmentDao, tx *sql.Tx, courseId string, attachments []*models.Attachment) error {
+func updateAttachments(attachmentDao *daos.AttachmentDao, tx *database.Tx, courseId string, attachments []*models.Attachment) error {
 	// Get existing attachments
 	dbParams := &database.DatabaseParams{
 		Where: sq.Eq{attachmentDao.Table() + ".course_id": courseId},

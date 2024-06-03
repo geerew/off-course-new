@@ -37,7 +37,7 @@ func (dao *AssetDao) Table() string {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of assets
-func (dao *AssetDao) Count(params *database.DatabaseParams, tx *sql.Tx) (int, error) {
+func (dao *AssetDao) Count(params *database.DatabaseParams, tx *database.Tx) (int, error) {
 	generic := NewGenericDao(dao.db, dao)
 	return generic.Count(params, tx)
 }
@@ -45,7 +45,7 @@ func (dao *AssetDao) Count(params *database.DatabaseParams, tx *sql.Tx) (int, er
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Create inserts a new asset
-func (dao *AssetDao) Create(a *models.Asset, tx *sql.Tx) error {
+func (dao *AssetDao) Create(a *models.Asset, tx *database.Tx) error {
 	if a.Prefix.Valid && a.Prefix.Int16 < 0 {
 		return ErrInvalidPrefix
 	}
@@ -80,7 +80,7 @@ func (dao *AssetDao) Create(a *models.Asset, tx *sql.Tx) error {
 // `dbparams` can be used to order the attachments
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Asset, error) {
+func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *database.Tx) (*models.Asset, error) {
 	generic := NewGenericDao(dao.db, dao)
 
 	assetDbParams := &database.DatabaseParams{
@@ -123,7 +123,7 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.T
 // List selects assets
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Asset, error) {
+func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Asset, error) {
 	generic := NewGenericDao(dao.db, dao)
 
 	if dbParams == nil {
@@ -199,7 +199,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mod
 // Delete deletes an asset based upon the where clause
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
+func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere
 	}

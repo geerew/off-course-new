@@ -40,7 +40,7 @@ func (dao *CourseProgressDao) Table() string {
 // Create inserts a new course progress
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *CourseProgressDao) Create(cp *models.CourseProgress, tx *sql.Tx) error {
+func (dao *CourseProgressDao) Create(cp *models.CourseProgress, tx *database.Tx) error {
 	execFn := dao.db.Exec
 	if tx != nil {
 		execFn = tx.Exec
@@ -69,7 +69,7 @@ func (dao *CourseProgressDao) Create(cp *models.CourseProgress, tx *sql.Tx) erro
 // Get selects a course progress with the given course ID
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *CourseProgressDao) Get(courseId string, tx *sql.Tx) (*models.CourseProgress, error) {
+func (dao *CourseProgressDao) Get(courseId string, tx *database.Tx) (*models.CourseProgress, error) {
 	generic := NewGenericDao(dao.db, dao)
 
 	dbParams := &database.DatabaseParams{
@@ -104,7 +104,7 @@ func (dao *CourseProgressDao) Get(courseId string, tx *sql.Tx) (*models.CoursePr
 //   - If the course is not complete, `completed_at` is set to null
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *CourseProgressDao) Refresh(courseId string, tx *sql.Tx) error {
+func (dao *CourseProgressDao) Refresh(courseId string, tx *database.Tx) error {
 	if courseId == "" {
 		return ErrEmptyId
 	}

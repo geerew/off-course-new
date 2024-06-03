@@ -1,8 +1,6 @@
 package daos
 
 import (
-	"database/sql"
-
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
@@ -36,7 +34,7 @@ func (dao *AttachmentDao) Table() string {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of attachments
-func (dao *AttachmentDao) Count(params *database.DatabaseParams, tx *sql.Tx) (int, error) {
+func (dao *AttachmentDao) Count(params *database.DatabaseParams, tx *database.Tx) (int, error) {
 	generic := NewGenericDao(dao.db, dao)
 	return generic.Count(params, tx)
 }
@@ -44,7 +42,7 @@ func (dao *AttachmentDao) Count(params *database.DatabaseParams, tx *sql.Tx) (in
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Create inserts a new attachment
-func (dao *AttachmentDao) Create(a *models.Attachment, tx *sql.Tx) error {
+func (dao *AttachmentDao) Create(a *models.Attachment, tx *database.Tx) error {
 	if a.ID == "" {
 		a.RefreshId()
 	}
@@ -73,7 +71,7 @@ func (dao *AttachmentDao) Create(a *models.Attachment, tx *sql.Tx) error {
 // Get selects an attachment with the given ID
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *AttachmentDao) Get(id string, tx *sql.Tx) (*models.Attachment, error) {
+func (dao *AttachmentDao) Get(id string, tx *database.Tx) (*models.Attachment, error) {
 	generic := NewGenericDao(dao.db, dao)
 
 	dbParams := &database.DatabaseParams{
@@ -99,7 +97,7 @@ func (dao *AttachmentDao) Get(id string, tx *sql.Tx) (*models.Attachment, error)
 // List selects attachments
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Attachment, error) {
+func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Attachment, error) {
 	generic := NewGenericDao(dao.db, dao)
 
 	if dbParams == nil {
@@ -143,7 +141,7 @@ func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([
 // Delete deletes an attachment based upon the where clause
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *AttachmentDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
+func (dao *AttachmentDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere
 	}

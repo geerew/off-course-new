@@ -27,11 +27,14 @@ func setupCourseScanner(t *testing.T) (*CourseScanner, *database.DatabaseManager
 	// Logger
 	var logs []*logger.Log
 	var logsMux sync.Mutex
-	loggy, _, err := logger.InitLogger(logger.TestWriteFn(&logs, &logsMux), 1)
+	logger, _, err := logger.InitLogger(&logger.BatchOptions{
+		BatchSize: 1,
+		WriteFn:   logger.TestWriteFn(&logs, &logsMux),
+	})
 	require.NoError(t, err, "Failed to initialize logger")
 
 	// Filesystem
-	appFs := appFs.NewAppFs(afero.NewMemMapFs(), loggy)
+	appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
 
 	// Db
 	dbManager, err := database.NewSqliteDBManager(&database.DatabaseConfig{
@@ -48,7 +51,7 @@ func setupCourseScanner(t *testing.T) (*CourseScanner, *database.DatabaseManager
 	courseScanner := NewCourseScanner(&CourseScannerConfig{
 		Db:     dbManager.DataDb,
 		AppFs:  appFs,
-		Logger: loggy,
+		Logger: logger,
 	})
 
 	return courseScanner, dbManager, &logs, &logsMux

@@ -7,55 +7,44 @@ import (
 	"log/slog"
 	"testing"
 	"time"
+
+	"github.com/geerew/off-course/utils"
+	"github.com/stretchr/testify/require"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestNewBatchHandlerPanic(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("Expected to panic.")
-		}
-	}()
+func TesBatch_NewBatchHandler(t *testing.T) {
+	t.Run("panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Expected to panic.")
+			}
+		}()
 
-	NewBatchHandler(BatchOptions{})
+		NewBatchHandler(BatchOptions{})
+	})
+
+	t.Run("defaults", func(t *testing.T) {
+		h := NewBatchHandler(BatchOptions{
+			WriteFn: func(ctx context.Context, logs []*Log) error {
+				return nil
+			},
+		})
+
+		require.Equal(t, h.options.BatchSize, 100)
+		require.Equal(t, h.options.Level, slog.LevelInfo)
+		require.Nil(t, h.options.BeforeAddFn)
+		require.NotNil(t, h.options.WriteFn)
+		require.Empty(t, h.group)
+		require.Empty(t, h.attrs)
+		require.Empty(t, h.logs)
+	})
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestNewBatchHandlerDefaults(t *testing.T) {
-	h := NewBatchHandler(BatchOptions{
-		WriteFn: func(ctx context.Context, logs []*Log) error {
-			return nil
-		},
-	})
-
-	if h.options.BatchSize != 100 {
-		t.Fatalf("Expected default BatchSize %d, got %d", 100, h.options.BatchSize)
-	}
-
-	if h.options.Level != slog.LevelInfo {
-		t.Fatalf("Expected default Level Info, got %v", h.options.Level)
-	}
-
-	if h.options.WriteFn == nil {
-		t.Fatal("Expected default WriteFn to be set")
-	}
-
-	if h.group != "" {
-		t.Fatalf("Expected empty group, got %s", h.group)
-	}
-
-	if len(h.attrs) != 0 {
-		t.Fatalf("Expected empty attrs, got %v", h.attrs)
-	}
-
-	if len(h.logs) != 0 {
-		t.Fatalf("Expected empty logs queue, got %v", h.logs)
-	}
-}
-
-func TestBatchHandlerEnabled(t *testing.T) {
+func TestBatch_LevelEnabled(t *testing.T) {
 	h := NewBatchHandler(BatchOptions{
 		Level: slog.LevelWarn,
 		WriteFn: func(ctx context.Context, logs []*Log) error {
@@ -78,17 +67,14 @@ func TestBatchHandlerEnabled(t *testing.T) {
 	for _, s := range scenarios {
 		t.Run(fmt.Sprintf("Level %v", s.level), func(t *testing.T) {
 			result := l.Enabled(context.Background(), s.level)
-
-			if result != s.expected {
-				t.Fatalf("Expected %v, got %v", s.expected, result)
-			}
+			require.Equal(t, s.expected, result)
 		})
 	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestBatchHandlerSetLevel(t *testing.T) {
+func TestBatch_SetLevel(t *testing.T) {
 	h := NewBatchHandler(BatchOptions{
 		Level: slog.LevelWarn,
 		WriteFn: func(ctx context.Context, logs []*Log) error {
@@ -96,20 +82,15 @@ func TestBatchHandlerSetLevel(t *testing.T) {
 		},
 	})
 
-	if h.options.Level != slog.LevelWarn {
-		t.Fatalf("Expected the initial level to be %d, got %d", slog.LevelWarn, h.options.Level)
-	}
+	require.Equal(t, h.options.Level, slog.LevelWarn)
 
 	h.SetLevel(slog.LevelDebug)
-
-	if h.options.Level != slog.LevelDebug {
-		t.Fatalf("Expected the updated level to be %d, got %d", slog.LevelDebug, h.options.Level)
-	}
+	require.Equal(t, h.options.Level, slog.LevelDebug)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestBatchHandlerWithAttrsAndWithGroup(t *testing.T) {
+func TestBatch_WithAttrsAndWithGroup(t *testing.T) {
 	h0 := NewBatchHandler(BatchOptions{
 		WriteFn: func(ctx context.Context, logs []*Log) error {
 			return nil
@@ -127,62 +108,35 @@ func TestBatchHandlerWithAttrsAndWithGroup(t *testing.T) {
 		expectedGroup  string
 		expectedAttrs  int
 	}{
-		{
-			"h0",
-			h0,
-			nil,
-			"",
-			0,
-		},
-		{
-			"h1",
-			h1,
-			h0,
-			"",
-			1,
-		},
-		{
-			"h2",
-			h2,
-			h1,
-			"h2_group",
-			0,
-		},
-		{
-			"h3",
-			h3,
-			h2,
-			"",
-			1,
-		},
+		{"h0", h0, nil, "", 0},
+		{"h1", h1, h0, "", 1},
+		{"h2", h2, h1, "h2_group", 0},
+		{"h3", h3, h2, "", 1},
 	}
 
 	for _, s := range scenarios {
 		t.Run(s.name, func(t *testing.T) {
-			if s.handler.group != s.expectedGroup {
-				t.Fatalf("Expected group %q, got %q", s.expectedGroup, s.handler.group)
-			}
-
-			if s.handler.parent != s.expectedParent {
-				t.Fatalf("Expected parent %v, got %v", s.expectedParent, s.handler.parent)
-			}
-
-			if totalAttrs := len(s.handler.attrs); totalAttrs != s.expectedAttrs {
-				t.Fatalf("Expected %d attrs, got %d", s.expectedAttrs, totalAttrs)
-			}
+			require.Equal(t, s.expectedGroup, s.handler.group)
+			require.Equal(t, s.expectedParent, s.handler.parent)
+			require.Equal(t, s.expectedAttrs, len(s.handler.attrs))
 		})
 	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestBatchHandlerHandle(t *testing.T) {
+func TestBatch_Handle(t *testing.T) {
 	ctx := context.Background()
 
+	beforeLogs := []*Log{}
 	writeLogs := []*Log{}
 
 	h := NewBatchHandler(BatchOptions{
 		BatchSize: 3,
+		BeforeAddFn: func(_ context.Context, log *Log) bool {
+			beforeLogs = append(beforeLogs, log)
+			return log.Message != "test2"
+		},
 		WriteFn: func(_ context.Context, logs []*Log) error {
 			writeLogs = logs
 			return nil
@@ -191,37 +145,41 @@ func TestBatchHandlerHandle(t *testing.T) {
 
 	h.Handle(ctx, slog.NewRecord(time.Now(), slog.LevelInfo, "test1", 0))
 	h.Handle(ctx, slog.NewRecord(time.Now(), slog.LevelInfo, "test2", 0))
+	h.Handle(ctx, slog.NewRecord(time.Now(), slog.LevelInfo, "test3", 0))
 
-	// no batch write
-	{
-		checkLogMessages([]string{"test1", "test2"}, h.logs, t)
+	// Before logs should have all the logs
+	require.Equal(t, []string{"test1", "test2", "test3"}, utils.Map(beforeLogs, getMessage))
 
-		// should be empty because no batch write has happened yet
-		if totalWriteLogs := len(writeLogs); totalWriteLogs != 0 {
-			t.Fatalf("Expected %d writeLogs, got %d", 0, totalWriteLogs)
-		}
-	}
+	// h.logs should have only the logs that passed the BeforeAddFn
+	require.Equal(t, []string{"test1", "test3"}, utils.Map(h.logs, getMessage))
 
-	// add one more log to trigger the batch write
-	{
-		h.Handle(ctx, slog.NewRecord(time.Now(), slog.LevelInfo, "test3", 0))
+	// writeLogs should be empty because the batch size hasn't been reached
+	require.Len(t, writeLogs, 0)
 
-		// should be empty after the batch write
-		checkLogMessages([]string{}, h.logs, t)
+	// Trigger the batch write
+	h.Handle(ctx, slog.NewRecord(time.Now(), slog.LevelInfo, "test4", 0))
 
-		checkLogMessages([]string{"test1", "test2", "test3"}, writeLogs, t)
-	}
+	// h.logs should be empty because they were written
+	require.Empty(t, utils.Map(h.logs, getMessage))
+
+	// writeLogs should have the logs that passed the BeforeAddFn
+	require.Equal(t, []string{"test1", "test3", "test4"}, utils.Map(writeLogs, getMessage))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestBatchHandlerWriteAll(t *testing.T) {
+func TestBatch_rWriteAll(t *testing.T) {
 	ctx := context.Background()
 
+	beforeLogs := []*Log{}
 	writeLogs := []*Log{}
 
 	h := NewBatchHandler(BatchOptions{
 		BatchSize: 3,
+		BeforeAddFn: func(_ context.Context, log *Log) bool {
+			beforeLogs = append(beforeLogs, log)
+			return true
+		},
 		WriteFn: func(_ context.Context, logs []*Log) error {
 			writeLogs = logs
 			return nil
@@ -231,24 +189,30 @@ func TestBatchHandlerWriteAll(t *testing.T) {
 	h.Handle(ctx, slog.NewRecord(time.Now(), slog.LevelInfo, "test1", 0))
 	h.Handle(ctx, slog.NewRecord(time.Now(), slog.LevelInfo, "test2", 0))
 
-	checkLogMessages([]string{"test1", "test2"}, h.logs, t)
-	checkLogMessages([]string{}, writeLogs, t) // empty because the batch size hasn't been reached
+	require.Equal(t, []string{"test1", "test2"}, utils.Map(beforeLogs, getMessage))
+	require.Equal(t, []string{"test1", "test2"}, utils.Map(h.logs, getMessage))
+	require.Empty(t, utils.Map(writeLogs, getMessage))
 
-	// force trigger the batch write
 	h.WriteAll(ctx)
 
-	checkLogMessages([]string{}, h.logs, t) // reset
-	checkLogMessages([]string{"test1", "test2"}, writeLogs, t)
+	require.Equal(t, []string{"test1", "test2"}, utils.Map(beforeLogs, getMessage))
+	require.Empty(t, utils.Map(h.logs, getMessage))
+	require.Equal(t, []string{"test1", "test2"}, utils.Map(writeLogs, getMessage))
 }
 
-func TestBatchHandlerAttrsFormat(t *testing.T) {
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestBatch_AttrsFormat(t *testing.T) {
 	ctx := context.Background()
 
-	writeLogs := []*Log{}
+	beforeLogs := []*Log{}
 
 	h0 := NewBatchHandler(BatchOptions{
+		BeforeAddFn: func(_ context.Context, log *Log) bool {
+			beforeLogs = append(beforeLogs, log)
+			return true
+		},
 		WriteFn: func(_ context.Context, logs []*Log) error {
-			writeLogs = logs
 			return nil
 		},
 	})
@@ -268,43 +232,24 @@ func TestBatchHandlerAttrsFormat(t *testing.T) {
 	h1.Handle(ctx, record)
 	h2.Handle(ctx, record)
 
-	// force trigger the batch write
-	h0.WriteAll(ctx)
-
 	expected := []string{
 		`{"name":"test"}`,
 		`{"a":1,"b":"123","name":"test"}`,
 		`{"a":1,"b":"123","sub":{"c":3,"d":{"d.1":1},"e":"example error","name":"test"}}`,
 	}
 
-	for i, data := range expected {
+	for i, ex := range expected {
 		t.Run(fmt.Sprintf("log handler %d", i), func(t *testing.T) {
-			log := writeLogs[i]
+			log := beforeLogs[i]
 			raw, _ := log.Data.MarshalJSON()
-			if string(raw) != data {
-				t.Fatalf("Expected \n%s \ngot \n%s", data, raw)
-			}
+			require.JSONEq(t, ex, string(raw))
 		})
 	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func checkLogMessages(expected []string, logs []*Log, t *testing.T) {
-	if len(logs) != len(expected) {
-		t.Fatalf("Expected %d batched logs, got %d (expected: %v)", len(expected), len(logs), expected)
-	}
-
-	for _, message := range expected {
-		exists := false
-		for _, l := range logs {
-			if l.Message == message {
-				exists = true
-				continue
-			}
-		}
-		if !exists {
-			t.Fatalf("Missing %q log message", message)
-		}
-	}
+// getMessage is a helper function that returns the message of a Log
+func getMessage(l *Log) string {
+	return l.Message
 }

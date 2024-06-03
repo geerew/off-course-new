@@ -1,8 +1,6 @@
 package daos
 
 import (
-	"database/sql"
-
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
@@ -40,9 +38,9 @@ func (dao *AssetProgressDao) Table() string {
 //
 // If `tx` is nil, the function will create a new transaction, else it will use the current
 // transaction
-func (dao *AssetProgressDao) Create(ap *models.AssetProgress, tx *sql.Tx) error {
+func (dao *AssetProgressDao) Create(ap *models.AssetProgress, tx *database.Tx) error {
 	if tx == nil {
-		return dao.db.RunInTransaction(func(tx *sql.Tx) error {
+		return dao.db.RunInTransaction(func(tx *database.Tx) error {
 			return dao.create(ap, tx)
 		})
 	} else {
@@ -55,7 +53,7 @@ func (dao *AssetProgressDao) Create(ap *models.AssetProgress, tx *sql.Tx) error 
 // Get selects an asset progress with the given asset ID
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *AssetProgressDao) Get(assetId string, tx *sql.Tx) (*models.AssetProgress, error) {
+func (dao *AssetProgressDao) Get(assetId string, tx *database.Tx) (*models.AssetProgress, error) {
 	generic := NewGenericDao(dao.db, dao)
 
 	dbParams := &database.DatabaseParams{
@@ -85,9 +83,9 @@ func (dao *AssetProgressDao) Get(assetId string, tx *sql.Tx) (*models.AssetProgr
 //
 // If `tx` is nil, the function will create a new transaction, else it will use the current
 // transaction
-func (dao *AssetProgressDao) Update(ap *models.AssetProgress, tx *sql.Tx) error {
+func (dao *AssetProgressDao) Update(ap *models.AssetProgress, tx *database.Tx) error {
 	if tx == nil {
-		return dao.db.RunInTransaction(func(tx *sql.Tx) error {
+		return dao.db.RunInTransaction(func(tx *database.Tx) error {
 			return dao.update(ap, tx)
 		})
 	} else {
@@ -102,7 +100,7 @@ func (dao *AssetProgressDao) Update(ap *models.AssetProgress, tx *sql.Tx) error 
 // create inserts a new asset progress, then refreshes the course progress
 //
 // This function is used by Create() and always runs within a transaction
-func (dao *AssetProgressDao) create(ap *models.AssetProgress, tx *sql.Tx) error {
+func (dao *AssetProgressDao) create(ap *models.AssetProgress, tx *database.Tx) error {
 	if ap.ID == "" {
 		ap.RefreshId()
 	}
@@ -132,7 +130,7 @@ func (dao *AssetProgressDao) create(ap *models.AssetProgress, tx *sql.Tx) error 
 // update updates the asset progress, then refreshes the course progress
 //
 // This function is used by Update() and always runs within a transaction
-func (dao *AssetProgressDao) update(ap *models.AssetProgress, tx *sql.Tx) error {
+func (dao *AssetProgressDao) update(ap *models.AssetProgress, tx *database.Tx) error {
 	if ap.AssetID == "" {
 		return ErrEmptyId
 	}

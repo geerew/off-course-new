@@ -1,8 +1,6 @@
 package daos
 
 import (
-	"database/sql"
-
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
@@ -36,7 +34,7 @@ func (dao *CourseTagDao) Table() string {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Count returns the number of course-tags
-func (dao *CourseTagDao) Count(dbParams *database.DatabaseParams, tx *sql.Tx) (int, error) {
+func (dao *CourseTagDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
 	generic := NewGenericDao(dao.db, dao)
 	return generic.Count(dbParams, nil)
 }
@@ -47,9 +45,9 @@ func (dao *CourseTagDao) Count(dbParams *database.DatabaseParams, tx *sql.Tx) (i
 //
 // If `tx` is nil, the function will create a new transaction, else it will use the current
 // transaction
-func (dao *CourseTagDao) Create(ct *models.CourseTag, tx *sql.Tx) error {
+func (dao *CourseTagDao) Create(ct *models.CourseTag, tx *database.Tx) error {
 	if tx == nil {
-		return dao.db.RunInTransaction(func(tx *sql.Tx) error {
+		return dao.db.RunInTransaction(func(tx *database.Tx) error {
 			return dao.create(ct, tx)
 		})
 	} else {
@@ -62,7 +60,7 @@ func (dao *CourseTagDao) Create(ct *models.CourseTag, tx *sql.Tx) error {
 // List selects courses
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *CourseTagDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.CourseTag, error) {
+func (dao *CourseTagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.CourseTag, error) {
 	generic := NewGenericDao(dao.db, dao)
 
 	if dbParams == nil {
@@ -150,7 +148,7 @@ func (dao *CourseTagDao) ListCourseIdsByTags(tags []string, dbParams *database.D
 // Delete deletes a course-tag based upon the where clause
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *CourseTagDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
+func (dao *CourseTagDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere
 	}
@@ -182,7 +180,7 @@ func (dao *CourseTagDao) ProcessOrderBy(orderBy []string, explicit bool) []strin
 // create inserts a new course-tag and tag if it does not exist
 //
 // This function is used by Create() and always runs within a transaction
-func (dao *CourseTagDao) create(ct *models.CourseTag, tx *sql.Tx) error {
+func (dao *CourseTagDao) create(ct *models.CourseTag, tx *database.Tx) error {
 	if tx == nil {
 		return ErrNilTransaction
 	}

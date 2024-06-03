@@ -64,7 +64,7 @@ func (dao *CourseDao) Create(c *models.Course) error {
 		SetMap(dao.data(c)).
 		ToSql()
 
-	return dao.db.RunInTransaction(func(tx *sql.Tx) error {
+	return dao.db.RunInTransaction(func(tx *database.Tx) error {
 		// Create the course
 		if _, err := tx.Exec(query, args...); err != nil {
 			return err
@@ -85,7 +85,7 @@ func (dao *CourseDao) Create(c *models.Course) error {
 // Get selects a course with the given ID
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *CourseDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.Tx) (*models.Course, error) {
+func (dao *CourseDao) Get(id string, dbParams *database.DatabaseParams, tx *database.Tx) (*models.Course, error) {
 	generic := NewGenericDao(dao.db, dao)
 
 	courseDbParams := &database.DatabaseParams{
@@ -111,7 +111,7 @@ func (dao *CourseDao) Get(id string, dbParams *database.DatabaseParams, tx *sql.
 // List selects courses
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*models.Course, error) {
+func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Course, error) {
 	generic := NewGenericDao(dao.db, dao)
 
 	if dbParams == nil {
@@ -155,7 +155,7 @@ func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *sql.Tx) ([]*mo
 // Update updates a course
 //
 // Note: Only `card_path` and `available` can be updated
-func (dao *CourseDao) Update(course *models.Course, tx *sql.Tx) error {
+func (dao *CourseDao) Update(course *models.Course, tx *database.Tx) error {
 	if course.ID == "" {
 		return ErrEmptyId
 	}
@@ -185,7 +185,7 @@ func (dao *CourseDao) Update(course *models.Course, tx *sql.Tx) error {
 // Delete deletes a course based upon the where clause
 //
 // `tx` allows for the function to be run within a transaction
-func (dao *CourseDao) Delete(dbParams *database.DatabaseParams, tx *sql.Tx) error {
+func (dao *CourseDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere
 	}

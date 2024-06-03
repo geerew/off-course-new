@@ -207,7 +207,9 @@
 													<Table.Cell
 														class={cn(
 															'whitespace-nowrap px-6 text-sm [&:has([role=checkbox])]:pl-3',
-															cell.id === 'message' ? 'min-w-96' : 'min-w-[1%]'
+															cell.id === 'message'
+																? 'flex min-w-96 flex-wrap whitespace-normal'
+																: 'min-w-[1%]'
 														)}
 														{...attrs}
 													>

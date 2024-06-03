@@ -13,7 +13,10 @@ import (
 
 func Test_NewSqliteDBManager(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		logger, _, err := logger.InitLogger(logger.NilWriteFn(), 1)
+		logger, _, err := logger.InitLogger(&logger.BatchOptions{
+			BatchSize: 1,
+			WriteFn:   logger.NilWriteFn(),
+		})
 		require.Nil(t, err)
 
 		appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
@@ -31,7 +34,10 @@ func Test_NewSqliteDBManager(t *testing.T) {
 	})
 
 	t.Run("error creating data dir", func(t *testing.T) {
-		logger, _, err := logger.InitLogger(logger.NilWriteFn(), 1)
+		logger, _, err := logger.InitLogger(&logger.BatchOptions{
+			BatchSize: 1,
+			WriteFn:   logger.NilWriteFn(),
+		})
 		require.Nil(t, err)
 
 		appFs := appFs.NewAppFs(afero.NewReadOnlyFs(afero.NewMemMapFs()), logger)

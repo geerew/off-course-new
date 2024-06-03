@@ -2,12 +2,46 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
 	"github.com/geerew/off-course/migrations"
 	"github.com/pressly/goose/v3"
 )
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Tx is a wrapper around sql.Tx that logs queries
+type Tx struct {
+	*sql.Tx
+	db *SqliteDb
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Exec executes a query within a transaction without returning any rows
+func (tx *Tx) Exec(query string, args ...any) (sql.Result, error) {
+	tx.db.log(query, args...)
+	return tx.Tx.Exec(query, args...)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Query executes a query within a transaction that returns rows, typically a SELECT statement
+func (tx *Tx) Query(query string, args ...any) (*sql.Rows, error) {
+	tx.db.log(query, args...)
+	return tx.Tx.Query(query, args...)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// QueryRow executes a query within a transaction that is expected to return at most one row
+func (tx *Tx) QueryRow(query string, args ...any) *sql.Row {
+	tx.db.log(query, args...)
+	return tx.Tx.QueryRow(query, args...)
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -41,7 +75,8 @@ func NewSqliteDB(config *DatabaseConfig) (*SqliteDb, error) {
 // Query executes a query that returns rows, typically a SELECT statement
 //
 // It implements the Database interface
-func (db *SqliteDb) Query(query string, args ...interface{}) (*sql.Rows, error) {
+func (db *SqliteDb) Query(query string, args ...any) (*sql.Rows, error) {
+	db.log(query, args...)
 	return db.DB.Query(query, args...)
 }
 
@@ -50,7 +85,8 @@ func (db *SqliteDb) Query(query string, args ...interface{}) (*sql.Rows, error) 
 // QueryRow executes a query that is expected to return at most one row
 //
 // It implements the Database interface
-func (db *SqliteDb) QueryRow(query string, args ...interface{}) *sql.Row {
+func (db *SqliteDb) QueryRow(query string, args ...any) *sql.Row {
+	db.log(query, args...)
 	return db.DB.QueryRow(query, args...)
 }
 
@@ -59,7 +95,8 @@ func (db *SqliteDb) QueryRow(query string, args ...interface{}) *sql.Row {
 // Exec executes a query without returning any rows
 //
 // It implements the Database interface
-func (db *SqliteDb) Exec(query string, args ...interface{}) (sql.Result, error) {
+func (db *SqliteDb) Exec(query string, args ...any) (sql.Result, error) {
+	db.log(query, args...)
 	return db.DB.Exec(query, args...)
 }
 
@@ -77,10 +114,15 @@ func (db *SqliteDb) Begin(opts *sql.TxOptions) (*sql.Tx, error) {
 // RunInTransaction runs a function in a transaction
 //
 // It implements the Database interface
-func (db *SqliteDb) RunInTransaction(txFunc func(*sql.Tx) error) error {
-	tx, err := db.DB.Begin()
+func (db *SqliteDb) RunInTransaction(txFunc func(*Tx) error) error {
+	slqTx, err := db.DB.Begin()
 	if err != nil {
 		return err
+	}
+
+	tx := &Tx{
+		Tx: slqTx,
+		db: db,
 	}
 
 	defer func() {
@@ -96,6 +138,12 @@ func (db *SqliteDb) RunInTransaction(txFunc func(*sql.Tx) error) error {
 
 	err = txFunc(tx)
 	return err
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (db *SqliteDb) SetLogger(l *slog.Logger) {
+	db.config.Logger = l
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -146,6 +194,24 @@ func (db *SqliteDb) migrate() error {
 	}
 
 	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+func (db *SqliteDb) log(query string, args ...any) {
+	if db.config.Logger != nil {
+		attrs := make([]any, 0, len(args))
+		attrs = append(attrs, loggerType)
+
+		for i, arg := range args {
+			attrs = append(attrs, slog.Any(fmt.Sprintf("arg %d", i), arg))
+		}
+
+		db.config.Logger.Debug(
+			query,
+			attrs...,
+		)
+	}
+
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
