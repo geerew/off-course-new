@@ -52,7 +52,7 @@ func main() {
 	// Logger
 	logger, loggerDone, err := logger.InitLogger(&logger.BatchOptions{
 		BatchSize:   200,
-		BeforeAddFn: loggerBeforeAddFunc(dbManager.LogsDb),
+		BeforeAddFn: loggerBeforeAddFn(dbManager.LogsDb),
 		WriteFn:     loggerWriteFn(dbManager.LogsDb),
 	})
 
@@ -125,12 +125,12 @@ func main() {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // loggerBeforeAddFunc is a logger.BeforeAddFn
-func loggerBeforeAddFunc(db database.Database) logger.BeforeAddFn {
+func loggerBeforeAddFn(db database.Database) logger.BeforeAddFn {
 	logsDao := daos.NewLogDao(db)
 
 	return func(ctx context.Context, log *logger.Log) bool {
 		// Skip calls to the logs API
-		if strings.HasPrefix(log.Message, "GET /api/logs/") {
+		if strings.HasPrefix(log.Message, "GET /api/logs") {
 			return false
 		}
 
