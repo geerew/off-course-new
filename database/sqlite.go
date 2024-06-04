@@ -203,7 +203,7 @@ func (db *SqliteDb) log(query string, args ...any) {
 		attrs = append(attrs, loggerType)
 
 		for i, arg := range args {
-			attrs = append(attrs, slog.Any(fmt.Sprintf("arg %d", i), arg))
+			attrs = append(attrs, slog.Any(fmt.Sprintf("arg %d", i+1), arg))
 		}
 
 		db.config.Logger.Debug(

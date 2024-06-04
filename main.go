@@ -75,7 +75,11 @@ func main() {
 	go courseScanner.Worker(jobs.CourseProcessor, nil)
 
 	// Initialize cron jobs
-	cron.InitCron(dbManager.DataDb, logger)
+	cron.InitCron(&cron.CronConfig{
+		Db:     dbManager.DataDb,
+		AppFs:  appFs,
+		Logger: logger,
+	})
 
 	// Create router
 	router := api.New(&api.RouterConfig{
