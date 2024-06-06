@@ -3,12 +3,15 @@ package daos
 import (
 	"database/sql"
 	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/pagination"
+	"github.com/geerew/off-course/utils/security"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/stretchr/testify/require"
 )
@@ -16,6 +19,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func assetSetup(t *testing.T) (*AssetDao, database.Database) {
+	t.Helper()
+
 	dbManager := setup(t)
 	assetDao := NewAssetDao(dbManager.DataDb)
 	return assetDao, dbManager.DataDb
@@ -167,11 +172,11 @@ func TestAsset_Create(t *testing.T) {
 		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
 		asset.Path = "/course 1/01 asset"
 
-		// No md5
-		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
-		asset.Md5 = ""
-		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
-		asset.Md5 = "1234"
+		// No hash
+		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.hash", dao.Table()))
+		asset.Hash = ""
+		require.ErrorContains(t, dao.Create(asset, nil), fmt.Sprintf("NOT NULL constraint failed: %s.hash", dao.Table()))
+		asset.Hash = "1234"
 
 		// Invalid Course ID
 		require.ErrorContains(t, dao.Create(asset, nil), "FOREIGN KEY constraint failed")
@@ -374,7 +379,7 @@ func TestAsset_List(t *testing.T) {
 			AssetID:     testData[1].Assets[1].ID,
 			CourseID:    testData[1].ID,
 			Completed:   true,
-			CompletedAt: types.NowDateTime(),
+			CompletedAt: time.Now(),
 		}
 
 		require.Nil(t, apDao.Update(ap2, nil))
@@ -519,6 +524,60 @@ func TestAsset_List(t *testing.T) {
 		require.Nil(t, err)
 
 		_, err = dao.List(nil, nil)
+		require.ErrorContains(t, err, "no such table: "+dao.Table())
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestAsset_Update(t *testing.T) {
+	t.Run("update", func(t *testing.T) {
+		dao, db := assetSetup(t)
+
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
+
+		testData[0].Assets[0].Title = security.PseudorandomString(6)
+		testData[0].Assets[0].Prefix = sql.NullInt16{Int16: int16(rand.Intn(200-1) + 1), Valid: true}
+		testData[0].Assets[0].Chapter = fmt.Sprintf("%s chapter %s", security.PseudorandomString(3), security.PseudorandomString(2))
+		testData[0].Assets[0].Type = *types.NewAsset("html")
+		testData[0].Assets[0].Path = fmt.Sprintf("%s/%s/%d %s.mp4", testData[0].Path, testData[0].Assets[0].Chapter, testData[0].Assets[0].Prefix.Int16, testData[0].Assets[0].Title)
+
+		require.Nil(t, dao.Update(testData[0].Assets[0], nil))
+
+		a, err := dao.Get(testData[0].Assets[0].ID, nil, nil)
+		require.Nil(t, err)
+		require.Equal(t, testData[0].Assets[0].Prefix, a.Prefix)
+		require.Equal(t, testData[0].Assets[0].Title, a.Title)
+		require.Equal(t, testData[0].Assets[0].Chapter, a.Chapter)
+		require.Equal(t, testData[0].Assets[0].Path, a.Path)
+		require.True(t, a.Type.IsHTML())
+
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		dao, _ := assetSetup(t)
+
+		err := dao.Update(&models.Asset{}, nil)
+		require.ErrorIs(t, err, ErrEmptyId)
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		dao, db := assetSetup(t)
+
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
+		testData[0].Assets[0].ID = "1234"
+		require.Nil(t, dao.Update(testData[0].Assets[0], nil))
+	})
+
+	t.Run("db error", func(t *testing.T) {
+		dao, db := assetSetup(t)
+
+		testData := NewTestBuilder(t).Db(db).Courses(1).Assets(1).Build()
+
+		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
+		require.Nil(t, err)
+
+		err = dao.Update(testData[0].Assets[0], nil)
 		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }

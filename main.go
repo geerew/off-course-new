@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -19,7 +20,6 @@ import (
 	"github.com/geerew/off-course/utils/jobs"
 	"github.com/geerew/off-course/utils/logger"
 	"github.com/geerew/off-course/utils/security"
-	"github.com/geerew/off-course/utils/types"
 	"github.com/spf13/afero"
 )
 
@@ -112,6 +112,8 @@ func main() {
 
 	wg.Wait()
 
+	fmt.Println("\nShutting down...")
+
 	// Delete all scans
 	_, err = dbManager.DataDb.Exec("DELETE FROM " + daos.NewScanDao(dbManager.DataDb).Table())
 	if err != nil {
@@ -161,7 +163,7 @@ func loggerWriteFn(db database.Database) logger.WriteFn {
 				model.Level = int(l.Level)
 				model.Message = l.Message
 				model.Data = l.Data
-				model.CreatedAt, _ = types.ParseDateTime(l.Time)
+				model.CreatedAt = l.Time
 				model.UpdatedAt = model.CreatedAt
 
 				if err := daos.NewLogDao(db).Write(model, tx); err != nil {

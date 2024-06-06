@@ -16,6 +16,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func setup(t *testing.T) (*AppFs, *[]*logger.Log) {
+	t.Helper()
+
 	// Logger
 	var logs []*logger.Log
 	var logsMux sync.Mutex

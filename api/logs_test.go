@@ -22,7 +22,7 @@ func TestLogs_GetLogs(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
 		router := setup(t)
 
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/", nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -39,7 +39,7 @@ func TestLogs_GetLogs(t *testing.T) {
 			require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{}, Level: 0, Message: fmt.Sprintf("log %d", i+1)}, nil))
 		}
 
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/", nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -64,7 +64,7 @@ func TestLogs_GetLogs(t *testing.T) {
 		// ----------------------------
 		// All
 		// ----------------------------
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/", nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -75,7 +75,7 @@ func TestLogs_GetLogs(t *testing.T) {
 		// ----------------------------
 		// Debug
 		// ----------------------------
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?levels=-4", nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?levels=-4", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -87,7 +87,7 @@ func TestLogs_GetLogs(t *testing.T) {
 		// ----------------------------
 		// Debug and info
 		// ----------------------------
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?levels=-4,0", nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?levels=-4,0", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -100,7 +100,7 @@ func TestLogs_GetLogs(t *testing.T) {
 		// ----------------------------
 		// Warn and error only (with spaces)
 		// ----------------------------
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?levels=4,%20%208", nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?levels=4,%20%208", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -127,7 +127,7 @@ func TestLogs_GetLogs(t *testing.T) {
 		// ----------------------------
 		// Request
 		// ----------------------------
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?types="+types.LogTypeRequest.String(), nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?types="+types.LogTypeRequest.String(), nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -141,7 +141,7 @@ func TestLogs_GetLogs(t *testing.T) {
 		// Database and course scanner
 		// ----------------------------
 		typesQuery := url.QueryEscape(types.LogTypeDB.String() + ",   " + types.LogTypeCourseScanner.String())
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?types="+typesQuery, nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?types="+typesQuery, nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -154,7 +154,7 @@ func TestLogs_GetLogs(t *testing.T) {
 		// ----------------------------
 		// Database
 		// ----------------------------
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?types="+types.LogTypeDB.String(), nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?types="+types.LogTypeDB.String(), nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -180,7 +180,7 @@ func TestLogs_GetLogs(t *testing.T) {
 		// ----------------------------
 		// log 1
 		// ----------------------------
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?messages=log%201", nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?messages=log%201", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -192,7 +192,7 @@ func TestLogs_GetLogs(t *testing.T) {
 		// ----------------------------
 		// log 2 and log 4
 		// ----------------------------
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?messages=log%202,log%204", nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?messages=log%202,log%204", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -220,7 +220,7 @@ func TestLogs_GetLogs(t *testing.T) {
 			pagination.PerPageQueryParam: {"10"},
 		}
 
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?"+params.Encode(), nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?"+params.Encode(), nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -239,7 +239,7 @@ func TestLogs_GetLogs(t *testing.T) {
 			pagination.PageQueryParam:    {"2"},
 			pagination.PerPageQueryParam: {"10"},
 		}
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/?"+params.Encode(), nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?"+params.Encode(), nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -258,7 +258,7 @@ func TestLogs_GetLogs(t *testing.T) {
 		_, err := router.config.DbManager.LogsDb.Exec("DROP TABLE IF EXISTS " + daos.NewLogDao(router.config.DbManager.LogsDb).Table())
 		require.Nil(t, err)
 
-		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/", nil))
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
@@ -269,7 +269,7 @@ func TestLogs_GetLogs(t *testing.T) {
 func TestLogs_GetLogTypes(t *testing.T) {
 	router := setup(t)
 
-	status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/logs/types", nil))
+	status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/types", nil))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, status)
 

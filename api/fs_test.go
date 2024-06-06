@@ -27,7 +27,7 @@ func TestFsPath(t *testing.T) {
 		router.config.AppFs.Fs.Create("/file3")
 
 		req := httptest.NewRequest(http.MethodGet, "/api/filesystem/"+utils.EncodeString("/"), nil)
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.Nil(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -61,7 +61,7 @@ func TestFsPath(t *testing.T) {
 		// Get / (test ancestors and none)
 		// ----------------------------
 		req := httptest.NewRequest(http.MethodGet, "/api/filesystem/"+utils.EncodeString("/"), nil)
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.Nil(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -84,7 +84,7 @@ func TestFsPath(t *testing.T) {
 		// Get directory above 'course 2'
 		// ----------------------------
 		req = httptest.NewRequest(http.MethodGet, "/api/filesystem/"+utils.EncodeString(strings.TrimSuffix(testData[1].Path, "/course 2")), nil)
-		status, body, err = requestHelper(router, req)
+		status, body, err = requestHelper(t, router, req)
 		require.Nil(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -100,7 +100,7 @@ func TestFsPath(t *testing.T) {
 	t.Run("404 (path not found)", func(t *testing.T) {
 		router := setup(t)
 		req := httptest.NewRequest(http.MethodGet, "/api/filesystem/"+utils.EncodeString("nonexistent/path"), nil)
-		status, _, err := requestHelper(router, req)
+		status, _, err := requestHelper(t, router, req)
 		require.Nil(t, err)
 		require.Equal(t, http.StatusNotFound, status)
 	})
@@ -109,7 +109,7 @@ func TestFsPath(t *testing.T) {
 		router := setup(t)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/filesystem/`", nil)
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)

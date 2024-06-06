@@ -14,6 +14,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func courseTagSetup(t *testing.T) (*CourseTagDao, database.Database) {
+	t.Helper()
+
 	dbManager := setup(t)
 	courseTagDao := NewCourseTagDao(dbManager.DataDb)
 	return courseTagDao, dbManager.DataDb

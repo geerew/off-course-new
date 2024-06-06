@@ -1,13 +1,18 @@
 package utils
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/url"
 	"reflect"
 	"strconv"
 	"time"
+
+	"github.com/geerew/off-course/utils/appFs"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -83,7 +88,7 @@ func EncodeString(p string) string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// DiffStructs takes in two slices of type T (left and right) and a key (string) as arguments.
+// DiffStructsByKey takes in two slices of type T (left and right) and a key (string) as arguments.
 // The key defines the which key to use when comparing.
 //
 // It returns two slices:
@@ -98,8 +103,8 @@ func EncodeString(p string) string {
 // nil and nil are returned.
 //
 // The function uses maps to optimize lookup operations and determine differences between the
-// slices.
-func DiffStructs[T any](left, right []T, key string) ([]T, []T, error) {
+// slices
+func DiffSliceOfStructsByKey[T any](left, right []T, key string) ([]T, []T, error) {
 	leftDiff := []T{}
 	rightDiff := []T{}
 
@@ -159,6 +164,84 @@ func DiffStructs[T any](left, right []T, key string) ([]T, []T, error) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// CompareStructs compares two structs and returns true if they are equal, ignoring the specified keys. It
+// also supports comparing nested structs
+//
+// Parameters:
+// - a: The first struct to compare. Can be a struct or a pointer to a struct
+// - b: The second struct to compare. Can be a struct or a pointer to a struct
+// - ignoreKeys: A slice of strings representing the field names to ignore during the comparison
+//
+// Returns:
+// - true if the structs are equal (ignoring the specified keys), false otherwise
+//
+// The function works as follows:
+//  1. It checks if the types of a and b are the same. If not, it returns false
+//  2. It dereferences pointers to structs, if necessary, so that it can work with the actual structs
+//  3. It ensures that a and b are structs. If they are not, it returns false
+//  4. It creates a map from the ignoreKeys slice for quick lookup of keys to ignore
+//  5. It iterates over the fields of struct a, skipping any fields that are in the ignoreKeys map or are
+//     unexported
+//  6. For each field, it checks if the corresponding field exists in struct b. If not, it returns false
+//  7. If a field is itself a struct, it recursively calls CompareStructs to compare the nested structs
+//  8. For non-struct fields, it uses reflect.DeepEqual to check if the field values are equal. If any field
+//     values are not equal, it returns false
+//  9. If all fields (except the ignored ones) are equal, it returns true
+func CompareStructs(a, b interface{}, ignoreKeys []string) bool {
+	if reflect.TypeOf(a) != reflect.TypeOf(b) {
+		return false
+	}
+
+	valA := reflect.ValueOf(a)
+	valB := reflect.ValueOf(b)
+
+	// Ensure we are dealing with structs or pointers to structs
+	if valA.Kind() == reflect.Ptr {
+		valA = valA.Elem()
+	}
+	if valB.Kind() == reflect.Ptr {
+		valB = valB.Elem()
+	}
+
+	if valA.Kind() != reflect.Struct || valB.Kind() != reflect.Struct {
+		return false
+	}
+
+	ignoreMap := make(map[string]bool)
+	for _, key := range ignoreKeys {
+		ignoreMap[key] = true
+	}
+
+	for i := 0; i < valA.NumField(); i++ {
+		fieldA := valA.Type().Field(i)
+		if ignoreMap[fieldA.Name] {
+			continue
+		}
+
+		// Skip unexported fields
+		if !fieldA.IsExported() {
+			continue
+		}
+
+		fieldB := valB.FieldByName(fieldA.Name)
+		if !fieldB.IsValid() {
+			return false
+		}
+
+		if fieldA.Type.Kind() == reflect.Struct {
+			if !CompareStructs(valA.Field(i).Interface(), fieldB.Interface(), ignoreKeys) {
+				return false
+			}
+		} else if !reflect.DeepEqual(valA.Field(i).Interface(), fieldB.Interface()) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // IsStructWithKey checks if the provided value is a struct or a pointer to a struct
 // and if it contains the provided key.
 func IsStructWithKey(value any, key string) bool {
@@ -205,4 +288,81 @@ func Map[T, V any](ts []T, fn func(T) V) []V {
 		result[i] = fn(t)
 	}
 	return result
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// partialHash is a function that receives a file path and a chunk size as arguments and
+// returns a partial hash of the file, by reading the first, middle, and last
+// chunks of the file, as well as two random chunks, and hashes them together.
+//
+// It uses the SHA-256 hashing algorithm from the standard library to calculate the hash
+func PartialHash(appFs *appFs.AppFs, filePath string, chunkSize int64) (string, error) {
+	file, err := appFs.Fs.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return "", err
+	}
+
+	// Append file size to the hash
+	fileSize := fileInfo.Size()
+	binary.Write(hash, binary.LittleEndian, fileSize)
+
+	// Function to read and hash a chunk at a given position
+	readAndHashChunk := func(position int64) error {
+		_, err := file.Seek(position, 0)
+		if err != nil {
+			return err
+		}
+		chunk := make([]byte, chunkSize)
+		n, err := file.Read(chunk)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		hash.Write(chunk[:n])
+		return nil
+	}
+
+	// Read and hash the first chunk
+	if err = readAndHashChunk(0); err != nil {
+		return "", err
+	}
+
+	// Read and hash the middle chunk
+	middlePosition := fileSize / 2
+	if middlePosition < fileSize {
+		if err = readAndHashChunk(middlePosition); err != nil {
+			return "", err
+		}
+	}
+
+	// Read and hash the last chunk
+	lastPosition := fileSize - chunkSize
+	if lastPosition < 0 {
+		lastPosition = 0
+	}
+	if lastPosition < fileSize {
+		if err = readAndHashChunk(lastPosition); err != nil {
+			return "", err
+		}
+	}
+
+	// Random chunks
+	additionalPositions := []int64{fileSize / 4, 3 * fileSize / 4}
+	for _, position := range additionalPositions {
+		if position < fileSize {
+			if err = readAndHashChunk(position); err != nil {
+				return "", err
+			}
+		}
+	}
+
+	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }

@@ -6,13 +6,13 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/pagination"
-	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -27,12 +27,12 @@ type tags struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type tagResponse struct {
-	ID          string         `json:"id"`
-	Tag         string         `json:"tag"`
-	CourseCount int            `json:"courseCount"`
-	Courses     []*courseTag   `json:"courses,omitempty"`
-	CreatedAt   types.DateTime `json:"createdAt"`
-	UpdatedAt   types.DateTime `json:"updatedAt"`
+	ID          string       `json:"id"`
+	Tag         string       `json:"tag"`
+	CourseCount int          `json:"courseCount"`
+	Courses     []*courseTag `json:"courses,omitempty"`
+	CreatedAt   time.Time    `json:"createdAt"`
+	UpdatedAt   time.Time    `json:"updatedAt"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

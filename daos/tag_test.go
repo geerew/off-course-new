@@ -15,6 +15,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func tagSetup(t *testing.T) (*TagDao, database.Database) {
+	t.Helper()
+
 	dbManager := setup(t)
 	tagDao := NewTagDao(dbManager.DataDb)
 	return tagDao, dbManager.DataDb

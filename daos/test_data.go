@@ -28,16 +28,25 @@ var test_tags = []string{
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type TestBuilder struct {
-	t  *testing.T
+	// A testing object. Used to validate assertions into the DB
+	t *testing.T
+
+	// The database
 	db database.Database
 
+	// How many courses to create OR a list of course titles
 	numberOfCourses int
 	courseTitles    []string
 
-	scan                bool
-	assetsPerCourse     int
+	// Whether to create a scan per course
+	scan bool
+
+	// How many assets per course
+	assetsPerCourse int
+	// How many attachments per asset
 	attachmentsPerAsset int
 
+	// How many tags per course OR a list of tags
 	tagsPerCourse int
 	tags          []string
 }
@@ -172,7 +181,7 @@ func (builder *TestBuilder) newTestCourse(title string) *models.Course {
 		err := dao.Create(c)
 		require.NoError(builder.t, err, "Failed to create course")
 
-		time.Sleep(time.Millisecond * 1)
+		time.Sleep(time.Millisecond * 2)
 	}
 
 	return c
@@ -196,7 +205,7 @@ func (builder *TestBuilder) newTestScan(courseId string) *models.Scan {
 		err := dao.Create(s, nil)
 		require.Nil(builder.t, err)
 
-		time.Sleep(time.Millisecond * 1)
+		time.Sleep(time.Millisecond * 2)
 	}
 
 	return s
@@ -220,7 +229,7 @@ func (builder *TestBuilder) newTestAssets(course *models.Course) []*models.Asset
 		a.Chapter = fmt.Sprintf("%d chapter %s", i+1, security.PseudorandomString(2))
 		a.Type = *types.NewAsset("mp4")
 		a.Path = fmt.Sprintf("%s/%s/%d %s.mp4", course.Path, a.Chapter, a.Prefix.Int16, a.Title)
-		a.Md5 = security.PseudorandomString(32)
+		a.Hash = security.PseudorandomString(32)
 
 		if builder.db != nil {
 			dao := NewAssetDao(builder.db)
@@ -228,7 +237,7 @@ func (builder *TestBuilder) newTestAssets(course *models.Course) []*models.Asset
 			err := dao.Create(a, nil)
 			require.Nil(builder.t, err)
 
-			time.Sleep(time.Millisecond * 1)
+			time.Sleep(time.Millisecond * 2)
 		}
 
 		if builder.attachmentsPerAsset > 0 {
@@ -257,7 +266,6 @@ func (builder *TestBuilder) newTestAttachments(asset *models.Asset) []*models.At
 		a.AssetID = asset.ID
 		a.Title = security.PseudorandomString(6)
 		a.Path = fmt.Sprintf("%s/%d %s", filepath.Dir(asset.Path), asset.Prefix.Int16, a.Title)
-		a.Md5 = security.PseudorandomString(32)
 
 		if builder.db != nil {
 			dao := NewAttachmentDao(builder.db)
@@ -265,7 +273,7 @@ func (builder *TestBuilder) newTestAttachments(asset *models.Asset) []*models.At
 			err := dao.Create(a, nil)
 			require.Nil(builder.t, err)
 
-			time.Sleep(time.Millisecond * 1)
+			time.Sleep(time.Millisecond * 2)
 		}
 
 		attachments = append(attachments, a)
@@ -311,7 +319,7 @@ func (builder *TestBuilder) newTestTags(course *models.Course) []*models.CourseT
 
 		tags = append(tags, ct)
 
-		time.Sleep(time.Millisecond * 1)
+		time.Sleep(time.Millisecond * 2)
 	}
 
 	return tags

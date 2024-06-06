@@ -3,11 +3,11 @@ package daos
 import (
 	"database/sql"
 	"math"
+	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
-	"github.com/geerew/off-course/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -144,10 +144,10 @@ func (dao *CourseProgressDao) Refresh(courseId string, tx *database.Tx) error {
 
 	// Default values
 	isStarted := false
-	startedAt := types.DateTime{}
+	startedAt := time.Time{}
 	percent := int(math.Abs((float64(completedAssetCount.Int32) * float64(100)) / float64(totalAssetCount.Int32)))
-	completedAt := types.DateTime{}
-	updatedAt := types.NowDateTime()
+	completedAt := time.Time{}
+	updatedAt := time.Now()
 
 	// When there are started assets or percent is between >0 and <=100, set started to true and set started_at
 	if startedAssetCount.Int32 > 0 || percent > 0 && percent <= 100 {
@@ -165,17 +165,17 @@ func (dao *CourseProgressDao) Refresh(courseId string, tx *database.Tx) error {
 		Update(dao.Table()).
 		Set("started", isStarted).
 		Set("percent", percent).
-		Set("updated_at", updatedAt).
+		Set("updated_at", FormatTime(updatedAt)).
 		Where("course_id = ?", courseId)
 
 	if isStarted {
-		builder = builder.Set("started_at", squirrel.Expr("COALESCE(started_at, ?)", startedAt))
+		builder = builder.Set("started_at", squirrel.Expr("COALESCE(started_at, ?)", FormatTime(startedAt)))
 	} else {
 		builder = builder.Set("started_at", nil)
 	}
 
 	if percent == 100 {
-		builder = builder.Set("completed_at", squirrel.Expr("COALESCE(completed_at, ?)", completedAt))
+		builder = builder.Set("completed_at", squirrel.Expr("COALESCE(completed_at, ?)", FormatTime(completedAt)))
 	} else {
 		builder = builder.Set("completed_at", nil)
 	}
@@ -227,11 +227,11 @@ func (dao *CourseProgressDao) data(cp *models.CourseProgress) map[string]any {
 		"id":           cp.ID,
 		"course_id":    NilStr(cp.CourseID),
 		"started":      cp.Started,
-		"started_at":   NilStr(cp.StartedAt.String()),
+		"started_at":   FormatTime(cp.StartedAt),
 		"percent":      cp.Percent,
-		"completed_at": NilStr(cp.CompletedAt.String()),
-		"created_at":   cp.CreatedAt,
-		"updated_at":   cp.UpdatedAt,
+		"completed_at": FormatTime(cp.CompletedAt),
+		"created_at":   FormatTime(cp.CreatedAt),
+		"updated_at":   FormatTime(cp.UpdatedAt),
 	}
 }
 
@@ -241,18 +241,39 @@ func (dao *CourseProgressDao) data(cp *models.CourseProgress) map[string]any {
 func (dao *CourseProgressDao) scanRow(scannable Scannable) (*models.CourseProgress, error) {
 	var cp models.CourseProgress
 
+	var createdAt string
+	var updatedAt string
+	var startedAt sql.NullString
+	var completedAt sql.NullString
+
 	err := scannable.Scan(
 		&cp.ID,
 		&cp.CourseID,
 		&cp.Started,
-		&cp.StartedAt,
+		&startedAt,
 		&cp.Percent,
-		&cp.CompletedAt,
-		&cp.CreatedAt,
-		&cp.UpdatedAt,
+		&completedAt,
+		&createdAt,
+		&updatedAt,
 	)
 
 	if err != nil {
+		return nil, err
+	}
+
+	if cp.CreatedAt, err = ParseTime(createdAt); err != nil {
+		return nil, err
+	}
+
+	if cp.UpdatedAt, err = ParseTime(updatedAt); err != nil {
+		return nil, err
+	}
+
+	if cp.StartedAt, err = ParseTimeNull(startedAt); err != nil {
+		return nil, err
+	}
+
+	if cp.CompletedAt, err = ParseTimeNull(completedAt); err != nil {
 		return nil, err
 	}
 

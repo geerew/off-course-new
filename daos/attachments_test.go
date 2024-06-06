@@ -15,6 +15,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func attachmentSetup(t *testing.T) (*AttachmentDao, database.Database) {
+	t.Helper()
+
 	dbManager := setup(t)
 	attachmentDao := NewAttachmentDao(dbManager.DataDb)
 	return attachmentDao, dbManager.DataDb
@@ -157,12 +159,6 @@ func TestAttachment_Create(t *testing.T) {
 		attachment.Path = ""
 		require.ErrorContains(t, dao.Create(attachment, nil), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
 		attachment.Path = "/course 1/01 attachment"
-
-		// No md5
-		require.ErrorContains(t, dao.Create(attachment, nil), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
-		attachment.Md5 = ""
-		require.ErrorContains(t, dao.Create(attachment, nil), fmt.Sprintf("NOT NULL constraint failed: %s.md5", dao.Table()))
-		attachment.Md5 = "1234"
 
 		// Invalid course ID
 		require.ErrorContains(t, dao.Create(attachment, nil), "FOREIGN KEY constraint failed")

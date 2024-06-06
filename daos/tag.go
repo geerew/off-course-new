@@ -214,7 +214,7 @@ func (dao *TagDao) Update(tag *models.Tag, tx *database.Tx) error {
 		StatementBuilder.
 		Update(dao.Table()).
 		Set("tag", NilStr(tag.Tag)).
-		Set("updated_at", tag.UpdatedAt).
+		Set("updated_at", FormatTime(tag.UpdatedAt)).
 		Where("id = ?", tag.ID).
 		ToSql()
 
@@ -304,8 +304,8 @@ func (dao *TagDao) data(t *models.Tag) map[string]any {
 	return map[string]any{
 		"id":         t.ID,
 		"tag":        NilStr(t.Tag),
-		"created_at": t.CreatedAt,
-		"updated_at": t.UpdatedAt,
+		"created_at": FormatTime(t.CreatedAt),
+		"updated_at": FormatTime(t.UpdatedAt),
 	}
 }
 
@@ -315,15 +315,26 @@ func (dao *TagDao) data(t *models.Tag) map[string]any {
 func (dao *TagDao) scanRow(scannable Scannable) (*models.Tag, error) {
 	var t models.Tag
 
+	var createdAt string
+	var updatedAt string
+
 	err := scannable.Scan(
 		&t.ID,
 		&t.Tag,
-		&t.CreatedAt,
-		&t.UpdatedAt,
+		&createdAt,
+		&updatedAt,
 		&t.CourseCount,
 	)
 
 	if err != nil {
+		return nil, err
+	}
+
+	if t.CreatedAt, err = ParseTime(createdAt); err != nil {
+		return nil, err
+	}
+
+	if t.UpdatedAt, err = ParseTime(updatedAt); err != nil {
 		return nil, err
 	}
 

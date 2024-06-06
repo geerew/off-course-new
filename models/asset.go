@@ -4,6 +4,7 @@ package models
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/geerew/off-course/utils/types"
 )
@@ -20,7 +21,7 @@ type Asset struct {
 	Chapter  string
 	Type     types.Asset
 	Path     string
-	Md5      string
+	Hash     string
 
 	// --------------------------------
 	// Not in this table, but added via a join
@@ -29,7 +30,7 @@ type Asset struct {
 	// Asset Progress
 	VideoPos    int
 	Completed   bool
-	CompletedAt types.DateTime
+	CompletedAt time.Time
 
 	// Attachments
 	Attachments []*Attachment

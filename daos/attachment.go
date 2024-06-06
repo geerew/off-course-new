@@ -209,9 +209,8 @@ func (dao *AttachmentDao) data(a *models.Attachment) map[string]any {
 		"asset_id":   NilStr(a.AssetID),
 		"title":      NilStr(a.Title),
 		"path":       NilStr(a.Path),
-		"md5":        NilStr(a.Md5),
-		"created_at": a.CreatedAt,
-		"updated_at": a.UpdatedAt,
+		"created_at": FormatTime(a.CreatedAt),
+		"updated_at": FormatTime(a.UpdatedAt),
 	}
 }
 
@@ -221,18 +220,28 @@ func (dao *AttachmentDao) data(a *models.Attachment) map[string]any {
 func (dao *AttachmentDao) scanRow(scannable Scannable) (*models.Attachment, error) {
 	var a models.Attachment
 
+	var createdAt string
+	var updatedAt string
+
 	err := scannable.Scan(
 		&a.ID,
 		&a.CourseID,
 		&a.AssetID,
 		&a.Title,
 		&a.Path,
-		&a.Md5,
-		&a.CreatedAt,
-		&a.UpdatedAt,
+		&createdAt,
+		&updatedAt,
 	)
 
 	if err != nil {
+		return nil, err
+	}
+
+	if a.CreatedAt, err = ParseTime(createdAt); err != nil {
+		return nil, err
+	}
+
+	if a.UpdatedAt, err = ParseTime(updatedAt); err != nil {
 		return nil, err
 	}
 

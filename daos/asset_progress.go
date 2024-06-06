@@ -1,10 +1,11 @@
 package daos
 
 import (
+	"time"
+
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
-	"github.com/geerew/off-course/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -173,10 +174,10 @@ func (dao *AssetProgressDao) update(ap *models.AssetProgress, tx *database.Tx) e
 		if !asset.CompletedAt.IsZero() {
 			ap.CompletedAt = asset.CompletedAt
 		} else {
-			ap.CompletedAt = types.NowDateTime()
+			ap.CompletedAt = time.Now()
 		}
 	} else {
-		ap.CompletedAt = types.DateTime{}
+		ap.CompletedAt = time.Time{}
 	}
 
 	// Update (or create if it doesn't exist)
@@ -186,7 +187,7 @@ func (dao *AssetProgressDao) update(ap *models.AssetProgress, tx *database.Tx) e
 		SetMap(dao.data(ap)).
 		Suffix(
 			"ON CONFLICT (asset_id) DO UPDATE SET video_pos = ?, completed = ?, completed_at = ?, updated_at = ?",
-			ap.VideoPos, ap.Completed, NilStr(ap.CompletedAt.String()), ap.UpdatedAt,
+			ap.VideoPos, ap.Completed, FormatTime(ap.CompletedAt), FormatTime(ap.UpdatedAt),
 		).
 		ToSql()
 
@@ -241,9 +242,9 @@ func (dao *AssetProgressDao) data(ap *models.AssetProgress) map[string]any {
 		"course_id":    NilStr(ap.CourseID),
 		"video_pos":    ap.VideoPos,
 		"completed":    ap.Completed,
-		"completed_at": ap.CompletedAt,
-		"created_at":   ap.CreatedAt,
-		"updated_at":   ap.UpdatedAt,
+		"completed_at": FormatTime(ap.CompletedAt),
+		"created_at":   FormatTime(ap.CreatedAt),
+		"updated_at":   FormatTime(ap.UpdatedAt),
 	}
 }
 
@@ -253,18 +254,34 @@ func (dao *AssetProgressDao) data(ap *models.AssetProgress) map[string]any {
 func (dao *AssetProgressDao) scanRow(scannable Scannable) (*models.AssetProgress, error) {
 	var ap models.AssetProgress
 
+	var createdAt string
+	var updatedAt string
+	var completedAt string
+
 	err := scannable.Scan(
 		&ap.ID,
 		&ap.AssetID,
 		&ap.CourseID,
 		&ap.VideoPos,
 		&ap.Completed,
-		&ap.CompletedAt,
-		&ap.CreatedAt,
-		&ap.UpdatedAt,
+		&completedAt,
+		&createdAt,
+		&updatedAt,
 	)
 
 	if err != nil {
+		return nil, err
+	}
+
+	if ap.CompletedAt, err = ParseTime(completedAt); err != nil {
+		return nil, err
+	}
+
+	if ap.CreatedAt, err = ParseTime(createdAt); err != nil {
+		return nil, err
+	}
+
+	if ap.UpdatedAt, err = ParseTime(updatedAt); err != nil {
 		return nil, err
 	}
 

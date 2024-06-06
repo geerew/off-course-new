@@ -21,7 +21,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
 		router := setup(t)
 
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -35,7 +35,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 
 		daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(2).Attachments(2).Build()
 
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -53,7 +53,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		// CREATED_AT ASC
 		// ----------------------------
 		req := httptest.NewRequest(http.MethodGet, "/api/attachments/?orderBy=created_at%20asc", nil)
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -68,7 +68,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		// CREATED_AT DESC
 		// ----------------------------
 		req = httptest.NewRequest(http.MethodGet, "/api/attachments/?orderBy=created_at%20desc", nil)
-		status, body, err = requestHelper(router, req)
+		status, body, err = requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -94,7 +94,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 			pagination.PerPageQueryParam: {"10"},
 		}
 
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/?"+params.Encode(), nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/attachments/?"+params.Encode(), nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -114,7 +114,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 			pagination.PerPageQueryParam: {"10"},
 		}
 
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/?"+params.Encode(), nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/attachments/?"+params.Encode(), nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -133,7 +133,7 @@ func TestAttachments_GetAttachments(t *testing.T) {
 		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
-		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/attachments/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
@@ -148,7 +148,7 @@ func TestAttachments_GetAttachment(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(2).Attachments(2).Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/attachments/"+testData[1].Assets[1].Attachments[0].ID, nil)
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -163,7 +163,7 @@ func TestAttachments_GetAttachment(t *testing.T) {
 	t.Run("404 (not found)", func(t *testing.T) {
 		router := setup(t)
 
-		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/test", nil))
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/attachments/test", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
 	})
@@ -175,7 +175,7 @@ func TestAttachments_GetAttachment(t *testing.T) {
 		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
-		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/test", nil))
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/attachments/test", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
@@ -193,7 +193,7 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 		require.Nil(t, router.config.AppFs.Fs.MkdirAll(filepath.Dir(testData[1].Assets[0].Attachments[0].Path), os.ModePerm))
 		require.Nil(t, afero.WriteFile(router.config.AppFs.Fs, testData[1].Assets[0].Attachments[0].Path, []byte("hello"), os.ModePerm))
 
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/"+testData[1].Assets[0].Attachments[0].ID+"/serve", nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/attachments/"+testData[1].Assets[0].Attachments[0].ID+"/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 		require.Equal(t, "hello", string(body))
@@ -204,7 +204,7 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 
 		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Assets(2).Attachments(2).Build()
 
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/"+testData[1].Assets[0].Attachments[0].ID+"/serve", nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/attachments/"+testData[1].Assets[0].Attachments[0].ID+"/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		require.Contains(t, string(body), "Attachment does not exist")
@@ -213,7 +213,7 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 	t.Run("404 (not found)", func(t *testing.T) {
 		router := setup(t)
 
-		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/test/serve", nil))
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/attachments/test/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
 	})
@@ -225,7 +225,7 @@ func TestAttachments_ServeAttachment(t *testing.T) {
 		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewAttachmentDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
-		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/attachments/test/serve", nil))
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/attachments/test/serve", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})

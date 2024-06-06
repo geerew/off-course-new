@@ -15,6 +15,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func setup(t *testing.T) (*database.DatabaseManager, *appFs.AppFs, *slog.Logger, *[]*logger.Log) {
+	t.Helper()
+
 	// Logger
 	var logs []*logger.Log
 	var logsMux sync.Mutex

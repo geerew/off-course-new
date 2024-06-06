@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -220,7 +220,6 @@ func Test_PerPage(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func Test_BuildResult(t *testing.T) {
-
 	t.Run("success", func(t *testing.T) {
 		app := fiber.New()
 		c := app.AcquireCtx(&fasthttp.RequestCtx{})
@@ -231,14 +230,14 @@ func Test_BuildResult(t *testing.T) {
 		p.SetCount(24)
 
 		type Data struct {
-			ID        string         `json:"id"`
-			CreatedAt types.DateTime `json:"createdAt"`
+			ID        string    `json:"id"`
+			CreatedAt time.Time `json:"createdAt"`
 		}
 
 		// The data to marshal
 		data := []Data{
-			{ID: "1", CreatedAt: types.NowDateTime()},
-			{ID: "2", CreatedAt: types.NowDateTime()},
+			{ID: "1", CreatedAt: time.Now()},
+			{ID: "2", CreatedAt: time.Now()},
 		}
 
 		result, err := p.BuildResult(data)
@@ -249,7 +248,7 @@ func Test_BuildResult(t *testing.T) {
 			var d Data
 			require.Nil(t, json.Unmarshal(raw, &d))
 			require.Equal(t, data[i].ID, d.ID)
-			require.Equal(t, data[i].CreatedAt.String(), d.CreatedAt.String())
+			require.True(t, d.CreatedAt.Equal(data[i].CreatedAt))
 		}
 	})
 

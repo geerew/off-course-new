@@ -10,5 +10,4 @@ type Attachment struct {
 	AssetID  string
 	Title    string
 	Path     string
-	Md5      string
 }

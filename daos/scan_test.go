@@ -16,6 +16,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func scanSetup(t *testing.T) (*ScanDao, database.Database) {
+	t.Helper()
+
 	dbManager := setup(t)
 	scanDao := NewScanDao(dbManager.DataDb)
 	return scanDao, dbManager.DataDb

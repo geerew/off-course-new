@@ -13,6 +13,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func assetProgressSetup(t *testing.T) (*AssetProgressDao, database.Database) {
+	t.Helper()
+
 	dbManager := setup(t)
 	apDao := NewAssetProgressDao(dbManager.DataDb)
 	return apDao, dbManager.DataDb

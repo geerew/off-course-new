@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"log/slog"
+	"time"
 
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/models"
@@ -27,8 +28,8 @@ type scanResponse struct {
 	ID        string           `json:"id"`
 	CourseID  string           `json:"courseId"`
 	Status    types.ScanStatus `json:"status"`
-	CreatedAt types.DateTime   `json:"createdAt"`
-	UpdatedAt types.DateTime   `json:"updatedAt"`
+	CreatedAt time.Time        `json:"createdAt"`
+	UpdatedAt time.Time        `json:"updatedAt"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

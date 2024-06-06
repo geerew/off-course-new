@@ -1,16 +1,15 @@
 package jobs
 
 import (
-	"crypto/md5"
 	"database/sql"
 	"errors"
-	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 
+	"github.com/Masterminds/squirrel"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
@@ -313,23 +312,15 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 			continue
 		}
 
-		// Generate an MD5 hash for the file
-		file, err := cs.appFs.Fs.Open(filePath)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		hash := md5.New()
-		if _, err := io.Copy(hash, file); err != nil {
-			return err
-		}
-
-		md5 := string(hash.Sum(nil))
-
 		if pfn.asset != nil {
 			// Check if we have an existing asset for this [chapter][prefix]
 			existing, exists := assetsMap[chapter][pfn.prefix]
+
+			// Get a (partial) hash of the asset
+			hash, err := utils.PartialHash(cs.appFs, filePath, 1024*1024)
+			if err != nil {
+				return err
+			}
 
 			newAsset := &models.Asset{
 				Title:    pfn.title,
@@ -338,7 +329,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 				Chapter:  chapter,
 				Path:     filePath,
 				Type:     *pfn.asset,
-				Md5:      md5,
+				Hash:     hash,
 			}
 
 			if !exists {
@@ -351,7 +342,6 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 					newAsset.Type.IsHTML() && existing.Type.IsPDF() {
 					// Asset -> Replace the existing asset with the new asset and set the existing
 					// asset as an attachment
-
 					cs.logger.Debug(
 						"Replacing existing asset with new asset",
 						loggerType,
@@ -365,7 +355,6 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 						Title:    existing.Title + filepath.Ext(existing.Path),
 						Path:     existing.Path,
 						CourseID: course.ID,
-						Md5:      existing.Md5,
 					})
 				} else {
 					// Attachment -> This new asset has a lower priority than the existing asset
@@ -373,7 +362,6 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 						Title:    pfn.attachmentTitle,
 						Path:     filePath,
 						CourseID: course.ID,
-						Md5:      md5,
 					})
 				}
 			}
@@ -383,7 +371,6 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 				Title:    pfn.attachmentTitle,
 				Path:     filePath,
 				CourseID: course.ID,
-				Md5:      md5,
 			})
 		}
 	}
@@ -477,16 +464,19 @@ var fileNameRegex = regexp.MustCompile(`^\s*(?P<Prefix>[0-9]+)((?:\s+-+\s+|\s+-+
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// parseFileName is a rudimentary function for determining if a file is an asset, attachment, or
-// neither based upon a regex pattern match.
+// parseFileName parses a file name and determines if it represents an asset, attachment, or neither
 //
-// A file is an asset when it has a <prefix>, <title>, <ext> and the <ext> is of type video, html,
-// or pdf
+// A file is an asset when it matches `<prefix> <title>.<ext>` and <ext> is a valid `types.AssetType`
 //
-// A file is an attachment when it has a <prefix>, and optionally a <title> and/or <ext>, with the
-// <ext> not being of type video, html, or pdf
+// A file is an attachment when it has a <prefix>, and optionally a <title> and/or <ext>, whereby <ext>
+// is not a valid `types.AssetType`
 //
-// Nil will be returned A file that does not match the regex is ignored
+// Parameters:
+// - fileName: The name of the file to parse
+//
+// Returns:
+//   - *parsedFileName: A struct containing parsed information if the file name matches the expected
+//     format, otherwise nil
 func parseFileName(fileName string) *parsedFileName {
 	pfn := &parsedFileName{}
 
@@ -529,7 +519,13 @@ func parseFileName(fileName string) *parsedFileName {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// isCard returns true if the fileName is `card` and the extension is supported
+// isCard determines if a given file name represents a card based on its name and extension
+//
+// Parameters:
+// - fileName: The name of the file to check
+//
+// Returns:
+// - bool: True if the file name represents a card, false otherwise
 func isCard(fileName string) bool {
 	// Get the extension. If there is no extension, return false
 	ext := filepath.Ext(fileName)
@@ -558,8 +554,18 @@ func isCard(fileName string) bool {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// updateAssets updates the assets in the DB (in a transaction), by comparing the assets found on disk
-// to the assets found in the DB. It will insert new assets and delete assets which no longer exist
+// updateAssets updates the assets in the database based on the assets found on disk. It compares
+// the existing assets in the database with the assets found on disk, and performs the necessary
+// additions, deletions, and updates
+//
+// Parameters:
+// - assetDao: The DAO used to interact with the assets table in the database
+// - tx: The database transaction within which all operations should be performed
+// - courseId: The ID of the course to which the assets belong
+// - assets: A slice of Asset structs representing the assets found on disk
+//
+// Returns:
+// - error: An error if any operation fails, otherwise nil
 func updateAssets(assetDao *daos.AssetDao, tx *database.Tx, courseId string, assets []*models.Asset) error {
 	// Get existing assets
 	dbParams := &database.DatabaseParams{
@@ -571,38 +577,48 @@ func updateAssets(assetDao *daos.AssetDao, tx *database.Tx, courseId string, ass
 		return err
 	}
 
-	// Compare the assets found on disk to assets found in DB
-	toAdd, toDelete, err := utils.DiffStructs(assets, existingAssets, "Path")
+	// Compare the assets found on disk to assets found in DB and identify which assets to add and
+	// which assets to delete
+	toAdd, toDelete, err := utils.DiffSliceOfStructsByKey(assets, existingAssets, "Hash")
 	if err != nil {
 		return err
 	}
 
-	// Add the missing assets
+	// Add assets
+	// TODO: This could be optimized by using a bulk insert
 	for _, asset := range toAdd {
 		if err := assetDao.Create(asset, tx); err != nil {
 			return err
 		}
 	}
 
-	// Delete the irrelevant assets
-	for _, asset := range toDelete {
-		err := assetDao.Delete(&database.DatabaseParams{Where: sq.Eq{"id": asset.ID}}, tx)
-		if err != nil {
-			return err
-		}
+	// Bulk delete assets
+	whereClause := squirrel.Or{}
+	for _, deleteAsset := range toDelete {
+		whereClause = append(whereClause, sq.Eq{"id": deleteAsset.ID})
 	}
 
-	// Assets that already exist in the DB will have an empty ID. We need to map the existing ID
-	// to these assets, so that we can update the attachments with the correct asset ID later on.
+	if err := assetDao.Delete(&database.DatabaseParams{Where: whereClause}, tx); err != nil {
+		return err
+	}
+
+	// Identify the existing assets whose information has changed
 	existingAssetsMap := make(map[string]*models.Asset)
-	for _, asset := range existingAssets {
-		existingAssetsMap[asset.Path] = asset
+	for _, existingAsset := range existingAssets {
+		existingAssetsMap[existingAsset.Hash] = existingAsset
 	}
 
 	for _, asset := range assets {
-		if asset.ID == "" {
-			if existingAsset, exists := existingAssetsMap[asset.Path]; exists {
-				asset.ID = existingAsset.ID
+		if existingAsset, exists := existingAssetsMap[asset.Hash]; exists {
+			// fmt.Println(asset, existingAsset)
+			asset.ID = existingAsset.ID
+
+			if !utils.CompareStructs(asset, existingAsset, []string{"CreatedAt", "UpdatedAt"}) {
+				// The assets has been updated to have the existing assets ID, so this will update the
+				// existing asset with the details of the new asset
+				if err := assetDao.Update(asset, tx); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -612,9 +628,18 @@ func updateAssets(assetDao *daos.AssetDao, tx *database.Tx, courseId string, ass
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// updateAttachments updates the attachments in the DB (in a transaction), by comparing the attachments
-// found on disk to the attachments found in the DB. It will insert new attachments and delete attachments
-// which no longer exist
+// updateAttachments updates the attachments in the database based on the attachments found on disk.
+// It compares the existing attachments in the database with the attachments found on disk, and performs
+// the necessary additions and deletions
+//
+// Parameters:
+// - attachmentDao: The DAO used to interact with the attachments table in the database
+// - tx: The database transaction within which all operations should be performed
+// - courseId: The ID of the course to which the attachments belong
+// - attachments: A slice of Attachment structs representing the attachments found on disk
+//
+// Returns:
+// - error: An error if any operation fails, otherwise nil
 func updateAttachments(attachmentDao *daos.AttachmentDao, tx *database.Tx, courseId string, attachments []*models.Attachment) error {
 	// Get existing attachments
 	dbParams := &database.DatabaseParams{
@@ -627,7 +652,7 @@ func updateAttachments(attachmentDao *daos.AttachmentDao, tx *database.Tx, cours
 	}
 
 	// Compare the attachments found on disk to attachments found in DB
-	toAdd, toDelete, err := utils.DiffStructs(attachments, existingAttachments, "Path")
+	toAdd, toDelete, err := utils.DiffSliceOfStructsByKey(attachments, existingAttachments, "Path")
 	if err != nil {
 		return err
 	}

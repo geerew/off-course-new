@@ -3,6 +3,7 @@ package daos
 import (
 	"database/sql"
 	"slices"
+	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
@@ -196,6 +197,39 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Update updates an asset
+//
+// Note: Only `title`, `prefix`, `chapter`, `type`, and `path` can be updated
+func (dao *AssetDao) Update(asset *models.Asset, tx *database.Tx) error {
+	if asset.ID == "" {
+		return ErrEmptyId
+	}
+
+	asset.RefreshUpdatedAt()
+
+	query, args, _ := squirrel.
+		StatementBuilder.
+		Update(dao.Table()).
+		Set("title", NilStr(asset.Title)).
+		Set("prefix", asset.Prefix).
+		Set("chapter", NilStr(asset.Chapter)).
+		Set("type", NilStr(asset.Type.String())).
+		Set("path", NilStr(asset.Path)).
+		Set("updated_at", FormatTime(asset.UpdatedAt)).
+		Where("id = ?", asset.ID).
+		ToSql()
+
+	execFn := dao.db.Exec
+	if tx != nil {
+		execFn = tx.Exec
+	}
+
+	_, err := execFn(query, args...)
+	return err
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Delete deletes an asset based upon the where clause
 //
 // `tx` allows for the function to be run within a transaction
@@ -280,9 +314,9 @@ func (dao *AssetDao) data(a *models.Asset) map[string]any {
 		"chapter":    NilStr(a.Chapter),
 		"type":       NilStr(a.Type.String()),
 		"path":       NilStr(a.Path),
-		"md5":        NilStr(a.Md5),
-		"created_at": a.CreatedAt,
-		"updated_at": a.UpdatedAt,
+		"hash":       NilStr(a.Hash),
+		"created_at": FormatTime(a.CreatedAt),
+		"updated_at": FormatTime(a.UpdatedAt),
 	}
 }
 
@@ -296,6 +330,9 @@ func (dao *AssetDao) scanRow(scannable Scannable) (*models.Asset, error) {
 	var chapter sql.NullString
 	var videoPos sql.NullInt16
 	var completed sql.NullBool
+	var createdAt string
+	var updatedAt string
+	var completedAt sql.NullString
 
 	err := scannable.Scan(
 		&a.ID,
@@ -305,13 +342,14 @@ func (dao *AssetDao) scanRow(scannable Scannable) (*models.Asset, error) {
 		&chapter,
 		&a.Type,
 		&a.Path,
-		&a.Md5,
-		&a.CreatedAt,
-		&a.UpdatedAt,
+		&a.Hash,
+		&createdAt,
+		&updatedAt,
+
 		// Asset progress
 		&videoPos,
 		&completed,
-		&a.CompletedAt,
+		&completedAt,
 	)
 
 	if err != nil {
@@ -320,6 +358,22 @@ func (dao *AssetDao) scanRow(scannable Scannable) (*models.Asset, error) {
 
 	if chapter.Valid {
 		a.Chapter = chapter.String
+	}
+
+	if a.CreatedAt, err = ParseTime(createdAt); err != nil {
+		return nil, err
+	}
+
+	if a.UpdatedAt, err = ParseTime(updatedAt); err != nil {
+		return nil, err
+	}
+
+	if completedAt.Valid {
+		if a.CompletedAt, err = ParseTime(completedAt.String); err != nil {
+			return nil, err
+		}
+	} else {
+		a.CompletedAt = time.Time{}
 	}
 
 	a.VideoPos = int(videoPos.Int16)

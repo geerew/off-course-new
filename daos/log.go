@@ -163,8 +163,8 @@ func (dao *LogDao) data(a *models.Log) map[string]any {
 		"level":      a.Level,
 		"message":    NilStr(a.Message),
 		"data":       a.Data,
-		"created_at": a.CreatedAt,
-		"updated_at": a.UpdatedAt,
+		"created_at": FormatTime(a.CreatedAt),
+		"updated_at": FormatTime(a.UpdatedAt),
 	}
 }
 
@@ -174,16 +174,27 @@ func (dao *LogDao) data(a *models.Log) map[string]any {
 func (dao *LogDao) scanRow(scannable Scannable) (*models.Log, error) {
 	var l models.Log
 
+	var createdAt string
+	var updatedAt string
+
 	err := scannable.Scan(
 		&l.ID,
 		&l.Level,
 		&l.Message,
 		&l.Data,
-		&l.CreatedAt,
-		&l.UpdatedAt,
+		&createdAt,
+		&updatedAt,
 	)
 
 	if err != nil {
+		return nil, err
+	}
+
+	if l.CreatedAt, err = ParseTime(createdAt); err != nil {
+		return nil, err
+	}
+
+	if l.UpdatedAt, err = ParseTime(updatedAt); err != nil {
 		return nil, err
 	}
 

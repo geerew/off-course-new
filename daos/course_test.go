@@ -17,6 +17,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func courseSetup(t *testing.T) (*CourseDao, database.Database) {
+	t.Helper()
+
 	dbManager := setup(t)
 	courseDao := NewCourseDao(dbManager.DataDb)
 	return courseDao, dbManager.DataDb

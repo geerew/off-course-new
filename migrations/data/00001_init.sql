@@ -34,7 +34,7 @@ CREATE TABLE assets (
 	chapter      TEXT,
 	type         TEXT NOT NULL,
 	path         TEXT UNIQUE NOT NULL,
-	md5		     TEXT NOT NULL,
+	hash	     TEXT NOT NULL,
 	created_at   TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
 	updated_at   TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
 	---
@@ -64,7 +64,6 @@ CREATE TABLE attachments (
 	asset_id    TEXT NOT NULL,
 	title       TEXT NOT NULL,
 	path        TEXT UNIQUE NOT NULL,
-	md5	        TEXT NOT NULL,
 	created_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
 	updated_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
 	---

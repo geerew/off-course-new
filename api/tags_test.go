@@ -33,7 +33,7 @@ func TestTags_GetTags(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
 		router := setup(t)
 
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/", nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -47,7 +47,7 @@ func TestTags_GetTags(t *testing.T) {
 
 		daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(2).Tags([]string{"PHP", "Go", "Java", "TypeScript", "JavaScript"}).Build()
 
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/", nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -61,7 +61,7 @@ func TestTags_GetTags(t *testing.T) {
 		// Courses
 		// ----------------------------
 
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/?expand=true", nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/?expand=true", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -83,7 +83,7 @@ func TestTags_GetTags(t *testing.T) {
 		// ----------------------------
 		// CREATED_AT ASC
 		// ----------------------------
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/?orderBy=created_at%20asc", nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/?orderBy=created_at%20asc", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -95,7 +95,7 @@ func TestTags_GetTags(t *testing.T) {
 		// ----------------------------
 		// CREATED_AT DESC
 		// ----------------------------
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/?orderBy=created_at%20desc", nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/?orderBy=created_at%20desc", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -109,7 +109,7 @@ func TestTags_GetTags(t *testing.T) {
 		// ----------------------------
 		courseDao := daos.NewCourseDao(router.config.DbManager.DataDb)
 
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/?expand=true&orderBy=created_at%20asc,"+courseDao.Table()+".title%20desc", nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/?expand=true&orderBy=created_at%20asc,"+courseDao.Table()+".title%20desc", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -133,7 +133,7 @@ func TestTags_GetTags(t *testing.T) {
 		// ----------------------------
 		// Filter by `none`
 		// ----------------------------
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=none", nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=none", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -144,7 +144,7 @@ func TestTags_GetTags(t *testing.T) {
 		// ----------------------------
 		// Filter by `li`
 		// ----------------------------
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=li", nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=li", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -161,7 +161,7 @@ func TestTags_GetTags(t *testing.T) {
 		// ----------------------------
 		// Filter by `gh`
 		// ----------------------------
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=gh", nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=gh", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -179,7 +179,7 @@ func TestTags_GetTags(t *testing.T) {
 		// ----------------------------
 		// Filter by `slight`
 		// ----------------------------
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=slight", nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=slight", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -197,7 +197,7 @@ func TestTags_GetTags(t *testing.T) {
 			Tags([]string{"Slight"}).
 			Build()
 
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=slight", nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/?filter=slight", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -225,7 +225,7 @@ func TestTags_GetTags(t *testing.T) {
 			pagination.PerPageQueryParam: {"11"},
 		}
 
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/?"+params.Encode(), nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/?"+params.Encode(), nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -244,7 +244,7 @@ func TestTags_GetTags(t *testing.T) {
 			pagination.PageQueryParam:    {"2"},
 			pagination.PerPageQueryParam: {"11"},
 		}
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/?"+params.Encode(), nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/?"+params.Encode(), nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -263,7 +263,7 @@ func TestTags_GetTags(t *testing.T) {
 		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
-		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/", nil))
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
@@ -278,7 +278,7 @@ func TestTags_GetTag(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(3).Tags([]string{"Go", "PHP"}).Build()
 
 		// By ID
-		status, body, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/"+testData[1].Tags[1].TagId, nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/"+testData[1].Tags[1].TagId, nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -290,7 +290,7 @@ func TestTags_GetTag(t *testing.T) {
 		require.Equal(t, 3, tagResp.CourseCount)
 
 		// By Name
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/Go/?byName=true", nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/Go/?byName=true", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -303,7 +303,7 @@ func TestTags_GetTag(t *testing.T) {
 		// ----------------------------
 		// Courses
 		// ----------------------------
-		status, body, err = requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/"+testData[1].Tags[1].TagId+"/?expand=true", nil))
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/"+testData[1].Tags[1].TagId+"/?expand=true", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -317,7 +317,7 @@ func TestTags_GetTag(t *testing.T) {
 	t.Run("404 (not found)", func(t *testing.T) {
 		router := setup(t)
 
-		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/test", nil))
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/test", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
 	})
@@ -328,7 +328,7 @@ func TestTags_GetTag(t *testing.T) {
 		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
-		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodGet, "/api/tags/test", nil))
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/tags/test", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
@@ -343,7 +343,7 @@ func TestTags_CreateTag(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{"tag": "test"}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, status)
 
@@ -360,7 +360,7 @@ func TestTags_CreateTag(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		require.Contains(t, string(body), "Error parsing data")
@@ -375,7 +375,7 @@ func TestTags_CreateTag(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{"tag": ""}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		require.Contains(t, string(body), "A tag is required")
@@ -387,12 +387,12 @@ func TestTags_CreateTag(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{"tag": "test"}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, _, err := requestHelper(router, req)
+		status, _, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, status)
 
 		// Create the tag again
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		require.Contains(t, string(body), "Tag already exists")
@@ -408,7 +408,7 @@ func TestTags_CreateTag(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/tags/", strings.NewReader(`{"tag": "test"}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 		require.Contains(t, string(body), "Error creating tag")
@@ -440,7 +440,7 @@ func TestTags_UpdateTag(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPut, "/api/tags/"+goTag.ID, strings.NewReader(string(data)))
 		req.Header.Set("Content-Type", "application/json")
 
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -457,7 +457,7 @@ func TestTags_UpdateTag(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPut, "/api/tags/test", strings.NewReader(`bob`))
 		req.Header.Set("Content-Type", "application/json")
 
-		status, _, err := requestHelper(router, req)
+		status, _, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 	})
@@ -468,7 +468,7 @@ func TestTags_UpdateTag(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPut, "/api/tags/test", strings.NewReader(`{"id": "1234567"}`))
 		req.Header.Set("Content-Type", "application/json")
 
-		status, _, err := requestHelper(router, req)
+		status, _, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
 	})
@@ -492,7 +492,7 @@ func TestTags_UpdateTag(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPut, "/api/tags/"+tag.ID, strings.NewReader(string(data)))
 		req.Header.Set("Content-Type", "application/json")
 
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 
@@ -509,7 +509,7 @@ func TestTags_UpdateTag(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPut, "/api/tags/test", strings.NewReader(`{"id": "1234567"}`))
 		req.Header.Set("Content-Type", "application/json")
 
-		status, _, err := requestHelper(router, req)
+		status, _, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
@@ -533,7 +533,7 @@ func TestTags_DeleteTag(t *testing.T) {
 		// ----------------------------
 		// Delete tag 3
 		// ----------------------------
-		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodDelete, "/api/tags/"+tags[2].ID, nil))
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/tags/"+tags[2].ID, nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNoContent, status)
 
@@ -563,7 +563,7 @@ func TestTags_DeleteTag(t *testing.T) {
 	t.Run("204 (not found)", func(t *testing.T) {
 		router := setup(t)
 
-		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodDelete, "/api/tags/test", nil))
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/tags/test", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNoContent, status)
 	})
@@ -575,7 +575,7 @@ func TestTags_DeleteTag(t *testing.T) {
 		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + daos.NewTagDao(router.config.DbManager.DataDb).Table())
 		require.Nil(t, err)
 
-		status, _, err := requestHelper(router, httptest.NewRequest(http.MethodDelete, "/api/tags/test", nil))
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/tags/test", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})

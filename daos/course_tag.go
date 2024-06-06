@@ -287,8 +287,8 @@ func (dao *CourseTagDao) data(ct *models.CourseTag) map[string]any {
 		"id":         ct.ID,
 		"tag_id":     NilStr(ct.TagId),
 		"course_id":  NilStr(ct.CourseId),
-		"created_at": ct.CreatedAt,
-		"updated_at": ct.UpdatedAt,
+		"created_at": FormatTime(ct.CreatedAt),
+		"updated_at": FormatTime(ct.UpdatedAt),
 	}
 }
 
@@ -298,17 +298,28 @@ func (dao *CourseTagDao) data(ct *models.CourseTag) map[string]any {
 func (dao *CourseTagDao) scanRow(scannable Scannable) (*models.CourseTag, error) {
 	var ct models.CourseTag
 
+	var createdAt string
+	var updatedAt string
+
 	err := scannable.Scan(
 		&ct.ID,
 		&ct.TagId,
 		&ct.CourseId,
-		&ct.CreatedAt,
-		&ct.UpdatedAt,
+		&createdAt,
+		&updatedAt,
 		&ct.Course,
 		&ct.Tag,
 	)
 
 	if err != nil {
+		return nil, err
+	}
+
+	if ct.CreatedAt, err = ParseTime(createdAt); err != nil {
+		return nil, err
+	}
+
+	if ct.UpdatedAt, err = ParseTime(updatedAt); err != nil {
 		return nil, err
 	}
 

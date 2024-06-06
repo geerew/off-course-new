@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/daos"
@@ -15,7 +16,6 @@ import (
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/jobs"
 	"github.com/geerew/off-course/utils/pagination"
-	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/spf13/afero"
@@ -40,23 +40,23 @@ type courses struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type courseResponse struct {
-	ID        string         `json:"id"`
-	Title     string         `json:"title"`
-	Path      string         `json:"path"`
-	HasCard   bool           `json:"hasCard"`
-	Available bool           `json:"available"`
-	CreatedAt types.DateTime `json:"createdAt"`
-	UpdatedAt types.DateTime `json:"updatedAt"`
+	ID        string    `json:"id"`
+	Title     string    `json:"title"`
+	Path      string    `json:"path"`
+	HasCard   bool      `json:"hasCard"`
+	Available bool      `json:"available"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 
 	// Scan status
 	ScanStatus string `json:"scanStatus"`
 
 	// Progress
-	Started           bool           `json:"started"`
-	StartedAt         types.DateTime `json:"startedAt"`
-	Percent           int            `json:"percent"`
-	CompletedAt       types.DateTime `json:"completedAt"`
-	ProgressUpdatedAt types.DateTime `json:"progressUpdatedAt"`
+	Started           bool      `json:"started"`
+	StartedAt         time.Time `json:"startedAt"`
+	Percent           int       `json:"percent"`
+	CompletedAt       time.Time `json:"completedAt"`
+	ProgressUpdatedAt time.Time `json:"progressUpdatedAt"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

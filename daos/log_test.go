@@ -15,6 +15,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func logSetup(t *testing.T) (*LogDao, database.Database) {
+	t.Helper()
+
 	dbManager := setup(t)
 	logDao := NewLogDao(dbManager.LogsDb)
 	return logDao, dbManager.LogsDb

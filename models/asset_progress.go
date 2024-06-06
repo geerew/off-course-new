@@ -1,8 +1,8 @@
 package models
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+import "time"
 
-import "github.com/geerew/off-course/utils/types"
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -14,5 +14,5 @@ type AssetProgress struct {
 	CourseID    string
 	VideoPos    int
 	Completed   bool
-	CompletedAt types.DateTime
+	CompletedAt time.Time
 }

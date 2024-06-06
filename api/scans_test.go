@@ -22,7 +22,7 @@ func TestScans_GetScan(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(5).Scan().Build()
 
 		req := httptest.NewRequest(http.MethodGet, "/api/scans/"+testData[2].ID, nil)
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
@@ -38,7 +38,7 @@ func TestScans_GetScan(t *testing.T) {
 		router := setup(t)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/scans/test", nil)
-		status, _, err := requestHelper(router, req)
+		status, _, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, status)
 	})
@@ -50,7 +50,7 @@ func TestScans_GetScan(t *testing.T) {
 		require.Nil(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/scans/test", nil)
-		status, _, err := requestHelper(router, req)
+		status, _, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 	})
@@ -67,7 +67,7 @@ func TestScans_CreateScan(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(fmt.Sprintf(`{"courseID": "%s"}`, testData[0].ID)))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, status)
 
@@ -83,7 +83,7 @@ func TestScans_CreateScan(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(`{`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		require.Contains(t, string(body), "Error parsing data")
@@ -95,7 +95,7 @@ func TestScans_CreateScan(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(`{"courseID": ""}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		require.Contains(t, string(body), "A course ID is required")
@@ -107,7 +107,7 @@ func TestScans_CreateScan(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(`{"courseID": "test"}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		require.Contains(t, string(body), "Invalid course ID")
@@ -122,7 +122,7 @@ func TestScans_CreateScan(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/scans/", strings.NewReader(`{"courseID": "test"}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-		status, body, err := requestHelper(router, req)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 		require.Contains(t, string(body), "Error creating scan job")

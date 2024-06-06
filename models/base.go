@@ -1,8 +1,9 @@
 package models
 
 import (
+	"time"
+
 	"github.com/geerew/off-course/utils/security"
-	"github.com/geerew/off-course/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -10,8 +11,8 @@ import (
 // BaseModel defines the base model for all models
 type BaseModel struct {
 	ID        string
-	CreatedAt types.DateTime
-	UpdatedAt types.DateTime
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -32,12 +33,12 @@ func (b *BaseModel) SetId(id string) {
 
 // RefreshCreatedAt updates the Created At field to the current date/time
 func (b *BaseModel) RefreshCreatedAt() {
-	b.CreatedAt = types.NowDateTime()
+	b.CreatedAt = time.Now()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // RefreshUpdatedAt updates the Updated At field to the current date/time
 func (b *BaseModel) RefreshUpdatedAt() {
-	b.UpdatedAt = types.NowDateTime()
+	b.UpdatedAt = time.Now()
 }

@@ -15,6 +15,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func CourseProgressSetup(t *testing.T) (*CourseProgressDao, database.Database) {
+	t.Helper()
+
 	dbManager := setup(t)
 	cpDao := NewCourseProgressDao(dbManager.DataDb)
 	return cpDao, dbManager.DataDb

@@ -13,6 +13,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func setupSqliteDB(t *testing.T) *DatabaseManager {
+	t.Helper()
+
 	// Logger
 	logger, _, err := logger.InitLogger(&logger.BatchOptions{
 		BatchSize: 1,

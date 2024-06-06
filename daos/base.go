@@ -1,8 +1,10 @@
 package daos
 
 import (
+	"database/sql"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/squirrel"
 )
@@ -33,6 +35,38 @@ var (
 	ErrNilTransaction  = errors.New("transaction cannot be nil")
 	ErrMissingTag      = errors.New("tag cannot be empty")
 )
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// FormatTime formats a time.Time to a string
+func FormatTime(t time.Time) string {
+	return t.Format("2006-01-02 15:04:05.000")
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ParseTime parses the time string from SQLite to time.Time
+func ParseTime(t string) (time.Time, error) {
+	if t == "" {
+		return time.Time{}, nil
+	}
+	return time.Parse("2006-01-02 15:04:05.000", t)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ParseTimeNull parses a time string from a sql.NullString to time.Time
+func ParseTimeNull(t sql.NullString) (time.Time, error) {
+	if t.Valid {
+		if value, err := ParseTime(t.String); err != nil {
+			return time.Time{}, err
+		} else {
+			return value, nil
+		}
+	} else {
+		return time.Time{}, nil
+	}
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -108,7 +108,7 @@ func (dao *ScanDao) Update(scan *models.Scan, tx *database.Tx) error {
 		StatementBuilder.
 		Update(dao.Table()).
 		Set("status", NilStr(scan.Status.String())).
-		Set("updated_at", scan.UpdatedAt).
+		Set("updated_at", FormatTime(scan.UpdatedAt)).
 		Where("id = ?", scan.ID).
 		ToSql()
 
@@ -214,8 +214,8 @@ func (dao *ScanDao) data(s *models.Scan) map[string]any {
 		"id":         s.ID,
 		"course_id":  NilStr(s.CourseID),
 		"status":     NilStr(s.Status.String()),
-		"created_at": s.CreatedAt,
-		"updated_at": s.UpdatedAt,
+		"created_at": FormatTime(s.CreatedAt),
+		"updated_at": FormatTime(s.UpdatedAt),
 	}
 }
 
@@ -225,16 +225,27 @@ func (dao *ScanDao) data(s *models.Scan) map[string]any {
 func (dao *ScanDao) scanRow(scannable Scannable) (*models.Scan, error) {
 	var s models.Scan
 
+	var createdAt string
+	var updatedAt string
+
 	err := scannable.Scan(
 		&s.ID,
 		&s.CourseID,
 		&s.Status,
-		&s.CreatedAt,
-		&s.UpdatedAt,
+		&createdAt,
+		&updatedAt,
 		&s.CoursePath,
 	)
 
 	if err != nil {
+		return nil, err
+	}
+
+	if s.CreatedAt, err = ParseTime(createdAt); err != nil {
+		return nil, err
+	}
+
+	if s.UpdatedAt, err = ParseTime(updatedAt); err != nil {
 		return nil, err
 	}
 

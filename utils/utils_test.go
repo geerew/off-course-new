@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"log/slog"
 	"reflect"
 	"testing"
 
+	"github.com/geerew/off-course/utils/appFs"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
@@ -70,7 +73,7 @@ func Test_EncodeString(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func Test_DiffStructs(t *testing.T) {
+func Test_DiffSliceOfStructsByKey(t *testing.T) {
 	// Struct for testing
 	type testStruct struct {
 		ID    int
@@ -78,7 +81,7 @@ func Test_DiffStructs(t *testing.T) {
 	}
 
 	t.Run("not a struct empty", func(t *testing.T) {
-		leftDiff, rightDiff, err := DiffStructs([]string{"left"}, []string{"right"}, "")
+		leftDiff, rightDiff, err := DiffSliceOfStructsByKey([]string{"left"}, []string{"right"}, "")
 
 		require.Error(t, err)
 		require.EqualError(t, err, "invalid struct or key")
@@ -87,7 +90,7 @@ func Test_DiffStructs(t *testing.T) {
 	})
 
 	t.Run("invalid key", func(t *testing.T) {
-		leftDiff, rightDiff, err := DiffStructs(
+		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(
 			[]testStruct{{ID: 0, Title: "Test"}},
 			[]testStruct{{ID: 0, Title: "Test"}},
 			"Name")
@@ -99,7 +102,7 @@ func Test_DiffStructs(t *testing.T) {
 	})
 
 	t.Run("both empty", func(t *testing.T) {
-		leftDiff, rightDiff, err := DiffStructs[testStruct](nil, nil, "")
+		leftDiff, rightDiff, err := DiffSliceOfStructsByKey[testStruct](nil, nil, "")
 		require.Nil(t, err)
 		require.Nil(t, leftDiff)
 		require.Nil(t, rightDiff)
@@ -112,7 +115,7 @@ func Test_DiffStructs(t *testing.T) {
 			right = append(right, &testStruct{ID: i, Title: "Test"})
 		}
 
-		leftDiff, rightDiff, err := DiffStructs(nil, right, "ID")
+		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(nil, right, "ID")
 		require.Nil(t, err)
 		require.Empty(t, leftDiff)
 		require.Len(t, rightDiff, 5)
@@ -125,7 +128,7 @@ func Test_DiffStructs(t *testing.T) {
 			left = append(left, &testStruct{ID: i, Title: "Test"})
 		}
 
-		leftDiff, rightDiff, err := DiffStructs(left, nil, "ID")
+		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, nil, "ID")
 		require.Nil(t, err)
 		require.Len(t, leftDiff, 5)
 		require.Empty(t, rightDiff)
@@ -140,7 +143,7 @@ func Test_DiffStructs(t *testing.T) {
 			right = append(right, &testStruct{ID: i, Title: "Test"})
 		}
 
-		leftDiff, rightDiff, err := DiffStructs(left, right, "ID")
+		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, right, "ID")
 		require.Nil(t, err)
 		require.Empty(t, leftDiff)
 		require.Empty(t, rightDiff)
@@ -155,7 +158,7 @@ func Test_DiffStructs(t *testing.T) {
 			right = append(right, &testStruct{ID: i + 5, Title: "Test"})
 		}
 
-		leftDiff, rightDiff, err := DiffStructs(left, right, "ID")
+		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, right, "ID")
 		require.Nil(t, err)
 		require.Len(t, leftDiff, 5)
 		require.Len(t, rightDiff, 5)
@@ -176,7 +179,7 @@ func Test_DiffStructs(t *testing.T) {
 		// Give right 1 from left. This means left now only has 4 that right does not have
 		right = append(right, left[0])
 
-		leftDiff, rightDiff, err := DiffStructs(left, right, "ID")
+		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, right, "ID")
 		require.Nil(t, err)
 		require.Len(t, leftDiff, 4)
 		require.Len(t, rightDiff, 3)
@@ -194,17 +197,82 @@ func Test_DiffStructs(t *testing.T) {
 		// Give left 1 extra
 		left = append(left, &testStruct{ID: 5, Title: "Test"})
 
-		leftDiff, rightDiff, err := DiffStructs(left, right, "ID")
+		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, right, "ID")
 		require.Nil(t, err)
 		require.Len(t, leftDiff, 1)
 		require.Zero(t, len(rightDiff))
 
 		// Give right 1 extra (plus the new left one)
 		right = append(right, left[len(left)-1], &testStruct{ID: 6, Title: "Test"})
-		leftDiff, rightDiff, err = DiffStructs(left, right, "ID")
+		leftDiff, rightDiff, err = DiffSliceOfStructsByKey(left, right, "ID")
 		require.Nil(t, err)
 		require.Zero(t, len(leftDiff))
 		require.Len(t, rightDiff, 1)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_CompareStructs(t *testing.T) {
+	// Struct for testing
+	type testStruct struct {
+		ID        int
+		Title     string
+		Path      string
+		CreatedAt string
+		UpdatedAt string
+	}
+
+	t.Run("not a struct", func(t *testing.T) {
+		require.False(t, CompareStructs("test", "test", nil))
+	})
+
+	t.Run("different types", func(t *testing.T) {
+		require.False(t, CompareStructs(testStruct{}, &testStruct{}, nil))
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		require.True(t, CompareStructs(testStruct{}, testStruct{}, nil))
+	})
+
+	t.Run("same", func(t *testing.T) {
+		require.True(t, CompareStructs(testStruct{ID: 1, Title: "Test"}, testStruct{ID: 1, Title: "Test"}, nil))
+	})
+
+	t.Run("different", func(t *testing.T) {
+		require.False(t, CompareStructs(testStruct{ID: 1, Title: "Test"}, testStruct{ID: 1, Title: "Test 2"}, nil))
+	})
+
+	t.Run("ignore", func(t *testing.T) {
+		require.True(t, CompareStructs(
+			testStruct{ID: 1, Title: "Test", Path: "/test", CreatedAt: "2021-01-01", UpdatedAt: "2021-01-01"},
+			testStruct{ID: 1, Title: "Test", Path: "/test", CreatedAt: "2021-01-02", UpdatedAt: "2021-01-02"},
+			[]string{"CreatedAt", "UpdatedAt"},
+		))
+	})
+
+	t.Run("nested struct", func(t *testing.T) {
+		type nestedStruct struct {
+			ID int
+		}
+
+		type testStruct struct {
+			ID     int
+			Title  string
+			Nested nestedStruct
+		}
+
+		require.True(t, CompareStructs(
+			testStruct{ID: 1, Title: "Test", Nested: nestedStruct{ID: 1}},
+			testStruct{ID: 1, Title: "Test", Nested: nestedStruct{ID: 1}},
+			nil,
+		))
+
+		require.False(t, CompareStructs(
+			testStruct{ID: 1, Title: "Test", Nested: nestedStruct{ID: 1}},
+			testStruct{ID: 1, Title: "Test", Nested: nestedStruct{ID: 2}},
+			nil,
+		))
 	})
 }
 
@@ -265,4 +333,54 @@ func Test_ValueToString(t *testing.T) {
 	for _, test := range tests {
 		require.Equal(t, test.output, ValueToString(reflect.ValueOf(test.input)))
 	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_PartialHash(t *testing.T) {
+	t.Run("random sizes", func(t *testing.T) {
+		appFs := appFs.NewAppFs(afero.NewMemMapFs(), slog.Default())
+
+		bigData := make([]byte, 1024*1024*10)
+		for i := 0; i < len(bigData); i++ {
+			bigData[i] = byte(i % 256)
+		}
+
+		tests := []struct {
+			name     string
+			content  []byte
+			expected string // You can generate these expected hashes beforehand
+		}{
+			{"empty", []byte(""), "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"},
+			{"small", []byte("small file contents"), "db664be16228614363fb0506a9f828fdb0dbb5ceef6465ac344647ed6feae240"},
+			{"big", bigData, "c37339299959bdb2885f2f30f77247b0fa3760ce1181d418b4f17fa652ff1386"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				require.Nil(t, afero.WriteFile(appFs.Fs, "/test/"+tt.name, tt.content, 0644))
+
+				hash, err := PartialHash(appFs, "/test/"+tt.name, 1024*1024)
+				require.Nil(t, err)
+				require.Equal(t, tt.expected, hash)
+			})
+		}
+	})
+
+	t.Run("rename file", func(t *testing.T) {
+		appFs := appFs.NewAppFs(afero.NewMemMapFs(), slog.Default())
+
+		require.Nil(t, afero.WriteFile(appFs.Fs, "/test/data", []byte("Some test data"), 0644))
+
+		hash, err := PartialHash(appFs, "/test/data", 1024*1024)
+		require.Nil(t, err)
+		require.Equal(t, "0843f7816915fae7fc9c31dbbb3e8745015b53a297930e522d544c13287cb062", hash)
+
+		// Rename the file
+		require.Nil(t, appFs.Fs.Rename("/test/data", "/test/newdata"))
+
+		hash, err = PartialHash(appFs, "/test/newdata", 1024*1024)
+		require.Nil(t, err)
+		require.Equal(t, "0843f7816915fae7fc9c31dbbb3e8745015b53a297930e522d544c13287cb062", hash)
+	})
 }

@@ -19,6 +19,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func setup(t *testing.T) *Router {
+	t.Helper()
+
 	// Logger
 	var logs []*logger.Log
 	var logsMux sync.Mutex
@@ -65,7 +67,9 @@ func setup(t *testing.T) *Router {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func requestHelper(router *Router, req *http.Request) (int, []byte, error) {
+func requestHelper(t *testing.T, router *Router, req *http.Request) (int, []byte, error) {
+	t.Helper()
+
 	resp, err := router.router.Test(req)
 	if err != nil {
 		return -1, nil, err
@@ -78,6 +82,8 @@ func requestHelper(router *Router, req *http.Request) (int, []byte, error) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func unmarshalHelper[T any](t *testing.T, body []byte) (pagination.PaginationResult, []T) {
+	t.Helper()
+
 	var respData pagination.PaginationResult
 	err := json.Unmarshal(body, &respData)
 	require.Nil(t, err)

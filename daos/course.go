@@ -167,7 +167,7 @@ func (dao *CourseDao) Update(course *models.Course, tx *database.Tx) error {
 		Update(dao.Table()).
 		Set("card_path", NilStr(course.CardPath)).
 		Set("available", course.Available).
-		Set("updated_at", course.UpdatedAt).
+		Set("updated_at", FormatTime(course.UpdatedAt)).
 		Where("id = ?", course.ID).
 		ToSql()
 
@@ -384,8 +384,8 @@ func (dao *CourseDao) data(c *models.Course) map[string]any {
 		"path":       NilStr(c.Path),
 		"card_path":  NilStr(c.CardPath),
 		"available":  c.Available,
-		"created_at": c.CreatedAt,
-		"updated_at": c.UpdatedAt,
+		"created_at": FormatTime(c.CreatedAt),
+		"updated_at": FormatTime(c.UpdatedAt),
 	}
 }
 
@@ -398,6 +398,11 @@ func (dao *CourseDao) scanRow(scannable Scannable) (*models.Course, error) {
 	// Nullable fields
 	var cardPath sql.NullString
 	var scanStatus sql.NullString
+	var createdAt string
+	var updatedAt string
+	var startedAt sql.NullString
+	var completedAt sql.NullString
+	var progressUpdatedAt sql.NullString
 
 	err := scannable.Scan(
 		// Course
@@ -406,16 +411,16 @@ func (dao *CourseDao) scanRow(scannable Scannable) (*models.Course, error) {
 		&c.Path,
 		&cardPath,
 		&c.Available,
-		&c.CreatedAt,
-		&c.UpdatedAt,
+		&createdAt,
+		&updatedAt,
 		// Scan
 		&scanStatus,
 		// Course progress
 		&c.Started,
-		&c.StartedAt,
+		&startedAt,
 		&c.Percent,
-		&c.CompletedAt,
-		&c.ProgressUpdatedAt,
+		&completedAt,
+		&progressUpdatedAt,
 	)
 
 	if err != nil {
@@ -428,6 +433,26 @@ func (dao *CourseDao) scanRow(scannable Scannable) (*models.Course, error) {
 
 	if scanStatus.Valid {
 		c.ScanStatus = scanStatus.String
+	}
+
+	if c.CreatedAt, err = ParseTime(createdAt); err != nil {
+		return nil, err
+	}
+
+	if c.UpdatedAt, err = ParseTime(updatedAt); err != nil {
+		return nil, err
+	}
+
+	if c.StartedAt, err = ParseTimeNull(startedAt); err != nil {
+		return nil, err
+	}
+
+	if c.CompletedAt, err = ParseTimeNull(completedAt); err != nil {
+		return nil, err
+	}
+
+	if c.ProgressUpdatedAt, err = ParseTime(progressUpdatedAt.String); err != nil {
+		return nil, err
 	}
 
 	return &c, nil

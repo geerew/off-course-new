@@ -1,8 +1,8 @@
 package models
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+import "time"
 
-import "github.com/geerew/off-course/utils/types"
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -12,7 +12,7 @@ type CourseProgress struct {
 
 	CourseID    string
 	Started     bool
-	StartedAt   types.DateTime
+	StartedAt   time.Time
 	Percent     int
-	CompletedAt types.DateTime
+	CompletedAt time.Time
 }
