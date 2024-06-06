@@ -181,7 +181,7 @@ func (builder *TestBuilder) newTestCourse(title string) *models.Course {
 		err := dao.Create(c)
 		require.NoError(builder.t, err, "Failed to create course")
 
-		time.Sleep(time.Millisecond * 2)
+		time.Sleep(time.Millisecond * 1)
 	}
 
 	return c
@@ -205,7 +205,7 @@ func (builder *TestBuilder) newTestScan(courseId string) *models.Scan {
 		err := dao.Create(s, nil)
 		require.Nil(builder.t, err)
 
-		time.Sleep(time.Millisecond * 2)
+		time.Sleep(time.Millisecond * 1)
 	}
 
 	return s
@@ -237,7 +237,7 @@ func (builder *TestBuilder) newTestAssets(course *models.Course) []*models.Asset
 			err := dao.Create(a, nil)
 			require.Nil(builder.t, err)
 
-			time.Sleep(time.Millisecond * 2)
+			time.Sleep(time.Millisecond * 1)
 		}
 
 		if builder.attachmentsPerAsset > 0 {
@@ -273,7 +273,7 @@ func (builder *TestBuilder) newTestAttachments(asset *models.Asset) []*models.At
 			err := dao.Create(a, nil)
 			require.Nil(builder.t, err)
 
-			time.Sleep(time.Millisecond * 2)
+			time.Sleep(time.Millisecond * 1)
 		}
 
 		attachments = append(attachments, a)
@@ -319,7 +319,7 @@ func (builder *TestBuilder) newTestTags(course *models.Course) []*models.CourseT
 
 		tags = append(tags, ct)
 
-		time.Sleep(time.Millisecond * 2)
+		time.Sleep(time.Millisecond * 1)
 	}
 
 	return tags

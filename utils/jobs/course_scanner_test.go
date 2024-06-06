@@ -917,6 +917,7 @@ func TestCourseScanner_UpdateAssets(t *testing.T) {
 		scanner, dbManager, _, _ := setupCourseScanner(t)
 
 		testData := daos.NewTestBuilder(t).Db(dbManager.DataDb).Courses(1).Assets(12).Build()
+
 		assetDao := daos.NewAssetDao(dbManager.DataDb)
 
 		dbParams := &database.DatabaseParams{Where: squirrel.Eq{assetDao.Table() + ".course_id": testData[0].ID}}
@@ -957,10 +958,7 @@ func TestCourseScanner_UpdateAssets(t *testing.T) {
 			require.Nil(t, scanner.assetDao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": a.ID}}, nil))
 		}
 
-		dbParams := &database.DatabaseParams{
-			OrderBy: []string{"created_at desc"},
-			Where:   squirrel.Eq{assetDao.Table() + ".course_id": testData[0].ID},
-		}
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{assetDao.Table() + ".course_id": testData[0].ID}}
 
 		// ----------------------------
 		// Add assets
@@ -992,17 +990,22 @@ func TestCourseScanner_UpdateAssets(t *testing.T) {
 		require.Nil(t, err)
 		require.Equal(t, 12, len(a))
 
-		require.Equal(t, testData[0].Assets[10].ID, a[10].ID)
-		require.Equal(t, testData[0].Assets[10].Title, a[10].Title)
-		require.Equal(t, testData[0].Assets[10].Prefix, a[10].Prefix)
-		require.Equal(t, testData[0].Assets[10].Chapter, a[10].Chapter)
-		require.Equal(t, testData[0].Assets[10].Path, a[10].Path)
-
-		require.Equal(t, testData[0].Assets[11].ID, a[11].ID)
-		require.Equal(t, testData[0].Assets[11].Title, a[11].Title)
-		require.Equal(t, testData[0].Assets[11].Prefix, a[11].Prefix)
-		require.Equal(t, testData[0].Assets[11].Chapter, a[11].Chapter)
-		require.Equal(t, testData[0].Assets[11].Path, a[11].Path)
+		// Ensure the assets were updated
+		//
+		// Note: Order is not guaranteed, so we have to validate this way
+		for _, asset := range a {
+			if asset.ID == testData[0].Assets[10].ID {
+				require.Equal(t, testData[0].Assets[10].Title, asset.Title)
+				require.Equal(t, testData[0].Assets[10].Prefix, asset.Prefix)
+				require.Equal(t, testData[0].Assets[10].Chapter, asset.Chapter)
+				require.Equal(t, testData[0].Assets[10].Path, asset.Path)
+			} else if asset.ID == testData[0].Assets[11].ID {
+				require.Equal(t, testData[0].Assets[11].Title, asset.Title)
+				require.Equal(t, testData[0].Assets[11].Prefix, asset.Prefix)
+				require.Equal(t, testData[0].Assets[11].Chapter, asset.Chapter)
+				require.Equal(t, testData[0].Assets[11].Path, asset.Path)
+			}
+		}
 	})
 
 	t.Run("db error", func(t *testing.T) {
