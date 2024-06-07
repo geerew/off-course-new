@@ -1,3 +1,4 @@
+import { goto } from '$app/navigation';
 import type { Asset, CourseChapters } from '$lib/types/models';
 import { clsx, type ClassValue } from 'clsx';
 import type { SortKey } from 'svelte-headless-table/plugins';
@@ -176,4 +177,15 @@ export function Throttle<R, A extends unknown[]>(
 			clearTimeout(timeout);
 		}
 	];
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+export function UpdateQueryParam(key: string, value: string, replaceState: boolean) {
+	if (typeof window === 'undefined') return;
+
+	const url = new URL(window.location.href);
+	url.searchParams.set(key, value);
+
+	goto(url.toString(), { replaceState, keepFocus: true, noScroll: true });
 }

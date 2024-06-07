@@ -3,8 +3,9 @@
 	import * as Sheet from '$components/ui/sheet';
 	import * as Tooltip from '$components/ui/tooltip';
 	import type { Asset, CourseChapters } from '$lib/types/models';
-	import { cn } from '$lib/utils';
+	import { UpdateQueryParam, cn } from '$lib/utils';
 	import { CircleCheck, Info, Menu } from 'lucide-svelte';
+	import { createEventDispatcher } from 'svelte';
 
 	// ----------------------
 	// Exports
@@ -21,8 +22,14 @@
 
 	// Currently selected asset. This should be used with `bind:`
 	export let selectedAsset: Asset | null;
+
+	// ----------------------
+	// Variables
+	// ----------------------
+	const dispatch = createEventDispatcher();
 </script>
 
+<!-- xs, sm, md -->
 <div class="border-b px-4 py-2 md:px-8 lg:hidden">
 	<Sheet.Root openFocus={null}>
 		<Sheet.Trigger asChild let:builder>
@@ -96,7 +103,7 @@
 													: 'decoration-muted-foreground'
 											)}
 											on:click={() => {
-												selectedAsset = asset;
+												UpdateQueryParam('a', asset.id, false);
 											}}
 										>
 											<div class={cn('flex w-full flex-row justify-between py-1.5')}>
@@ -132,6 +139,7 @@
 	</Sheet.Root>
 </div>
 
+<!-- lg and up -->
 <div
 	class="hidden h-[calc(100vh-var(--header-height))] shrink-0 overflow-hidden lg:block lg:w-[20rem]"
 >
@@ -191,7 +199,7 @@
 											: 'decoration-muted-foreground'
 									)}
 									on:click={() => {
-										selectedAsset = asset;
+										UpdateQueryParam('a', asset.id, false);
 									}}
 								>
 									<div class={cn('flex w-full flex-row justify-between py-1.5')}>

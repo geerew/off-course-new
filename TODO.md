@@ -6,7 +6,7 @@ TODO
 - [ ] on scan, have a minimum 'load' of 1 second to stop flickering
 - [x] Every DAO should support tx
 - [ ] Fix theme
-- [ ] Fix selecting video assets then moving forward and backward. There is an issue with history
+- [x] Fix selecting video assets then moving forward and backward. There is an issue with history
 - [ ] Update query param to all pages like settings -> courses/tags/logs etc as the uses filters
 
 ## Page -> Settings -> Tags

@@ -4,7 +4,7 @@
 	import { CourseContent, CourseMenu } from '$components/pages/course';
 	import { GetAllCourseAssets, GetCourseFromParams, UpdateAsset } from '$lib/api';
 	import type { Asset, Course, CourseChapters } from '$lib/types/models';
-	import { BuildChapterStructure, NO_CHAPTER } from '$lib/utils';
+	import { BuildChapterStructure, UpdateQueryParam } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 
 	// ----------------------
@@ -18,15 +18,19 @@
 	let chapters: CourseChapters = {};
 
 	// When an asset is selected, these will be populated
-	let selectedAsset: Asset | null;
-	let prevAsset: Asset | null;
-	let nextAsset: Asset | null;
+	let selectedAsset: Asset | null = null;
+	let prevAsset: Asset | null = null;
+	let nextAsset: Asset | null = null;
 
 	// ----------------------
 	// Functions
 	// ----------------------
 
-	// Lookup the course based upon the search params
+	// Lookup the course based on the `id` query param. Then build a chapter structure from the assets
+	// and attachment
+	//
+	// If the `a` query param is not set, find the first unfinished asset and set the `a` query param,
+	// triggering a reactive statement, which sets the selected asset
 	async function getCourse(): Promise<Course> {
 		try {
 			const course = await GetCourseFromParams($page.url.searchParams);
@@ -41,18 +45,34 @@
 
 			chapters = BuildChapterStructure(assets);
 
-			// Set ?a=xxx as the selected asset
-			const assetId = $page.url.searchParams && $page.url.searchParams.get('a');
-			if (assetId) selectedAsset = findAsset(assetId, chapters);
-
-			// If there is no selected asset, set it as the first unfinished asset
-			if (!selectedAsset) selectedAsset = findFirstUnfinishedAsset(course, chapters);
+			// If no asset was found in the query params, find the first unfinished asset and
+			// update the query params. This will trigger the reactive statement that will find
+			// and set the selected asset
+			if (!$page.url.searchParams || !$page.url.searchParams.get('a')) {
+				const found = findFirstUnfinishedAsset(course, chapters);
+				if (found) {
+					UpdateQueryParam('a', found.id, true);
+				}
+			}
 
 			return course;
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : (error as string));
 			throw error;
 		}
+	}
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	// As the query param `a` changes, this will be reactively called to
+	function updateSelectedAsset(id: string) {
+		selectedAsset = findAsset(id, chapters);
+		if (!selectedAsset) return;
+
+		// Set the previous and next assets
+		const { prev, next } = findAdjacentAssets(selectedAsset, chapters);
+		prevAsset = prev;
+		nextAsset = next;
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -122,41 +142,15 @@
 		return { prev: prevAsset, next: nextAsset };
 	}
 
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	function updateQueryParam(assetId: string) {
-		if (typeof window === 'undefined') return;
-
-		const url = new URL(window.location.href);
-		url.searchParams.set('a', assetId);
-		history.pushState({}, '', url.toString());
-	}
-
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	// Called when the selected asset changes. It sets the  previous and next assets and updates
-	function updateSelectedAsset() {
-		if (!selectedAsset) return;
-
-		const assetChapter = !selectedAsset.chapter ? NO_CHAPTER : selectedAsset.chapter;
-
-		// Set ?a=xxx
-		updateQueryParam(selectedAsset.id);
-
-		// Set the previous and next assets
-		const { prev, next } = findAdjacentAssets(selectedAsset, chapters);
-		prevAsset = prev;
-		nextAsset = next;
-	}
-
 	// ----------------------
 	// Reactive
 	// ----------------------
 
-	// When the selected asset changes, call updateSelectedAsset()
+	// When the query param `a` changes, update the selected asset
 	$: {
-		if (selectedAsset) {
-			updateSelectedAsset();
+		const assetId = $page.url.searchParams.get('a');
+		if (assetId && chapters && selectedAsset?.id !== assetId) {
+			updateSelectedAsset(assetId);
 		}
 	}
 </script>
@@ -166,15 +160,14 @@
 		<Loading />
 	{:then data}
 		<div class="flex h-full flex-col lg:container lg:flex-row lg:gap-10">
-			<CourseMenu title={data.title} id={data.id} {chapters} bind:selectedAsset />
+			<CourseMenu title={data.title} id={data.id} {chapters} {selectedAsset} />
 
 			<CourseContent
-				bind:selectedAsset
-				bind:prevAsset
-				bind:nextAsset
+				{selectedAsset}
+				{prevAsset}
+				{nextAsset}
 				on:update={() => {
 					if (!selectedAsset) return;
-
 					updateAsset(selectedAsset);
 					chapters = { ...chapters };
 				}}

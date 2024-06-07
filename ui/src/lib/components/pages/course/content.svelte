@@ -2,6 +2,7 @@
 	import { Video } from '$components/video';
 	import { ASSET_API, GetBackendUrl } from '$lib/api';
 	import type { Asset } from '$lib/types/models';
+	import { UpdateQueryParam } from '$lib/utils';
 	import { createEventDispatcher } from 'svelte';
 	import PrevNext from './_internal/prev-next.svelte';
 	import Title from './_internal/title.svelte';
@@ -70,8 +71,14 @@
 			<PrevNext
 				{prevAsset}
 				{nextAsset}
-				on:prev={() => (selectedAsset = prevAsset)}
-				on:next={() => (selectedAsset = nextAsset)}
+				on:prev={() => {
+					if (!prevAsset) return;
+					UpdateQueryParam('a', prevAsset.id, false);
+				}}
+				on:next={() => {
+					if (!nextAsset) return;
+					UpdateQueryParam('a', nextAsset.id, false);
+				}}
 			/>
 		{/if}
 	</div>
