@@ -12,6 +12,7 @@
 	import Button from '$components/ui/button/button.svelte';
 	import { AddScan, GetCourseFromParams } from '$lib/api';
 	import type { Course } from '$lib/types/models';
+	import { IsBrowser } from '$lib/utils';
 	import {
 		CalendarPlus,
 		CalendarSearch,
@@ -24,6 +25,7 @@
 		PlayCircle,
 		Trash2
 	} from 'lucide-svelte';
+	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { writable } from 'svelte/store';
 
@@ -31,7 +33,16 @@
 	// variables
 	// ----------------------
 
+	// Used during the #await. It is initially set to a promise that never resolves to prevent
+	// the page from rendering before the course is fetched, which occurs during onMount. This
+	// is because the site is pre-rendered and as such we can only get the search params after
+	// the page is mounted
+	let coursePromise: Promise<boolean> = new Promise(() => {});
+
+	// Holds the fetched course
 	let fetchedCourse: Course;
+
+	let pageParams: URLSearchParams;
 
 	// True when the course is being deleted
 	let openDeleteDialog = false;
@@ -45,22 +56,23 @@
 	// True when the tags need to be refreshed
 	let tagsRefresh = false;
 
-	let coursePromise = getCourse();
-
 	// ----------------------
 	// Functions
 	// ----------------------
 
 	// Lookup the course based upon the search params
 	async function getCourse(): Promise<boolean> {
+		if (!IsBrowser) false;
+
 		try {
-			const response = await GetCourseFromParams($page.url.searchParams);
+			const response = await GetCourseFromParams(pageParams);
 			if (!response) throw new Error('Course not found');
 
 			fetchedCourse = response;
 			return true;
 		} catch (error) {
 			throw error;
+			return true;
 		}
 	}
 
@@ -75,6 +87,17 @@
 			toast.error(error instanceof Error ? error.message : (error as string));
 		}
 	}
+
+	// ----------------------
+	// Lifecycle
+	// ----------------------
+
+	// Due to the site being pre-rendered, we need to wait for the page to be mounted before we
+	// can get the search params
+	onMount(async () => {
+		pageParams = $page.url.searchParams;
+		coursePromise = getCourse();
+	});
 </script>
 
 <div class="bg-background flex w-full flex-col gap-4 pb-10">

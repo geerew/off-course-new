@@ -4,12 +4,22 @@
 	import { CourseContent, CourseMenu } from '$components/pages/course';
 	import { GetAllCourseAssets, GetCourseFromParams, UpdateAsset } from '$lib/api';
 	import type { Asset, Course, CourseChapters } from '$lib/types/models';
-	import { BuildChapterStructure, UpdateQueryParam } from '$lib/utils';
+	import { BuildChapterStructure, IsBrowser, UpdateQueryParam } from '$lib/utils';
+	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	// ----------------------
 	// Variables
 	// ----------------------
+
+	// Used during the #await. It is initially set to a promise that never resolves to prevent
+	// the page from rendering before the course is fetched, which occurs during onMount. This
+	// is because the site is pre-rendered and as such we can only get the search params after
+	// the page is mounted
+	let coursePromise: Promise<Course> = new Promise(() => {});
+
+	let pageParams: URLSearchParams;
+
 	// Hold the assets + attachments for this course
 	let assets: Asset[];
 
@@ -32,8 +42,10 @@
 	// If the `a` query param is not set, find the first unfinished asset and set the `a` query param,
 	// triggering a reactive statement, which sets the selected asset
 	async function getCourse(): Promise<Course> {
+		if (!IsBrowser) return {} as Course;
+
 		try {
-			const course = await GetCourseFromParams($page.url.searchParams);
+			const course = await GetCourseFromParams(pageParams);
 			if (!course) throw new Error('Course not found');
 
 			// Get the assets
@@ -48,7 +60,7 @@
 			// If no asset was found in the query params, find the first unfinished asset and
 			// update the query params. This will trigger the reactive statement that will find
 			// and set the selected asset
-			if (!$page.url.searchParams || !$page.url.searchParams.get('a')) {
+			if (!pageParams || !pageParams.get('a')) {
 				const found = findFirstUnfinishedAsset(course, chapters);
 				if (found) {
 					UpdateQueryParam('a', found.id, true);
@@ -148,15 +160,28 @@
 
 	// When the query param `a` changes, update the selected asset
 	$: {
-		const assetId = $page.url.searchParams.get('a');
-		if (assetId && chapters && selectedAsset?.id !== assetId) {
-			updateSelectedAsset(assetId);
+		if (IsBrowser) {
+			const assetId = $page.url.searchParams.get('a');
+			if (assetId && chapters && selectedAsset?.id !== assetId) {
+				updateSelectedAsset(assetId);
+			}
 		}
 	}
+
+	// ----------------------
+	// Lifecycle
+	// ----------------------
+
+	// Due to the site being pre-rendered, we need to wait for the page to be mounted before we
+	// can get the search params
+	onMount(() => {
+		pageParams = $page.url.searchParams;
+		coursePromise = getCourse();
+	});
 </script>
 
 <div class="flex w-full flex-col">
-	{#await getCourse()}
+	{#await coursePromise}
 		<Loading />
 	{:then data}
 		<div class="flex h-full flex-col lg:container lg:flex-row lg:gap-10">
