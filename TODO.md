@@ -62,6 +62,7 @@ TODO
 
 ## Page -> Home
 
+- [ ] Fix Load More border in carousel
 - [ ] Landing page when there are no courses added (use a DB flag)
 - [ ] Hide ongoing when there are no ongoing courses
 - [ ] Categories

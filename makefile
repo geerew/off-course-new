@@ -1,5 +1,8 @@
 MAIN_PACKAGE_PATH := .
 BINARY_NAME := off-course
+WINDOWS_BINARY_NAME := ${BINARY_NAME}_windows_amd64.exe
+LINUX_BINARY_NAME := ${BINARY_NAME}_linux_amd64
+DARWIN_BINARY_NAME := ${BINARY_NAME}_darwin_amd64
 
 
 ## help: print this help message
@@ -42,11 +45,17 @@ test/cover:
 	go test -v -race -buildvcs -coverprofile=/tmp/coverage.out ./...
 	go tool cover -html=/tmp/coverage.out
 
+## build_ui: build the UI
+.PHONY: build_ui
+build_ui:
+	cd ui && pnpm install && pnpm run build
+
 ## build: build the application
 .PHONY: build
-build:
-	go build -o=dist/${BINARY_NAME} ${MAIN_PACKAGE_PATH}
-
+build: build_ui
+	env GOOS=windows GOARCH=amd64 go build -o=dist/${WINDOWS_BINARY_NAME} ${MAIN_PACKAGE_PATH}
+	env GOOS=linux GOARCH=amd64 go build -o=dist/${LINUX_BINARY_NAME} ${MAIN_PACKAGE_PATH}	
+	env GOOS=darwin GOARCH=amd64 go build -o=dist/${DARWIN_BINARY_NAME} ${MAIN_PACKAGE_PATH}
 ## dev: run in dev
 dev:
 	go run main.go
