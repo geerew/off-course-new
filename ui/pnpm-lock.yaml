@@ -24,8 +24,8 @@ importers:
         specifier: ^0.2.1
         version: 0.2.1(tailwindcss@3.4.3)
       vidstack:
-        specifier: ^1.11.21
-        version: 1.11.21
+        specifier: ^1.11.22
+        version: 1.11.22
     devDependencies:
       '@melt-ui/svelte':
         specifier: ^0.79.0
@@ -1798,8 +1798,8 @@ packages:
   valibot@0.30.0:
     resolution: {integrity: sha512-5POBdbSkM+3nvJ6ZlyQHsggisfRtyT4tVTo1EIIShs6qCdXJnyWU5TJ68vr8iTg5zpOLjXLRiBqNx+9zwZz/rA==}
 
-  vidstack@1.11.21:
-    resolution: {integrity: sha512-DtsbT8zsLUCF27vRheFLEnpUzy0TsLzIt2EqiZyYvwho7nKgiVR32GuJVKRj9BTj80SSRxzLQ0/tx99fum6Rmw==}
+  vidstack@1.11.22:
+    resolution: {integrity: sha512-prJUMxRNSJElzVv6imqAoZMR/x+mYSTC2bCjovXToE3tMGrBCFlYLwuaOht55vm0QS6oU03dDp3tqKGXqhMZOg==}
     engines: {node: '>=18'}
 
   vite@5.2.11:
@@ -3451,7 +3451,7 @@ snapshots:
 
   valibot@0.30.0: {}
 
-  vidstack@1.11.21:
+  vidstack@1.11.22:
     dependencies:
       media-captions: 1.0.3
       unplugin: 1.10.1

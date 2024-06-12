@@ -1,21 +1,14 @@
 <script lang="ts">
-	import Progress from '$components/video/_internal/progress.svelte';
 	import { ASSET_API, GetBackendUrl } from '$lib/api';
 	import type { Asset } from '$lib/types/models';
-	import { Throttle } from '$lib/utils';
-	import { createEventDispatcher, onMount } from 'svelte';
-	import {
-		type MediaDurationChangeEvent,
-		type MediaSourceChangeEvent,
-		type MediaTimeUpdateEvent
+	import { createEventDispatcher } from 'svelte';
+	import type {
+		MediaDurationChangeEvent,
+		MediaSourceChangeEvent,
+		MediaTimeUpdateEvent
 	} from 'vidstack';
+	import 'vidstack/bundle';
 	import type { MediaPlayerElement } from 'vidstack/elements';
-	import 'vidstack/player';
-	import 'vidstack/player/styles/base.css';
-	import 'vidstack/player/ui';
-	import { getCtx, setCtx } from './_internal/context';
-	import Controls from './_internal/controls.svelte';
-	import Gestures from './_internal/gestures.svelte';
 
 	// ----------------------
 	// Exports
@@ -23,7 +16,6 @@
 	export let title: string;
 	export let src: string;
 	export let startTime = 0;
-
 	export let nextAsset: Asset | null = null;
 
 	// ----------------------
@@ -47,30 +39,17 @@
 	// Set by the player
 	let duration = -1;
 
-	// Video context
-	setCtx();
-	const ctx = getCtx();
-
-	// A throttle for seeking forward and backward
-	const [throttleSeekFw, resetSeekFw] = Throttle(() => {
-		player.currentTime += 10;
-	}, 200);
-
-	const [throttleSeekBw, resetSeekBw] = Throttle(() => {
-		player.currentTime -= 10;
-	}, 100);
-
 	// ----------------------
 	// Functions
 	// ----------------------
 
-	// Reset some stuff when the src changes
+	// Called when the source changes. Resets the logged second and completed state
 	function srcChange(e: MediaSourceChangeEvent) {
 		if (!e.detail) return;
 
 		lastLoggedSecond = -1;
 		completeDispatched = false;
-		ctx.set({ ...$ctx, ended: false });
+		// ctx.set({ ...$ctx, ended: false });
 
 		if (!player) return;
 		if (Math.floor(startTime) == Math.floor(duration)) {
@@ -113,7 +92,7 @@
 		currentTime = e.detail.currentTime;
 
 		// Clear the ended state when the current time changes
-		if ($ctx.ended && currentTime !== duration) ctx.set({ ...$ctx, ended: false });
+		// if ($ctx.ended && currentTime !== duration) ctx.set({ ...$ctx, ended: false });
 
 		// Do nothing when we have already processed this second
 		const currentSecond = Math.floor(currentTime);
@@ -131,87 +110,21 @@
 			dispatch('progress', currentSecond);
 		}
 	}
-
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	// Seek on arrow right/left. This is called on keydown
-	function keyboardSeek(e: KeyboardEvent) {
-		if (!player) return;
-
-		if (e.key === 'ArrowRight') {
-			throttleSeekFw();
-		} else if (e.key === 'ArrowLeft') {
-			throttleSeekBw();
-		}
-	}
-
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	// Reset the seek throttle. This is called on keyup
-	function keyboardReset(e: KeyboardEvent) {
-		if (!player) return;
-
-		if (e.key === 'ArrowRight') {
-			resetSeekFw();
-		} else if (e.key === 'ArrowLeft') {
-			resetSeekBw();
-		}
-	}
-
-	// ----------------------
-	// Lifecycle
-	// ----------------------
-
-	onMount(() => {
-		document.addEventListener('keydown', keyboardSeek);
-		document.addEventListener('keyup', keyboardReset);
-
-		return () => {
-			document.removeEventListener('keydown', keyboardSeek);
-			document.removeEventListener('keyup', keyboardReset);
-		};
-	});
 </script>
 
 <media-player
 	bind:this={player}
-	class="ring-media-focus group/player aspect-video w-full overflow-hidden rounded-md data-[focus]:ring-4"
 	{title}
+	playsInline
 	src={{
 		src: GetBackendUrl(ASSET_API) + '/' + src + '/serve',
 		type: 'video/mp4'
 	}}
-	playsInline={true}
 	on:source-change={srcChange}
 	on:can-play={canPlay}
-	on:time-update={timeChange}
 	on:duration-change={durationChange}
-	on:ended={() => {
-		ctx.set({ ...$ctx, ended: true });
-	}}
+	on:time-update={timeChange}
 >
-	<media-provider />
-
-	<Gestures />
-	<Controls />
-
-	{#if $ctx.ended && nextAsset}
-		<div class="absolute left-0 top-0 h-full w-full bg-gray-700 py-3 dark:bg-gray-800">
-			<div class="flex h-full w-full flex-col place-content-center items-center gap-2.5 text-white">
-				<div class="text-muted-foreground">Up next</div>
-				<button
-					class="hover:text-primary max-w-lg overflow-hidden text-xl duration-200 md:text-2xl lg:max-h-none"
-					on:click={() => {
-						dispatch('next', 1);
-					}}
-				>
-					<span>
-						{nextAsset.prefix}. {nextAsset.title}
-					</span>
-				</button>
-
-				<Progress duration={8} on:completed={() => dispatch('next', 1)} />
-			</div>
-		</div>
-	{/if}
+	<media-provider></media-provider>
+	<media-video-layout></media-video-layout>
 </media-player>

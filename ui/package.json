@@ -59,6 +59,6 @@
 		"embla-carousel-svelte": "8.0.0",
 		"svelte-sonner": "^0.3.24",
 		"tailwind-variants": "^0.2.1",
-		"vidstack": "^1.11.21"
+		"vidstack": "^1.11.22"
 	}
 }

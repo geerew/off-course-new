@@ -5,9 +5,12 @@ TODO
 - [x] Tidy Loading component
 - [ ] on scan, have a minimum 'load' of 1 second to stop flickering
 - [x] Every DAO should support tx
-- [ ] Fix theme
 - [x] Fix selecting video assets then moving forward and backward. There is an issue with history
+- [ ] Fix theme
 - [ ] Update query param to all pages like settings -> courses/tags/logs etc as the uses filters
+- [ ] Fix border in back button when adding courses (course selection)
+- [ ] Fix time in the UI. Newly added courses show in an hour
+- [ ] Fix scan updated_at time .. it should be the time of the scan
 
 ## Page -> Settings -> Tags
 
@@ -57,6 +60,7 @@ TODO
 
 - [x] https://dribbble.com/shots/23132040-E-learning-website-course-details
 - [x] Filter
+- [ ] When a filter is selected, make sure you are on page 1 (if not already)
 - [ ] Burger menu when md or lower
 - [ ] Rework to look like https://dribbble.com/shots/23062409-NFS-Filter-Component
 
@@ -78,8 +82,8 @@ TODO
 - [ ] Fix issue when back button because a_id is updated
 - [ ] Video
   -  [ ] Settings (speed change, auto play)
-  -  [ ] Store state in DB
-  -  [ ] Issue -> Finish video, seek to middle then play. It jumps back to start
+  -  [ ] Store state in local storage
+  -  [x] Issue -> Finish video, seek to middle then play. It jumps back to start
 
 ## Page -> Settings -> General
 
