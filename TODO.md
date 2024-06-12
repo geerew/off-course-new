@@ -1,70 +1,21 @@
-TODO
+# TODO
 
+## UI 
+
+### General
 
 - [x] Use await
 - [x] Tidy Loading component
-- [ ] on scan, have a minimum 'load' of 1 second to stop flickering
-- [x] Every DAO should support tx
 - [x] Fix selecting video assets then moving forward and backward. There is an issue with history
 - [ ] Fix theme
 - [ ] Update query param to all pages like settings -> courses/tags/logs etc as the uses filters
-- [ ] Fix border in back button when adding courses (course selection)
-- [ ] Fix time in the UI. Newly added courses show in an hour
-- [ ] Fix scan updated_at time .. it should be the time of the scan
+- [ ] Fix time in the UI. Newly added courses show in an hour ... VPN?
+- [ ] On scan, have a minimum 'load' of 1 second to stop flickering
+- [ ] Add search (https://discord.com/channels/1116682155809067049/1117779396992979024/1163925360228962385)
+- [ ] Change how frequently the course availability check is run
+- [ ] Support for FFMPEG path
 
-## Page -> Settings -> Tags
-
-- [x] Add table
-- [x] Allow deleting of tags
-- [x] Allow adding of tags
-- [x] Fix sorting by course count
-- [x] Fix adding the same tag with different case (upper/lower/capital)
-- [x] Allow editing of tags
-- [ ] Add courses to tag(s)
-
-## Page -> Settings -> Courses -> Add
-
-- [x] Rework into a dialog
-- [x] Rework getting all courses to be more efficient
-
-## Page -> Settings -> Courses
-
-- [ ] Filter
-- [ ] Store table state in local storage/db
-- [x] Add table action `Add Tags`
-- [x] Use shadcn table
-
-## Backend -> logs
-
-- [x] Add a separate logs DB
-- [x] Update all logs (remove zerolog)
-- [ ] Support removing logs after n days
-
-## Page -> Settings -> Logs
-
-- [x] Add table
-- [x] Filter by data.type
-- [ ] Filter by data 
-
-## Page -> Settings -> Tags
-
-- [ ] Add table
-- [ ] Filters (log level, request type, etc)
-- [ ] Fix adding the same tag with different case (upper/lower/capital)
-
-## Page -> Settings -> Courses -> Details
-
-- [x] Fix issue with a page refresh happening after clicking the scan button
-
-## Page -> Courses
-
-- [x] https://dribbble.com/shots/23132040-E-learning-website-course-details
-- [x] Filter
-- [ ] When a filter is selected, make sure you are on page 1 (if not already)
-- [ ] Burger menu when md or lower
-- [ ] Rework to look like https://dribbble.com/shots/23062409-NFS-Filter-Component
-
-## Page -> Home
+### Home
 
 - [ ] Fix Load More border in carousel
 - [ ] Landing page when there are no courses added (use a DB flag)
@@ -74,29 +25,89 @@ TODO
   - [ ] Name the category
   - [ ] Show categories on the home page
 
-## Page -> Course
+### Courses 
+
+- [x] https://dribbble.com/shots/23132040-E-learning-website-course-details
+- [x] Filter
+- [ ] When a filter is selected, make sure you are on page 1 (if not already)
+- [ ] Burger menu when md or lower
+- [ ] Rework to look like https://dribbble.com/shots/23062409-NFS-Filter-Component
+- [ ] Fix timestamp shown in card. It is not showing the updated_at time
+- [ ] Fix card when only 1 is showing. It goes small for some reason
+
+### Course
 
 - [ ] When a course is unavailable, still show the menu
 - [ ] Support PDF
 - [ ] Show progress bar with tooltip for course progress
 - [ ] Fix issue when back button because a_id is updated
 - [ ] Video
-  -  [ ] Settings (speed change, auto play)
+  -  [ ] Settings; auto play, auto next
   -  [ ] Store state in local storage
-  -  [x] Issue -> Finish video, seek to middle then play. It jumps back to start
+  -  [ ] Fix opening `settings`, then clicking `playback` with a button behind the modal (Opened https://github.com/vidstack/player/issues/1309)
+-  [ ] Mobile
+   -  [ ] Add `x` to menu
+   -  [ ] Close when menu item is clicked
+   -  [ ] When opening the menu, scroll to the selected menu item
+   -  [ ] Fix prev/next button. It stays highlighted after being clicked
+   -  [ ] Make the prev/next buttons use `flex-col` and take up 4/5 of the left/right side
 
-## Page -> Settings -> General
+### Settings 
 
-- [ ] Change how frequently the course availability check is run
-- [ ] Support for FFMPEG path
+#### General
 
-## Search
+- [ ] Fix filters for mobile
 
-- [ ] Add search (https://discord.com/channels/1116682155809067049/1117779396992979024/1163925360228962385)
+#### Courses
 
-## Backend -> Assets and Attachments
+- [ ] Filter
+- [ ] Store table state in local storage/db
+- [x] Add table action `Add Tags`
+- [x] Use shadcn table
+- [ ] Fix scan updated_at time .. it should be the time of the last scan
+
+#####  Add
+
+- [x] Rework into a dialog
+- [x] Rework getting all courses to be more efficient
+- [ ] Fix border in back button when adding courses (course selection)
+
+##### Details
+
+- [x] Fix issue with a page refresh happening after clicking the scan button
+- [ ] Fix scan updated_at time .. it should be the time of the last scan
+
+#### Tags
+
+- [x] Add table
+- [x] Allow deleting of tags
+- [x] Allow adding of tags
+- [x] Fix sorting by course count
+- [x] Fix adding the same tag with different case (upper/lower/capital)
+- [x] Allow editing of tags
+- [ ] Add courses to tag(s)
+- [ ] Filters (log level, request type, etc)
+- [ ] Fix adding the same tag with different case (upper/lower/capital)
+
+#### Logs
+
+- [x] Add table
+- [x] Filter by data.type
+- [ ] Filter by data 
+
+## Backend
+
+### General
+
+- [x] Every DAO should support tx
+- [ ] Remove -ST1003 from audit
+
+### Logs
+
+- [x] Add a separate logs DB
+- [x] Update all logs (remove zerolog)
+- [ ] Support removing logs after n days
+
+### Assets and Attachments
 
 - [x] Add column for md5sum of file
-
-## Makefile 
-- [ ] Remove -ST1003 from audit
