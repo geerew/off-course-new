@@ -5,7 +5,6 @@
 	import type { Asset, CourseChapters } from '$lib/types/models';
 	import { UpdateQueryParam, cn } from '$lib/utils';
 	import { CircleCheck, Info, Menu } from 'lucide-svelte';
-	import { createEventDispatcher } from 'svelte';
 
 	// ----------------------
 	// Exports
@@ -26,12 +25,13 @@
 	// ----------------------
 	// Variables
 	// ----------------------
-	const dispatch = createEventDispatcher();
+
+	let open = false;
 </script>
 
 <!-- xs, sm, md -->
 <div class="border-b px-4 py-2 md:px-8 lg:hidden">
-	<Sheet.Root openFocus={null}>
+	<Sheet.Root openFocus={null} bind:open>
 		<Sheet.Trigger asChild let:builder>
 			<Button
 				builders={[builder]}
@@ -104,6 +104,7 @@
 											)}
 											on:click={() => {
 												UpdateQueryParam('a', asset.id, false);
+												open = false;
 											}}
 										>
 											<div class={cn('flex w-full flex-row justify-between py-1.5')}>

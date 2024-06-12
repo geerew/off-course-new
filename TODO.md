@@ -47,7 +47,7 @@
   -  [ ] Fix opening `settings`, then clicking `playback` with a button behind the modal (Opened https://github.com/vidstack/player/issues/1309)
 -  [ ] Mobile
    -  [ ] Add `x` to menu
-   -  [ ] Close when menu item is clicked
+   -  [x] Close when menu item is clicked
    -  [ ] When opening the menu, scroll to the selected menu item
    -  [ ] Fix prev/next button. It stays highlighted after being clicked
    -  [ ] Make the prev/next buttons use `flex-col` and take up 4/5 of the left/right side
