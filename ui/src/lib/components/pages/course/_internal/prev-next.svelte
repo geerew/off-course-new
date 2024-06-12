@@ -18,11 +18,11 @@
 	const dispatch = createEventDispatcher();
 </script>
 
-<div class="flex w-full flex-row gap-3 pt-5">
+<div class="flex w-full flex-col gap-3 pt-5 md:flex-row">
 	{#if prevAsset}
 		<Button
 			variant="outline"
-			class="text-muted-foreground hover:text-foreground hover:bg-background hover:border-alt-1 flex h-auto basis-1/2 flex-row items-center justify-start gap-4 whitespace-normal rounded-sm border p-3 text-start"
+			class="text-muted-foreground hover:text-foreground hover:bg-background hover:border-alt-1 flex h-auto flex-row items-center justify-start gap-4 whitespace-normal rounded-sm border p-3 text-start md:basis-1/2"
 			on:click={() => {
 				dispatch('prev');
 			}}
@@ -39,7 +39,7 @@
 	{#if nextAsset}
 		<Button
 			variant="outline"
-			class="text-muted-foreground hover:text-foreground hover:bg-background hover:border-alt-1 flex h-auto basis-1/2 flex-row items-center justify-end gap-4 whitespace-normal rounded-sm border p-3 text-end"
+			class="text-muted-foreground hover:text-foreground hover:bg-background hover:border-alt-1 flex h-auto flex-row place-content-end items-center justify-end gap-4 whitespace-normal rounded-sm border p-3 text-end md:basis-1/2"
 			on:click={() => {
 				dispatch('next');
 			}}
