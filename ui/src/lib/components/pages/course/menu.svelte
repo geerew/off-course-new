@@ -27,7 +27,7 @@
 	// Variables
 	// ----------------------
 
-	let open = true;
+	let open = true; // tmp
 
 	// ----------------------
 	// Functions
@@ -76,11 +76,11 @@
 
 		<Sheet.Content
 			side="left"
-			class="w-[calc(22rem+36px)] overflow-y-auto border-none bg-transparent p-0 shadow-none sm:max-w-[calc(22rem+36px)] [&>button[data-dialog-close]]:hidden "
+			class="w-[calc(22rem+36px)] overflow-y-auto border-none bg-transparent p-0 shadow-none sm:max-w-[calc(22rem+36px)] [&>button[data-dialog-close]]:hidden"
 		>
 			<!--  X button -->
 			<div
-				class="bg-background absolute right-px top-1 flex place-content-center items-center rounded-r-md border-y border-r"
+				class="bg-background absolute right-px top-1 z-10 flex place-content-center items-center rounded-r-md border-y border-r"
 			>
 				<Button
 					variant="ghost"
@@ -89,6 +89,14 @@
 				>
 					<X class="size-5" />
 				</Button>
+			</div>
+
+			<div class="absolute right-0 top-0 z-[1] flex h-full place-content-center bg-transparent">
+				<Button
+					variant="ghost"
+					class="h-auto cursor-auto hover:bg-transparent"
+					on:click={() => (open = false)}
+				></Button>
 			</div>
 
 			<!-- Content -->
