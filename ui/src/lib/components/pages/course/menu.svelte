@@ -27,7 +27,7 @@
 	// Variables
 	// ----------------------
 
-	let open = true; // tmp
+	let open = false;
 
 	// ----------------------
 	// Functions
