@@ -27,7 +27,7 @@
 	// Variables
 	// ----------------------
 
-	let open = false;
+	let open = true;
 
 	// ----------------------
 	// Functions
@@ -76,8 +76,9 @@
 
 		<Sheet.Content
 			side="left"
-			class="w-[calc(24rem+36px)] overflow-y-auto border-none bg-transparent p-0 shadow-none sm:max-w-[calc(24rem+36px)] [&>button[data-dialog-close]]:hidden "
+			class="w-[calc(22rem+36px)] overflow-y-auto border-none bg-transparent p-0 shadow-none sm:max-w-[calc(22rem+36px)] [&>button[data-dialog-close]]:hidden "
 		>
+			<!--  X button -->
 			<div
 				class="bg-background absolute right-px top-1 flex place-content-center items-center rounded-r-md border-y border-r"
 			>
@@ -90,14 +91,15 @@
 				</Button>
 			</div>
 
-			<div class="bg-background w-[24rem] border-r p-6 pr-0">
+			<!-- Content -->
+			<div class="bg-background h-full w-[22rem] border-r p-6 pr-0">
 				<nav
 					class="relative left-0 top-0 max-h-[calc(100vh-var(--header-height))] min-h-[calc(100vh-var(--header-height))] overflow-y-auto overflow-x-hidden"
 					tabindex="-1"
 				>
-					<ul class="ml-auto h-full columns-1 pt-7">
+					<ul class="ml-auto h-full columns-1 pt-0">
 						<!-- Course title -->
-						<div class="flex flex-row items-center gap-3 pb-8 pr-3">
+						<div class="flex flex-row items-start gap-3 pb-8 pr-3">
 							<span class="grow text-sm">{title}</span>
 
 							<Tooltip.Root openDelay={100} portal={null} closeOnPointerDown={true}>
