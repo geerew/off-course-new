@@ -13,8 +13,6 @@
 	// Variables
 	// ----------------------
 	let isOpen = false;
-
-	$: console.log('isOpen', isOpen);
 </script>
 
 <!-- Shown on sm- -->
