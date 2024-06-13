@@ -11,7 +11,7 @@
 
 <Button
 	variant="ghost"
-	class="hover:bg-accent-1 group flex items-center justify-center rounded-md p-3"
+	class="hover:bg-accent-1 group flex items-center justify-center rounded-md p-3 md:hidden"
 	on:click={() => {
 		open = !open;
 	}}
