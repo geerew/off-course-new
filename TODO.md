@@ -7,6 +7,8 @@
 - [x] Use await
 - [x] Tidy Loading component
 - [x] Fix selecting video assets then moving forward and backward. There is an issue with history
+- [x] Mobile menu clips header
+- [x] Disable scrolling when mobile menu is open
 - [ ] Fix theme
 - [ ] Update query param to all pages like settings -> courses/tags/logs etc as the uses filters
 - [ ] Fix time in the UI. Newly added courses show in an hour ... VPN?
@@ -45,6 +47,7 @@
   -  [ ] Settings; auto play, auto next
   -  [ ] Store state in local storage
   -  [ ] Fix opening `settings`, then clicking `playback` with a button behind the modal (Opened https://github.com/vidstack/player/issues/1309)
+  -  [ ] Rework tooltips to use shadcn
 -  [ ] Mobile
    -  [x] Add `x` to menu
    -  [x] Close when menu item is clicked

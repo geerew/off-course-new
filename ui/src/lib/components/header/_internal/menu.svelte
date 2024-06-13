@@ -2,26 +2,34 @@
 	import { page } from '$app/stores';
 	import { Github } from '$components/icons';
 	import Button from '$components/ui/button/button.svelte';
-	import * as Collapsible from '$components/ui/collapsible';
 	import { Separator } from '$components/ui/separator';
+	import * as Sheet from '$lib/components/ui/sheet/index.js';
 	import { header } from '$lib/config/navs';
 	import { site } from '$lib/config/site';
-	import { cn } from '$lib/utils';
+	import { FlyAndScale, cn } from '$lib/utils';
 	import Burger from './burger.svelte';
 
 	// ----------------------
 	// Variables
 	// ----------------------
-	let open = false;
+	let isOpen = false;
+
+	$: console.log('isOpen', isOpen);
 </script>
 
 <!-- Shown on sm- -->
-<Collapsible.Root class="md:hidden" bind:open>
-	<Collapsible.Trigger asChild let:builder>
-		<Burger builders={[builder]} {open} />
-	</Collapsible.Trigger>
+<Sheet.Root bind:open={isOpen} closeOnOutsideClick={false}>
+	<Sheet.Trigger asChild>
+		<Burger bind:open={isOpen} />
+	</Sheet.Trigger>
 
-	<Collapsible.Content class="bg-background fixed inset-0 top-10 z-[50] h-screen w-screen">
+	<Sheet.Content
+		overlay={false}
+		side="top"
+		class="top-[calc(var(--header-height)+1px)] h-screen [&>button[data-dialog-close]]:hidden"
+		transition={FlyAndScale}
+		transitionConfig={{ y: -30, duration: 300 }}
+	>
 		<div class="flex w-full flex-col items-center pt-10">
 			<div class="flex w-80 flex-col">
 				{#each header as navItem}
@@ -32,19 +40,21 @@
 							$page.url.pathname.startsWith(navItem.href) && 'text-primary'
 						)}
 						on:click={() => {
-							open = false;
+							isOpen = false;
 						}}
 					>
 						{navItem.title}
 					</a>
 				{/each}
 
-				<!-- <div class="flex w-64 select-none pt-5">
-				<div class="bg-accent-1 flex w-full items-center justify-between rounded-md px-2 py-1.5">
-					<span class="pl-1 text-sm">Appearance</span>
-					<Theme />
-				</div>
-			</div> -->
+				<!-- 
+				<div class="flex w-64 select-none pt-5">
+					<div class="bg-accent-1 flex w-full items-center justify-between rounded-md px-2 py-1.5">
+						<span class="pl-1 text-sm">Appearance</span>
+						<Theme />
+					</div>
+				</div> 
+				-->
 
 				<div class="flex select-none items-center justify-center pt-5">
 					<Button
@@ -62,8 +72,8 @@
 				</div>
 			</div>
 		</div>
-	</Collapsible.Content>
-</Collapsible.Root>
+	</Sheet.Content>
+</Sheet.Root>
 
 <!-- Showing on md+ -->
 <nav class="hidden items-center gap-2.5 md:inline-flex">
