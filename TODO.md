@@ -54,7 +54,7 @@
    -  [x] When opening the menu, scroll to the selected menu item
    -  [x] Make the prev/next buttons use `flex-col` and take up 4/5 of the left/right side
    -  [ ] Fix prev/next button. It stays highlighted after being clicked
-   -  [ ] Add fade to top and bottom of menu
+   -  [x] Add fade to top and bottom of menu
 -  [x] When moving to the prev/next course, scroll to that item in the normal menu
 
 ### Settings 
