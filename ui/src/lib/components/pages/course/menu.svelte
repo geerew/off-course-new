@@ -76,7 +76,7 @@
 
 		<Sheet.Content
 			side="left"
-			class="w-[calc(22rem+36px)] overflow-y-auto border-none bg-transparent p-0 shadow-none sm:max-w-[calc(22rem+36px)] [&>button[data-dialog-close]]:hidden"
+			class="overflow-none w-[calc(22rem+36px)] border-none bg-transparent p-0 shadow-none sm:max-w-[calc(22rem+36px)] [&>button[data-dialog-close]]:hidden"
 		>
 			<!--  X button -->
 			<div
@@ -91,6 +91,7 @@
 				</Button>
 			</div>
 
+			<!-- Overflow area that when clicked will close sheet -->
 			<div class="absolute right-0 top-0 z-[1] flex h-full place-content-center bg-transparent">
 				<Button
 					variant="ghost"
@@ -100,39 +101,41 @@
 			</div>
 
 			<!-- Content -->
-			<div class="bg-background h-full w-[22rem] border-r p-6 pr-0">
+			<div class="bg-background relative h-full w-[22rem] border-r pr-0">
 				<nav
-					class="relative left-0 top-0 max-h-[calc(100vh-var(--header-height))] min-h-[calc(100vh-var(--header-height))] overflow-y-auto overflow-x-hidden"
+					class="relative left-0 top-0 max-h-screen min-h-screen overflow-y-auto overflow-x-hidden"
 					tabindex="-1"
 				>
-					<ul class="ml-auto h-full columns-1 pt-0">
-						<!-- Course title -->
-						<div class="flex flex-row items-start gap-3 pb-8 pr-3">
-							<span class="grow text-sm">{title}</span>
+					<!-- Course title -->
+					<div
+						class="bg-background sticky top-0 z-[1] flex flex-row items-start gap-3 border-b py-6 pl-6 pr-3"
+					>
+						<span class="grow text-sm">{title}</span>
 
-							<Tooltip.Root openDelay={100} portal={null} closeOnPointerDown={true}>
-								<Tooltip.Trigger asChild let:builder>
-									<Button
-										builders={[builder]}
-										variant="ghost"
-										href="/settings/courses/details?id={id}"
-										class="text-muted-foreground hover:text-foreground mt-1 h-auto px-0 py-0 hover:bg-transparent"
-									>
-										<Info class="size-4 shrink-0" />
-									</Button>
-								</Tooltip.Trigger>
-
-								<Tooltip.Content
-									class="bg-foreground text-background select-none rounded-sm border-none px-1.5 py-1 text-xs"
-									transitionConfig={{ y: 8, duration: 100 }}
-									side="bottom"
+						<Tooltip.Root openDelay={100} portal={null} closeOnPointerDown={true}>
+							<Tooltip.Trigger asChild let:builder>
+								<Button
+									builders={[builder]}
+									variant="ghost"
+									href="/settings/courses/details?id={id}"
+									class="text-muted-foreground hover:text-foreground mt-1 h-auto px-0 py-0 hover:bg-transparent"
 								>
-									Details
-									<Tooltip.Arrow class="bg-background" />
-								</Tooltip.Content>
-							</Tooltip.Root>
-						</div>
+									<Info class="size-4 shrink-0" />
+								</Button>
+							</Tooltip.Trigger>
 
+							<Tooltip.Content
+								class="bg-foreground text-background select-none rounded-sm border-none px-1.5 py-1 text-xs"
+								transitionConfig={{ y: 8, duration: 100 }}
+								side="bottom"
+							>
+								Details
+								<Tooltip.Arrow class="bg-background" />
+							</Tooltip.Content>
+						</Tooltip.Root>
+					</div>
+
+					<ul class="ml-auto h-full columns-1 py-6 pl-6">
 						{#each Object.keys(chapters) as chapter}
 							<li class="pb-8 leading-5">
 								<!-- Chapter heading -->
@@ -200,38 +203,38 @@
 	class="hidden h-[calc(100vh-var(--header-height))] shrink-0 overflow-hidden lg:block lg:w-[20rem]"
 >
 	<nav
-		class="before:bg-alt-1 relative left-0 top-0 max-h-[calc(100vh-var(--header-height))] min-h-[calc(100vh-var(--header-height))] overflow-y-auto overflow-x-hidden before:absolute before:right-0 before:top-0 before:h-full before:w-px"
+		class="border-alt-1 relative max-h-[calc(100vh-var(--header-height))] min-h-[calc(100vh-var(--header-height))] overflow-y-auto overflow-x-hidden border-r"
 	>
-		<ul class="ml-auto h-full columns-1 pt-7">
-			<!-- Course title -->
-			<div class="flex flex-row gap-3 pb-8 pr-3">
-				<span class="grow text-sm">{title}</span>
+		<!-- Course title -->
+		<div class="bg-background sticky top-0 z-[1] flex flex-row gap-3 border-b py-5 pl-1.5 pr-3">
+			<span class="grow text-sm">{title}</span>
 
-				<span>
-					<Tooltip.Root openDelay={100} portal={null} closeOnPointerDown={true}>
-						<Tooltip.Trigger asChild let:builder>
-							<Button
-								builders={[builder]}
-								variant="ghost"
-								href="/settings/courses/details?id={id}"
-								class="text-muted-foreground hover:text-foreground mt-1 h-auto px-0 py-0 hover:bg-transparent"
-							>
-								<Info class="size-4 shrink-0" />
-							</Button>
-						</Tooltip.Trigger>
-
-						<Tooltip.Content
-							class="bg-foreground text-background select-none rounded-sm border-none px-1.5 py-1 text-xs"
-							transitionConfig={{ y: 8, duration: 100 }}
-							side="bottom"
+			<span>
+				<Tooltip.Root openDelay={100} portal={null} closeOnPointerDown={true}>
+					<Tooltip.Trigger asChild let:builder>
+						<Button
+							builders={[builder]}
+							variant="ghost"
+							href="/settings/courses/details?id={id}"
+							class="text-muted-foreground hover:text-foreground mt-1 h-auto px-0 py-0 hover:bg-transparent"
 						>
-							Details
-							<Tooltip.Arrow class="bg-background" />
-						</Tooltip.Content>
-					</Tooltip.Root>
-				</span>
-			</div>
+							<Info class="size-4 shrink-0" />
+						</Button>
+					</Tooltip.Trigger>
 
+					<Tooltip.Content
+						class="bg-foreground text-background select-none rounded-sm border-none px-1.5 py-1 text-xs"
+						transitionConfig={{ y: 8, duration: 100 }}
+						side="bottom"
+					>
+						Details
+						<Tooltip.Arrow class="bg-background" />
+					</Tooltip.Content>
+				</Tooltip.Root>
+			</span>
+		</div>
+
+		<ul class="ml-auto h-full columns-1 pt-7">
 			{#each Object.keys(chapters) as chapter}
 				<li class="pb-8 leading-5">
 					<!-- Chapter heading -->
