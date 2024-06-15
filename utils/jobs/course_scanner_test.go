@@ -1008,6 +1008,41 @@ func TestCourseScanner_UpdateAssets(t *testing.T) {
 		}
 	})
 
+	t.Run("swap", func(t *testing.T) {
+		scanner, dbManager, _, _ := setupCourseScanner(t)
+
+		testData := daos.NewTestBuilder(t).Db(dbManager.DataDb).Courses(1).Assets(2).Build()
+
+		assetDao := daos.NewAssetDao(dbManager.DataDb)
+		dbParams := &database.DatabaseParams{Where: squirrel.Eq{assetDao.Table() + ".course_id": testData[0].ID}}
+
+		// ----------------------------
+		// Swap assets title and path
+		// ----------------------------
+		testData[0].Assets[0].Title, testData[0].Assets[1].Title = testData[0].Assets[1].Title, testData[0].Assets[0].Title
+		testData[0].Assets[0].Path, testData[0].Assets[1].Path = testData[0].Assets[1].Path, testData[0].Assets[0].Path
+
+		err := updateAssets(scanner.assetDao, nil, testData[0].ID, testData[0].Assets)
+		require.Nil(t, err)
+
+		a, err := scanner.assetDao.List(dbParams, nil)
+		require.Nil(t, err)
+		require.Equal(t, 2, len(a))
+
+		// Ensure the assets were updated
+		//
+		// Note: Order is not guaranteed, so we have to validate this way
+		for _, asset := range a {
+			if asset.ID == testData[0].Assets[0].ID {
+				require.Equal(t, testData[0].Assets[0].Title, asset.Title)
+				require.Equal(t, testData[0].Assets[0].Path, asset.Path)
+			} else if asset.ID == testData[0].Assets[1].ID {
+				require.Equal(t, testData[0].Assets[1].Title, asset.Title)
+				require.Equal(t, testData[0].Assets[1].Path, asset.Path)
+			}
+		}
+	})
+
 	t.Run("db error", func(t *testing.T) {
 		scanner, dbManager, _, _ := setupCourseScanner(t)
 		assetDao := daos.NewAssetDao(dbManager.DataDb)

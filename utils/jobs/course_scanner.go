@@ -16,6 +16,7 @@ import (
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/appFs"
+	"github.com/geerew/off-course/utils/security"
 	"github.com/geerew/off-course/utils/types"
 )
 
@@ -156,7 +157,9 @@ func (cs *CourseScanner) Worker(processor CourseScannerProcessorFn, processingDo
 			if err != nil {
 				cs.logger.Error(
 					"Failed to process scan job",
+					loggerType,
 					slog.String("error", err.Error()),
+					slog.String("path", job.CoursePath),
 				)
 			}
 
@@ -608,18 +611,36 @@ func updateAssets(assetDao *daos.AssetDao, tx *database.Tx, courseId string, ass
 		existingAssetsMap[existingAsset.Hash] = existingAsset
 	}
 
+	randomTempSuffix := security.RandomString(10)
+	updatedAssets := make([]*models.Asset, 0, len(assets))
+
+	// On the first pass we update the existing assets with details of the new asset. In addition, we
+	// set the path to be path+ranomTempSuffix. This is to prevent a `unique path constraint` error if,
+	// for example, 2 files are have their titles swapped.
+	//
+	// On the second pass we update the existing assets and remove the randomTempSuffix from the path
 	for _, asset := range assets {
 		if existingAsset, exists := existingAssetsMap[asset.Hash]; exists {
-			// fmt.Println(asset, existingAsset)
 			asset.ID = existingAsset.ID
 
 			if !utils.CompareStructs(asset, existingAsset, []string{"CreatedAt", "UpdatedAt"}) {
+				asset.Path = asset.Path + randomTempSuffix
+				updatedAssets = append(updatedAssets, asset)
+
 				// The assets has been updated to have the existing assets ID, so this will update the
 				// existing asset with the details of the new asset
 				if err := assetDao.Update(asset, tx); err != nil {
 					return err
 				}
 			}
+		}
+	}
+
+	for _, asset := range updatedAssets {
+		asset.Path = asset.Path[:len(asset.Path)-len(randomTempSuffix)]
+
+		if err := assetDao.Update(asset, tx); err != nil {
+			return err
 		}
 	}
 
