@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	"github.com/Masterminds/squirrel"
-	sq "github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
@@ -164,7 +163,7 @@ func (cs *CourseScanner) Worker(processor CourseScannerProcessorFn, processingDo
 			}
 
 			// Cleanup
-			if err := cs.scanDao.Delete(&database.DatabaseParams{Where: sq.Eq{"id": job.ID}}, nil); err != nil {
+			if err := cs.scanDao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": job.ID}}, nil); err != nil {
 				cs.logger.Error(
 					"Failed to delete scan job",
 					loggerType,
@@ -572,7 +571,7 @@ func isCard(fileName string) bool {
 func updateAssets(assetDao *daos.AssetDao, tx *database.Tx, courseId string, assets []*models.Asset) error {
 	// Get existing assets
 	dbParams := &database.DatabaseParams{
-		Where: sq.Eq{assetDao.Table() + ".course_id": courseId},
+		Where: squirrel.Eq{assetDao.Table() + ".course_id": courseId},
 	}
 
 	existingAssets, err := assetDao.List(dbParams, tx)
@@ -598,7 +597,7 @@ func updateAssets(assetDao *daos.AssetDao, tx *database.Tx, courseId string, ass
 	// Bulk delete assets
 	whereClause := squirrel.Or{}
 	for _, deleteAsset := range toDelete {
-		whereClause = append(whereClause, sq.Eq{"id": deleteAsset.ID})
+		whereClause = append(whereClause, squirrel.Eq{"id": deleteAsset.ID})
 	}
 
 	if err := assetDao.Delete(&database.DatabaseParams{Where: whereClause}, tx); err != nil {
@@ -664,7 +663,7 @@ func updateAssets(assetDao *daos.AssetDao, tx *database.Tx, courseId string, ass
 func updateAttachments(attachmentDao *daos.AttachmentDao, tx *database.Tx, courseId string, attachments []*models.Attachment) error {
 	// Get existing attachments
 	dbParams := &database.DatabaseParams{
-		Where: sq.Eq{attachmentDao.Table() + ".course_id": courseId},
+		Where: squirrel.Eq{attachmentDao.Table() + ".course_id": courseId},
 	}
 
 	existingAttachments, err := attachmentDao.List(dbParams, tx)
@@ -687,7 +686,7 @@ func updateAttachments(attachmentDao *daos.AttachmentDao, tx *database.Tx, cours
 
 	// Delete the irrelevant attachments
 	for _, attachment := range toDelete {
-		err := attachmentDao.Delete(&database.DatabaseParams{Where: sq.Eq{"id": attachment.ID}}, tx)
+		err := attachmentDao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": attachment.ID}}, tx)
 		if err != nil {
 			return err
 		}
