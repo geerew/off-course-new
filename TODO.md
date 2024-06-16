@@ -44,17 +44,19 @@
 - [ ] Show progress bar with tooltip for course progress
 - [ ] Fix issue when back button because a_id is updated
 - [ ] Video
-  -  [ ] Settings; auto play, auto next
+  -  [x] Settings; auto play, auto next
   -  [ ] Store state in local storage
-  -  [ ] Fix opening `settings`, then clicking `playback` with a button behind the modal (Opened https://github.com/vidstack/player/issues/1309)
-  -  [ ] Rework tooltips to use shadcn
+  -  [ ] Rework mobile settings to use shadcn drawer
+   -  [ ] Add gradient to top of controls when on mobile
+
 -  [ ] Mobile
    -  [x] Add `x` to menu
    -  [x] Close when menu item is clicked
    -  [x] When opening the menu, scroll to the selected menu item
    -  [x] Make the prev/next buttons use `flex-col` and take up 4/5 of the left/right side
-   -  [ ] Fix prev/next button. It stays highlighted after being clicked
    -  [x] Add fade to top and bottom of menu
+   -  [ ] Fix prev/next button. It stays highlighted after being clicked
+   -  [ ] Sometimes the menu opens and is empty. A quick scroll fixes things
 -  [x] When moving to the prev/next course, scroll to that item in the normal menu
 
 ### Settings 

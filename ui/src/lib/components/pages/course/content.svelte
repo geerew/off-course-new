@@ -57,7 +57,7 @@
 					}}
 					on:next={() => {
 						if (!nextAsset) return;
-						selectedAsset = nextAsset;
+						UpdateQueryParam('a', nextAsset.id, false);
 					}}
 				/>
 			{:else if selectedAsset.assetType === 'html'}

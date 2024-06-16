@@ -9,14 +9,18 @@
 	} from 'vidstack';
 	import 'vidstack/bundle';
 	import type { MediaPlayerElement } from 'vidstack/elements';
+	import { getCtx, setCtx } from './_internal/context';
+	import Controls from './_internal/controls.svelte';
+	import Gestures from './_internal/gestures.svelte';
 
 	// ----------------------
 	// Exports
 	// ----------------------
+
 	export let title: string;
 	export let src: string;
 	export let startTime = 0;
-	export let nextAsset: Asset | null = null;
+	export let nextAsset: Asset | null;
 
 	// ----------------------
 	// Variables
@@ -25,7 +29,8 @@
 	// The player element
 	let player: MediaPlayerElement;
 
-	const dispatch = createEventDispatcher<Record<'progress' | 'complete' | 'next', number>>();
+	const dispatch = createEventDispatcher<Record<'progress' | 'complete', number>>();
+	const dispatchNext = createEventDispatcher();
 
 	// Current time of the player
 	let currentTime = -1;
@@ -38,6 +43,12 @@
 
 	// Set by the player
 	let duration = -1;
+
+	// Video context
+	setCtx();
+	const ctx = getCtx();
+
+	$: console.log('Saw change', $ctx.autoplayNext);
 
 	// ----------------------
 	// Functions
@@ -116,6 +127,31 @@
 	bind:this={player}
 	{title}
 	playsInline
+	autoPlay={$ctx.autoplay}
+	src={{
+		src: GetBackendUrl(ASSET_API) + '/' + src + '/serve',
+		type: 'video/mp4'
+	}}
+	on:source-change={srcChange}
+	on:can-play={canPlay}
+	on:duration-change={durationChange}
+	on:time-update={timeChange}
+	on:ended={() => {
+		if (nextAsset && $ctx.autoplayNext) {
+			dispatchNext('next');
+		}
+	}}
+	class="group/player"
+>
+	<media-provider />
+	<Gestures />
+	<Controls />
+</media-player>
+
+<!-- <media-player
+	bind:this={player}
+	{title}
+	playsInline
 	src={{
 		src: GetBackendUrl(ASSET_API) + '/' + src + '/serve',
 		type: 'video/mp4'
@@ -125,6 +161,6 @@
 	on:duration-change={durationChange}
 	on:time-update={timeChange}
 >
-	<media-provider></media-provider>
-	<media-video-layout></media-video-layout>
-</media-player>
+	<media-provider />
+	<media-video-layout />
+</media-player> -->
