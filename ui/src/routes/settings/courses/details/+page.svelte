@@ -258,7 +258,7 @@
 		<DeleteCourseDialog
 			courses={{ [fetchedCourse.id]: fetchedCourse.title }}
 			bind:open={openDeleteDialog}
-			on:courseDeleted={() => {
+			on:deleted={() => {
 				goto('/settings/courses');
 			}}
 		/>

@@ -82,6 +82,7 @@
 ##### Details
 
 - [x] Fix issue with a page refresh happening after clicking the scan button
+- [x] When deleting a course, move to /settings/courses
 - [ ] Fix scan updated_at time .. it should be the time of the last scan
 
 #### Tags
