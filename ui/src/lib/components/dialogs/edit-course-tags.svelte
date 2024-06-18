@@ -39,11 +39,6 @@
 	// The elements containing the edited/added tags
 	let tagsEl: HTMLDivElement;
 
-	// Every time the tags are added or existing tag is deleted, this counted will increment. When the
-	// inverse happens, it the counter will decrement. This can be used to enable/disable parts of the UI
-	// while the counter is 0
-	let changes = 0;
-
 	// This will be populated from a filtered list of tags will be fetched from the backend
 	let filteredTags: Tag[] = [];
 
@@ -99,7 +94,6 @@
 
 		// Append and increment the number of changes
 		toAdd = [...toAdd, tag];
-		changes++;
 
 		// Clear some things out
 		selected.set({ value: '', label: '' });
@@ -226,7 +220,6 @@
 	// Reset the state when the dialog is closed
 	$: if (!isDialogOpen) {
 		toAdd = [];
-		changes = 0;
 		filteredTags = [];
 		showSpinner = false;
 		inputValue.set('');
@@ -344,7 +337,6 @@
 									'text-destructive-foreground hover:bg-alt-1 opacity-60 transition-opacity hover:opacity-100'
 							)}
 							on:click={() => {
-								changes += tag.forDeletion ? 1 : -1;
 								tag.forDeletion = !tag.forDeletion;
 							}}
 						>
@@ -371,7 +363,6 @@
 							)}
 							on:click={() => {
 								toAdd = toAdd.filter((t) => t !== tag);
-								changes--;
 							}}
 						>
 							<X class="size-3" />
@@ -396,7 +387,7 @@
 
 			<Button
 				class="h-8 px-6"
-				disabled={changes === 0}
+				disabled={toAdd.length === 0 && existingTags.filter((tag) => tag.forDeletion).length === 0}
 				on:click={async () => {
 					await addTags();
 					await deleteTags();

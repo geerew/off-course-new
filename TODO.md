@@ -90,7 +90,7 @@
 - [x] Fix issue with a page refresh happening after clicking the scan button
 - [x] When deleting a course, move to /settings/courses
 - [x] Fix scan updated_at time .. it should be the time of the last scan
-- [ ] Cannot add and delete tags at the same time
+- [x] Cannot add and delete tags at the same time
 
 #### Tags
 
@@ -101,12 +101,12 @@
 - [x] Fix adding the same tag with different case (upper/lower/capital)
 - [x] Allow editing of tags
 - [ ] Add courses to tag(s)
-- [ ] Filters (log level, request type, etc)
 - [ ] Fix adding the same tag with different case (upper/lower/capital)
 
 #### Logs
 
 - [x] Add table
+- [x] Filters (log level, request type, etc)
 - [x] Filter by data.type
 - [ ] Filter by data
 
