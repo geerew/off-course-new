@@ -4,7 +4,7 @@
 
 - [ ] Update makefile to use goreleaser
 
-## UI 
+## UI
 
 ### General
 
@@ -31,7 +31,7 @@
   - [ ] Name the category
   - [ ] Show categories on the home page
 
-### Courses 
+### Courses
 
 - [x] https://dribbble.com/shots/23132040-E-learning-website-course-details
 - [x] Filter
@@ -40,34 +40,35 @@
 - [x] Fix card when only 1 is showing. It goes small for some reason
 - [ ] Rework filters to use shadcn drawer on mobile
 
-
 ### Course
 
 - [x] When a course is unavailable, still show the menu
 - [x] When moving to the prev/next course, scroll to that item in the normal menu
 - [ ] When a course is unavailable, show a message saying unavailable
 - [ ] Support PDF
-- [ ] Video
-  -  [x] Settings; auto play, auto next
-  -  [x] Add gradient to top of controls when on mobile
-  -  [x] Store state in local storage
-  -  [x] Rework mobile settings to use shadcn drawer
-  -  [ ] When video becomes unavailable, fix toast so it doesn't show again and again and show a message on 
-         the video saying unavailable
--  [ ] Mobile
-   -  [x] Add `x` to menu
-   -  [x] Close when menu item is clicked
-   -  [x] When opening the menu, scroll to the selected menu item
-   -  [x] Make the prev/next buttons use `flex-col` and take up 4/5 of the left/right side
-   -  [x] Add fade to top and bottom of menu
-   -  [ ] Fix prev/next button. It stays highlighted after being clicked
-   -  [ ] Sometimes the menu opens and is empty. A quick scroll fixes things
 
-### Settings 
+#### Video
+-  [x] Settings; auto play, auto next
+-  [x] Add gradient to top of controls when on mobile
+-  [x] Store state in local storage
+-  [x] Rework mobile settings to use shadcn drawer
+-  [ ] When video becomes unavailable, fix toast so it doesn't show again and again and show a message on
+       the video saying unavailable
+
+#### Mobile
+-  [x] Add `x` to menu
+-  [x] Close when menu item is clicked
+-  [x] When opening the menu, scroll to the selected menu item
+-  [x] Make the prev/next buttons use `flex-col` and take up 4/5 of the left/right side
+-  [x] Add fade to top and bottom of menu
+-  [ ] Fix prev/next button. It stays highlighted after being clicked
+-  [ ] Sometimes the menu opens and is empty. A quick scroll fixes things
+
+### Settings
 
 #### General
 
-- [ ] Fix filters for mobile
+- [x] Fix filters for mobile
 
 #### Courses
 
@@ -81,7 +82,7 @@
 
 - [x] Rework into a dialog
 - [x] Rework getting all courses to be more efficient
-- [ ] Fix border in back button when adding courses (course selection)
+- [x] Fix border in back button when adding courses (course selection)
 - [ ] Use drawer for small screens
 
 ##### Details
@@ -107,7 +108,7 @@
 
 - [x] Add table
 - [x] Filter by data.type
-- [ ] Filter by data 
+- [ ] Filter by data
 
 ## Backend
 
