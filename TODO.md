@@ -1,5 +1,9 @@
 # TODO
 
+## General
+
+- [ ] Update makefile to use goreleaser
+
 ## UI 
 
 ### General
@@ -39,15 +43,16 @@
 
 ### Course
 
-- [ ] When a course is unavailable, still show the menu
+- [x] When a course is unavailable, still show the menu
+- [ ] When a course is unavailable, show a message saying unavailable
 - [ ] Support PDF
 - [ ] Show progress bar with tooltip for course progress
 - [ ] Fix issue when back button because a_id is updated
 - [ ] Video
   -  [x] Settings; auto play, auto next
   -  [x] Add gradient to top of controls when on mobile
-  -  [ ] Store state in local storage
-  -  [ ] When video becomes unavailable, fix toast so it doesnt show again and again and show a message on 
+  -  [x] Store state in local storage
+  -  [ ] When video becomes unavailable, fix toast so it doesn't show again and again and show a message on 
          the video saying unavailable
   -  [ ] Rework mobile settings to use shadcn drawer
 -  [ ] Mobile

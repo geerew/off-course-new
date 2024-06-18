@@ -9,9 +9,9 @@
 	} from 'vidstack';
 	import 'vidstack/bundle';
 	import type { MediaPlayerElement } from 'vidstack/elements';
-	import { getCtx, setCtx } from './_internal/context';
 	import Controls from './_internal/controls.svelte';
 	import Gestures from './_internal/gestures.svelte';
+	import { preferences } from './_internal/store';
 
 	// ----------------------
 	// Exports
@@ -43,12 +43,6 @@
 
 	// Set by the player
 	let duration = -1;
-
-	// Video context
-	setCtx();
-	const ctx = getCtx();
-
-	$: console.log('Saw change', $ctx.autoplayNext);
 
 	// ----------------------
 	// Functions
@@ -127,7 +121,7 @@
 	bind:this={player}
 	{title}
 	playsInline
-	autoPlay={$ctx.autoplay}
+	autoPlay={$preferences.autoplay}
 	src={{
 		src: GetBackendUrl(ASSET_API) + '/' + src + '/serve',
 		type: 'video/mp4'
@@ -137,7 +131,7 @@
 	on:duration-change={durationChange}
 	on:time-update={timeChange}
 	on:ended={() => {
-		if (nextAsset && $ctx.autoplayNext) {
+		if (nextAsset && $preferences.autoplayNext) {
 			dispatchNext('next');
 		}
 	}}

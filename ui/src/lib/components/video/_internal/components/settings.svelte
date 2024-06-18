@@ -8,7 +8,7 @@
 	import { onMount } from 'svelte';
 	import theme from 'tailwindcss/defaultTheme';
 	import { MediaRemoteControl } from 'vidstack';
-	import { getCtx } from '../context';
+	import { preferences } from '../store';
 
 	//TMP
 	export let side: 'top' | 'bottom' = 'top';
@@ -18,9 +18,6 @@
 	// ----------------------
 
 	const remote = new MediaRemoteControl();
-
-	// Video ctx
-	const ctx = getCtx();
 
 	// The settings menu element
 	let menuEl: HTMLDivElement;
@@ -44,12 +41,10 @@
 	function controls(open: boolean) {
 		if (open) {
 			// Update the video ctx to mark settings as open
-			ctx.set({ ...$ctx, settingsOpen: true });
 			remote.pauseControls();
 		} else {
-			// Update the video ctx to mark settings as closed and resume idle tracking (if required)
-			ctx.set({ ...$ctx, settingsOpen: false });
-			if (!$ctx.settingsOpen) remote.resumeControls();
+			// Update the video ctx to mark settings as closed and resume idle tracking
+			remote.resumeControls();
 		}
 	}
 
@@ -70,6 +65,7 @@
 		// Set the playback rate
 		const playbackRateUnsub = player.subscribe(({ playbackRate: playerPlaybackRate }) => {
 			playbackRate = playerPlaybackRate;
+			// preferences.set({ playbackRate: playerPlaybackRate });
 		});
 
 		// Keep the controls open while the menu is open
@@ -94,10 +90,7 @@
 	}}
 />
 
-<div
-	bind:this={menuEl}
-	class="inline-flex transition-[height] duration-[10000ms] will-change-[height]"
->
+<div bind:this={menuEl} class="inline-flex">
 	<DropdownMenu.Root
 		bind:open
 		closeOnItemClick={false}
@@ -169,11 +162,11 @@
 						</Label>
 						<Checkbox
 							id="autoplay"
-							bind:checked={$ctx.autoplay}
+							bind:checked={$preferences.autoplay}
 							aria-labelledby="autoplay-label"
 							class="data-[state=checked]:text-secondary data-[state=checked]:border-secondary border-white data-[state=checked]:bg-transparent"
 							on:click={() => {
-								ctx.set({ ...$ctx, autoplay: !$ctx.autoplay });
+								preferences.set({ ...$preferences, autoplay: $preferences.autoplay });
 							}}
 						/>
 					</div>
@@ -188,11 +181,11 @@
 						</Label>
 						<Checkbox
 							id="autoplay-next"
-							bind:checked={$ctx.autoplayNext}
+							bind:checked={$preferences.autoplayNext}
 							aria-labelledby="autoplay-next-label"
 							class="data-[state=checked]:text-secondary data-[state=checked]:border-secondary border-white data-[state=checked]:bg-transparent"
 							on:click={() => {
-								ctx.set({ ...$ctx, autoplayNext: !$ctx.autoplayNext });
+								preferences.set({ ...$preferences, autoplayNext: !$preferences.autoplayNext });
 							}}
 						/>
 					</div>
