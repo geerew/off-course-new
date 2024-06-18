@@ -15,7 +15,7 @@
 - [x] Disable scrolling when mobile menu is open
 - [ ] Fix theme
 - [ ] Update query param to all pages like settings -> courses/tags/logs etc as the uses filters
-- [ ] Fix time in the UI. Newly added courses show in an hour ... VPN?
+- [x] Fix time in the UI. Newly added courses show in an hour ... VPN?
 - [ ] On scan, have a minimum 'load' of 1 second to stop flickering
 - [ ] Add search (https://discord.com/channels/1116682155809067049/1117779396992979024/1163925360228962385)
 - [ ] Change how frequently the course availability check is run
@@ -35,11 +35,9 @@
 
 - [x] https://dribbble.com/shots/23132040-E-learning-website-course-details
 - [x] Filter
-- [ ] When a filter is selected, make sure you are on page 1 (if not already)
-- [ ] Burger menu when md or lower
-- [ ] Rework to look like https://dribbble.com/shots/23062409-NFS-Filter-Component
-- [ ] Fix timestamp shown in card. It is not showing the updated_at time
-- [ ] Fix card when only 1 is showing. It goes small for some reason
+- [x] When a filter is selected, make sure you are on page 1 (if not already)
+- [x] Fix timestamp shown in card. It is not showing the updated_at time
+- [x] Fix card when only 1 is showing. It goes small for some reason
 - [ ] Rework filters to use shadcn drawer on mobile
 
 

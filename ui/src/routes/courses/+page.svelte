@@ -39,11 +39,11 @@
 	// ----------------------
 
 	// Get courses (paginated)
-	async function getCourses(): Promise<boolean> {
+	async function getCourses(resetPage = false): Promise<boolean> {
 		if (!IsBrowser) return false;
 
 		const params: CoursesGetParams = {
-			page: pagination.page,
+			page: resetPage ? 1 : pagination.page,
 			perPage: pagination.perPage
 		};
 
@@ -80,21 +80,21 @@
 		<CoursesFilter
 			on:titleFilter={(ev) => {
 				filterTitles = ev.detail;
-				courses = getCourses();
+				courses = getCourses(true);
 			}}
 			on:tagsFilter={(ev) => {
 				filterTags = ev.detail;
-				courses = getCourses();
+				courses = getCourses(true);
 			}}
 			on:progressFilter={(ev) => {
 				filterProgress = ev.detail;
-				courses = getCourses();
+				courses = getCourses(true);
 			}}
 			on:clear={() => {
 				filterTitles = [];
 				filterTags = [];
 				filterProgress = undefined;
-				courses = getCourses();
+				courses = getCourses(true);
 			}}
 		/>
 
