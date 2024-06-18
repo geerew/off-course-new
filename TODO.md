@@ -44,10 +44,9 @@
 ### Course
 
 - [x] When a course is unavailable, still show the menu
+- [x] When moving to the prev/next course, scroll to that item in the normal menu
 - [ ] When a course is unavailable, show a message saying unavailable
 - [ ] Support PDF
-- [ ] Show progress bar with tooltip for course progress
-- [ ] Fix issue when back button because a_id is updated
 - [ ] Video
   -  [x] Settings; auto play, auto next
   -  [x] Add gradient to top of controls when on mobile
@@ -63,7 +62,7 @@
    -  [x] Add fade to top and bottom of menu
    -  [ ] Fix prev/next button. It stays highlighted after being clicked
    -  [ ] Sometimes the menu opens and is empty. A quick scroll fixes things
--  [x] When moving to the prev/next course, scroll to that item in the normal menu
+   -  [ ] Rework filters to use shadcn drawer
 
 ### Settings 
 
@@ -77,7 +76,7 @@
 - [ ] Store table state in local storage/db
 - [x] Add table action `Add Tags`
 - [x] Use shadcn table
-- [ ] Fix scan updated_at time .. it should be the time of the last scan
+- [x] Fix scan updated_at time .. it should be the time of the last scan
 
 #####  Add
 
@@ -89,7 +88,7 @@
 
 - [x] Fix issue with a page refresh happening after clicking the scan button
 - [x] When deleting a course, move to /settings/courses
-- [ ] Fix scan updated_at time .. it should be the time of the last scan
+- [x] Fix scan updated_at time .. it should be the time of the last scan
 
 #### Tags
 
