@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import theme from 'tailwindcss/defaultTheme';
+	import BufferingIndicator from './components/buffering-indicator.svelte';
 	import Fullscreen from './components/fullscreen.svelte';
 	import Play from './components/play.svelte';
 	import Settings from './components/settings.svelte';
@@ -30,6 +31,7 @@
 </script>
 
 {#if loadedSize}
+	<BufferingIndicator />
 	{#if !largeLayout}
 		<!-- sm- -->
 		<media-controls

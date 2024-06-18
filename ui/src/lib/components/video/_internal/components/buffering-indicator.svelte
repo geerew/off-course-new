@@ -1,27 +1,13 @@
-<div class="vds-buffering-indicator">
-	<!-- ig-->
-	<!-- <media-spinner class="vds-buffering-spinner">
-		<svg
-			fill="none"
-			viewBox="0 0 120 120"
-			aria-hidden="true"
-			data-part="root"
-			width="96"
-			height="96"
-		>
-			<circle cx="60" cy="60" r="54" stroke="currentColor" data-part="track" stroke-width="8" />
-
-			<circle
-				cx="60"
-				cy="60"
-				r="54"
-				stroke="currentColor"
-				pathLength="100"
-				stroke-dasharray="100"
-				data-part="track-fill"
-				stroke-width="8"
-				stroke-dashoffset="50"
-			/>
-		</svg>
-	</media-spinner> -->
+<div
+	class="pointer-events-none absolute inset-0 z-50 flex h-full w-full items-center justify-center opacity-0 group-data-[buffering]/player:opacity-100"
+>
+	<div
+		class="text-secondary inline-block size-20 animate-spin rounded-full border-[6px] border-solid border-current border-e-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
+		role="status"
+	>
+		<!-- <span
+			class="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]"
+			>Loading...</span
+		> -->
+	</div>
 </div>
