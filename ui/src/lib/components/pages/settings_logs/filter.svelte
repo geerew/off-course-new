@@ -26,7 +26,7 @@
 </script>
 
 <!-- Filters -->
-<div class="border-alt-1/60 flex w-full flex-row gap-5 border-b pb-5">
+<div class="border-alt-1/60 flex w-full flex-col gap-5 border-b pb-5 md:flex-row">
 	<MessageFilter
 		on:change={(e) => {
 			filterMessages = [...filterMessages, e.detail];
@@ -34,19 +34,21 @@
 		}}
 	/>
 
-	<LevelFilter
-		bind:filterLevels
-		on:change={(e) => {
-			dispatchEvent('filterLevels', filterLevels);
-		}}
-	/>
+	<div class="flex gap-2.5 md:gap-5">
+		<LevelFilter
+			bind:filterLevels
+			on:change={(e) => {
+				dispatchEvent('filterLevels', filterLevels);
+			}}
+		/>
 
-	<TypeFilter
-		bind:filterTypes
-		on:change={(e) => {
-			dispatchEvent('filterTypes', filterTypes);
-		}}
-	/>
+		<TypeFilter
+			bind:filterTypes
+			on:change={(e) => {
+				dispatchEvent('filterTypes', filterTypes);
+			}}
+		/>
+	</div>
 </div>
 
 {#if isFiltering}

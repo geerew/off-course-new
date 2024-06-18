@@ -291,7 +291,7 @@
 
 <Button
 	variant="outline"
-	class="bg-primary hover:bg-primary group flex h-8 gap-1.5 hover:brightness-110"
+	class="bg-primary hover:bg-primary group flex h-8 w-36 gap-1.5 hover:brightness-110"
 	on:click={async () => {
 		open = true;
 	}}

@@ -280,12 +280,12 @@
 </script>
 
 <div class="bg-background flex w-full flex-col gap-4 pb-10 pt-6">
-	<div class="container flex flex-col gap-7">
+	<div class="container flex flex-col gap-5 md:gap-10">
 		{#await load}
 			<Loading />
 		{:then _}
 			<div class="flex w-full flex-row">
-				<div class="flex w-full justify-between">
+				<div class="flex w-full flex-col gap-y-5 md:flex-row md:justify-between">
 					<div class="flex">
 						<AddTagsDialog
 							on:added={() => {
@@ -294,7 +294,7 @@
 						/>
 					</div>
 
-					<div class="flex w-full justify-end gap-2.5">
+					<div class="flex w-full justify-between gap-2.5 md:justify-end">
 						<TagsTableActions
 							count={checkedRowsCount}
 							on:deselect={() => {

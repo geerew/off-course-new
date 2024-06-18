@@ -23,10 +23,13 @@
 
 <Popover.Root bind:open={isOpen}>
 	<Popover.Trigger asChild let:builder>
-		<Button variant="outline" {disabled} class="flex h-8 gap-1.5" builders={[builder]}>
-			<ArrowDownUp class="size-4" />
-			<span>Sort</span>
-			<ChevronRight class={cn('size-4 duration-200', isOpen && 'rotate-90')} />
+		<Button variant="outline" {disabled} class="flex h-8 px-2" builders={[builder]}>
+			<div class="flex items-center gap-1.5 pr-3">
+				<ArrowDownUp class="size-4" />
+				<span>Sort</span>
+			</div>
+
+			<ChevronRight class={cn('size-3 duration-200', isOpen && 'rotate-90')} />
 		</Button>
 	</Popover.Trigger>
 

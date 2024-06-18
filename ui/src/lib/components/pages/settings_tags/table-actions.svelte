@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
-	import { BoxSelect, ChevronRight, Trash2, X } from 'lucide-svelte';
+	import { BoxSelect, ChevronRight, MousePointerClick, Trash2, X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import type { Writable } from 'svelte/store';
 
@@ -18,9 +18,12 @@
 
 <DropdownMenu.Root disableFocusFirstItem={true}>
 	<DropdownMenu.Trigger asChild let:builder>
-		<Button variant="outline" class="group flex h-8 gap-1.5" builders={[builder]}>
-			<span>Actions</span>
-			<ChevronRight class="size-4 duration-200 group-data-[state=open]:rotate-90" />
+		<Button variant="outline" class="group flex h-8 px-2" builders={[builder]}>
+			<div class="flex items-center gap-1.5 pr-3">
+				<MousePointerClick class="size-4" />
+				<span>Actions</span>
+			</div>
+			<ChevronRight class="size-3 duration-200 group-data-[state=open]:rotate-90" />
 		</Button>
 	</DropdownMenu.Trigger>
 

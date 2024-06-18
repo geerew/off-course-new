@@ -15,10 +15,13 @@
 
 <DropdownMenu.Root closeOnItemClick={false}>
 	<DropdownMenu.Trigger asChild let:builder>
-		<Button variant="outline" {disabled} class="group flex h-8 gap-2.5" builders={[builder]}>
-			<EyeOff class="size-4" />
-			<span>Columns</span>
-			<ChevronRight class="size-4 duration-200 group-data-[state=open]:rotate-90" />
+		<Button variant="outline" {disabled} class="group flex h-8 px-2" builders={[builder]}>
+			<div class="flex items-center gap-1.5 pr-3">
+				<EyeOff class="size-4" />
+				<span>Columns</span>
+			</div>
+
+			<ChevronRight class="size-3 duration-200 group-data-[state=open]:rotate-90" />
 		</Button>
 	</DropdownMenu.Trigger>
 

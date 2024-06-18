@@ -391,12 +391,12 @@
 </script>
 
 <div class="bg-background flex w-full flex-col gap-4 pb-10 pt-6">
-	<div class="container flex flex-col gap-10">
+	<div class="container flex flex-col gap-5 md:gap-10">
 		{#await load}
 			<Loading />
 		{:then _}
 			<div class="flex w-full flex-row">
-				<div class="flex w-full justify-between">
+				<div class="flex w-full flex-col gap-y-5 md:flex-row md:justify-between">
 					<AddCoursesDialog
 						on:added={() => {
 							pagination.page = 1;
@@ -404,7 +404,7 @@
 						}}
 					/>
 
-					<div class="flex w-full justify-end gap-2.5">
+					<div class="flex w-full justify-between gap-2.5 md:justify-end">
 						<CoursesTableActions
 							count={checkedRowsCount}
 							on:deselect={() => {
@@ -426,17 +426,20 @@
 							}}
 						/>
 
-						<TableSortController
-							columns={availableSortColumns}
-							sortedColumn={sortKeys}
-							on:changed={getCourses}
-							disabled={$fetchedCourses.length === 0}
-						/>
-						<TableColumnsController
-							columns={availableHiddenColumns}
-							columnStore={hiddenColumnIds}
-							disabled={$fetchedCourses.length === 0}
-						/>
+						<div class="flex gap-2.5">
+							<TableSortController
+								columns={availableSortColumns}
+								sortedColumn={sortKeys}
+								on:changed={getCourses}
+								disabled={$fetchedCourses.length === 0}
+							/>
+
+							<TableColumnsController
+								columns={availableHiddenColumns}
+								columnStore={hiddenColumnIds}
+								disabled={$fetchedCourses.length === 0}
+							/>
+						</div>
 					</div>
 				</div>
 			</div>
