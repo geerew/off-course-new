@@ -225,12 +225,10 @@
 					<!-- Courses -->
 					{#each fetchedCourses as course}
 						<Carousel.Item class="group basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
-							<Button
-								variant="ghost"
-								class="bg-muted group relative h-full min-h-36 cursor-pointer gap-4 whitespace-normal p-2 text-start"
-								href={`/course?id=${course.id}`}
+							<a
+								class="bg-muted group relative flex h-full min-h-36 cursor-pointer flex-col gap-4 overflow-hidden whitespace-normal rounded-lg"
+								href={`/course/?id=${course.id}`}
 							>
-								<!-- <Card.Root class="relative h-full"> -->
 								{#if !course.available}
 									<span
 										class="bg-destructive absolute right-0 top-0 z-10 flex h-1 w-1 items-center justify-center rounded-bl-lg rounded-tr-lg p-3 text-center text-sm"
@@ -239,31 +237,20 @@
 									</span>
 								{/if}
 
-								<!-- <a href="/course?id={course.id}"> -->
-								<!-- <Card.Content -->
-								<!-- class="bg-muted flex h-full flex-col overflow-hidden rounded-lg p-0" -->
-								<!-- > -->
 								<CourseCard {course} />
 
-								<div class="flex h-full flex-col justify-between p-3 text-sm md:p-3">
+								<div class="flex h-full flex-grow flex-col justify-between p-2 text-sm">
 									<h3 class="group-hover:text-secondary font-semibold">
 										{course.title}
 									</h3>
 
 									<div class="flex flex-row justify-between">
-										<NiceDate
-											date={variant === 'latest' ? course.createdAt : course.progressUpdatedAt}
-											prefix={variant === 'latest' ? 'Added:' : 'Last Viewed:'}
-											class="shrink-0 pt-3 text-xs"
-										/>
+										<NiceDate date={course.progressUpdatedAt} class="shrink-0 pt-3 text-xs" />
 
 										<span class="flex w-full justify-end pt-3 text-xs">{course.percent}%</span>
 									</div>
 								</div>
-								<!-- </Card.Content> -->
-								<!-- </a> -->
-								<!-- </Card.Root> -->
-							</Button>
+							</a>
 						</Carousel.Item>
 					{/each}
 
