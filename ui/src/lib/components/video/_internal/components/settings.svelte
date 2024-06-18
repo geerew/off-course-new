@@ -61,9 +61,8 @@
 		if (!player) return;
 
 		// Set the playback rate
-		const playbackRateUnsub = player.subscribe(({ playbackRate: playerPlaybackRate }) => {
-			// playbackRate = playerPlaybackRate;
-			preferences.set({ ...$preferences, playbackRate: playerPlaybackRate });
+		const playbackRateUnsub = player.subscribe(({ playbackRate }) => {
+			preferences.set({ ...$preferences, playbackRate: playbackRate });
 		});
 
 		// Keep the controls open while the menu is open
@@ -77,6 +76,7 @@
 		return () => {
 			playbackRateUnsub();
 			controlsUnsub();
+			remote.resumeControls();
 		};
 	});
 </script>
