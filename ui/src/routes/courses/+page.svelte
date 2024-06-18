@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { CourseCard, Err, Loading, NiceDate, Pagination } from '$components/generic';
 	import { CoursesFilter } from '$components/pages/courses';
-	import * as Card from '$components/ui/card';
 	import { GetCourses } from '$lib/api';
 	import type { Course, CourseProgress, CoursesGetParams } from '$lib/types/models';
 	import type { PaginationParams } from '$lib/types/pagination';
@@ -71,7 +70,6 @@
 
 			return true;
 		} catch (error) {
-			// toast.error(error instanceof Error ? error.message : (error as string));
 			throw error;
 		}
 	}
@@ -114,10 +112,15 @@
 						{/if}
 					</div>
 				{:else}
-					<div class="flex w-full flex-col items-center gap-5 pb-5">
-						<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+					<div class="flex w-full flex-col gap-5 overflow-hidden pb-5">
+						<div
+							class="grid w-full auto-cols-fr grid-cols-[repeat(auto-fill,minmax(17.5rem,1fr))] gap-4"
+						>
 							{#each fetchedCourses as course}
-								<Card.Root class="group relative h-full">
+								<a
+									class="bg-muted group relative grid h-full min-h-36 cursor-pointer grid-cols-2 gap-4 overflow-hidden whitespace-normal rounded-lg p-2 sm:flex sm:flex-col sm:gap-0 sm:p-0"
+									href={`/course/?id=${course.id}`}
+								>
 									{#if !course.available}
 										<span
 											class="bg-destructive absolute right-0 top-0 z-10 flex h-1 w-1 items-center justify-center rounded-bl-lg rounded-tr-lg p-3 text-center text-sm"
@@ -126,27 +129,22 @@
 										</span>
 									{/if}
 
-									<a href="/course?id={course.id}">
-										<Card.Content
-											class="bg-muted flex h-full flex-col overflow-hidden rounded-lg p-0"
-										>
-											<CourseCard {course} />
+									<CourseCard {course} />
 
-											<div class="flex h-full flex-col justify-between p-3 text-sm md:p-3">
-												<h3 class="group-hover:text-secondary font-semibold">
-													{course.title}
-												</h3>
+									<div
+										class="flex h-full flex-grow flex-col justify-between text-base sm:p-3 sm:text-sm"
+									>
+										<h3 class="group-hover:text-secondary font-semibold">
+											{course.title}
+										</h3>
 
-												<div class="flex flex-row justify-between">
-													<NiceDate date={course.progressUpdatedAt} class="shrink-0 pt-3 text-xs" />
+										<div class="flex flex-row justify-between">
+											<NiceDate date={course.progressUpdatedAt} class="shrink-0 pt-3 text-xs" />
 
-													<span class="flex w-full justify-end pt-3 text-xs">{course.percent}%</span
-													>
-												</div>
-											</div>
-										</Card.Content>
-									</a>
-								</Card.Root>
+											<span class="flex w-full justify-end pt-3 text-xs">{course.percent}%</span>
+										</div>
+									</div>
+								</a>
 							{/each}
 						</div>
 

@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { AspectRatio } from '$components/ui/aspect-ratio';
 	import { COURSE_API, GetBackendUrl } from '$lib/api';
 	import type { Course } from '$lib/types/models';
 	import { createAvatar } from '@melt-ui/svelte';
-	import { Play } from 'lucide-svelte';
+	import { Hexagon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
 	// ----------------------
@@ -55,15 +54,18 @@
 	});
 </script>
 
-<AspectRatio ratio={16 / 9} class="bg-muted mx-h-48 overflow-hidden">
-	<!-- Image -->
-	<img {...$image} alt="Course Card" class="w-full" />
+<div class="aspect-w-16 aspect-h-7 sm:aspect-w-16 sm:aspect-h-7">
+	<img
+		{...$image}
+		alt="Course Card"
+		class="rounded-lg object-cover object-center sm:rounded-b-none md:object-top"
+	/>
 
 	<!-- Fallback -->
 	<div
-		class="bg-background mx-auto flex h-full w-full place-content-center items-center lg:w-full"
+		class="bg-alt-1 mx-auto flex place-content-center items-center rounded-lg sm:rounded-b-none lg:w-full"
 		{...$fallback}
 	>
-		<Play class="fill-primary text-primary h-12 w-12 opacity-60" />
+		<Hexagon class="fill-muted/40 size-12 rotate-90 stroke-none md:size-16" />
 	</div>
-</AspectRatio>
+</div>

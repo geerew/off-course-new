@@ -89,6 +89,7 @@ const config = {
 		}
 	},
 	plugins: [
+		require('@tailwindcss/aspect-ratio'),
 		require('@tailwindcss/forms'),
 		require('tailwindcss-animate'),
 		// eslint-disable-next-line @typescript-eslint/no-var-requires

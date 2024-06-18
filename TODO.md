@@ -45,10 +45,11 @@
 - [ ] Fix issue when back button because a_id is updated
 - [ ] Video
   -  [x] Settings; auto play, auto next
+  -  [x] Add gradient to top of controls when on mobile
   -  [ ] Store state in local storage
+  -  [ ] When video becomes unavailable, fix toast so it doesnt show again and again and show a message on 
+         the video saying unavailable
   -  [ ] Rework mobile settings to use shadcn drawer
-   -  [ ] Add gradient to top of controls when on mobile
-
 -  [ ] Mobile
    -  [x] Add `x` to menu
    -  [x] Close when menu item is clicked

@@ -2,7 +2,6 @@
 	import { CourseCard, Err, Loading, NiceDate } from '$components/generic';
 	import { Button } from '$components/ui/button';
 	import { GetCourses } from '$lib/api';
-	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Carousel from '$lib/components/ui/carousel';
 	import { CourseProgress, type Course, type CoursesGetParams } from '$lib/types/models';
 	import { ArrowLeft, ArrowRight } from 'lucide-svelte';
@@ -226,7 +225,12 @@
 					<!-- Courses -->
 					{#each fetchedCourses as course}
 						<Carousel.Item class="group basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
-							<Card.Root class="relative h-full">
+							<Button
+								variant="ghost"
+								class="bg-muted group relative h-full min-h-36 cursor-pointer gap-4 whitespace-normal p-2 text-start"
+								href={`/course?id=${course.id}`}
+							>
+								<!-- <Card.Root class="relative h-full"> -->
 								{#if !course.available}
 									<span
 										class="bg-destructive absolute right-0 top-0 z-10 flex h-1 w-1 items-center justify-center rounded-bl-lg rounded-tr-lg p-3 text-center text-sm"
@@ -235,30 +239,31 @@
 									</span>
 								{/if}
 
-								<a href="/course?id={course.id}">
-									<Card.Content
-										class="bg-muted flex h-full flex-col overflow-hidden rounded-lg p-0"
-									>
-										<CourseCard {course} />
+								<!-- <a href="/course?id={course.id}"> -->
+								<!-- <Card.Content -->
+								<!-- class="bg-muted flex h-full flex-col overflow-hidden rounded-lg p-0" -->
+								<!-- > -->
+								<CourseCard {course} />
 
-										<div class="flex h-full flex-col justify-between p-3 text-sm md:p-3">
-											<h3 class="group-hover:text-secondary font-semibold">
-												{course.title}
-											</h3>
+								<div class="flex h-full flex-col justify-between p-3 text-sm md:p-3">
+									<h3 class="group-hover:text-secondary font-semibold">
+										{course.title}
+									</h3>
 
-											<div class="flex flex-row justify-between">
-												<NiceDate
-													date={variant === 'latest' ? course.createdAt : course.progressUpdatedAt}
-													prefix={variant === 'latest' ? 'Added:' : 'Last Viewed:'}
-													class="shrink-0 pt-3 text-xs"
-												/>
+									<div class="flex flex-row justify-between">
+										<NiceDate
+											date={variant === 'latest' ? course.createdAt : course.progressUpdatedAt}
+											prefix={variant === 'latest' ? 'Added:' : 'Last Viewed:'}
+											class="shrink-0 pt-3 text-xs"
+										/>
 
-												<span class="flex w-full justify-end pt-3 text-xs">{course.percent}%</span>
-											</div>
-										</div>
-									</Card.Content>
-								</a>
-							</Card.Root>
+										<span class="flex w-full justify-end pt-3 text-xs">{course.percent}%</span>
+									</div>
+								</div>
+								<!-- </Card.Content> -->
+								<!-- </a> -->
+								<!-- </Card.Root> -->
+							</Button>
 						</Carousel.Item>
 					{/each}
 
