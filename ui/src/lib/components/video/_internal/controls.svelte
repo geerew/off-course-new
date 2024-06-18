@@ -41,7 +41,7 @@
 		>
 			<div class="basis-1/3 bg-gradient-to-b from-black/30 to-transparent pt-2">
 				<media-controls-group class="pointer-events-auto flex w-full items-center justify-end px-3">
-					<Settings side="bottom" />
+					<Settings isMobile={true} />
 				</media-controls-group>
 			</div>
 
@@ -90,7 +90,7 @@
 
 				<div class="flex-1" />
 
-				<Settings />
+				<Settings isMobile={false} />
 				<Fullscreen />
 			</media-controls-group>
 		</media-controls>

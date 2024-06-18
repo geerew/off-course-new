@@ -122,6 +122,7 @@
 	{title}
 	playsInline
 	autoPlay={$preferences.autoplay}
+	playbackRate={$preferences.playbackRate}
 	src={{
 		src: GetBackendUrl(ASSET_API) + '/' + src + '/serve',
 		type: 'video/mp4'
@@ -131,7 +132,7 @@
 	on:duration-change={durationChange}
 	on:time-update={timeChange}
 	on:ended={() => {
-		if (nextAsset && $preferences.autoplayNext) {
+		if (nextAsset && $preferences.autoloadNext) {
 			dispatchNext('next');
 		}
 	}}
@@ -141,20 +142,3 @@
 	<Gestures />
 	<Controls />
 </media-player>
-
-<!-- <media-player
-	bind:this={player}
-	{title}
-	playsInline
-	src={{
-		src: GetBackendUrl(ASSET_API) + '/' + src + '/serve',
-		type: 'video/mp4'
-	}}
-	on:source-change={srcChange}
-	on:can-play={canPlay}
-	on:duration-change={durationChange}
-	on:time-update={timeChange}
->
-	<media-provider />
-	<media-video-layout />
-</media-player> -->

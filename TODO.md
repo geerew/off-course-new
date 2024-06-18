@@ -40,6 +40,8 @@
 - [ ] Rework to look like https://dribbble.com/shots/23062409-NFS-Filter-Component
 - [ ] Fix timestamp shown in card. It is not showing the updated_at time
 - [ ] Fix card when only 1 is showing. It goes small for some reason
+- [ ] Rework filters to use shadcn drawer on mobile
+
 
 ### Course
 
@@ -51,9 +53,9 @@
   -  [x] Settings; auto play, auto next
   -  [x] Add gradient to top of controls when on mobile
   -  [x] Store state in local storage
+  -  [x] Rework mobile settings to use shadcn drawer
   -  [ ] When video becomes unavailable, fix toast so it doesn't show again and again and show a message on 
          the video saying unavailable
-  -  [ ] Rework mobile settings to use shadcn drawer
 -  [ ] Mobile
    -  [x] Add `x` to menu
    -  [x] Close when menu item is clicked
@@ -62,7 +64,6 @@
    -  [x] Add fade to top and bottom of menu
    -  [ ] Fix prev/next button. It stays highlighted after being clicked
    -  [ ] Sometimes the menu opens and is empty. A quick scroll fixes things
-   -  [ ] Rework filters to use shadcn drawer
 
 ### Settings 
 
@@ -83,12 +84,14 @@
 - [x] Rework into a dialog
 - [x] Rework getting all courses to be more efficient
 - [ ] Fix border in back button when adding courses (course selection)
+- [ ] Use drawer for small screens
 
 ##### Details
 
 - [x] Fix issue with a page refresh happening after clicking the scan button
 - [x] When deleting a course, move to /settings/courses
 - [x] Fix scan updated_at time .. it should be the time of the last scan
+- [ ] Cannot add and delete tags at the same time
 
 #### Tags
 
