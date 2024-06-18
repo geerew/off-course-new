@@ -25,7 +25,7 @@
 </script>
 
 <!-- Filters -->
-<div class="border-alt-1/60 flex w-full flex-row gap-5 border-b pb-5">
+<div class="border-alt-1/60 flex w-full flex-col gap-5 border-b pb-5 md:flex-row">
 	<CoursesTitleFilter
 		on:change={(e) => {
 			filterTitles = [...filterTitles, e.detail];
@@ -33,19 +33,21 @@
 		}}
 	/>
 
-	<CoursesProgressFilter
-		bind:progress={filterProgress}
-		on:change={() => {
-			dispatchEvent('progressFilter', filterProgress);
-		}}
-	/>
+	<div class="flex gap-2.5 md:gap-5">
+		<CoursesProgressFilter
+			bind:progress={filterProgress}
+			on:change={() => {
+				dispatchEvent('progressFilter', filterProgress);
+			}}
+		/>
 
-	<CoursesTagsFilter
-		bind:filterTags
-		on:change={() => {
-			dispatchEvent('tagsFilter', Object.values(filterTags));
-		}}
-	/>
+		<CoursesTagsFilter
+			bind:filterTags
+			on:change={() => {
+				dispatchEvent('tagsFilter', Object.values(filterTags));
+			}}
+		/>
+	</div>
 </div>
 
 {#if isFiltering}
