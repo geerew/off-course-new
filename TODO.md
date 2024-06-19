@@ -13,9 +13,10 @@
 - [x] Fix selecting video assets then moving forward and backward. There is an issue with history
 - [x] Mobile menu clips header
 - [x] Disable scrolling when mobile menu is open
+- [x] Fix time in the UI. Newly added courses show in an hour ... VPN?
+- [x] When loading course card spin the fallback icon
 - [ ] Fix theme
 - [ ] Update query param to all pages like settings -> courses/tags/logs etc as the uses filters
-- [x] Fix time in the UI. Newly added courses show in an hour ... VPN?
 - [ ] On scan, have a minimum 'load' of 1 second to stop flickering
 - [ ] Add search (https://discord.com/channels/1116682155809067049/1117779396992979024/1163925360228962385)
 - [ ] Change how frequently the course availability check is run
@@ -23,13 +24,16 @@
 
 ### Home
 
-- [ ] Fix Load More border in carousel
-- [ ] Landing page when there are no courses added (use a DB flag)
+- [x] Fix Load More border in carousel
+- [ ] Landing page when there are no courses added
 - [ ] Hide ongoing when there are no ongoing courses
-- [ ] Categories
-  - [ ] Click a button and select 1 or more tags to create a category
-  - [ ] Name the category
-  - [ ] Show categories on the home page
+- [ ] New courses timestamp should be created_at
+
+#### Categories
+
+- [ ] Click a button and select 1 or more tags to create a category
+- [ ] Name the category
+- [ ] Show categories on the home page
 
 ### Courses
 
@@ -91,6 +95,7 @@
 - [x] When deleting a course, move to /settings/courses
 - [x] Fix scan updated_at time .. it should be the time of the last scan
 - [x] Cannot add and delete tags at the same time
+- [ ] Rework size of text/icons for lg+
 
 #### Tags
 

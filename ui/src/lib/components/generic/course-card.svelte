@@ -1,14 +1,30 @@
 <script lang="ts">
 	import { COURSE_API, GetBackendUrl } from '$lib/api';
-	import type { Course } from '$lib/types/models';
+	import type { ClassName } from '$lib/types/general';
+	import { cn } from '$lib/utils';
 	import { createAvatar } from '@melt-ui/svelte';
 	import { Hexagon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
+	let className: ClassName = undefined;
+
 	// ----------------------
 	// Exports
 	// ----------------------
-	export let course: Course;
+
+	// The course ID
+	export let courseId: string;
+
+	// Whether the course has a card
+	export let hasCard: boolean;
+
+	// When true, the card will refresh. Bind this to trigger a refresh from the parent component
+	export let refresh = false;
+
+	// Class overrides
+	export { className as class };
+	export let imgClass: ClassName = undefined;
+	export let fallbackClass: ClassName = undefined;
 
 	// ----------------------
 	// Variables
@@ -20,6 +36,9 @@
 		options: { src }
 	} = createAvatar();
 
+	// True when the image is loading
+	let isLoading = true;
+
 	// True after the component is mounted
 	let mounted = false;
 
@@ -28,9 +47,13 @@
 	// ----------------------
 
 	// Sets the src if the course has a card
-	function setSrc() {
-		if (course && course.hasCard) {
-			src.set(`${GetBackendUrl(COURSE_API)}/${course.id}/card?b=${new Date().getTime()}`);
+	async function setSrc() {
+		await new Promise((resolve) => setTimeout(resolve, isLoading ? 500 : 0));
+
+		isLoading = false;
+
+		if (hasCard) {
+			src.set(`${GetBackendUrl(COURSE_API)}/${courseId}/card?b=${new Date().getTime()}`);
 		} else {
 			src.set('');
 		}
@@ -41,31 +64,30 @@
 	// ----------------------
 
 	// When mounted and the course scan status is empty, set the src
-	$: if (mounted && course.scanStatus === '') {
+	$: if (mounted && refresh) {
+		isLoading = true;
 		setSrc();
 	}
 
 	// ----------------------
 	// Lifecycle
 	// ----------------------
-	onMount(() => {
-		setSrc();
+	onMount(async () => {
+		await setSrc();
 		mounted = true;
 	});
 </script>
 
-<div class="aspect-w-16 aspect-h-7 sm:aspect-w-16 sm:aspect-h-7">
-	<img
-		{...$image}
-		alt="Course Card"
-		class="rounded-lg object-cover object-center sm:rounded-b-none md:object-top"
-	/>
+<div class={className}>
+	<img {...$image} alt="Course Card" class={imgClass} />
 
 	<!-- Fallback -->
-	<div
-		class="bg-alt-1 mx-auto flex place-content-center items-center rounded-lg sm:rounded-b-none lg:w-full"
-		{...$fallback}
-	>
-		<Hexagon class="fill-muted/40 size-12 rotate-90 stroke-none md:size-16" />
+	<div class={fallbackClass} {...$fallback}>
+		<Hexagon
+			class={cn(
+				'fill-muted/40 size-12 stroke-none md:size-16',
+				isLoading ? 'duration-2.5s animate-spin' : 'rotate-90'
+			)}
+		/>
 	</div>
 </div>

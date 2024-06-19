@@ -2,9 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { DeleteCourseDialog } from '$components/dialogs';
-	import { Err, Loading, NiceDate, ScanStatus } from '$components/generic';
+	import { CourseCard, Err, Loading, NiceDate, ScanStatus } from '$components/generic';
 	import {
-		CourseDetailsCard,
 		CourseDetailsChapters,
 		CourseDetailsTags
 	} from '$components/pages/settings_course_details';
@@ -242,11 +241,16 @@
 						<CourseDetailsTags courseId={fetchedCourse.id} bind:refresh={tagsRefresh} />
 					</div>
 
-					<CourseDetailsCard
-						courseId={fetchedCourse.id}
-						hasCard={fetchedCourse.hasCard}
-						bind:refresh={cardRefresh}
-					/>
+					<div class="order-1 md:order-2">
+						<CourseCard
+							courseId={fetchedCourse.id}
+							hasCard={fetchedCourse.hasCard}
+							bind:refresh={cardRefresh}
+							class="flex h-48 max-h-48 w-auto flex-col rounded-none"
+							imgClass="border-alt-1/60 mx-auto min-h-0 max-w-full rounded-lg border"
+							fallbackClass="bg-alt-1 inline-flex grow max-w-72 place-content-center items-center rounded-lg"
+						/>
+					</div>
 				</div>
 			</div>
 		</div>

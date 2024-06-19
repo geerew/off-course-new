@@ -85,6 +85,9 @@ const config = {
 						transform: 'translate3d(4px, 0, 0)'
 					}
 				}
+			},
+			animationDuration: {
+				'2.5s': '2.5s'
 			}
 		}
 	},
