@@ -237,7 +237,13 @@
 									</span>
 								{/if}
 
-								<CourseCard {course} />
+								<CourseCard
+									courseId={course.id}
+									hasCard={course.hasCard}
+									class="aspect-w-16 aspect-h-7 sm:aspect-w-16 sm:aspect-h-7"
+									imgClass="rounded-lg object-cover object-center sm:rounded-b-none md:object-top"
+									fallbackClass="bg-alt-1 inline-flex grow place-content-center items-center rounded-lg sm:rounded-b-none"
+								/>
 
 								<div class="flex h-full flex-grow flex-col justify-between p-2 text-sm">
 									<h3 class="group-hover:text-secondary font-semibold">

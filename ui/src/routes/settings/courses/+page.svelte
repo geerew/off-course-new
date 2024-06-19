@@ -393,7 +393,7 @@
 <div class="bg-background flex w-full flex-col gap-4 pb-10 pt-6">
 	<div class="container flex flex-col gap-5 md:gap-10">
 		{#await load}
-			<Loading />
+			<Loading class="max-h-96" />
 		{:then _}
 			<div class="flex w-full flex-row">
 				<div class="flex w-full flex-col gap-y-5 md:flex-row md:justify-between">

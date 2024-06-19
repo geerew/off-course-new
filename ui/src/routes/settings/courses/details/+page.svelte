@@ -101,7 +101,7 @@
 
 <div class="bg-background flex w-full flex-col gap-4 pb-10">
 	{#await coursePromise}
-		<Loading />
+		<Loading class="max-h-96" />
 	{:then _}
 		<!-- Course Details -->
 		<div class="bg-muted">

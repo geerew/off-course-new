@@ -182,7 +182,7 @@
 
 <div class="flex w-full flex-col">
 	{#await coursePromise}
-		<Loading />
+		<Loading class="max-h-96" />
 	{:then data}
 		<div class="flex h-full flex-col lg:container lg:flex-row lg:gap-10">
 			<CourseMenu title={data.title} id={data.id} {chapters} {selectedAsset} />

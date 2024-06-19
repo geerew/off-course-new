@@ -101,7 +101,7 @@
 		<!-- Courses -->
 		<div class="flex h-full w-full">
 			{#await courses}
-				<Loading />
+				<Loading class="max-h-96" />
 			{:then _}
 				{#if fetchedCourses && fetchedCourses.length === 0}
 					<div class="flex min-h-[6rem] w-full flex-grow flex-col items-center p-10">

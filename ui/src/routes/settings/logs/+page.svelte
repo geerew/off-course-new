@@ -148,7 +148,7 @@
 
 		<div class="flex h-full w-full flex-col">
 			{#await load}
-				<Loading />
+				<Loading class="max-h-96" />
 			{:then _}
 				<div class="flex flex-col gap-5">
 					<Table.Root {...$tableAttrs} class="min-w-[15rem] border-collapse">
