@@ -88,6 +88,8 @@
 - [x] Rework getting all courses to be more efficient
 - [x] Fix border in back button when adding courses (course selection)
 - [x] Use drawer for small screens
+- [ ] Fix drawer slider not showing on mobile
+- [ ] fix toast when adding courses on mobile. Hides bottom of the drawer
 
 ##### Details
 
