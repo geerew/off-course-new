@@ -12,6 +12,19 @@
 	import { toast } from 'svelte-sonner';
 
 	// ----------------------
+	// Interfaces
+	// ----------------------
+
+	interface $$Slots {
+		// we don't want to render a default slot
+		default: never;
+		// the named slot exposes no variables (use an empty object)
+		named: {};
+		// we have to use the `$$Slots` interface if we have two slots with the same name exposing differently typed props
+		trigger: { open: () => void };
+	}
+
+	// ----------------------
 	// Variables
 	// ----------------------
 
@@ -92,6 +105,12 @@
 	// ----------------------
 	// Functions
 	// ----------------------
+
+	function doOpen() {
+		open = true;
+	}
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Generic load function
 	async function load(path: string) {
@@ -272,6 +291,8 @@
 		}
 
 		dispatch('added');
+
+		open = false;
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -289,16 +310,18 @@
 	};
 </script>
 
-<Button
-	variant="outline"
-	class="bg-primary hover:bg-primary group flex h-8 w-36 gap-1.5 hover:brightness-110"
-	on:click={async () => {
-		open = true;
-	}}
->
-	<BookPlus class="size-4" />
-	<span>Add Courses</span>
-</Button>
+<slot name="trigger" open={doOpen}>
+	<Button
+		variant="outline"
+		class="bg-primary hover:bg-primary group flex h-8 w-36 gap-1.5 hover:brightness-110"
+		on:click={async () => {
+			open = true;
+		}}
+	>
+		<BookPlus class="size-4" />
+		<span>Add Courses</span>
+	</Button>
+</slot>
 
 <Dialog.Root bind:open closeOnEscape={false} closeOnOutsideClick={false}>
 	<Dialog.Content
