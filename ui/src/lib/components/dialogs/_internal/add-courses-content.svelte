@@ -318,7 +318,11 @@
 	</div>
 
 	<!-- Body -->
-	<div bind:this={body} class="flex min-h-[10rem] grow flex-col overflow-y-scroll" tabindex="-1">
+	<div
+		bind:this={body}
+		class="flex min-h-[10rem] grow flex-col overflow-x-hidden overflow-y-scroll"
+		tabindex="-1"
+	>
 		{#if loadingDrives}
 			<Loading />
 		{:else if errorMsg}
