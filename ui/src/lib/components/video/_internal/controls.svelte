@@ -13,26 +13,27 @@
 	// Variables
 	// ----------------------
 
-	let loadedSize = false;
-
 	// The breakpoint for md
 	const mdPx = +theme.screens.md.replace('px', '');
 
-	let largeLayout = true;
+	// True when the window size is < md
+	let isMobile: boolean | null = null;
+
+	// ----------------------
+	// Lifecycle
+	// ----------------------
 
 	onMount(() => {
-		largeLayout = window.innerWidth >= mdPx;
+		isMobile = window.innerWidth >= mdPx;
 		window.addEventListener('resize', () => {
-			largeLayout = window.innerWidth >= mdPx;
+			isMobile = window.innerWidth < mdPx;
 		});
-
-		loadedSize = true;
 	});
 </script>
 
-{#if loadedSize}
+{#if isMobile !== null}
 	<BufferingIndicator />
-	{#if !largeLayout}
+	{#if isMobile}
 		<!-- sm- -->
 		<media-controls
 			class="pointer-events-none absolute inset-0 z-10 flex h-full w-full flex-col opacity-0 transition-opacity data-[visible]:opacity-100 md:hidden"
@@ -41,7 +42,7 @@
 		>
 			<div class="basis-1/3 bg-gradient-to-b from-black/30 to-transparent pt-2">
 				<media-controls-group class="pointer-events-auto flex w-full items-center justify-end px-3">
-					<Settings isMobile={true} />
+					<Settings {isMobile} />
 				</media-controls-group>
 			</div>
 
@@ -90,7 +91,7 @@
 
 				<div class="flex-1" />
 
-				<Settings isMobile={false} />
+				<Settings {isMobile} />
 				<Fullscreen />
 			</media-controls-group>
 		</media-controls>

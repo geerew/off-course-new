@@ -87,7 +87,7 @@
 - [x] Rework into a dialog
 - [x] Rework getting all courses to be more efficient
 - [x] Fix border in back button when adding courses (course selection)
-- [ ] Use drawer for small screens
+- [x] Use drawer for small screens
 
 ##### Details
 
