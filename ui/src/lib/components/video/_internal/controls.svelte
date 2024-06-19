@@ -16,7 +16,7 @@
 	// The breakpoint for md
 	const mdPx = +theme.screens.md.replace('px', '');
 
-	// True when the window size is < md
+	// True when the window size is < md. Set once the window size is known, which happens in onMount
 	let isMobile: boolean | null = null;
 
 	// ----------------------
@@ -24,7 +24,7 @@
 	// ----------------------
 
 	onMount(() => {
-		isMobile = window.innerWidth >= mdPx;
+		isMobile = window.innerWidth < mdPx;
 		window.addEventListener('resize', () => {
 			isMobile = window.innerWidth < mdPx;
 		});
