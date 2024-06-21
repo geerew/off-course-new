@@ -14,7 +14,8 @@ const config = {
 		preprocess({
 			postcss: {
 				configFilePath: join(__dirname, 'postcss.config.cjs')
-			}
+			},
+			markupTagName: 'markup'
 		})
 	],
 	kit: {

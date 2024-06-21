@@ -1,7 +1,7 @@
 <div>
 	<!-- On single click, play/pause -->
 	<media-gesture
-		class="pointer-coarse:hidden absolute inset-0 z-0 block h-full w-full"
+		class="absolute inset-0 z-0 block h-full w-full group-data-[pointer=coarse]/player:hidden"
 		event="pointerup"
 		action="toggle:paused"
 		data-media-gesture=""
@@ -10,7 +10,7 @@
 
 	<!-- On single click, show controls -->
 	<media-gesture
-		class="pointer-fine:hidden absolute inset-0 z-0 block h-full w-full"
+		class="absolute inset-0 z-0 block h-full w-full group-data-[pointer=fine]/player:hidden"
 		event="pointerup"
 		action="toggle:controls"
 		data-media-gesture=""

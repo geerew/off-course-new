@@ -105,33 +105,11 @@
 					<media-slider-steps
 						class="absolute left-0 top-0 flex h-full w-full items-center justify-between"
 					>
-						<div
-							class="h-1.5 w-0.5 bg-white/50 opacity-0 transition-opacity group-data-[active]:opacity-100"
-						/>
-						<div
-							class="h-1.5 w-0.5 bg-white/50 opacity-0 transition-opacity group-data-[active]:opacity-100"
-						/>
-						<div
-							class="h-1.5 w-0.5 bg-white/50 opacity-0 transition-opacity group-data-[active]:opacity-100"
-						/>
-						<div
-							class="h-1.5 w-0.5 bg-white/50 opacity-0 transition-opacity group-data-[active]:opacity-100"
-						/>
-						<div
-							class="h-1.5 w-0.5 bg-white/50 opacity-0 transition-opacity group-data-[active]:opacity-100"
-						/>
-						<div
-							class="h-1.5 w-0.5 bg-white/50 opacity-0 transition-opacity group-data-[active]:opacity-100"
-						/>
-						<div
-							class="h-1.5 w-0.5 bg-white/50 opacity-0 transition-opacity group-data-[active]:opacity-100"
-						/>
-						<div
-							class="h-1.5 w-0.5 bg-white/50 opacity-0 transition-opacity group-data-[active]:opacity-100"
-						/>
-						<div
-							class="h-1.5 w-0.5 bg-white/50 opacity-0 transition-opacity group-data-[active]:opacity-100"
-						/>
+						<template>
+							<div
+								class="h-1.5 w-0.5 bg-white/50 opacity-0 transition-opacity group-data-[active]:opacity-100"
+							/>
+						</template>
 					</media-slider-steps>
 				</media-speed-slider>
 				<ChevronsRight class="size-4 text-white/70" />

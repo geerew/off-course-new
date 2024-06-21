@@ -23,6 +23,7 @@
 	// The settings menu element
 	let menuEl: HTMLDivElement;
 
+	// Whether the menu is open
 	let open = false;
 
 	// The current section of the menu
@@ -66,16 +67,18 @@
 		});
 
 		// Keep the controls open while the menu is open
-		const controlsUnsub = player.subscribe(({ controlsVisible }) => {
-			if (open && !controlsVisible) {
-				remote.toggleControls();
-			}
-		});
+		// const controlsUnsub = player.subscribe(({ controlsVisible }) => {
+		// 	console.log('constrols visible', controlsVisible, 'settings open', open);
+		// 	if (open && !controlsVisible) {
+		// 		console.log('toggling controls');
+		// 		remote.toggleControls();
+		// 	}
+		// });
 
 		// Unsubscribe
 		return () => {
 			playbackRateUnsub();
-			controlsUnsub();
+			// controlsUnsub();
 			remote.resumeControls();
 		};
 	});

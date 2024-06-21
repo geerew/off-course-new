@@ -1,16 +1,20 @@
 <script lang="ts">
 	import { ASSET_API, GetBackendUrl } from '$lib/api';
 	import type { Asset } from '$lib/types/models';
-	import { createEventDispatcher } from 'svelte';
-	import type {
-		MediaDurationChangeEvent,
-		MediaSourceChangeEvent,
-		MediaTimeUpdateEvent
+	import { createEventDispatcher, onMount } from 'svelte';
+	import theme from 'tailwindcss/defaultTheme';
+	import {
+		type MediaDurationChangeEvent,
+		type MediaSourceChangeEvent,
+		type MediaTimeUpdateEvent
 	} from 'vidstack';
 	import 'vidstack/bundle';
-	import type { MediaPlayerElement } from 'vidstack/elements';
-	import Controls from './_internal/controls.svelte';
+	import type { MediaLayoutElement, MediaPlayerElement } from 'vidstack/elements';
+	import 'vidstack/icons';
+	import BufferingIndicator from './_internal/components/buffering-indicator.svelte';
 	import Gestures from './_internal/gestures.svelte';
+	import MobileControlsLayout from './_internal/mobile-controls-layout.svelte';
+	import NormalControlsLayout from './_internal/normal-controls-layout.svelte';
 	import { preferences } from './_internal/store';
 
 	// ----------------------
@@ -28,6 +32,8 @@
 
 	// The player element
 	let player: MediaPlayerElement;
+	let normalLayout: MediaLayoutElement;
+	let mobileLayout: MediaLayoutElement;
 
 	const dispatch = createEventDispatcher<Record<'progress' | 'complete', number>>();
 	const dispatchNext = createEventDispatcher();
@@ -43,6 +49,9 @@
 
 	// Set by the player
 	let duration = -1;
+
+	// The breakpoint for md
+	const mdPx = +theme.screens.md.replace('px', '');
 
 	// ----------------------
 	// Functions
@@ -115,6 +124,27 @@
 			dispatch('progress', currentSecond);
 		}
 	}
+
+	// $: if (layout) {
+	// 	layout.when = (all) => {
+	// 		console.log(all);
+	// 		return true;
+	// 	};
+	// }
+
+	onMount(() => {
+		if (!normalLayout) return;
+
+		normalLayout.when = () => {
+			return window.innerWidth >= mdPx;
+		};
+
+		window.addEventListener('resize', () => {
+			normalLayout.when = () => {
+				return window.innerWidth >= mdPx;
+			};
+		});
+	});
 </script>
 
 <media-player
@@ -139,6 +169,11 @@
 	class="group/player"
 >
 	<media-provider />
+
 	<Gestures />
-	<Controls />
+
+	<BufferingIndicator />
+
+	<NormalControlsLayout />
+	<MobileControlsLayout />
 </media-player>

@@ -1,9 +1,9 @@
 <media-time-slider
-	class="group relative mx-[7.5px] inline-flex h-10 w-full cursor-pointer touch-none select-none items-center outline-none aria-hidden:hidden"
+	class="group relative mx-[7.5px] inline-flex h-6 w-full cursor-pointer touch-none select-none items-center outline-none aria-hidden:hidden"
 >
 	<!-- Track -->
 	<div
-		class="relative z-0 h-[5px] w-full rounded-sm bg-white/30 ring-sky-400 group-data-[focus]:ring-[3px]"
+		class="duration-250 relative z-0 h-[3px] w-full rounded-sm bg-white/30 ring-sky-400 transition-[height] group-hover:h-[9px] group-data-[focus]:ring-[3px]"
 	>
 		<!-- Progress -->
 		<div
@@ -12,7 +12,7 @@
 
 		<!-- Fill -->
 		<div
-			class="bg-secondary absolute z-[11] h-full w-[var(--slider-fill)] rounded-sm will-change-[width]"
+			class="bg-primary absolute z-[11] h-full w-[var(--slider-fill)] rounded-sm will-change-[width]"
 		/>
 	</div>
 
