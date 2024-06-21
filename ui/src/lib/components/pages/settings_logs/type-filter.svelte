@@ -73,7 +73,6 @@
 			{:then _}
 				<div class="max-h-40 overflow-y-scroll">
 					{#each workingTypes as t}
-						<!---->
 						<DropdownMenu.CheckboxItem
 							class="data-[highlighted]:bg-alt-1/40 cursor-pointer"
 							checked={filterTypes.find((type) => type === t) ? true : false}

@@ -25,9 +25,10 @@
 ### Home
 
 - [x] Fix Load More border in carousel
-- [ ] Landing page when there are no courses added
+- [x] Landing page when there are no courses added
 - [ ] Hide ongoing when there are no ongoing courses
 - [ ] New courses timestamp should be created_at
+- [ ] Get image for landing page 
 
 #### Categories
 
@@ -56,6 +57,12 @@
 -  [x] Add gradient to top of controls when on mobile
 -  [x] Store state in local storage
 -  [x] Rework mobile settings to use shadcn drawer
+-  [x] Show rewind and forward buttons on xs and sm
+-  [x] Add support for replay 
+-  [ ] Store the volume in local storage
+-  [ ] Show volume control on xs, sm when the data-pointer is fine
+-  [x] On mobile, when the video is playing, clicking the video, when controls are hidden, should show 
+       the controls
 -  [ ] When video becomes unavailable, fix toast so it doesn't show again and again and show a message on
        the video saying unavailable
 
@@ -129,6 +136,10 @@
 - [x] Add a separate logs DB
 - [x] Update all logs (remove zerolog)
 - [ ] Support removing logs after n days
+  
+### Tags
+
+- [ ] Currently uppercase and lowercase tags are different and so uppercase are ordered first. Make them case insensitive
 
 ### Assets and Attachments
 

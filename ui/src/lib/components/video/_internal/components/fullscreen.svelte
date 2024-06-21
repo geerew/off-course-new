@@ -7,8 +7,8 @@
 		<media-fullscreen-button
 			class="hover:text-secondary relative inline-flex cursor-pointer items-center justify-center rounded-md outline-none ring-inset ring-sky-400 data-[focus]:ring-4"
 		>
-			<Maximize class="size-5 stroke-2 group-data-[fullscreen]/player:hidden sm:size-6" />
-			<Minimize class="hidden size-5 stroke-2 group-data-[fullscreen]/player:block sm:size-6" />
+			<Maximize class="not-media-fullscreen:block hidden size-5 stroke-2 sm:size-6" />
+			<Minimize class="media-fullscreen:block hidden size-5 stroke-2 sm:size-6" />
 		</media-fullscreen-button>
 	</media-tooltip-trigger>
 	<media-tooltip-content
@@ -16,7 +16,7 @@
 		placement="top end"
 		offset={10}
 	>
-		<span class="group-data-[fullscreen]/player:hidden">Fullscreen</span>
-		<span class="hidden group-data-[fullscreen]/player:block">Exit Fullscreen</span>
+		<span class="not-media-fullscreen:block hidden">Fullscreen</span>
+		<span class="media-fullscreen:block hidden">Exit Fullscreen</span>
 	</media-tooltip-content>
 </media-tooltip>

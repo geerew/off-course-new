@@ -45,7 +45,6 @@
 	>
 		<div class="max-h-40 overflow-y-scroll">
 			{#each Object.values(LogLevel) as l}
-				<!---->
 				<DropdownMenu.CheckboxItem
 					class="data-[highlighted]:bg-alt-1/40 cursor-pointer"
 					checked={filterLevels.find((level) => level === l) ? true : false}

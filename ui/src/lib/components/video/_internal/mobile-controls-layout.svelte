@@ -5,6 +5,8 @@
 	import 'vidstack/icons';
 	import Fullscreen from './components/fullscreen.svelte';
 	import PlayBig from './components/play-big.svelte';
+	import SeekBackward from './components/seek-backward.svelte';
+	import SeekForward from './components/seek-forward.svelte';
 	import Settings from './components/settings.svelte';
 	import TimeSlider from './components/time-slider.svelte';
 	import Timestamp from './components/timestamp.svelte';
@@ -55,21 +57,9 @@
 		<media-controls-group
 			class="pointer-events-auto flex w-full basis-6/12 place-content-center items-center gap-5 sm:gap-8"
 		>
-			<media-seek-button
-				class="hover:text-secondary relative inline-flex size-8 cursor-pointer items-center justify-center rounded-md bg-black/30 outline-none ring-inset ring-sky-400 hover:bg-white/20 aria-hidden:hidden data-[focus]:ring-4 sm:size-10"
-				seconds={-10}
-			>
-				<media-icon type="seek-backward-10" class="size-8 sm:size-10"></media-icon>
-			</media-seek-button>
-
+			<SeekBackward />
 			<PlayBig />
-
-			<media-seek-button
-				class="hover:text-secondary relative inline-flex size-8 cursor-pointer items-center justify-center rounded-md bg-black/30 outline-none ring-inset ring-sky-400 hover:bg-white/20 aria-hidden:hidden data-[focus]:ring-4 sm:size-10"
-				seconds={10}
-			>
-				<media-icon type="seek-forward-10" class="size-8 sm:size-10"></media-icon>
-			</media-seek-button>
+			<SeekForward />
 		</media-controls-group>
 
 		<media-controls-group

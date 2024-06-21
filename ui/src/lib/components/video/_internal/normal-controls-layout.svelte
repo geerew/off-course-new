@@ -53,7 +53,7 @@
 		</media-controls-group>
 
 		<media-controls-group
-			class="pointer-events-auto relative z-20 flex w-full items-center gap-6 pb-3 pl-4 pr-5 pt-1"
+			class="pointer-events-auto relative z-20 flex w-full items-center gap-5 pb-3 pl-4 pr-5 pt-1"
 		>
 			<Play />
 			<Volume />
