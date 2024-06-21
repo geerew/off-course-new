@@ -125,13 +125,6 @@
 		}
 	}
 
-	// $: if (layout) {
-	// 	layout.when = (all) => {
-	// 		console.log(all);
-	// 		return true;
-	// 	};
-	// }
-
 	onMount(() => {
 		if (!normalLayout) return;
 

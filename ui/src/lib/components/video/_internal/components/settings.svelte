@@ -66,19 +66,9 @@
 			preferences.set({ ...$preferences, playbackRate: playbackRate });
 		});
 
-		// Keep the controls open while the menu is open
-		// const controlsUnsub = player.subscribe(({ controlsVisible }) => {
-		// 	console.log('constrols visible', controlsVisible, 'settings open', open);
-		// 	if (open && !controlsVisible) {
-		// 		console.log('toggling controls');
-		// 		remote.toggleControls();
-		// 	}
-		// });
-
 		// Unsubscribe
 		return () => {
 			playbackRateUnsub();
-			// controlsUnsub();
 			remote.resumeControls();
 		};
 	});
