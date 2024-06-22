@@ -51,29 +51,33 @@
 - [x] When moving to the prev/next course, scroll to that item in the normal menu
 - [ ] When a course is unavailable, show a message saying unavailable
 - [ ] Support PDF
+- [ ] Show 'scanning' loading page when a course is first added and scanning is in progress'
 
 #### Video
--  [x] Settings; auto play, auto next
--  [x] Add gradient to top of controls when on mobile
--  [x] Store state in local storage
--  [x] Rework mobile settings to use shadcn drawer
--  [x] Show rewind and forward buttons on xs and sm
--  [x] Add support for replay 
--  [ ] Store the volume in local storage
--  [ ] Show volume control on xs, sm when the data-pointer is fine
--  [x] On mobile, when the video is playing, clicking the video, when controls are hidden, should show 
+- [x] Settings; auto play, auto next
+- [x] Add gradient to top of controls when on mobile
+- [x] Store state in local storage
+- [x] Rework mobile settings to use shadcn drawer
+- [x] Show rewind and forward buttons on xs and sm
+- [x] Add support for replay 
+- [x] Store the volume in local storage
+- [ ] Show volume control on xs, sm when the data-pointer is fine
+- [ ] Fix error on md+ settings. Error in console
+- [x] On mobile, when the video is playing, clicking the video, when controls are hidden, should show 
        the controls
--  [ ] When video becomes unavailable, fix toast so it doesn't show again and again and show a message on
-       the video saying unavailable
+- [ ] When video becomes unavailable, fix toast so it doesn't show again and again and show a message on
+      the video saying unavailable
+- [x] When the `autoplay next` is enabled, and the time slider is dragged to the end, it sometimes loads next + 1
+      It does not happened when the video ends naturally
 
 #### Mobile
--  [x] Add `x` to menu
--  [x] Close when menu item is clicked
--  [x] When opening the menu, scroll to the selected menu item
--  [x] Make the prev/next buttons use `flex-col` and take up 4/5 of the left/right side
--  [x] Add fade to top and bottom of menu
--  [ ] Fix prev/next button. It stays highlighted after being clicked
--  [ ] Sometimes the menu opens and is empty. A quick scroll fixes things
+- [x] Add `x` to menu
+- [x] Close when menu item is clicked
+- [x] When opening the menu, scroll to the selected menu item
+- [x] Make the prev/next buttons use `flex-col` and take up 4/5 of the left/right side
+- [x] Add fade to top and bottom of menu
+- [ ] Fix prev/next button. It stays highlighted after being clicked
+- [ ] Sometimes the menu opens and is empty. A quick scroll fixes things
 
 ### Settings
 

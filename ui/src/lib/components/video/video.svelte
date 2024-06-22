@@ -47,6 +47,10 @@
 	// Set by the player
 	let duration = -1;
 
+	// When loading the component store the local storage volume in a variable. We do this because vidstack tries to set it
+	// to 1 initially, triggering a volume change event, which result in the local storage volume being set to 1
+	let storageVolume = $preferences.volume ?? 1;
+
 	// ----------------------
 	// Functions
 	// ----------------------
@@ -129,13 +133,14 @@
 		src: GetBackendUrl(ASSET_API) + '/' + src + '/serve',
 		type: 'video/mp4'
 	}}
+	volume={storageVolume}
+	muted={$preferences.muted}
 	on:source-change={srcChange}
 	on:can-play={canPlay}
 	on:duration-change={durationChange}
 	on:time-update={timeChange}
-	on:ended={(e) => {
-		if (!player) return;
-		if (nextAsset && $preferences.autoloadNext && player.duration !== 0) {
+	on:ended={() => {
+		if (player && nextAsset && $preferences.autoloadNext && player.duration !== 0) {
 			dispatchNext('next');
 		}
 	}}

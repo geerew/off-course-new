@@ -1,10 +1,41 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
+	import { onMount } from 'svelte';
+	import { MediaRemoteControl } from 'vidstack';
+	import { preferences } from '../store';
 
+	// ----------------------
+	// Variables
+	// ----------------------
+
+	const remote = new MediaRemoteControl();
+
+	// The volume element
+	let volumeEl: HTMLDivElement;
+
+	// True when the volume slider is hovered. Used to show/hide the slider
 	let isHovered = false;
+
+	onMount(() => {
+		// Find the player
+		const player = remote.getPlayer(volumeEl);
+		if (!player) return;
+
+		// Set the playback rate
+		const volumeUnsub = player.subscribe(({ volume, muted }) => {
+			preferences.set({ ...$preferences, volume, muted });
+		});
+
+		// Unsubscribe
+		return () => {
+			volumeUnsub();
+			remote.resumeControls();
+		};
+	});
 </script>
 
 <div
+	bind:this={volumeEl}
 	class="inline-flex"
 	role="button"
 	tabindex="0"
