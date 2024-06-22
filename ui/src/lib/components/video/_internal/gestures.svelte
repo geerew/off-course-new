@@ -1,5 +1,5 @@
 <div>
-	<!-- On single click, play/pause -->
+	<!-- On single click, play/pause (Hidden on mobile) -->
 	<media-gesture
 		class="absolute inset-0 z-0 block h-full w-full group-data-[pointer=coarse]/player:hidden"
 		event="pointerup"
@@ -8,7 +8,7 @@
 		style="pointer-events: none;"
 	/>
 
-	<!-- On single click, show controls -->
+	<!-- On single click, show controls (hidden on non-mobile)-->
 	<media-gesture
 		class="absolute inset-0 z-0 block h-full w-full group-data-[pointer=fine]/player:hidden"
 		event="pointerup"

@@ -139,6 +139,7 @@
 			dispatchNext('next');
 		}
 	}}
+	class="group/player"
 >
 	<media-provider />
 
