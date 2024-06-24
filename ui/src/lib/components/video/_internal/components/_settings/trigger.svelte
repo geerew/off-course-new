@@ -19,7 +19,7 @@
 		viewBox="0 0 24 24"
 		stroke="currentColor"
 		stroke-width="2"
-		class="group-hover:fill-secondary size-7 fill-white stroke-[1] duration-200 group-data-[open]:rotate-90"
+		class="group-hover:fill-secondary size-6 fill-white stroke-[1] duration-200 group-data-[open]:rotate-90"
 		xmlns="http://www.w3.org/2000/svg"
 	>
 		<path

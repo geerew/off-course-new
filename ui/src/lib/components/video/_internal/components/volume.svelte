@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
 	import { onMount } from 'svelte';
-	import { MediaRemoteControl } from 'vidstack';
+	import { fade } from 'svelte/transition';
+	import theme from 'tailwindcss/defaultTheme';
+	import { MediaRemoteControl, type SliderOrientation } from 'vidstack';
+	import type { MediaVolumeSliderElement } from 'vidstack/elements';
 	import { preferences } from '../store';
 
 	// ----------------------
@@ -13,10 +16,38 @@
 	// The volume element
 	let volumeEl: HTMLDivElement;
 
-	// True when the volume slider is hovered. Used to show/hide the slider
-	let isHovered = false;
+	// True when the volume slider should be shown
+	let show = false;
+
+	// Used to determine the orientation of the slider
+	const mdPx = +theme.screens.md.replace('px', '');
+
+	// The orientation of the slider. Based on the window width this will either be 'vertical'
+	// or 'horizontal'
+	let orientation: SliderOrientation;
+
+	let verticalSliderEl: MediaVolumeSliderElement;
+
+	// ----------------------
+	// Functions
+	// ----------------------
+
+	// Hide the vertical slider when the user clicks outside of the volume element
+	function hideVerticalSlider(e: MouseEvent) {
+		if (!volumeEl || !verticalSliderEl) return;
+
+		if (!verticalSliderEl.hasAttribute('data-dragging') && !volumeEl.contains(e.target as Node)) {
+			show = false;
+		}
+	}
+
+	// ----------------------
+	// Lifecycle
+	// ----------------------
 
 	onMount(() => {
+		orientation = window.innerWidth < mdPx ? 'vertical' : 'horizontal';
+
 		// Find the player
 		const player = remote.getPlayer(volumeEl);
 		if (!player) return;
@@ -26,26 +57,38 @@
 			preferences.set({ ...$preferences, volume, muted });
 		});
 
+		document.addEventListener('mouseup', hideVerticalSlider);
+
 		// Unsubscribe
 		return () => {
 			volumeUnsub();
-			remote.resumeControls();
+			document.removeEventListener('mouseup', hideVerticalSlider);
 		};
 	});
 </script>
 
+<!-- Update the orientation as the window size changes -->
+<svelte:window
+	on:resize={() => {
+		orientation = window.innerWidth < mdPx ? 'vertical' : 'horizontal';
+	}}
+/>
+
 <div
 	bind:this={volumeEl}
-	class="inline-flex"
+	class={cn('relative inline-flex group-data-[pointer=coarse]/player:hidden')}
 	role="button"
 	tabindex="0"
 	aria-haspopup="true"
-	aria-expanded={isHovered}
+	aria-expanded={show}
 	on:mouseenter={() => {
-		isHovered = true;
+		show = true;
 	}}
 	on:mouseleave={() => {
-		isHovered = false;
+		if (orientation === 'horizontal') show = false;
+		else {
+			if (verticalSliderEl && !verticalSliderEl.hasAttribute('data-dragging')) show = false;
+		}
 	}}
 >
 	<!-- Volume/mute -->
@@ -107,35 +150,107 @@
 		</svg>
 	</media-mute-button>
 
-	<!-- Volume slider -->
-	<media-volume-slider
-		class={cn(
-			'group relative inline-flex w-0 cursor-pointer touch-none select-none items-center outline-none transition-all duration-200',
-			isHovered && 'ml-3.5 w-20'
-		)}
-	>
-		<!-- Track -->
-		<div
-			class="relative z-0 h-[5px] w-full rounded-sm bg-white/30 ring-sky-400 group-data-[focus]:ring-[3px]"
+	{#if orientation === 'horizontal'}
+		<media-volume-slider
+			class={cn(
+				'group relative inline-flex w-0 cursor-pointer touch-none select-none items-center outline-none transition-all duration-200',
+				show && 'ml-3.5 w-20'
+			)}
+			orientation="horizontal"
 		>
-			<!-- Fill -->
+			<!-- Track -->
 			<div
-				class="bg-secondary absolute h-full w-[var(--slider-fill)] rounded-sm will-change-[width]"
-			/>
-		</div>
+				class="relative z-0 h-[5px] w-full rounded-sm bg-white/30 ring-sky-400 group-data-[focus]:ring-[3px]"
+			>
+				<!-- Fill -->
+				<div
+					class="bg-secondary absolute h-full w-[var(--slider-fill)] rounded-sm will-change-[width]"
+				/>
+			</div>
 
-		<!-- Thumb -->
+			<!-- Thumb -->
+			<div
+				class="absolute left-[var(--slider-fill)] top-1/2 z-20 h-[15px] w-[15px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#cacaca] bg-white opacity-0 ring-white/40 transition-opacity will-change-[left] group-data-[active]:opacity-100 group-data-[dragging]:ring-4"
+			/>
+
+			<media-slider-preview
+				class="pointer-events-none flex flex-col items-center opacity-0 transition-opacity duration-200 data-[visible]:opacity-100"
+				noClamp={false}
+			>
+				<media-slider-value
+					class="rounded-sm bg-white px-2 py-px text-[13px] font-medium text-black"
+				/>
+			</media-slider-preview>
+		</media-volume-slider>
+	{:else if show}
+		<!-- gap -->
 		<div
-			class="absolute left-[var(--slider-fill)] top-1/2 z-20 h-[15px] w-[15px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#cacaca] bg-white opacity-0 ring-white/40 transition-opacity will-change-[left] group-data-[active]:opacity-100 group-data-[dragging]:ring-4"
+			class={cn(
+				'after:absolute after:-bottom-2 after:left-1/2 after:h-3 after:w-10 after:-translate-x-1/2 after:cursor-auto'
+			)}
 		/>
-
-		<media-slider-preview
-			class="pointer-events-none flex flex-col items-center opacity-0 transition-opacity duration-200 data-[visible]:opacity-100"
-			noClamp={false}
+		<!-- Slider Popover -->
+		<div
+			class={cn(
+				'bg-background absolute left-1/2 top-8 flex h-28 w-10 -translate-x-1/2 cursor-auto place-content-center place-items-center items-center rounded-md border py-3'
+			)}
+			transition:fade={{ duration: 150 }}
 		>
-			<media-slider-value
-				class="rounded-sm bg-white px-2 py-px text-[13px] font-medium text-black"
-			/>
-		</media-slider-preview>
-	</media-volume-slider>
+			<media-volume-slider
+				class="group relative my-[7.5px] inline-flex h-full w-full cursor-pointer touch-none select-none place-content-center items-center outline-none aria-hidden:hidden"
+				orientation="vertical"
+				bind:this={verticalSliderEl}
+			>
+				<!-- Track -->
+				<div
+					class="relative z-0 h-full w-[5px] rounded-sm bg-white/30 ring-sky-400 group-data-[focus]:ring-[3px]"
+				>
+					<!-- Fill -->
+					<div
+						class="bg-secondary absolute bottom-0 h-[var(--slider-fill)] w-full rounded-sm will-change-[height]"
+					/>
+				</div>
+
+				<!-- Thumb -->
+				<div
+					class="absolute bottom-[var(--slider-fill)] left-1/2 z-20 h-[15px] w-[15px] -translate-x-1/2 translate-y-1/2 rounded-full border border-[#cacaca] bg-white opacity-0 ring-white/40 transition-opacity will-change-[bottom] group-data-[active]:opacity-100 group-data-[dragging]:ring-4"
+				/>
+
+				<media-slider-preview
+					class="pointer-events-none flex flex-col items-center opacity-0 transition-opacity duration-200 data-[visible]:opacity-100"
+					noClamp
+					offset={-85}
+				>
+					<media-slider-value
+						class="rounded-sm bg-white px-2 py-px text-[13px] font-medium text-black"
+					/>
+				</media-slider-preview>
+			</media-volume-slider>
+		</div>
+	{/if}
 </div>
+
+<!-- <media-volume-slider
+	class="group relative my-[7.5px] inline-flex h-full max-h-[80px] w-10 cursor-pointer touch-none select-none items-center outline-none aria-hidden:hidden"
+	orientation="vertical"
+>
+	<div
+		class="relative z-0 h-full w-[5px] rounded-sm bg-white/30 ring-sky-400 group-data-[focus]:ring-[3px]"
+	>
+		<div
+			class="absolute bottom-0 h-[var(--slider-fill)] w-full rounded-sm bg-indigo-400 will-change-[height]"
+		></div>
+	</div>
+
+	<media-slider-preview
+		class="pointer-events-none flex flex-col items-center opacity-0 transition-opacity duration-200 data-[visible]:opacity-100"
+		noClamp
+	>
+		<media-slider-value class="rounded-sm bg-black px-2 py-px text-[13px] font-medium text-white"
+		></media-slider-value>
+	</media-slider-preview>
+
+	<div
+		class="absolute bottom-[var(--slider-fill)] left-1/2 z-20 h-[15px] w-[15px] -translate-x-1/2 translate-y-1/2 rounded-full border border-[#cacaca] bg-white opacity-0 ring-white/40 transition-opacity will-change-[bottom] group-data-[active]:opacity-100 group-data-[dragging]:ring-4"
+	></div>
+</media-volume-slider> -->

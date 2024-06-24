@@ -28,7 +28,7 @@
 - [x] Landing page when there are no courses added
 - [ ] Hide ongoing when there are no ongoing courses
 - [ ] New courses timestamp should be created_at
-- [ ] Get image for landing page 
+- [ ] Get image for landing page
 
 #### Categories
 
@@ -54,23 +54,25 @@
 - [ ] Show 'scanning' loading page when a course is first added and scanning is in progress'
 
 #### Video
+
 - [x] Settings; auto play, auto next
 - [x] Add gradient to top of controls when on mobile
 - [x] Store state in local storage
 - [x] Rework mobile settings to use shadcn drawer
 - [x] Show rewind and forward buttons on xs and sm
-- [x] Add support for replay 
+- [x] Add support for replay
 - [x] Store the volume in local storage
-- [ ] Show volume control on xs, sm when the data-pointer is fine
+- [x] Show volume control on xs, sm when the data-pointer is fine
 - [x] Fix error on md+ settings. Error in console
-- [x] On mobile, when the video is playing, clicking the video, when controls are hidden, should show 
+- [x] On mobile, when the video is playing, clicking the video, when controls are hidden, should show
        the controls
+- [x] When the `autoplay next` is enabled, and the time slider is dragged to the end, it sometimes loads
+      next + 1. It does not happened when the video ends naturally
 - [ ] When video becomes unavailable, fix toast so it doesn't show again and again and show a message on
       the video saying unavailable
-- [x] When the `autoplay next` is enabled, and the time slider is dragged to the end, it sometimes loads next + 1
-      It does not happened when the video ends naturally
 
 #### Mobile
+
 - [x] Add `x` to menu
 - [x] Close when menu item is clicked
 - [x] When opening the menu, scroll to the selected menu item
@@ -140,7 +142,7 @@
 - [x] Add a separate logs DB
 - [x] Update all logs (remove zerolog)
 - [ ] Support removing logs after n days
-  
+
 ### Tags
 
 - [ ] Currently uppercase and lowercase tags are different and so uppercase are ordered first. Make them case insensitive

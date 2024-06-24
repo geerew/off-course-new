@@ -10,6 +10,7 @@
 	import Settings from './components/settings.svelte';
 	import TimeSlider from './components/time-slider.svelte';
 	import Timestamp from './components/timestamp.svelte';
+	import Volume from './components/volume.svelte';
 
 	// ----------------------
 	// Variables
@@ -49,9 +50,10 @@
 	>
 		<!--  Top 1/3 -->
 		<media-controls-group
-			class="pointer-events-auto flex w-full basis-3/12 items-start justify-end px-3 pt-2"
+			class="pointer-events-auto flex w-full basis-3/12 items-start justify-end gap-5 px-3 pt-2"
 		>
 			<Settings isMobile={true} />
+			<Volume />
 		</media-controls-group>
 
 		<media-controls-group

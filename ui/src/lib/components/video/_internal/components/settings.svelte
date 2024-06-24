@@ -59,7 +59,6 @@
 	onMount(() => {
 		// Find the player
 		const player = remote.getPlayer(menuEl);
-		console.log();
 		if (!player) return;
 
 		// Set the playback rate
