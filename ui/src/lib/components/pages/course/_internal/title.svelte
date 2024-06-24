@@ -30,7 +30,7 @@
 				: asset.assetType === 'html'
 					? FileCode
 					: FileText}
-			class="size-6 stroke-[1]"
+			class="size-6 shrink-0 stroke-[1]"
 		/>
 		<span class="text-lg font-medium">{asset.title}</span>
 	</div>
