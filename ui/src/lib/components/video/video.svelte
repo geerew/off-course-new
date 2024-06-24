@@ -144,6 +144,18 @@
 			dispatchNext('next');
 		}
 	}}
+	on:controls-change={(e) => {
+		if (!player) return;
+
+		const pointerValue = player.getAttribute('data-pointer');
+		if (e.detail && pointerValue === 'coarse') {
+			setTimeout(() => {
+				if (player && pointerValue === 'coarse') {
+					player.remoteControl.resumeControls();
+				}
+			}, 2500);
+		}
+	}}
 	class="group/player"
 >
 	<media-provider />
