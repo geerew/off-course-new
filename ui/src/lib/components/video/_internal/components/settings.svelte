@@ -59,6 +59,7 @@
 	onMount(() => {
 		// Find the player
 		const player = remote.getPlayer(menuEl);
+		console.log();
 		if (!player) return;
 
 		// Set the playback rate
@@ -111,6 +112,7 @@
 	{:else}
 		<DropdownMenu.Root
 			bind:open
+			portal={null}
 			closeOnItemClick={false}
 			typeahead={false}
 			onOpenChange={(o) => {

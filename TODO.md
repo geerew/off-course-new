@@ -62,7 +62,7 @@
 - [x] Add support for replay 
 - [x] Store the volume in local storage
 - [ ] Show volume control on xs, sm when the data-pointer is fine
-- [ ] Fix error on md+ settings. Error in console
+- [x] Fix error on md+ settings. Error in console
 - [x] On mobile, when the video is playing, clicking the video, when controls are hidden, should show 
        the controls
 - [ ] When video becomes unavailable, fix toast so it doesn't show again and again and show a message on
