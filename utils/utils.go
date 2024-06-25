@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"reflect"
 	"strconv"
-	"time"
 
 	"github.com/geerew/off-course/utils/appFs"
 )
@@ -24,17 +23,6 @@ import (
 func PrettyFormat(x any) string {
 	b, _ := json.MarshalIndent(x, "", "  ")
 	return string(b)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// TimeTrack is a function that receives a time value and a name string,
-// calculates the time elapsed since the provided time, and then prints
-// out the name and elapsed time. It is used for simple performance profiling
-// of code sections.
-func TimeTrack(start time.Time, name string) {
-	elapsed := time.Since(start)
-	fmt.Printf("name: %s, elapsed: %s\n", name, elapsed)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -88,19 +76,19 @@ func EncodeString(p string) string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// DiffStructsByKey takes in two slices of type T (left and right) and a key (string) as arguments.
-// The key defines the which key to use when comparing.
+// DiffSliceOfStructsByKey takes in two slices of type T (left and right) and a key (string) as
+// arguments. The key defines the which key to use when comparing.
 //
 // It returns two slices:
-//   - Items in the left slice that are not in the right slice based on the provided key.
-//   - Items in the right slice that are not in the left slice based on the provided key.
+//   - Items in the left slice that are not in the right slice based on the provided key
+//   - Items in the right slice that are not in the left slice based on the provided key
 //
-// If both left and right slices are empty, nil and nil is returned.
-// If left is empty and right is not, nil and the entire right slice are returned.
-// If right is empty and left is not, the entire left slice and nil are returned.
+// If both left and right slices are empty, nil and nil is returned
+// If left is empty and right is not, nil and the entire right slice are returned
+// If right is empty and left is not, the entire left slice and nil are returned
 //
 // When either left or right is not a struct or the key is not a valid key for the struct,
-// nil and nil are returned.
+// nil and nil are returned
 //
 // The function uses maps to optimize lookup operations and determine differences between the
 // slices
@@ -164,29 +152,16 @@ func DiffSliceOfStructsByKey[T any](left, right []T, key string) ([]T, []T, erro
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// CompareStructs compares two structs and returns true if they are equal, ignoring the specified keys. It
-// also supports comparing nested structs
+// CompareStructs compares deeply nested structs, returning true if they are equal. It can also
+// ignore specified keys during the comparison
 //
 // Parameters:
-// - a: The first struct to compare. Can be a struct or a pointer to a struct
-// - b: The second struct to compare. Can be a struct or a pointer to a struct
+// - a: The first struct to compare (struct or a pointer to a struct)
+// - b: The second struct to compare (struct or a pointer to a struct)
 // - ignoreKeys: A slice of strings representing the field names to ignore during the comparison
 //
 // Returns:
-// - true if the structs are equal (ignoring the specified keys), false otherwise
-//
-// The function works as follows:
-//  1. It checks if the types of a and b are the same. If not, it returns false
-//  2. It dereferences pointers to structs, if necessary, so that it can work with the actual structs
-//  3. It ensures that a and b are structs. If they are not, it returns false
-//  4. It creates a map from the ignoreKeys slice for quick lookup of keys to ignore
-//  5. It iterates over the fields of struct a, skipping any fields that are in the ignoreKeys map or are
-//     unexported
-//  6. For each field, it checks if the corresponding field exists in struct b. If not, it returns false
-//  7. If a field is itself a struct, it recursively calls CompareStructs to compare the nested structs
-//  8. For non-struct fields, it uses reflect.DeepEqual to check if the field values are equal. If any field
-//     values are not equal, it returns false
-//  9. If all fields (except the ignored ones) are equal, it returns true
+// - true if the structs are equal, false otherwise
 func CompareStructs(a, b interface{}, ignoreKeys []string) bool {
 	if reflect.TypeOf(a) != reflect.TypeOf(b) {
 		return false
@@ -260,6 +235,8 @@ func IsStructWithKey(value any, key string) bool {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// ValueToString converts a reflect.Value to a string. It supports basic types like
+// int, uint, float, string, and bool. For other types, it returns an empty string
 func ValueToString(v reflect.Value) string {
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -281,7 +258,7 @@ func ValueToString(v reflect.Value) string {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Map is a generic function that takes a slice of type T and a function that
-// maps T to type V. It returns a new slice of type V with the mapped values.
+// maps T to type V. It returns a new slice of type V with the mapped values
 func Map[T, V any](ts []T, fn func(T) V) []V {
 	result := make([]V, len(ts))
 	for i, t := range ts {
@@ -292,9 +269,9 @@ func Map[T, V any](ts []T, fn func(T) V) []V {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// partialHash is a function that receives a file path and a chunk size as arguments and
+// PartialHash is a function that receives a file path and a chunk size as arguments and
 // returns a partial hash of the file, by reading the first, middle, and last
-// chunks of the file, as well as two random chunks, and hashes them together.
+// chunks of the file, as well as two random chunks, and hashes them together
 //
 // It uses the SHA-256 hashing algorithm from the standard library to calculate the hash
 func PartialHash(appFs *appFs.AppFs, filePath string, chunkSize int64) (string, error) {
