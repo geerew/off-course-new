@@ -2,13 +2,15 @@
 	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
-	import type { Course } from '$lib/types/models';
+	import { cn } from '$lib/utils';
 	import { createEventDispatcher } from 'svelte';
+	import type { Writable } from 'svelte/store';
 
 	// ----------------------
 	// Exports
 	// ----------------------
-	export let course: Course;
+	export let courseId: string;
+	export let scanning: Writable<boolean>;
 
 	// ----------------------
 	// Variables
@@ -28,7 +30,7 @@
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content class="flex flex-col text-sm" align="end" fitViewport={true}>
-		<DropdownMenu.Item class="cursor-pointer gap-2.5" href="/course?id={course.id}">
+		<DropdownMenu.Item class="cursor-pointer gap-2.5" href="/course?id={courseId}">
 			<Icons.Play class="size-4" />
 			Open
 		</DropdownMenu.Item>
@@ -37,17 +39,18 @@
 
 		<DropdownMenu.Item
 			class="cursor-pointer gap-2.5"
-			href="/settings/courses/details?id={course.id}"
+			href="/settings/courses/details?id={courseId}"
 		>
 			<Icons.Info class="size-4" />
 			Details
 		</DropdownMenu.Item>
 
+		<!-- disabled={$scanning} -->
 		<DropdownMenu.Item
-			class="cursor-pointer gap-2.5"
-			disabled={course.scanStatus !== ''}
+			class={cn('cursor-pointer gap-2.5', $scanning && 'pointer-events-none opacity-50')}
 			on:click={() => {
-				dispatch('scan', { id: course.id });
+				if ($scanning) return;
+				dispatch('scan', { id: courseId });
 			}}
 		>
 			<Icons.Scan class="size-4 stroke-[1.5]" />
@@ -59,7 +62,7 @@
 		<DropdownMenu.Item
 			class="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground cursor-pointer gap-2.5"
 			on:click={() => {
-				dispatch('delete', { id: course.id });
+				dispatch('delete', { id: courseId });
 			}}
 		>
 			<Icons.Trash class="size-4" />

@@ -73,8 +73,10 @@
 	// Reactive
 	// ----------------------
 
-	// Start polling when the poll store is set to true and we are currently not polling
+	// Start polling when the poll store is set to true and we are currently not polling. It
+	// will set the scanStatus to 'waiting' so there is instant feedback to the user
 	$: if ($poll && pollInterval === -1) {
+		scanStatus = 'waiting';
 		startPoll();
 	}
 

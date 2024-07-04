@@ -87,7 +87,15 @@ func (cs *CourseScanner) Add(courseId string) (*models.Scan, error) {
 			loggerType,
 			slog.String("path", course.Path),
 		)
-		return nil, nil
+
+		// Get the scan from the db and return that
+		scan, err := cs.scanDao.Get(courseId, nil)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return scan, nil
 	}
 
 	// Add the job

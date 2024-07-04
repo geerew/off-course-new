@@ -177,9 +177,12 @@
 				}
 			},
 			cell: ({ value }) => {
-				return createRender(CoursesRowAction, { course: value })
+				return createRender(CoursesRowAction, {
+					courseId: value.id,
+					scanning: workingRows[value.id].scanPoll
+				})
 					.on('delete', () => {
-						// Set to false for all rows
+						// Set to false for all rows (Only 1 rowAction can be active at a time)
 						Object.keys(workingRows).forEach((value) => {
 							workingRows[value].rowAction = false;
 						});
@@ -189,7 +192,7 @@
 						openDeleteDialog = true;
 					})
 					.on('scan', () => {
-						// Set to false for all rows
+						// Set to false for all rows (Only 1 rowAction can be active at a time)
 						Object.keys(workingRows).forEach((value) => {
 							workingRows[value].rowAction = false;
 						});
