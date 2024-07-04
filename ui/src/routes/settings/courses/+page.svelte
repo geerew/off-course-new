@@ -110,9 +110,10 @@
 			accessor: 'id',
 			cell: ({ value }) => {
 				return createRender(Checkbox, {
+					value: value,
 					checked: workingRows[value].checked
-				}).on('click', () => {
-					workingRows[value].checked.update((checked) => {
+				}).on('click', (ev) => {
+					workingRows[ev.detail].checked.update((checked) => {
 						return !checked;
 					});
 
@@ -162,8 +163,8 @@
 					courseId: row.original.id,
 					initialStatus: row.original.scanStatus,
 					poll: workingRows[row.original.id].scanPoll
-				}).on('empty', (e) => {
-					updateCourseInCourses(e.detail);
+				}).on('empty', (ev) => {
+					updateCourseInCourses(ev.detail);
 				});
 			}
 		}),
@@ -181,24 +182,24 @@
 					courseId: value.id,
 					scanning: workingRows[value.id].scanPoll
 				})
-					.on('delete', () => {
-						// Set to false for all rows (Only 1 rowAction can be active at a time)
+					.on('delete', (ev) => {
+						// Set to false for all rows. Only 1 rowAction can be active at a time
 						Object.keys(workingRows).forEach((value) => {
 							workingRows[value].rowAction = false;
 						});
 
 						// Set to true for this row and open the delete dialog
-						workingRows[value.id].rowAction = true;
+						workingRows[ev.detail].rowAction = true;
 						openDeleteDialog = true;
 					})
-					.on('scan', () => {
-						// Set to false for all rows (Only 1 rowAction can be active at a time)
+					.on('scan', (ev) => {
+						// Set to false for all rows. Only 1 rowAction can be active at a time
 						Object.keys(workingRows).forEach((value) => {
 							workingRows[value].rowAction = false;
 						});
 
 						// Set to true for this row and start the scan
-						workingRows[value.id].rowAction = true;
+						workingRows[ev.detail].rowAction = true;
 						startScans();
 					});
 			}

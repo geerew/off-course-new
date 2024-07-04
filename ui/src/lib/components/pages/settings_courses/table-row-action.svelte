@@ -50,7 +50,7 @@
 			class={cn('cursor-pointer gap-2.5', $scanning && 'pointer-events-none opacity-50')}
 			on:click={() => {
 				if ($scanning) return;
-				dispatch('scan', { id: courseId });
+				dispatch('scan', courseId);
 			}}
 		>
 			<Icons.Scan class="size-4 stroke-[1.5]" />
@@ -62,7 +62,7 @@
 		<DropdownMenu.Item
 			class="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground cursor-pointer gap-2.5"
 			on:click={() => {
-				dispatch('delete', { id: courseId });
+				dispatch('delete', courseId);
 			}}
 		>
 			<Icons.Trash class="size-4" />

@@ -2,13 +2,12 @@
 	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
-	import type { Tag } from '$lib/types/models';
 	import { createEventDispatcher } from 'svelte';
 
 	// ----------------------
 	// Exports
 	// ----------------------
-	export let tag: Tag;
+	export let tagId: string;
 
 	// ----------------------
 	// Variables
@@ -31,7 +30,7 @@
 		<DropdownMenu.Item
 			class="cursor-pointer gap-2.5"
 			on:click={() => {
-				dispatch('rename', { id: tag.id });
+				dispatch('rename', tagId);
 			}}
 		>
 			<Icons.Edit class="size-4" />
@@ -43,7 +42,7 @@
 		<DropdownMenu.Item
 			class="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground cursor-pointer gap-2.5"
 			on:click={() => {
-				dispatch('delete', { id: tag.id });
+				dispatch('delete', tagId);
 			}}
 		>
 			<Icons.Trash class="size-4" />

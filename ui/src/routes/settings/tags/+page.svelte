@@ -89,10 +89,11 @@
 			accessor: 'id',
 			cell: ({ value }) => {
 				return createRender(Checkbox, {
+					value: value,
 					checked: workingRows[value].checked
-				}).on('click', () => {
+				}).on('click', (ev) => {
 					// Flip the checked state for this row
-					workingRows[value].checked.update((checked) => {
+					workingRows[ev.detail].checked.update((checked) => {
 						return !checked;
 					});
 
@@ -118,25 +119,25 @@
 				}
 			},
 			cell: ({ value }) => {
-				return createRender(TagsRowAction, { tag: value })
-					.on('delete', () => {
-						// Set to false for all rows
+				return createRender(TagsRowAction, { tagId: value.id })
+					.on('delete', (ev) => {
+						// Set to false for all rows. Only 1 rowAction can be active at a time
 						Object.keys(workingRows).forEach((value) => {
 							workingRows[value].rowAction = false;
 						});
 
 						// Set to true for this row and open the delete dialog
-						workingRows[value.id].rowAction = true;
+						workingRows[ev.detail].rowAction = true;
 						openDeleteDialog = true;
 					})
-					.on('rename', () => {
-						// Set to false for all rows
+					.on('rename', (ev) => {
+						// Set to false for all rows. Only 1 rowAction can be active at a time
 						Object.keys(workingRows).forEach((value) => {
 							workingRows[value].rowAction = false;
 						});
 
 						// Set to true for this row and open the rename dialog
-						workingRows[value.id].rowAction = true;
+						workingRows[ev.detail].rowAction = true;
 						openRenameDialog = true;
 					});
 			}
@@ -167,6 +168,7 @@
 	// GET a paginated list of tags
 	async function getTags(): Promise<boolean> {
 		try {
+			// sleep for 2 seconds
 			const response = await GetTags({
 				orderBy: FlattenOrderBy($sortKeys),
 				page: pagination.page,
