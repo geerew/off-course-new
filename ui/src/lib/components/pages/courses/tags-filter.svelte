@@ -113,7 +113,7 @@
 				{:else}
 					<div class="relative mb-1.5">
 						<label for="tags-input">
-							<Search
+							<Icons.Search
 								class="text-muted-foreground absolute left-2 top-1/2 size-3 -translate-y-1/2"
 							/>
 						</label>
@@ -133,7 +133,7 @@
 									searchValue = '';
 								}}
 							>
-								<X class="size-3" />
+								<Icons.X class="size-3" />
 							</Button>
 						{/if}
 					</div>
