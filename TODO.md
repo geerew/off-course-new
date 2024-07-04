@@ -31,7 +31,7 @@
 - [x] Fix Load More border in carousel
 - [x] Landing page when there are no courses added
 - [ ] Hide ongoing when there are no ongoing courses
-- [ ] New courses timestamp should be created_at
+- [x] New courses timestamp should be created_at
 - [ ] Get image for landing page
 
 #### Categories

@@ -44,40 +44,36 @@
 					<Button
 						builders={[builder]}
 						variant="ghost"
-						class="group h-auto items-center gap-1 text-xs"
-						on:click={(e) => {
-							e.stopPropagation();
-						}}
+						class="group flex h-auto items-center gap-1 px-0 py-0 text-xs hover:bg-transparent"
 					>
 						<Icons.Paperclip class="size-6" />
 					</Button>
 				</DropdownMenu.Trigger>
 
 				<DropdownMenu.Content
-					class="bg-foreground text-background flex  w-auto max-w-xs flex-col md:max-w-sm"
+					class="flex max-h-[10rem] w-auto max-w-xs flex-col overflow-y-scroll md:max-w-sm"
 					fitViewport={true}
+					sideOffset={-5}
 				>
-					<div class=" max-h-[10rem] overflow-y-scroll">
-						{#each asset.attachments as attachment, i}
-							{@const lastAttachment = asset.attachments.length - 1 == i}
-							<DropdownMenu.Item
-								class="data-[highlighted]:text-background cursor-pointer justify-between gap-3 text-xs data-[highlighted]:bg-transparent data-[highlighted]:underline"
-								href={GetBackendUrl(ATTACHMENT_API) + '/' + attachment.id + '/serve'}
-								download
-							>
-								<div class="flex flex-row gap-1.5">
-									<span class="grow">{attachment.title}</span>
-								</div>
+					{#each asset.attachments as attachment, i}
+						{@const lastAttachment = asset.attachments.length - 1 == i}
+						<DropdownMenu.Item
+							class="cursor-pointer justify-between gap-3 text-xs"
+							href={GetBackendUrl(ATTACHMENT_API) + '/' + attachment.id + '/serve'}
+							download
+						>
+							<div class="flex flex-row gap-1.5">
+								<span class="shrink-0">{i + 1}.</span>
+								<span class="grow">{attachment.title}</span>
+							</div>
 
-								<Icons.Download class="flex size-3 shrink-0" />
-							</DropdownMenu.Item>
+							<Icons.Download class="flex size-3 shrink-0" />
+						</DropdownMenu.Item>
 
-							{#if !lastAttachment}
-								<DropdownMenu.Separator class="bg-muted my-1 -ml-1 -mr-1 block h-px" />
-							{/if}
-						{/each}
-					</div>
-					<DropdownMenu.Arrow />
+						{#if !lastAttachment}
+							<DropdownMenu.Separator class="bg-muted my-1 -ml-1 -mr-1 block h-px" />
+						{/if}
+					{/each}
 				</DropdownMenu.Content>
 			</DropdownMenu.Root>
 		{/if}
