@@ -4,7 +4,7 @@
 	import * as Popover from '$components/ui/popover';
 	import { cn } from '$lib/utils';
 	import { createEventDispatcher } from 'svelte';
-	import type { WritableSortKeys } from 'svelte-headless-table/plugins';
+	import type { SortKey, WritableSortKeys } from 'svelte-headless-table/plugins';
 
 	// -------------------
 	// Exports
@@ -16,7 +16,7 @@
 	// -------------------
 	// Variables
 	// -------------------
-	const dispatch = createEventDispatcher();
+	const dispatch = createEventDispatcher<Record<'changed', SortKey>>();
 
 	let isOpen = false;
 </script>
@@ -61,7 +61,7 @@
 						on:click={() => {
 							if (isAscSorted) return;
 							sortedColumn.set([{ id: column.id, order: 'asc' }]);
-							dispatch('changed');
+							dispatch('changed', { id: column.id, order: 'asc' });
 						}}
 					>
 						<Icons.CaretUp
@@ -76,7 +76,7 @@
 						on:click={() => {
 							if (isDescSorted) return;
 							sortedColumn.set([{ id: column.id, order: 'desc' }]);
-							dispatch('changed');
+							dispatch('changed', { id: column.id, order: 'desc' });
 						}}
 					>
 						<Icons.CaretDown

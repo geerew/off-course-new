@@ -3,6 +3,7 @@
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import { cn } from '$lib/utils';
+	import { createEventDispatcher } from 'svelte';
 	import type { Writable } from 'svelte/store';
 
 	// -------------------
@@ -11,6 +12,11 @@
 	export let columns: Array<{ id: string; label: string }>;
 	export let columnStore: Writable<Array<string>>;
 	export let disabled: boolean = false;
+
+	// -------------------
+	// Variables
+	// -------------------
+	const dispatch = createEventDispatcher<Record<'changed', string[]>>();
 </script>
 
 <DropdownMenu.Root closeOnItemClick={false}>
@@ -35,6 +41,8 @@
 					} else {
 						columnStore.update((store) => [...store, col.id]);
 					}
+
+					dispatch('changed', $columnStore);
 				}}
 			>
 				<div

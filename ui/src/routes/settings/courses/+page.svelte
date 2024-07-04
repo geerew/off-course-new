@@ -16,6 +16,7 @@
 		CoursesRowProgress,
 		CoursesTableActions
 	} from '$components/pages/settings_courses';
+	import { preferences } from '$components/pages/settings_courses/store';
 	import { TableColumnsController, TableSortController } from '$components/table/controllers';
 	import * as Table from '$components/ui/table';
 	import { AddScan, GetCourses } from '$lib/api';
@@ -26,6 +27,8 @@
 	import { addHiddenColumns, addSortBy } from 'svelte-headless-table/plugins';
 	import { toast } from 'svelte-sonner';
 	import { get, writable, type Writable } from 'svelte/store';
+
+	$preferences;
 
 	// ----------------------
 	// Types
@@ -73,12 +76,12 @@
 	// Create the table
 	const table = createTable(fetchedCourses, {
 		sort: addSortBy({
-			initialSortKeys: [{ id: 'createdAt', order: 'desc' }],
+			initialSortKeys: [$preferences.sortBy],
 			toggleOrder: ['desc', 'asc'],
 			serverSide: true
 		}),
 		hide: addHiddenColumns({
-			initialHiddenColumnIds: ['updatedAt']
+			initialHiddenColumnIds: $preferences.hiddenColumns
 		})
 	});
 
@@ -434,14 +437,20 @@
 							<TableSortController
 								columns={availableSortColumns}
 								sortedColumn={sortKeys}
-								on:changed={getCourses}
 								disabled={$fetchedCourses.length === 0}
+								on:changed={(ev) => {
+									preferences.set({ ...$preferences, sortBy: ev.detail });
+									getCourses();
+								}}
 							/>
 
 							<TableColumnsController
 								columns={availableHiddenColumns}
 								columnStore={hiddenColumnIds}
 								disabled={$fetchedCourses.length === 0}
+								on:changed={(ev) => {
+									preferences.set({ ...$preferences, hiddenColumns: ev.detail });
+								}}
 							/>
 						</div>
 					</div>
