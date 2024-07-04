@@ -87,7 +87,7 @@
 				});
 			},
 			accessor: 'id',
-			cell: ({ value, row }) => {
+			cell: ({ value }) => {
 				return createRender(Checkbox, {
 					checked: workingRows[value].checked
 				}).on('click', () => {
@@ -150,7 +150,7 @@
 	const { sortKeys } = pluginStates.sort;
 
 	// The columns that can be sorted
-	const ignoredSortIds = ['id'];
+	const ignoredSortIds = ['id', 'actions'];
 	const availableSortColumns: Array<{ id: string; label: string }> = flatColumns
 		.filter((col) => !ignoredSortIds.includes(col.id.toString()))
 		.map((col) => {
