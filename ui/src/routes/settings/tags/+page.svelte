@@ -2,6 +2,7 @@
 	import { AddTagsDialog, DeleteTagsDialog, RenameTagDialog } from '$components/dialogs';
 	import { Checkbox, Err, Loading, Pagination, SelectAllCheckbox } from '$components/generic';
 	import { Icons } from '$components/icons';
+	import { preferences } from '$components/pages/settings_tags/store';
 	import { TableSortController } from '$components/table/controllers';
 	import { GetTags } from '$lib/api';
 	import { TagsRowAction, TagsTableActions } from '$lib/components/pages/settings_tags';
@@ -58,7 +59,7 @@
 
 	const table = createTable(fetchedTags, {
 		sort: addSortBy({
-			initialSortKeys: [{ id: 'tag', order: 'asc' }],
+			initialSortKeys: [$preferences.sortBy],
 			toggleOrder: ['desc', 'asc'],
 			serverSide: true
 		})
@@ -315,7 +316,10 @@
 						<TableSortController
 							columns={availableSortColumns}
 							sortedColumn={sortKeys}
-							on:changed={getTags}
+							on:changed={(ev) => {
+								preferences.set({ ...$preferences, sortBy: ev.detail });
+								getTags();
+							}}
 							disabled={$fetchedTags.length === 0}
 						/>
 					</div>

@@ -28,8 +28,6 @@
 	import { toast } from 'svelte-sonner';
 	import { get, writable, type Writable } from 'svelte/store';
 
-	$preferences;
-
 	// ----------------------
 	// Types
 	// ----------------------
