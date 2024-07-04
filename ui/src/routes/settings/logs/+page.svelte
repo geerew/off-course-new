@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { Err, LogLevel as LL, Loading, LogMessage, Pagination } from '$components/generic';
 	import { LogsFilter } from '$components/pages/settings_logs';
+	import { preferences } from '$components/pages/settings_logs/store';
 	import * as Table from '$components/ui/table';
 	import { GetLogs } from '$lib/api';
-	import { LogLevel, LogLevelMapping, type Log, type LogsGetParams } from '$lib/types/models';
+	import { LogLevelMapping, type Log, type LogsGetParams } from '$lib/types/models';
 	import type { PaginationParams } from '$lib/types/pagination';
 	import { cn } from '$lib/utils';
 	import { Render, Subscribe, createRender, createTable } from 'svelte-headless-table';
@@ -17,13 +18,13 @@
 	const fetchedLogs = writable<Log[]>([]);
 
 	// The messages to filter on
-	let filterMessages: string[] = [];
+	let filterMessages = $preferences.messages;
 
 	// The levels to filter on
-	let filterLevels: LogLevel[] = [];
+	let filterLevels = $preferences.levels;
 
 	// The types to filter on
-	let filterTypes: string[] = [];
+	let filterTypes = $preferences.types;
 
 	// Pagination
 	let pagination: PaginationParams = {
@@ -122,17 +123,23 @@
 <div class="bg-background flex w-full flex-col gap-4 pb-10 pt-6">
 	<div class="container flex flex-col gap-10">
 		<LogsFilter
+			{filterMessages}
+			{filterLevels}
+			{filterTypes}
 			on:filterMessages={(ev) => {
+				preferences.set({ ...$preferences, messages: ev.detail });
 				filterMessages = ev.detail;
 				pagination.page = 1;
 				load = getLogs();
 			}}
 			on:filterLevels={(ev) => {
+				preferences.set({ ...$preferences, levels: ev.detail });
 				filterLevels = ev.detail;
 				pagination.page = 1;
 				load = getLogs();
 			}}
 			on:filterTypes={(ev) => {
+				preferences.set({ ...$preferences, types: ev.detail });
 				filterTypes = ev.detail;
 				pagination.page = 1;
 				load = getLogs();
@@ -141,6 +148,7 @@
 				filterMessages = [];
 				filterLevels = [];
 				filterTypes = [];
+				preferences.set({ messages: [], levels: [], types: [] });
 				pagination.page = 1;
 				load = getLogs();
 			}}

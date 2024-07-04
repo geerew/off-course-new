@@ -13,9 +13,9 @@
 	// ----------------------
 	// Variables
 	// ----------------------
-	let filterMessages: string[] = [];
-	let filterLevels: LogLevel[] = [];
-	let filterTypes: string[] = [];
+	export let filterMessages: string[];
+	export let filterLevels: LogLevel[];
+	export let filterTypes: string[];
 
 	const dispatchEvent = createEventDispatcher();
 
@@ -37,14 +37,14 @@
 	<div class="flex gap-2.5 md:gap-5">
 		<LevelFilter
 			bind:filterLevels
-			on:change={(e) => {
+			on:change={() => {
 				dispatchEvent('filterLevels', filterLevels);
 			}}
 		/>
 
 		<TypeFilter
 			bind:filterTypes
-			on:change={(e) => {
+			on:change={() => {
 				dispatchEvent('filterTypes', filterTypes);
 			}}
 		/>
@@ -158,6 +158,7 @@
 					filterMessages = [];
 					filterLevels = [];
 					filterTypes = [];
+
 					dispatchEvent('clear');
 				}}
 			>
