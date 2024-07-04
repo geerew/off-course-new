@@ -1,11 +1,11 @@
 <script lang="ts">
 	import AddCourses from '$components/dialogs/add-courses.svelte';
 	import { Err, Loading } from '$components/generic';
+	import { Icons } from '$components/icons';
 	import { Carousel } from '$components/pages/home';
 	import { Button } from '$components/ui/button';
 	import { GetCourses } from '$lib/api';
 	import { IsBrowser } from '$lib/utils';
-	import { ArrowRight, BookPlus } from 'lucide-svelte';
 
 	// ----------------------
 	// Variables
@@ -73,11 +73,11 @@
 							}}
 						>
 							<div class="flex flex-row items-center gap-1.5">
-								<BookPlus class="size-4" />
+								<Icons.StackPlus class="size-4" />
 								<span>Add Courses</span>
 							</div>
 
-							<ArrowRight class="size-4" />
+							<Icons.ArrowRight class="size-4" />
 						</Button>
 					</AddCourses>
 				</div>

@@ -1,9 +1,9 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import { Checkbox } from '$components/ui/checkbox';
 	import { Label } from '$components/ui/label';
 	import { cn } from '$lib/utils';
-	import { ArrowLeft, ChevronRight, ChevronsLeft, ChevronsRight, CirclePlay } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { preferences } from '../../store';
 
@@ -29,14 +29,14 @@
 		dispatch(show ? 'close' : 'open');
 	}}
 >
-	<ArrowLeft class={cn('hidden size-4 text-white/80', show && 'inline-flex')} />
+	<Icons.ArrowLeft class={cn('hidden size-4 text-white/80', show && 'inline-flex')} />
 
-	<div class="flex items-center gap-1.5">
-		<CirclePlay class="size-3.5" />
+	<div class="flex items-center gap-2">
+		<Icons.PlayCircle class="size-4" />
 		<span class="font-semibold leading-3">Playback</span>
 	</div>
 
-	<ChevronRight class={cn('inline-flex size-4 text-white/70', show && 'hidden')} />
+	<Icons.CaretRight class={cn('inline-flex size-4 text-white/70', show && 'hidden')} />
 </Button>
 
 <!-- Content -->
@@ -81,7 +81,7 @@
 			</div>
 
 			<div class="bg-muted/60 flex w-full flex-row px-2 py-3">
-				<ChevronsLeft class="size-4 text-white/70" />
+				<Icons.CaretLeft class="size-4 text-white/70" />
 				<media-speed-slider
 					class="group relative mx-[7.5px] inline-flex w-full cursor-pointer touch-none select-none items-center outline-none aria-hidden:hidden"
 					data-vaul-no-drag=""
@@ -112,7 +112,7 @@
 						</template>
 					</media-slider-steps>
 				</media-speed-slider>
-				<ChevronsRight class="size-4 text-white/70" />
+				<Icons.CaretRight class="size-4 text-white/70" />
 			</div>
 		</div>
 	</div>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { AddTagsDialog, DeleteTagsDialog, RenameTagDialog } from '$components/dialogs';
 	import { Checkbox, Err, Loading, Pagination, SelectAllCheckbox } from '$components/generic';
+	import { Icons } from '$components/icons';
 	import { TableSortController } from '$components/table/controllers';
 	import { GetTags } from '$lib/api';
 	import { TagsRowAction, TagsTableActions } from '$lib/components/pages/settings_tags';
@@ -8,7 +9,6 @@
 	import type { Tag } from '$lib/types/models';
 	import type { PaginationParams } from '$lib/types/pagination';
 	import { FlattenOrderBy, cn } from '$lib/utils';
-	import { ChevronDown, ChevronUp } from 'lucide-svelte';
 	import { Render, Subscribe, createRender, createTable } from 'svelte-headless-table';
 	import { addSortBy } from 'svelte-headless-table/plugins';
 	import { toast } from 'svelte-sonner';
@@ -353,11 +353,11 @@
 													<Render of={cell.render()} />
 
 													{#if ascSort}
-														<ChevronUp
+														<Icons.CaretUp
 															class="text-secondary/80 absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2]"
 														/>
 													{:else if descSort}
-														<ChevronDown
+														<Icons.CaretDown
 															class="text-secondary/80 absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2]"
 														/>
 													{/if}

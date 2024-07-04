@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Maximize, Minimize } from 'lucide-svelte';
+	import { Icons } from '$components/icons';
 </script>
 
 <media-tooltip class="contents">
@@ -7,8 +7,8 @@
 		<media-fullscreen-button
 			class="hover:text-secondary relative inline-flex cursor-pointer items-center justify-center rounded-md outline-none ring-inset ring-sky-400 data-[focus]:ring-4"
 		>
-			<Maximize class="not-media-fullscreen:block hidden size-5 stroke-2 sm:size-6" />
-			<Minimize class="media-fullscreen:block hidden size-5 stroke-2 sm:size-6" />
+			<Icons.Maximize class="not-media-fullscreen:block hidden size-5 stroke-2 sm:size-6" />
+			<Icons.Minimize class="media-fullscreen:block hidden size-5 stroke-2 sm:size-6" />
 		</media-fullscreen-button>
 	</media-tooltip-trigger>
 	<media-tooltip-content

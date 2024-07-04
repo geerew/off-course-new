@@ -1,8 +1,8 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import * as Popover from '$components/ui/popover';
 	import { cn } from '$lib/utils';
-	import { ArrowDownUp, ChevronDown, ChevronRight, ChevronUp } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import type { WritableSortKeys } from 'svelte-headless-table/plugins';
 
@@ -25,11 +25,11 @@
 	<Popover.Trigger asChild let:builder>
 		<Button variant="outline" {disabled} class="flex h-8 px-2" builders={[builder]}>
 			<div class="flex items-center gap-1.5 pr-3">
-				<ArrowDownUp class="size-4" />
+				<Icons.ArrowsDownUp class="size-4" />
 				<span>Sort</span>
 			</div>
 
-			<ChevronRight class={cn('size-3 duration-200', isOpen && 'rotate-90')} />
+			<Icons.CaretRight class={cn('size-3 duration-200', isOpen && 'rotate-90')} />
 		</Button>
 	</Popover.Trigger>
 
@@ -64,9 +64,9 @@
 							dispatch('changed');
 						}}
 					>
-						<ChevronUp
+						<Icons.CaretUp
 							class={cn(
-								'text-muted-foreground size-5 duration-150',
+								'text-muted-foreground size-4 duration-150',
 								isAscSorted ? 'text-primary' : 'hover:text-foreground'
 							)}
 						/>
@@ -79,9 +79,9 @@
 							dispatch('changed');
 						}}
 					>
-						<ChevronDown
+						<Icons.CaretDown
 							class={cn(
-								'text-muted-foreground size-5 duration-150',
+								'text-muted-foreground size-4 duration-150',
 								isDescSorted ? 'text-primary' : 'hover:text-foreground'
 							)}
 						/>

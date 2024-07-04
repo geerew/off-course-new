@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Err, Loading } from '$components/generic';
+	import { Icons } from '$components/icons';
 	import * as Accordion from '$components/ui/accordion';
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import { ATTACHMENT_API, GetAllCourseAssets, GetBackendUrl } from '$lib/api';
 	import { type Asset, type CourseChapters } from '$lib/types/models';
 	import { BuildChapterStructure, cn } from '$lib/utils';
-	import { ChevronRight, Dot, Download } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 
 	// ----------------------
@@ -90,7 +90,7 @@
 				{Object.keys(fectchedCourseChapters).length}
 				{Object.keys(fectchedCourseChapters).length ? 'chapters' : 'chapter'}
 			</span>
-			<Dot class="text-muted-foreground size-5" />
+			<Icons.Dot weight="fill" class="text-muted-foreground size-5" />
 			<span class="text-muted-foreground text-sm">
 				{totalAssetCount(fectchedCourseChapters)}
 				{totalAssetCount(fectchedCourseChapters) ? 'assets' : 'asset'}
@@ -144,16 +144,16 @@
 
 											<!-- Progress -->
 											{#if asset.completed}
-												<Dot class="size-5" />
+												<Icons.Dot weight="fill" class="size-5" />
 												<span class="text-success font-bold"> completed </span>
 											{:else if asset.assetType === 'video' && asset.videoPos > 0}
-												<Dot class="size-5" />
+												<Icons.Dot weight="fill" class="size-5" />
 												<span class="text-secondary"> in-progress </span>
 											{/if}
 
 											<!-- Attachments -->
 											{#if asset.attachments && asset.attachments.length > 0}
-												<Dot class="size-5" />
+												<Icons.Dot weight="fill" class="size-5" />
 
 												<DropdownMenu.Root closeOnItemClick={false}>
 													<DropdownMenu.Trigger asChild let:builder>
@@ -166,7 +166,7 @@
 																? 's'
 																: ''}
 
-															<ChevronRight
+															<Icons.CaretRight
 																class="size-3 duration-200 group-data-[state=open]:rotate-90"
 															/>
 														</Button>
@@ -191,7 +191,7 @@
 																	<span class="grow">{attachment.title}</span>
 																</div>
 
-																<Download class="flex size-3 shrink-0" />
+																<Icons.Download class="flex size-3 shrink-0" />
 															</DropdownMenu.Item>
 
 															{#if !lastAttachment}

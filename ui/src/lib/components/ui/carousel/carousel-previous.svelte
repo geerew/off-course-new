@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { Button, buttonVariants, type Props } from '$lib/components/ui/button/index.js';
 	import { cn } from '$lib/utils.js';
-	import { ArrowLeft } from 'lucide-svelte';
 	import type { VariantProps } from 'tailwind-variants';
 	import { getEmblaContext } from './context.js';
 
@@ -32,7 +32,7 @@
 	{...$$restProps}
 >
 	<slot>
-		<ArrowLeft class="h-4 w-4" />
+		<Icons.ArrowLeft class="h-4 w-4" />
 	</slot>
 	<span class="sr-only">Previous slide</span>
 </Button>

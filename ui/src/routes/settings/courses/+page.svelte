@@ -9,6 +9,7 @@
 		ScanStatus,
 		SelectAllCheckbox
 	} from '$components/generic';
+	import { Icons } from '$components/icons';
 	import {
 		CoursesRowAction,
 		CoursesRowAvailability,
@@ -21,7 +22,6 @@
 	import type { Course } from '$lib/types/models';
 	import type { PaginationParams } from '$lib/types/pagination';
 	import { FlattenOrderBy, cn } from '$lib/utils';
-	import { ChevronDown, ChevronUp } from 'lucide-svelte';
 	import { Render, Subscribe, createRender, createTable } from 'svelte-headless-table';
 	import { addHiddenColumns, addSortBy } from 'svelte-headless-table/plugins';
 	import { toast } from 'svelte-sonner';
@@ -477,11 +477,11 @@
 													<Render of={cell.render()} />
 
 													{#if ascSort}
-														<ChevronUp
+														<Icons.CaretUp
 															class="text-secondary/80 absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2]"
 														/>
 													{:else if descSort}
-														<ChevronDown
+														<Icons.CaretDown
 															class="text-secondary/80 absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2]"
 														/>
 													{/if}

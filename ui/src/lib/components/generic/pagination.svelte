@@ -1,9 +1,9 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import * as Pagination from '$components/ui/pagination';
 	import * as Select from '$components/ui/select';
 	import type { PaginationParams } from '$lib/types/pagination';
 	import { cn } from '$lib/utils';
-	import { ChevronLeft, ChevronRight } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { mediaQuery } from 'svelte-legos';
 
@@ -55,7 +55,7 @@
 				>
 					<Select.Trigger class="w-[140px]">
 						<Select.Value placeholder={String(pagination.perPage)} />
-						<ChevronRight class={cn('size-4 duration-200', isOpen && 'rotate-90')} />
+						<Icons.CaretRight class={cn('size-4 duration-200', isOpen && 'rotate-90')} />
 					</Select.Trigger>
 					<Select.Content>
 						<Select.Group>
@@ -86,7 +86,7 @@
 					<Pagination.Content>
 						<Pagination.Item>
 							<Pagination.PrevButton>
-								<ChevronLeft class="size-4" />
+								<Icons.CaretLeft class="size-4" />
 								<span class="hidden sm:block">Previous</span>
 							</Pagination.PrevButton>
 						</Pagination.Item>
@@ -106,7 +106,7 @@
 						<Pagination.Item>
 							<Pagination.NextButton>
 								<span class="hidden sm:block">Next</span>
-								<ChevronRight class="size-4" />
+								<Icons.CaretRight class="size-4" />
 							</Pagination.NextButton>
 						</Pagination.Item>
 					</Pagination.Content>

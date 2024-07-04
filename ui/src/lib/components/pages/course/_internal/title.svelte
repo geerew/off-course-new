@@ -1,11 +1,11 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import * as Tooltip from '$components/ui/tooltip';
 	import { ATTACHMENT_API, GetBackendUrl } from '$lib/api';
 	import type { Asset } from '$lib/types/models';
 	import { cn } from '$lib/utils';
-	import { CircleCheck, Download, FileCode, FileText, FileVideo, Paperclip } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	// ----------------------
@@ -26,10 +26,10 @@
 	<div class="flex flex-row items-center gap-2.5">
 		<svelte:component
 			this={asset.assetType === 'video'
-				? FileVideo
+				? Icons.FileVideo
 				: asset.assetType === 'html'
-					? FileCode
-					: FileText}
+					? Icons.FileCode
+					: Icons.FileText}
 			class="size-6 shrink-0 stroke-[1]"
 		/>
 		<span class="text-lg font-medium">{asset.title}</span>
@@ -49,7 +49,7 @@
 							e.stopPropagation();
 						}}
 					>
-						<Paperclip />
+						<Icons.Paperclip class="size-6" />
 					</Button>
 				</DropdownMenu.Trigger>
 
@@ -69,7 +69,7 @@
 									<span class="grow">{attachment.title}</span>
 								</div>
 
-								<Download class="flex size-3 shrink-0" />
+								<Icons.Download class="flex size-3 shrink-0" />
 							</DropdownMenu.Item>
 
 							{#if !lastAttachment}
@@ -91,7 +91,7 @@
 					class="h-auto"
 					on:click={() => (asset.completed ? dispatch('incomplete') : dispatch('complete'))}
 				>
-					<CircleCheck
+					<Icons.CircleCheck
 						class={cn(asset.completed && 'fill-success text-success [&>:nth-child(2)]:text-white')}
 					/>
 				</Button>

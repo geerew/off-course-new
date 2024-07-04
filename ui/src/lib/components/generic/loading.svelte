@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import type { ClassName } from '$lib/types/general';
 	import { cn } from '$lib/utils';
-	import { Loader2 } from 'lucide-svelte';
 
 	let className: ClassName = undefined;
 
@@ -18,5 +18,5 @@
 		className
 	)}
 >
-	<Loader2 class={cn('text-primary h-12 w-16 animate-spin', loaderClass)} />
+	<Icons.Loader class={cn('text-primary size-12 animate-spin', loaderClass)} />
 </div>

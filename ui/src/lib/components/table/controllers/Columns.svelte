@@ -1,8 +1,8 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import { cn } from '$lib/utils';
-	import { Check, ChevronRight, EyeOff } from 'lucide-svelte';
 	import type { Writable } from 'svelte/store';
 
 	// -------------------
@@ -17,11 +17,11 @@
 	<DropdownMenu.Trigger asChild let:builder>
 		<Button variant="outline" {disabled} class="group flex h-8 px-2" builders={[builder]}>
 			<div class="flex items-center gap-1.5 pr-3">
-				<EyeOff class="size-4" />
+				<Icons.EyeSlash class="size-4" />
 				<span>Columns</span>
 			</div>
 
-			<ChevronRight class="size-3 duration-200 group-data-[state=open]:rotate-90" />
+			<Icons.CaretRight class="size-3 duration-200 group-data-[state=open]:rotate-90" />
 		</Button>
 	</DropdownMenu.Trigger>
 
@@ -43,7 +43,7 @@
 						!$columnStore.includes(col.id) ? 'block' : 'hidden'
 					)}
 				>
-					<Check class="size-4" />
+					<Icons.Check class="size-3.5" />
 				</div>
 
 				<span class={$columnStore.includes(col.id) ? 'text-muted-foreground' : ''}>

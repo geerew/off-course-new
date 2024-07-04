@@ -1,10 +1,10 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { Badge } from '$components/ui/badge';
 	import { Button } from '$components/ui/button';
 	import Separator from '$components/ui/separator/separator.svelte';
 	import { CourseProgress } from '$lib/types/models';
 	import { cn } from '$lib/utils';
-	import { Filter, Loader2, Tag, Text, X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { CoursesProgressFilter, CoursesTagsFilter, CoursesTitleFilter } from '.';
 
@@ -53,7 +53,7 @@
 {#if isFiltering}
 	<div class="border-alt-1/60 flex flex-col gap-4 border-b pb-5">
 		<div class="text-primary flex flex-row items-center gap-2.5 text-sm">
-			<Filter class="size-4" />
+			<Icons.Filter class="size-4" />
 			<span class="tracking-wide">ACTIVE FILTERS</span>
 		</div>
 
@@ -66,7 +66,7 @@
 							'bg-alt-1/60 hover:bg-alt-1/60 text-foreground h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none'
 						)}
 					>
-						<Text class="size-3" />
+						<Icons.Text class="size-3" />
 						<span>{title}</span>
 					</Badge>
 
@@ -80,7 +80,7 @@
 							dispatchEvent('titleFilter', filterTitles);
 						}}
 					>
-						<X class="size-3" />
+						<Icons.X class="size-3" />
 					</Button>
 				</div>
 			{/each}
@@ -97,7 +97,7 @@
 							'bg-alt-1/60 hover:bg-alt-1/60 text-foreground h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none'
 						)}
 					>
-						<Loader2 class="size-3" />
+						<Icons.Hourglass class="size-3" />
 						<span>{filterProgress}</span>
 					</Badge>
 
@@ -110,7 +110,7 @@
 							dispatchEvent('progressFilter', filterProgress);
 						}}
 					>
-						<X class="size-3" />
+						<Icons.X class="size-3" />
 					</Button>
 				</div>
 			{/if}
@@ -128,7 +128,7 @@
 								'bg-alt-1/60 hover:bg-alt-1/60 text-foreground h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none'
 							)}
 						>
-							<Tag class="size-3" />
+							<Icons.Tag class="size-3" />
 							<span>{filterTags[id]}</span>
 						</Badge>
 
@@ -142,7 +142,7 @@
 								dispatchEvent('tagsFilter', Object.values(filterTags));
 							}}
 						>
-							<X class="size-3" />
+							<Icons.X class="size-3" />
 						</Button>
 					</div>
 				{/each}

@@ -3,6 +3,7 @@
 ## General
 
 - [ ] Update makefile to use goreleaser
+- [ ] Rewrite the README
 
 ## UI
 
@@ -17,10 +18,13 @@
 - [x] When loading course card spin the fallback icon
 - [ ] Fix theme
 - [ ] Update query param to all pages like settings -> courses/tags/logs etc as the uses filters
-- [ ] On scan, have a minimum 'load' of 1 second to stop flickering
+- [x] On scan, have a minimum 'load' of 1 second to stop flickering
 - [ ] Add search (https://discord.com/channels/1116682155809067049/1117779396992979024/1163925360228962385)
 - [ ] Change how frequently the course availability check is run
 - [ ] Support for FFMPEG path
+- [x] Move from lucide to phosphor icons
+- [ ] Test building without .env file (pnpm run build)
+
 
 ### Home
 
@@ -52,6 +56,8 @@
 - [ ] When a course is unavailable, show a message saying unavailable
 - [ ] Support PDF
 - [ ] Show 'scanning' loading page when a course is first added and scanning is in progress'
+- [ ] Fix hover over details icon in menu. The tooltip flickers open and closed and part of the menu appears
+      behind
 
 #### Video
 

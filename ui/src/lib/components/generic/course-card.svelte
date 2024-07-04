@@ -1,9 +1,9 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { COURSE_API, GetBackendUrl } from '$lib/api';
 	import type { ClassName } from '$lib/types/general';
 	import { cn } from '$lib/utils';
 	import { createAvatar } from '@melt-ui/svelte';
-	import { Hexagon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
 	let className: ClassName = undefined;
@@ -83,7 +83,8 @@
 
 	<!-- Fallback -->
 	<div class={fallbackClass} {...$fallback}>
-		<Hexagon
+		<Icons.Hexagon
+			weight="fill"
 			class={cn(
 				'fill-muted/40 size-12 stroke-none md:size-16',
 				isLoading ? 'duration-2.5s animate-spin' : 'rotate-90'

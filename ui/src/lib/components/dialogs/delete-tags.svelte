@@ -1,10 +1,10 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import * as Dialog from '$components/ui/dialog';
 	import * as Table from '$components/ui/table';
 	import { DeleteTag } from '$lib/api';
 	import { cn } from '$lib/utils';
-	import { AlertOctagon } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -53,7 +53,7 @@
 		class="bg-muted top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md px-0 py-0 duration-200 md:max-w-md [&>button[data-dialog-close]]:hidden"
 	>
 		<div class="flex flex-col items-center gap-5 overflow-y-scroll px-8 pt-4">
-			<AlertOctagon class="text-destructive size-10" />
+			<Icons.WarningOctagon class="text-destructive size-10" />
 
 			{#if tagsCount > 1}
 				<span class="text-center">

@@ -1,8 +1,8 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import * as Dialog from '$components/ui/dialog';
 	import * as Drawer from '$lib/components/ui/drawer';
-	import { BookPlus } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import theme from 'tailwindcss/defaultTheme';
 	import AddCoursesContent from './_internal/add-courses-content.svelte';
@@ -61,7 +61,7 @@
 			open = true;
 		}}
 	>
-		<BookPlus class="size-4" />
+		<Icons.StackPlus class="size-4" />
 		<span>Add Courses</span>
 	</Button>
 </slot>

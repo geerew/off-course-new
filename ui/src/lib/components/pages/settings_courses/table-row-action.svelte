@@ -1,8 +1,8 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import type { Course } from '$lib/types/models';
-	import { BookText, FolderSearch, MoreHorizontal, Play, Trash2 } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	// ----------------------
@@ -23,13 +23,13 @@
 			class="text-muted-foreground hover:bg-alt-1/60 data-[state=open]:text-foreground data-[state=open]:bg-alt-1/60 h-auto p-1.5"
 			builders={[builder]}
 		>
-			<MoreHorizontal class="size-4" />
+			<Icons.MoreHorizontal weight="fill" class="size-4" />
 		</Button>
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content class="flex flex-col text-sm" align="end" fitViewport={true}>
 		<DropdownMenu.Item class="cursor-pointer gap-2.5" href="/course?id={course.id}">
-			<Play class="size-4" />
+			<Icons.Play class="size-4" />
 			Open
 		</DropdownMenu.Item>
 
@@ -39,7 +39,7 @@
 			class="cursor-pointer gap-2.5"
 			href="/settings/courses/details?id={course.id}"
 		>
-			<BookText class="size-4" />
+			<Icons.Info class="size-4" />
 			Details
 		</DropdownMenu.Item>
 
@@ -50,7 +50,7 @@
 				dispatch('scan', { id: course.id });
 			}}
 		>
-			<FolderSearch class="size-4" />
+			<Icons.Scan class="size-4 stroke-[1.5]" />
 			Scan
 		</DropdownMenu.Item>
 
@@ -62,7 +62,7 @@
 				dispatch('delete', { id: course.id });
 			}}
 		>
-			<Trash2 class="size-4" />
+			<Icons.Trash class="size-4" />
 			Delete
 		</DropdownMenu.Item>
 	</DropdownMenu.Content>

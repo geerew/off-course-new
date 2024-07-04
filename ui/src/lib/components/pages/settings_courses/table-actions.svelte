@@ -1,15 +1,8 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
-	import {
-		BoxSelect,
-		ChevronRight,
-		FolderSearch,
-		MousePointerClick,
-		Tag,
-		Trash2,
-		X
-	} from 'lucide-svelte';
+
 	import { createEventDispatcher } from 'svelte';
 	import type { Writable } from 'svelte/store';
 
@@ -28,10 +21,10 @@
 	<DropdownMenu.Trigger asChild let:builder>
 		<Button variant="outline" class="group flex h-8 px-2" builders={[builder]}>
 			<div class="flex items-center gap-1.5 pr-3">
-				<MousePointerClick class="size-4" />
+				<Icons.CursorClick class="size-4" />
 				<span>Actions</span>
 			</div>
-			<ChevronRight class="size-3 duration-200 group-data-[state=open]:rotate-90" />
+			<Icons.CaretRight class="size-3 duration-200 group-data-[state=open]:rotate-90" />
 		</Button>
 	</DropdownMenu.Trigger>
 
@@ -44,8 +37,8 @@
 			}}
 		>
 			<div class="relative size-4">
-				<BoxSelect class="absolute size-4" />
-				<X class="absolute left-1/2 top-1/2 size-3 -translate-x-1/2 -translate-y-1/2" />
+				<Icons.BoxSelect class="absolute size-4" />
+				<Icons.X class="absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2" />
 			</div>
 			<span>Deselect All</span>
 		</DropdownMenu.Item>
@@ -57,7 +50,7 @@
 				dispatch('scan');
 			}}
 		>
-			<FolderSearch class="size-4" />
+			<Icons.Scan class="size-4" />
 			Scan
 		</DropdownMenu.Item>
 
@@ -68,7 +61,7 @@
 				dispatch('tags');
 			}}
 		>
-			<Tag class="size-4" />
+			<Icons.Tag class="size-4" />
 			Add Tags
 		</DropdownMenu.Item>
 
@@ -81,7 +74,7 @@
 				dispatch('delete');
 			}}
 		>
-			<Trash2 class="size-4" />
+			<Icons.Trash class="size-4" />
 			Delete
 		</DropdownMenu.Item>
 	</DropdownMenu.Content>

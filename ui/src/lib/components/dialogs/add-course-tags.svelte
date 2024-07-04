@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Loading } from '$components/generic';
+	import { Icons } from '$components/icons';
 	import { Badge } from '$components/ui/badge';
 	import { Button } from '$components/ui/button';
 	import * as Dialog from '$components/ui/dialog';
@@ -8,7 +9,6 @@
 	import { cn } from '$lib/utils';
 	import { createCombobox, type ComboboxOption } from '@melt-ui/svelte';
 	import axios from 'axios';
-	import { ArrowLeft, Search, X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { writable, type Writable } from 'svelte/store';
@@ -223,7 +223,9 @@
 		<div class="border-alt-1/60 group relative flex flex-row items-center border-b">
 			<!-- svelte-ignore a11y-label-has-associated-control - $label contains the 'for' attribute -->
 			<label {...$label} use:label>
-				<Search class="text-muted-foreground absolute start-3 top-1/2 size-6 -translate-y-1/2" />
+				<Icons.Search
+					class="text-muted-foreground absolute start-3 top-1/2 size-6 -translate-y-1/2"
+				/>
 			</label>
 
 			<input
@@ -263,7 +265,7 @@
 
 							{#if t.tag.toLowerCase() === $inputValue.toLowerCase()}
 								<div class="ml-auto">
-									<ArrowLeft class="size-3" />
+									<Icons.ArrowLeft class="size-3" />
 								</div>
 							{/if}
 						</li>
@@ -298,7 +300,7 @@
 								changes--;
 							}}
 						>
-							<X class="size-3" />
+							<Icons.X class="size-3" />
 						</Button>
 					</div>
 				{/each}

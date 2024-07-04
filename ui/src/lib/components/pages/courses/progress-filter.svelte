@@ -1,9 +1,9 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import { CourseProgress } from '$lib/types/models';
 	import { cn } from '$lib/utils';
-	import { ChevronRight, Loader2 } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	// ----------------------
@@ -30,11 +30,11 @@
 			}}
 		>
 			<div class="flex items-center gap-2">
-				<Loader2 class={cn('size-3', progress && 'text-primary')} />
+				<Icons.Hourglass class={cn('size-3', progress && 'text-primary')} />
 				<span>Progress </span>
 			</div>
 
-			<ChevronRight class="size-3 duration-200 group-data-[state=open]:rotate-90" />
+			<Icons.CaretRight class="size-3 duration-200 group-data-[state=open]:rotate-90" />
 		</Button>
 	</DropdownMenu.Trigger>
 

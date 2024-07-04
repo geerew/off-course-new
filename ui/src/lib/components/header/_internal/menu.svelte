@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { Github } from '$components/icons';
+	import { Icons } from '$components/icons';
 	import Button from '$components/ui/button/button.svelte';
 	import { Separator } from '$components/ui/separator';
 	import * as Sheet from '$lib/components/ui/sheet/index.js';
@@ -62,7 +62,7 @@
 						rel="noreferrer"
 						target="_blank"
 					>
-						<Github
+						<Icons.Github
 							class="fill-muted-foreground group-hover:fill-foreground size-6 stroke-none duration-200"
 						/>
 						<span class="sr-only">GitHub</span>
@@ -92,7 +92,7 @@
 
 	<div class="flex flex-row gap-2.5">
 		<Button variant="ghost" href={site.links.github} class="group" rel="noreferrer" target="_blank">
-			<Github
+			<Icons.Github
 				class="fill-muted-foreground group-hover:fill-foreground size-5 stroke-none duration-200"
 			/>
 			<span class="sr-only">GitHub</span>

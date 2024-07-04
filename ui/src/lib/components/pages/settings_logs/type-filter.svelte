@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Err, Loading } from '$components/generic';
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import { GetLogTypes } from '$lib/api';
 	import { IsBrowser, cn } from '$lib/utils';
-	import { ChevronRight, Type } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	// ----------------------
@@ -47,18 +47,18 @@
 	<DropdownMenu.Trigger asChild let:builder>
 		<Button
 			builders={[builder]}
-			variant="ghost"
-			class="data-[state=open]:border-alt-1/100 border-alt-1/60 hover:border-alt-1/100 group h-auto w-32 items-center justify-between gap-2.5 border px-2.5 text-xs hover:bg-inherit"
+			variant="outline"
+			class="border-alt-1/60 group h-auto w-36 justify-between gap-2.5 border px-2"
 			on:click={(e) => {
 				e.stopPropagation();
 			}}
 		>
 			<div class="flex items-center gap-2">
-				<Type class={cn('size-3', Object.keys(filterTypes).length > 0 && 'text-primary')} />
+				<Icons.Text class={cn('size-4', Object.keys(filterTypes).length > 0 && 'text-primary')} />
 				<span>Log Type</span>
 			</div>
 
-			<ChevronRight class="size-3 duration-200 group-data-[state=open]:rotate-90" />
+			<Icons.CaretRight class="size-3.5 duration-200 group-data-[state=open]:rotate-90" />
 		</Button>
 	</DropdownMenu.Trigger>
 

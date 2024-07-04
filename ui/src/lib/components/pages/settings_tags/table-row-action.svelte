@@ -1,8 +1,8 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import type { Tag } from '$lib/types/models';
-	import { MoreHorizontal, SquarePen, Trash2 } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	// ----------------------
@@ -23,7 +23,7 @@
 			class="text-muted-foreground hover:bg-alt-1/60 data-[state=open]:text-foreground data-[state=open]:bg-alt-1/60 h-auto p-1.5"
 			builders={[builder]}
 		>
-			<MoreHorizontal class="size-4" />
+			<Icons.MoreHorizontal weight="fill" class="size-4" />
 		</Button>
 	</DropdownMenu.Trigger>
 
@@ -34,7 +34,7 @@
 				dispatch('rename', { id: tag.id });
 			}}
 		>
-			<SquarePen class="size-4" />
+			<Icons.Edit class="size-4" />
 			Rename
 		</DropdownMenu.Item>
 
@@ -46,7 +46,7 @@
 				dispatch('delete', { id: tag.id });
 			}}
 		>
-			<Trash2 class="size-4" />
+			<Icons.Trash class="size-4" />
 			Delete
 		</DropdownMenu.Item>
 	</DropdownMenu.Content>

@@ -1,6 +1,6 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
-	import { Search, X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	// ----------------------
@@ -15,7 +15,7 @@
 	class="border-alt-1/60 focus-within:border-alt-1/100 group relative w-64 rounded-md border md:w-56"
 >
 	<label for="tags-input">
-		<Search class="text-muted-foreground absolute left-2 top-1/2 size-3 -translate-y-1/2" />
+		<Icons.Search class="text-muted-foreground absolute left-2 top-1/2 size-3 -translate-y-1/2" />
 	</label>
 
 	<input
@@ -41,7 +41,7 @@
 				inputEl.focus();
 			}}
 		>
-			<X class="size-3" />
+			<Icons.X class="size-3" />
 		</Button>
 	{/if}
 </div>

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { CourseCard, Err, Loading, NiceDate } from '$components/generic';
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import { GetCourses } from '$lib/api';
 	import * as Carousel from '$lib/components/ui/carousel';
 	import { CourseProgress, type Course, type CoursesGetParams } from '$lib/types/models';
-	import { ArrowLeft, ArrowRight } from 'lucide-svelte';
 	import { writable } from 'svelte/store';
 	import theme from 'tailwindcss/defaultTheme';
 	import type { CarouselAPI } from '../../ui/carousel/context';
@@ -191,7 +191,7 @@
 					}}
 					class="hover:text-secondary px-3"
 				>
-					<ArrowLeft class="size-6" />
+					<Icons.ArrowLeft class="size-6" />
 				</Button>
 
 				<Button
@@ -203,7 +203,7 @@
 					}}
 					class="hover:text-secondary px-3"
 				>
-					<ArrowRight class="size-6" />
+					<Icons.ArrowRight class="size-6" />
 				</Button>
 			{/await}
 		</div>

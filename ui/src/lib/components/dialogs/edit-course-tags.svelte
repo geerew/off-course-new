@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Loading } from '$components/generic';
+	import { Icons } from '$components/icons';
 	import { Badge } from '$components/ui/badge';
 	import { Button } from '$components/ui/button';
 	import * as Dialog from '$components/ui/dialog';
@@ -8,7 +9,6 @@
 	import type { CourseTag, Tag } from '$lib/types/models';
 	import { cn } from '$lib/utils';
 	import { createCombobox, type ComboboxOption } from '@melt-ui/svelte';
-	import { ArrowLeft, Pencil, RotateCcw, Search, X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { writable, type Writable } from 'svelte/store';
@@ -241,7 +241,7 @@
 				isDialogOpen = true;
 			}}
 		>
-			<Pencil class="size-4" />
+			<Icons.Edit class="size-[18px]" weight="bold" />
 		</Button>
 	</Tooltip.Trigger>
 
@@ -263,7 +263,9 @@
 		<div class="border-alt-1/60 group relative flex flex-row items-center border-b">
 			<!-- svelte-ignore a11y-label-has-associated-control - $label contains the 'for' attribute -->
 			<label {...$label} use:label>
-				<Search class="text-muted-foreground absolute start-3 top-1/2 size-6 -translate-y-1/2" />
+				<Icons.Search
+					class="text-muted-foreground absolute start-3 top-1/2 size-6 -translate-y-1/2"
+				/>
 			</label>
 
 			<input
@@ -303,7 +305,7 @@
 
 							{#if t.tag.toLowerCase() === $inputValue.toLowerCase()}
 								<div class="ml-auto">
-									<ArrowLeft class="size-3" />
+									<Icons.ArrowLeft class="size-3" />
 								</div>
 							{/if}
 						</li>
@@ -340,7 +342,10 @@
 								tag.forDeletion = !tag.forDeletion;
 							}}
 						>
-							<svelte:component this={tag.forDeletion ? RotateCcw : X} class="size-3" />
+							<svelte:component
+								this={tag.forDeletion ? Icons.ArrowCounterClockwise : Icons.X}
+								class="size-3"
+							/>
 						</Button>
 					</div>
 				{/each}
@@ -365,7 +370,7 @@
 								toAdd = toAdd.filter((t) => t !== tag);
 							}}
 						>
-							<X class="size-3" />
+							<Icons.X class="size-3" />
 						</Button>
 					</div>
 				{/each}

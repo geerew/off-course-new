@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import type { Asset } from '$lib/types/models';
-	import { ArrowLeft, ArrowRight } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	// ----------------------
@@ -29,7 +29,7 @@
 				}}
 			>
 				<span class="text-start">
-					<ArrowLeft class="size-5" />
+					<Icons.ArrowLeft class="size-5" />
 				</span>
 				{prevAsset.prefix}. {prevAsset.title}
 			</Button>
@@ -50,7 +50,7 @@
 				<span class="text-start">
 					{nextAsset.prefix}. {nextAsset.title}
 				</span>
-				<ArrowRight class="size-5" />
+				<Icons.ArrowRight class="size-5" />
 			</Button>
 		{/key}
 	{:else}

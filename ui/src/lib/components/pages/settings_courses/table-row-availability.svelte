@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CheckSquare2Icon, XSquare } from 'lucide-svelte';
+	import { Icons } from '$components/icons';
 
 	// ----------------------
 	// Exports
@@ -9,18 +9,10 @@
 
 <div class="flex place-content-center">
 	{#if available}
-		<span title="available">
-			<CheckSquare2Icon
-				class="fill-success stroke-success [&>:nth-child(2)]:stroke-success-foreground"
-			>
-				Available
-			</CheckSquare2Icon>
-		</span>
+		<Icons.SquareCheck
+			class="fill-success stroke-success [&>:nth-child(2)]:stroke-success-foreground"
+		/>
 	{:else}
-		<span title="unavailable">
-			<XSquare class="fill-destructive stroke-destructive [&>:nth-child(n+2)]:stroke-white">
-				Unavailable
-			</XSquare>
-		</span>
+		<Icons.SquareX class="fill-destructive stroke-destructive [&>:nth-child(n+2)]:stroke-white" />
 	{/if}
 </div>

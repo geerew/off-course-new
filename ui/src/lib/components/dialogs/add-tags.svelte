@@ -1,13 +1,13 @@
 <!-- TODO: Handle adding a tag that goes off screen (scroll to it?) -->
 <script lang="ts">
 	import Loading from '$components/generic/loading.svelte';
+	import { Icons } from '$components/icons';
 	import { Badge } from '$components/ui/badge';
 	import { Button } from '$components/ui/button';
 	import * as Dialog from '$components/ui/dialog';
 	import { AddTag, GetTag } from '$lib/api';
 	import { cn } from '$lib/utils';
 	import axios from 'axios';
-	import { Search, Tag, X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -122,7 +122,7 @@
 	class="bg-primary hover:bg-primary group flex h-8 gap-1.5 hover:brightness-110"
 	on:click={() => (isOpen = true)}
 >
-	<Tag class="size-4" />
+	<Icons.Tag class="size-4" />
 	<span>Add Tags</span>
 </Button>
 
@@ -132,7 +132,7 @@
 	>
 		<div class="border-alt-1/60 group relative flex flex-row items-center border-b">
 			<label class="px-5" for="add-tag-input">
-				<Search class="text-muted-foreground size-6" />
+				<Icons.Search class="text-muted-foreground size-6" />
 			</label>
 
 			<input
@@ -174,7 +174,7 @@
 								toAdd = toAdd.filter((t) => t !== tag);
 							}}
 						>
-							<X class="size-3" />
+							<Icons.X class="size-3" />
 						</Button>
 					</div>
 				{/each}

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Err, Loading } from '$components/generic';
+	import { Icons } from '$components/icons';
 	import { Badge } from '$components/ui/badge';
 	import { Button } from '$components/ui/button';
 	import { Separator } from '$components/ui/separator';
 	import { AddCourse, GetFileSystem } from '$lib/api';
 	import { PathClassification, type DirInfo, type FileSystem } from '$lib/types/fileSystem';
 	import { cn } from '$lib/utils';
-	import { BookPlus, CornerUpLeft, RefreshCw } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -107,8 +107,6 @@
 			response.directories?.forEach((d) => {
 				d.isSelected = d.path in selectedCourses;
 
-				// If the directory is an ancestor, disable the checkbox
-
 				if (d.classification === PathClassification.None) {
 					// Check if this path is an ancestor of any selected course
 					d.classification = Object.keys(selectedCourses).some((key) => {
@@ -119,7 +117,7 @@
 				}
 			});
 
-			pathInfo = response;
+			return response;
 		} catch (error) {
 			errorMsg = error instanceof Error ? error.message : (error as string);
 		}
@@ -132,7 +130,9 @@
 		loadingDrives = true;
 
 		try {
-			await load('');
+			const flickerPromise = new Promise((resolve) => setTimeout(resolve, 200));
+			const [loadResponse] = await Promise.all([load(''), flickerPromise]);
+			if (loadResponse) pathInfo = loadResponse;
 		} catch (error) {
 			errorMsg = error instanceof Error ? error.message : (error as string);
 		} finally {
@@ -147,7 +147,9 @@
 		loadingPath = true;
 
 		try {
-			await load(path);
+			const flickerPromise = new Promise((resolve) => setTimeout(resolve, 200));
+			const [loadResponse] = await Promise.all([load(path), flickerPromise]);
+			if (loadResponse) pathInfo = loadResponse;
 		} catch (error) {
 			errorMsg = error instanceof Error ? error.message : (error as string);
 		} finally {
@@ -182,12 +184,10 @@
 
 		refreshing = true;
 
-		// Set a timeout to prevent flickering
-		const oneSecondPromise = new Promise((resolve) => setTimeout(resolve, 1000));
-
-		// Wait for load and the oneSecondPromise to resolve
 		try {
-			await Promise.all([load(currentLoadingPath), oneSecondPromise]);
+			const flickerPromise = new Promise((resolve) => setTimeout(resolve, 1000));
+			const [loadResponse] = await Promise.all([load(currentLoadingPath), flickerPromise]);
+			if (loadResponse) pathInfo = loadResponse;
 		} catch (error) {
 			errorMsg = error instanceof Error ? error.message : (error as string);
 		}
@@ -297,7 +297,7 @@
 		class="border-alt-1/60 flex h-14 shrink-0 items-center justify-between border-b px-3 text-base font-medium"
 	>
 		<div class="flex items-center gap-2">
-			<BookPlus class="size-4" />
+			<Icons.StackPlus class="size-4" />
 			<span>Course Selection</span>
 		</div>
 
@@ -308,7 +308,7 @@
 			class="hover:bg-alt-1 group px-2.5 disabled:opacity-100"
 			on:click={refresh}
 		>
-			<RefreshCw
+			<Icons.Refresh
 				class={cn(
 					'group-hover:text-foreground text-muted-foreground size-5',
 					refreshing && 'animate-spin'
@@ -356,7 +356,9 @@
 								}}
 							>
 								<div class="flex grow gap-2 text-sm">
-									<CornerUpLeft class="text-muted-foreground group-hover:text-foreground size-4" />
+									<Icons.CornerUpLeft
+										class="text-muted-foreground group-hover:text-foreground size-4"
+									/>
 									<span>Back</span>
 								</div>
 							</Button>

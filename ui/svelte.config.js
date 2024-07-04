@@ -1,5 +1,6 @@
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+import { phosphorSvelteOptimize } from 'phosphor-svelte/preprocessor';
 import preprocess from 'svelte-preprocess';
 
 import { dirname, join } from 'path';
@@ -10,6 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	preprocess: [
+		phosphorSvelteOptimize(),
 		vitePreprocess(),
 		preprocess({
 			postcss: {

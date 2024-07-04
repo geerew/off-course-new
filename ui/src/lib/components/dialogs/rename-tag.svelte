@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Loading } from '$components/generic';
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import * as Dialog from '$components/ui/dialog';
 	import { GetTag, UpdateTag } from '$lib/api';
 	import type { Tag } from '$lib/types/models';
 	import axios from 'axios';
-	import { SquarePen } from 'lucide-svelte';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -88,7 +88,7 @@
 	>
 		<div class="flex flex-col gap-5 overflow-y-scroll px-8 pt-4">
 			<div class="flex flex-row items-center gap-2.5">
-				<SquarePen class="size-4" />
+				<Icons.Edit class="size-4" />
 				<span>Rename Tag</span>
 			</div>
 

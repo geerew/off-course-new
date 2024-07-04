@@ -1,10 +1,10 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import Button from '$components/ui/button/button.svelte';
 	import * as Sheet from '$components/ui/sheet';
 	import * as Tooltip from '$components/ui/tooltip';
 	import type { Asset, CourseChapters } from '$lib/types/models';
 	import { UpdateQueryParam, cn } from '$lib/utils';
-	import { CircleCheck, Info, Menu, X } from 'lucide-svelte';
 	import { tick } from 'svelte';
 
 	// ----------------------
@@ -69,7 +69,7 @@
 				variant="ghost"
 				class="text-muted-foreground hover:text-foreground gap-2 px-0 hover:bg-inherit lg:hidden"
 			>
-				<Menu class="size-5" />
+				<Icons.List class="size-5" />
 				<span>Menu</span>
 			</Button>
 		</Sheet.Trigger>
@@ -87,7 +87,7 @@
 					class="text-muted-foreground hover:text-foreground hover:bg-background h-auto p-2"
 					on:click={() => (open = false)}
 				>
-					<X class="size-5" />
+					<Icons.X class="size-5" />
 				</Button>
 			</div>
 
@@ -120,7 +120,7 @@
 									href="/settings/courses/details?id={id}"
 									class="text-muted-foreground hover:text-foreground mt-1 h-auto px-0 py-0 hover:bg-transparent"
 								>
-									<Info class="size-4 shrink-0" />
+									<Icons.Info class="size-4 shrink-0" />
 								</Button>
 							</Tooltip.Trigger>
 
@@ -177,7 +177,7 @@
 													</div>
 
 													<!-- Asset completed -->
-													<CircleCheck
+													<Icons.CircleCheck
 														class={cn(
 															'text-muted-foreground mt-0.5 size-4 shrink-0',
 															asset.completed &&
@@ -218,7 +218,7 @@
 							href="/settings/courses/details?id={id}"
 							class="text-muted-foreground hover:text-foreground mt-1 h-auto px-0 py-0 hover:bg-transparent"
 						>
-							<Info class="size-4 shrink-0" />
+							<Icons.Info class="size-4 shrink-0" />
 						</Button>
 					</Tooltip.Trigger>
 
@@ -275,7 +275,7 @@
 										</div>
 
 										<!-- Asset completed -->
-										<CircleCheck
+										<Icons.CircleCheck
 											class={cn(
 												'text-muted-foreground mt-0.5 size-4 shrink-0',
 												asset.completed && 'fill-success text-success [&>:nth-child(2)]:text-white'

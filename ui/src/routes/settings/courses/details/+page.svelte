@@ -3,27 +3,16 @@
 	import { page } from '$app/stores';
 	import { DeleteCourseDialog } from '$components/dialogs';
 	import { CourseCard, Err, Loading, NiceDate, ScanStatus } from '$components/generic';
+	import { Icons } from '$components/icons';
 	import {
 		CourseDetailsChapters,
 		CourseDetailsTags
 	} from '$components/pages/settings_course_details';
-	import Badge from '$components/ui/badge/badge.svelte';
 	import Button from '$components/ui/button/button.svelte';
+	import { Progress } from '$components/ui/progress';
 	import { AddScan, GetCourseFromParams } from '$lib/api';
 	import type { Course } from '$lib/types/models';
-	import { IsBrowser } from '$lib/utils';
-	import {
-		CalendarPlus,
-		CalendarSearch,
-		CheckCircle2,
-		Circle,
-		CircleSlash,
-		Folder,
-		FolderSearch,
-		Play,
-		PlayCircle,
-		Trash2
-	} from 'lucide-svelte';
+	import { cn, IsBrowser } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { writable } from 'svelte/store';
@@ -117,22 +106,35 @@
 
 						<div class="flex flex-col gap-2.5">
 							<!-- Path -->
-							<div class="flex max-w-[30rem] flex-row items-center gap-2.5 md:max-w-full">
-								<Folder class="size-4 shrink-0" />
-								<span class="text-xs">{fetchedCourse.path}</span>
+							<div
+								class={cn(
+									'flex max-w-[30rem] flex-row items-start gap-2.5 text-xs md:max-w-full',
+									!fetchedCourse.available && 'text-destructive'
+								)}
+							>
+								<Icons.Folder class="size-4 shrink-0" />
+								{fetchedCourse.path}
 							</div>
 
 							<!-- Created at -->
 							<div class="flex flex-row items-center gap-2.5">
-								<CalendarPlus class="size-4 shrink-0" />
-								<NiceDate date={fetchedCourse.createdAt} class="text-foreground text-xs" />
+								<Icons.CalendarPlus class="size-4 shrink-0" />
+								<NiceDate
+									date={fetchedCourse.createdAt}
+									prefix="Added: "
+									class="text-foreground text-xs"
+								/>
 							</div>
 
 							<!-- Update at || scan status -->
 							<div class="flex flex-row items-center gap-2.5">
-								<CalendarSearch class="size-4 shrink-0" />
+								<Icons.CalendarScan class="size-4 shrink-0" />
 								{#if !fetchedCourse.scanStatus}
-									<NiceDate date={fetchedCourse.updatedAt} class="text-foreground text-xs" />
+									<NiceDate
+										date={fetchedCourse.updatedAt}
+										prefix="Last Scanned: "
+										class="text-foreground text-xs"
+									/>
 								{:else}
 									<ScanStatus
 										courseId={fetchedCourse.id}
@@ -152,58 +154,25 @@
 								{/if}
 							</div>
 
-							<div class="flex flex-row place-content-center gap-3 pt-3.5 md:place-content-start">
-								<!-- Availability -->
-								{#if fetchedCourse.available}
-									<Badge
-										class="bg-success text-success-foreground hover:bg-success items-center gap-1.5 rounded-sm"
-									>
-										<CheckCircle2 class="size-4" />
-										Available
-									</Badge>
-								{:else}
-									<Badge
-										variant="destructive"
-										class="hover:bg-destructive items-center gap-1.5 rounded-sm"
-									>
-										<CircleSlash class="size-4" />
-										Unavailable
-									</Badge>
-								{/if}
+							<!-- Progress -->
+							<div class="flex flex-row items-center gap-2.5 text-xs">
+								<Icons.Hourglass class="size-4 shrink-0" />
 
-								<!-- % completed -->
-								{#if !fetchedCourse.started}
-									<Badge
-										class="bg-alt-1 hover:bg-alt-1 text-foreground items-center gap-1.5 rounded-sm"
-									>
-										<Circle class="size-4" />
-										Not Started
-									</Badge>
-								{:else if fetchedCourse.percent === 100}
-									<Badge class="hover:bg-primary items-center gap-1.5 rounded-sm">
-										<CheckCircle2 class="size-4" />
-										Completed
-									</Badge>
-								{:else}
-									<Badge
-										variant="secondary"
-										class="hover:bg-secondary items-center gap-1.5 rounded-sm"
-									>
-										<PlayCircle class="size-4" />
-										{fetchedCourse.percent}% completed
-									</Badge>
-								{/if}
+								<div class="flex min-w-24 flex-row items-center gap-2.5">
+									<Progress value={fetchedCourse.percent} class="bg-foreground/40 h-1.5" />
+									<span class="min-w-5 text-xs">{fetchedCourse.percent}%</span>
+								</div>
 							</div>
 						</div>
 
-						<!-- Course actions -->
+						<!-- Actions -->
 						<div class="flex flex-row items-center gap-2.5">
 							<Button
 								variant="outline"
 								class="hover:bg-primary bg-muted border-muted-foreground hover:text-primary-foreground hover:border-primary h-8 cursor-pointer gap-2 px-2.5"
 								href="/course?id={fetchedCourse.id}"
 							>
-								<Play class="size-4" />
+								<Icons.Play class="size-4" />
 								{#if fetchedCourse.percent === 0}
 									Start
 								{:else if fetchedCourse.percent === 100}
@@ -222,7 +191,7 @@
 									if (s) fetchedCourse.scanStatus = s;
 								}}
 							>
-								<FolderSearch class="size-4" />
+								<Icons.Scan class="size-4" />
 								Scan
 							</Button>
 
@@ -233,14 +202,16 @@
 									openDeleteDialog = true;
 								}}
 							>
-								<Trash2 class="size-4" />
+								<Icons.Trash class="size-4" />
 								Delete
 							</Button>
 						</div>
 
+						<!-- Tags -->
 						<CourseDetailsTags courseId={fetchedCourse.id} bind:refresh={tagsRefresh} />
 					</div>
 
+					<!-- Card -->
 					<div class="order-1 md:order-2">
 						<CourseCard
 							courseId={fetchedCourse.id}

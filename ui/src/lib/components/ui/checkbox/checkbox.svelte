@@ -1,8 +1,7 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import { cn } from '$lib/utils.js';
 	import { Checkbox as CheckboxPrimitive } from 'bits-ui';
-	import Check from 'lucide-svelte/icons/check';
-	import Minus from 'lucide-svelte/icons/minus';
 
 	type $$Props = CheckboxPrimitive.Props;
 	type $$Events = CheckboxPrimitive.Events;
@@ -27,9 +26,9 @@
 		let:isIndeterminate
 	>
 		{#if isChecked}
-			<Check class="size-3.5" />
+			<Icons.Check class="size-3.5" />
 		{:else if isIndeterminate}
-			<Minus class="size-3.5" />
+			<Icons.Minus class="size-3.5" />
 		{/if}
 	</CheckboxPrimitive.Indicator>
 </CheckboxPrimitive.Root>

@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { Icons } from '$components/icons';
 	import type { ClassName } from '$lib/types/general';
 	import { cn } from '$lib/utils';
-	import { CircleOff } from 'lucide-svelte';
 
 	let className: ClassName = undefined;
 
@@ -20,7 +20,7 @@
 		className
 	)}
 >
-	<CircleOff class={cn('text-destructive h-12 w-12', imgClass)} />
+	<Icons.Bug class={cn('text-destructive size-12', imgClass)} />
 
 	<div class="flex flex-col gap-2.5 text-center">
 		<span class={cn('text-foreground', textClass)}>Oh no! An error occurred</span>

@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Err, Loading } from '$components/generic';
+	import { Icons } from '$components/icons';
 	import { Button } from '$components/ui/button';
 	import * as DropdownMenu from '$components/ui/dropdown-menu';
 	import { GetAllTags } from '$lib/api';
-	import type { Tag } from '$lib/types/models';
+	import type { Tag as TagModel } from '$lib/types/models';
 	import { IsBrowser, cn } from '$lib/utils';
-	import { ChevronRight, Search, Tag as TagIcon, X } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	// ----------------------
@@ -21,10 +21,10 @@
 	let tags = getTags();
 
 	// A list of all tags
-	let allTags: Tag[] = [];
+	let allTags: TagModel[] = [];
 
 	// A list of tags that are currently being displayed. When the search input is empty, this will be equal to `allTags`, otherwise it will be a filtered version of `allTags`
-	let workingTags: Tag[] = [];
+	let workingTags: TagModel[] = [];
 
 	// As the selected tags change, dispatch an event
 	const dispatchEvent = createEventDispatcher();
@@ -42,7 +42,7 @@
 		try {
 			const response = await GetAllTags();
 
-			allTags = response as Tag[];
+			allTags = response as TagModel[];
 			workingTags = allTags;
 
 			return true;
@@ -87,11 +87,11 @@
 			}}
 		>
 			<div class="flex items-center gap-2">
-				<TagIcon class={cn('size-3', Object.keys(filterTags).length > 0 && 'text-primary')} />
+				<Icons.Tag class={cn('size-3', Object.keys(filterTags).length > 0 && 'text-primary')} />
 				<span>Tags</span>
 			</div>
 
-			<ChevronRight class="size-3 duration-200 group-data-[state=open]:rotate-90" />
+			<Icons.CaretRight class="size-3 duration-200 group-data-[state=open]:rotate-90" />
 		</Button>
 	</DropdownMenu.Trigger>
 
