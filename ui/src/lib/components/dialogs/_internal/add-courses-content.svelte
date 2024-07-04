@@ -105,7 +105,13 @@
 			// Set the selected state of the directories. This will ensure previously selected courses are
 			// still selected even as the user navigated
 			response.directories?.forEach((d) => {
-				d.isSelected = d.path in selectedCourses;
+				if (d.path in selectedCourses) {
+					// If the course is in the selectedCourses list, mark it as selected. Skip
+					// the classification check as we want to allows the user to unselect selected
+					// courses
+					d.isSelected = true;
+					return;
+				}
 
 				if (d.classification === PathClassification.None) {
 					// Check if this path is an ancestor of any selected course
@@ -395,7 +401,7 @@
 							<Separator orientation="vertical" class="bg-alt-1/40 h-full" />
 
 							{#if dirInfo.classification !== PathClassification.Course}
-								<!-- Check box (right) -->
+								<!-- Checkbox (right) -->
 								{#if loadingPath && dirInfo.path === currentLoadingPath}
 									<Loading class="px-0 py-0" loaderClass="size-5" />
 								{:else}
