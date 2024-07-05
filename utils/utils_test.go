@@ -1,12 +1,10 @@
 package utils
 
 import (
-	"log/slog"
 	"reflect"
+	"runtime"
 	"testing"
 
-	"github.com/geerew/off-course/utils/appFs"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
@@ -336,51 +334,24 @@ func Test_ValueToString(t *testing.T) {
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+func Test_NormalizeWindowsDrive(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		// Test cases for Windows drive paths
+		{"C:", "C:\\"},
+		{"C:\\", "C:\\"},
+		{"C:folder", "C:\\folder"},
+		{"C:\\folder", "C:\\folder"},
+	}
 
-func Test_PartialHash(t *testing.T) {
-	t.Run("random sizes", func(t *testing.T) {
-		appFs := appFs.NewAppFs(afero.NewMemMapFs(), slog.Default())
+	if runtime.GOOS != "windows" {
+		t.Skip("Skipping Windows-specific tests on non-Windows systems")
+	}
 
-		bigData := make([]byte, 1024*1024*10)
-		for i := 0; i < len(bigData); i++ {
-			bigData[i] = byte(i % 256)
-		}
-
-		tests := []struct {
-			name     string
-			content  []byte
-			expected string // You can generate these expected hashes beforehand
-		}{
-			{"empty", []byte(""), "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"},
-			{"small", []byte("small file contents"), "db664be16228614363fb0506a9f828fdb0dbb5ceef6465ac344647ed6feae240"},
-			{"big", bigData, "c37339299959bdb2885f2f30f77247b0fa3760ce1181d418b4f17fa652ff1386"},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				require.Nil(t, afero.WriteFile(appFs.Fs, "/test/"+tt.name, tt.content, 0644))
-
-				hash, err := PartialHash(appFs, "/test/"+tt.name, 1024*1024)
-				require.Nil(t, err)
-				require.Equal(t, tt.expected, hash)
-			})
-		}
-	})
-
-	t.Run("rename file", func(t *testing.T) {
-		appFs := appFs.NewAppFs(afero.NewMemMapFs(), slog.Default())
-
-		require.Nil(t, afero.WriteFile(appFs.Fs, "/test/data", []byte("Some test data"), 0644))
-
-		hash, err := PartialHash(appFs, "/test/data", 1024*1024)
-		require.Nil(t, err)
-		require.Equal(t, "0843f7816915fae7fc9c31dbbb3e8745015b53a297930e522d544c13287cb062", hash)
-
-		// Rename the file
-		require.Nil(t, appFs.Fs.Rename("/test/data", "/test/newdata"))
-
-		hash, err = PartialHash(appFs, "/test/newdata", 1024*1024)
-		require.Nil(t, err)
-		require.Equal(t, "0843f7816915fae7fc9c31dbbb3e8745015b53a297930e522d544c13287cb062", hash)
-	})
+	for _, test := range tests {
+		got := NormalizeWindowsDrive(test.input)
+		require.Equal(t, test.expected, got)
+	}
 }

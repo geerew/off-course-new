@@ -13,6 +13,7 @@ import (
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/jobs"
 	"github.com/geerew/off-course/utils/pagination"
@@ -197,6 +198,8 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 
 	// Empty stuff that should not be set
 	course.ID = ""
+
+	course.Path = utils.NormalizeWindowsDrive(course.Path)
 
 	// Validate the path
 	if exists, err := afero.DirExists(api.appFs.Fs, course.Path); err != nil || !exists {

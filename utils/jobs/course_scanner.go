@@ -327,7 +327,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 			existing, exists := assetsMap[chapter][pfn.prefix]
 
 			// Get a (partial) hash of the asset
-			hash, err := utils.PartialHash(cs.appFs, filePath, 1024*1024)
+			hash, err := cs.appFs.PartialHash(filePath, 1024*1024)
 			if err != nil {
 				return err
 			}

@@ -1,7 +1,10 @@
 package appFs
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -9,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/host"
@@ -79,6 +83,8 @@ func (appFs *AppFs) Open(name string) (fs.File, error) {
 // ReadDir reads the contents of a path and builds a slice of files and
 // directories
 func (appFs AppFs) ReadDir(path string, sortResult bool) (*PathContents, error) {
+	path = utils.NormalizeWindowsDrive(path)
+
 	items, err := appFs.PathItems(path)
 	if err != nil {
 		return nil, err
@@ -113,7 +119,7 @@ func (appFs AppFs) ReadDir(path string, sortResult bool) (*PathContents, error) 
 // ReadDirFlat recursively reads a directory down to a certain depth, and returns
 // a flat string slice of paths
 func (appFs AppFs) ReadDirFlat(path string, depth int) ([]string, error) {
-	return appFs.recursivelyReadDir(path, depth, 0)
+	return appFs.recursivelyReadDir(utils.NormalizeWindowsDrive(path), depth, 0)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -158,7 +164,7 @@ func (appFs AppFs) PathItems(path string) ([]string, error) {
 	}
 
 	// List the items at the path
-	items, err := f.Readdirnames((-1))
+	items, err := f.Readdirnames(-1)
 	if err != nil {
 		appFs.logger.Error(
 			"Unable to read path",
@@ -255,4 +261,81 @@ func (appFs AppFs) wslDrives() ([]string, error) {
 	}
 
 	return drives, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// PartialHash is a function that receives a file path and a chunk size as arguments and
+// returns a partial hash of the file, by reading the first, middle, and last
+// chunks of the file, as well as two random chunks, and hashes them together
+//
+// It uses the SHA-256 hashing algorithm from the standard library to calculate the hash
+func (appFs AppFs) PartialHash(filePath string, chunkSize int64) (string, error) {
+	file, err := appFs.Fs.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return "", err
+	}
+
+	// Append file size to the hash
+	fileSize := fileInfo.Size()
+	binary.Write(hash, binary.LittleEndian, fileSize)
+
+	// Function to read and hash a chunk at a given position
+	readAndHashChunk := func(position int64) error {
+		_, err := file.Seek(position, 0)
+		if err != nil {
+			return err
+		}
+		chunk := make([]byte, chunkSize)
+		n, err := file.Read(chunk)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		hash.Write(chunk[:n])
+		return nil
+	}
+
+	// Read and hash the first chunk
+	if err = readAndHashChunk(0); err != nil {
+		return "", err
+	}
+
+	// Read and hash the middle chunk
+	middlePosition := fileSize / 2
+	if middlePosition < fileSize {
+		if err = readAndHashChunk(middlePosition); err != nil {
+			return "", err
+		}
+	}
+
+	// Read and hash the last chunk
+	lastPosition := fileSize - chunkSize
+	if lastPosition < 0 {
+		lastPosition = 0
+	}
+	if lastPosition < fileSize {
+		if err = readAndHashChunk(lastPosition); err != nil {
+			return "", err
+		}
+	}
+
+	// Random chunks
+	additionalPositions := []int64{fileSize / 4, 3 * fileSize / 4}
+	for _, position := range additionalPositions {
+		if position < fileSize {
+			if err = readAndHashChunk(position); err != nil {
+				return "", err
+			}
+		}
+	}
+
+	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }
