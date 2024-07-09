@@ -1,0 +1,20 @@
+name: CI
+
+on: 
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  UI-Build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.1.7
+      - uses: pnpm/action-setup@v4.0.0
+        with:
+          version: 9.4.0
+          run_install: true
+      - name: build
+        working-directory: ./ui
+        run: pnpm run build
