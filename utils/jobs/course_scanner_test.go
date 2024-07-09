@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 
@@ -79,14 +80,14 @@ func TestCourseScanner_Add(t *testing.T) {
 
 		testData := daos.NewTestBuilder(t).Db(dbManager.DataDb).Courses(1).Build()
 
-		scan, err := scanner.Add(testData[0].ID)
+		firstScan, err := scanner.Add(testData[0].ID)
 		require.Nil(t, err)
-		require.Equal(t, testData[0].ID, scan.CourseID)
+		require.Equal(t, testData[0].ID, firstScan.CourseID)
 
 		// Add the same course again
-		scan, err = scanner.Add(testData[0].ID)
+		secondScan, err := scanner.Add(testData[0].ID)
 		require.Nil(t, err)
-		require.Nil(t, scan)
+		require.Equal(t, secondScan.ID, firstScan.ID)
 		require.NotEmpty(t, *logs)
 		require.Equal(t, "Scan already in progress", (*logs)[len(*logs)-1].Message)
 		require.Equal(t, slog.LevelDebug, (*logs)[len(*logs)-1].Level)
@@ -308,27 +309,27 @@ func TestCourseScanner_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Found card
 		// ----------------------------
-		testData := daos.NewTestBuilder(t).Db(dbManager.DataDb).Courses(1).Scan().Build()
+		testData := daos.NewTestBuilder(t).Db(dbManager.DataDb).Courses([]string{"course 1"}).Scan().Build()
 		require.Empty(t, testData[0].CardPath)
 
 		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", testData[0].Path))
+		scanner.appFs.Fs.Create(filepath.Join(testData[0].Path, "card.jpg"))
 
 		err := CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
 		c, err := scanner.courseDao.Get(testData[0].ID, nil, nil)
 		require.Nil(t, err)
-		require.Equal(t, fmt.Sprintf("%s/card.jpg", testData[0].Path), c.CardPath)
+		require.Equal(t, filepath.Join(testData[0].Path, "card.jpg"), c.CardPath)
 
 		// ----------------------------
 		// Ignore card in chapter
 		// ----------------------------
-		testData = daos.NewTestBuilder(t).Db(dbManager.DataDb).Courses(1).Scan().Build()
+		testData = daos.NewTestBuilder(t).Db(dbManager.DataDb).Courses([]string{"course "}).Scan().Build()
 		require.Empty(t, testData[0].CardPath)
 
 		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/chapter 1/card.jpg", testData[0].Path))
+		scanner.appFs.Fs.Create(filepath.Join(testData[0].Path, "chapter 1", "card.jpg"))
 
 		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
@@ -341,25 +342,25 @@ func TestCourseScanner_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Multiple cards types
 		// ----------------------------
-		testData = daos.NewTestBuilder(t).Db(dbManager.DataDb).Courses(1).Scan().Build()
+		testData = daos.NewTestBuilder(t).Db(dbManager.DataDb).Courses([]string{"course 3"}).Scan().Build()
 		require.Empty(t, testData[0].CardPath)
 
 		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.jpg", testData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/card.png", testData[0].Path))
+		scanner.appFs.Fs.Create(filepath.Join(testData[0].Path, "card.jpg"))
+		scanner.appFs.Fs.Create(filepath.Join(testData[0].Path, "card.png"))
 
 		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
 
 		c, err = scanner.courseDao.Get(testData[0].ID, nil, nil)
 		require.Nil(t, err)
-		require.Equal(t, fmt.Sprintf("%s/card.jpg", testData[0].Path), c.CardPath)
+		require.Equal(t, filepath.Join(testData[0].Path, "card.jpg"), c.CardPath)
 	})
 
 	t.Run("card error", func(t *testing.T) {
 		scanner, dbManager, _, _ := setupCourseScanner(t)
 
-		testData := daos.NewTestBuilder(t).Db(dbManager.DataDb).Courses(1).Scan().Build()
+		testData := daos.NewTestBuilder(t).Db(dbManager.DataDb).Courses([]string{"course 4"}).Scan().Build()
 		require.Empty(t, testData[0].CardPath)
 
 		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
@@ -530,8 +531,8 @@ func TestCourseScanner_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Add 1 asset with 1 attachment
 		// ----------------------------
-		afero.WriteFile(scanner.appFs.Fs, fmt.Sprintf("%s/01 video.mp4", testData[0].Path), []byte("video"), os.ModePerm)
-		afero.WriteFile(scanner.appFs.Fs, fmt.Sprintf("%s/01 info.txt", testData[0].Path), []byte("info"), os.ModePerm)
+		afero.WriteFile(scanner.appFs.Fs, filepath.Join(testData[0].Path, "01 video.mp4"), []byte("video"), os.ModePerm)
+		afero.WriteFile(scanner.appFs.Fs, filepath.Join(testData[0].Path, "01 info.txt"), []byte("info"), os.ModePerm)
 
 		err := CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
@@ -542,7 +543,7 @@ func TestCourseScanner_CourseProcessor(t *testing.T) {
 		require.Equal(t, "video", assets[0].Title)
 		require.Equal(t, testData[0].ID, assets[0].CourseID)
 		require.Equal(t, 1, int(assets[0].Prefix.Int16))
-		require.Equal(t, fmt.Sprintf("%s/01 video.mp4", testData[0].Path), assets[0].Path)
+		require.Equal(t, filepath.Join(testData[0].Path, "01 video.mp4"), assets[0].Path)
 		require.True(t, assets[0].Type.IsVideo())
 		require.Equal(t, "e56ca866bff1691433766c60304a96583c1a410e53b33ef7d89cb29eac2a97ab", assets[0].Hash)
 
@@ -550,12 +551,12 @@ func TestCourseScanner_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
 		require.Equal(t, "info.txt", attachments[0].Title)
-		require.Equal(t, fmt.Sprintf("%s/01 info.txt", testData[0].Path), attachments[0].Path)
+		require.Equal(t, filepath.Join(testData[0].Path, "01 info.txt"), attachments[0].Path)
 
 		// ----------------------------
 		// Add another attachment
 		// ----------------------------
-		afero.WriteFile(scanner.appFs.Fs, fmt.Sprintf("%s/01 code.zip", testData[0].Path), []byte("code"), os.ModePerm)
+		afero.WriteFile(scanner.appFs.Fs, filepath.Join(testData[0].Path, "01 code.zip"), []byte("code"), os.ModePerm)
 
 		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
@@ -570,14 +571,14 @@ func TestCourseScanner_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, attachments, 2)
 		require.Equal(t, "info.txt", attachments[0].Title)
-		require.Equal(t, fmt.Sprintf("%s/01 info.txt", testData[0].Path), attachments[0].Path)
+		require.Equal(t, filepath.Join(testData[0].Path, "01 info.txt"), attachments[0].Path)
 		require.Equal(t, "code.zip", attachments[1].Title)
-		require.Equal(t, fmt.Sprintf("%s/01 code.zip", testData[0].Path), attachments[1].Path)
+		require.Equal(t, filepath.Join(testData[0].Path, "01 code.zip"), attachments[1].Path)
 
 		// ----------------------------
 		// Delete first attachment
 		// ----------------------------
-		scanner.appFs.Fs.Remove(fmt.Sprintf("%s/01 info.txt", testData[0].Path))
+		scanner.appFs.Fs.Remove(filepath.Join(testData[0].Path, "01 info.txt"))
 
 		err = CourseProcessor(scanner, testData[0].Scan)
 		require.Nil(t, err)
@@ -593,7 +594,7 @@ func TestCourseScanner_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, attachments, 1)
 		require.Equal(t, "code.zip", attachments[0].Title)
-		require.Equal(t, fmt.Sprintf("%s/01 code.zip", testData[0].Path), attachments[0].Path)
+		require.Equal(t, filepath.Join(testData[0].Path, "01 code.zip"), attachments[0].Path)
 	})
 
 	t.Run("attachments error", func(t *testing.T) {
@@ -603,8 +604,8 @@ func TestCourseScanner_CourseProcessor(t *testing.T) {
 		attachmentDao := daos.NewAttachmentDao(dbManager.DataDb)
 
 		scanner.appFs.Fs.Mkdir(testData[0].Path, os.ModePerm)
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 video.mkv", testData[0].Path))
-		scanner.appFs.Fs.Create(fmt.Sprintf("%s/01 info", testData[0].Path))
+		scanner.appFs.Fs.Create(filepath.Join(testData[0].Path, "01 video.mkv"))
+		scanner.appFs.Fs.Create(filepath.Join(testData[0].Path, "01 info"))
 
 		// Drop the attachments table
 		_, err := dbManager.DataDb.Exec("DROP TABLE IF EXISTS " + attachmentDao.Table())
@@ -640,7 +641,7 @@ func TestCourseScanner_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Add PDF (asset)
 		// ----------------------------
-		pdfFile := fmt.Sprintf("%s/01 doc 1.pdf", testData[0].Path)
+		pdfFile := filepath.Join(testData[0].Path, "01 doc 1.pdf")
 		afero.WriteFile(scanner.appFs.Fs, pdfFile, []byte("doc 1"), os.ModePerm)
 
 		err := CourseProcessor(scanner, testData[0].Scan)
@@ -657,7 +658,7 @@ func TestCourseScanner_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Add HTML (asset)
 		// ----------------------------
-		htmlFile := fmt.Sprintf("%s/01 example.html", testData[0].Path)
+		htmlFile := filepath.Join(testData[0].Path, "01 example.html")
 		afero.WriteFile(scanner.appFs.Fs, htmlFile, []byte("example"), os.ModePerm)
 
 		err = CourseProcessor(scanner, testData[0].Scan)
@@ -679,7 +680,7 @@ func TestCourseScanner_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Add VIDEO (asset)
 		// ----------------------------
-		videoFile := fmt.Sprintf("%s/01 video.mp4", testData[0].Path)
+		videoFile := filepath.Join(testData[0].Path, "01 video.mp4")
 		afero.WriteFile(scanner.appFs.Fs, videoFile, []byte("video"), os.ModePerm)
 
 		err = CourseProcessor(scanner, testData[0].Scan)
@@ -702,7 +703,7 @@ func TestCourseScanner_CourseProcessor(t *testing.T) {
 		// ----------------------------
 		// Add PDF file (attachment)
 		// ----------------------------
-		pdfFile2 := fmt.Sprintf("%s/01 - e.pdf", testData[0].Path)
+		pdfFile2 := filepath.Join(testData[0].Path, "/01 - e.pdf")
 		afero.WriteFile(scanner.appFs.Fs, pdfFile2, []byte("e"), os.ModePerm)
 
 		err = CourseProcessor(scanner, testData[0].Scan)

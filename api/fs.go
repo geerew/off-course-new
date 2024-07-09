@@ -50,12 +50,15 @@ func (api *fs) fileSystem(c *fiber.Ctx) error {
 
 	directories := make([]*fileInfo, 0)
 
+	normalizedPaths := make([]string, len(drives))
 	for _, d := range drives {
-		directories = append(directories, &fileInfo{Title: d, Path: d})
+		normalizedPath := utils.NormalizeWindowsDrive(d)
+		directories = append(directories, &fileInfo{Title: d, Path: normalizedPath})
+		normalizedPaths = append(normalizedPaths, normalizedPath)
 	}
 
 	// Include path classification; ancestor, course, descendant, none
-	if classificationResult, err := api.courseDao.ClassifyPaths(drives); err != nil {
+	if classificationResult, err := api.courseDao.ClassifyPaths(normalizedPaths); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "error classifying paths - " + err.Error(),
 		})
@@ -96,7 +99,7 @@ func (api *fs) path(c *fiber.Ctx) error {
 
 	paths := make([]string, 0)
 	for _, directory := range items.Directories {
-		path := filepath.Join(path, directory.Name())
+		path := utils.NormalizeWindowsDrive(filepath.Join(path, directory.Name()))
 		paths = append(paths, path)
 
 		directories = append(directories, &fileInfo{Title: directory.Name(), Path: path})

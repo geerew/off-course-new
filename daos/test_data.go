@@ -140,7 +140,7 @@ func (builder *TestBuilder) Build() []*TestCourse {
 		if len(builder.courseTitles) > 0 {
 			title = builder.courseTitles[i]
 		} else {
-			title = fmt.Sprintf("Course %s", security.PseudorandomString(5))
+			title = fmt.Sprintf("Course %d", i+1)
 		}
 
 		tc.Course = builder.newTestCourse(title)
@@ -173,7 +173,7 @@ func (builder *TestBuilder) newTestCourse(title string) *models.Course {
 	c.RefreshUpdatedAt()
 
 	c.Title = title
-	c.Path = fmt.Sprintf("/%s/%s", security.PseudorandomString(5), c.Title)
+	c.Path = filepath.Join(string(filepath.Separator), "courses", c.Title)
 
 	if builder.db != nil {
 		dao := NewCourseDao(builder.db)
@@ -224,11 +224,11 @@ func (builder *TestBuilder) newTestAssets(course *models.Course) []*models.Asset
 		a.RefreshUpdatedAt()
 
 		a.CourseID = course.ID
-		a.Title = security.PseudorandomString(6)
-		a.Prefix = sql.NullInt16{Int16: int16(rand.Intn(100-1) + 1), Valid: true}
+		a.Title = fmt.Sprintf("asset %d", i+1)
+		a.Prefix = sql.NullInt16{Int16: int16(i + 1), Valid: true}
 		a.Chapter = fmt.Sprintf("%d chapter %s", i+1, security.PseudorandomString(2))
 		a.Type = *types.NewAsset("mp4")
-		a.Path = fmt.Sprintf("%s/%s/%d %s.mp4", course.Path, a.Chapter, a.Prefix.Int16, a.Title)
+		a.Path = filepath.Join(course.Path, a.Chapter, fmt.Sprintf("%d", a.Prefix.Int16), a.Title+a.Type.String())
 		a.Hash = security.PseudorandomString(32)
 
 		if builder.db != nil {
@@ -264,8 +264,8 @@ func (builder *TestBuilder) newTestAttachments(asset *models.Asset) []*models.At
 
 		a.CourseID = asset.CourseID
 		a.AssetID = asset.ID
-		a.Title = security.PseudorandomString(6)
-		a.Path = fmt.Sprintf("%s/%d %s", filepath.Dir(asset.Path), asset.Prefix.Int16, a.Title)
+		a.Title = fmt.Sprintf("attachment %d", i+1)
+		a.Path = filepath.Join(filepath.Dir(asset.Path), fmt.Sprintf("%d", asset.Prefix.Int16), a.Title)
 
 		if builder.db != nil {
 			dao := NewAttachmentDao(builder.db)

@@ -3,6 +3,7 @@ package daos
 import (
 	"database/sql"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -552,13 +553,13 @@ func TestCourse_ClassifyPaths(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		dao, db := courseSetup(t)
 
-		testData := NewTestBuilder(t).Db(db).Courses([]string{"course 1", "course 2", "course 3"}).Build()
+		testData := NewTestBuilder(t).Db(db).Courses(3).Build()
 
-		path1 := "/"                                               // ancestor
-		path2 := strings.TrimSuffix(testData[1].Path, "/course 2") // ancestor
-		path3 := "/test"                                           // none
-		path4 := testData[2].Path                                  // course
-		path5 := testData[2].Path + "/test"                        // descendant
+		path1 := string(filepath.Separator)                                                  // ancestor
+		path2 := strings.TrimSuffix(testData[1].Path, string(filepath.Separator)+"Course 2") // ancestor
+		path3 := string(filepath.Separator) + "test"                                         // none
+		path4 := testData[2].Path                                                            // course
+		path5 := filepath.Join(testData[2].Path + "test")                                    // descendant
 
 		result, err := dao.ClassifyPaths([]string{path1, path2, path3, path4, path5})
 		require.Nil(t, err)

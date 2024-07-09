@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
+	"strings"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -88,6 +89,26 @@ func EncodeString(p string) string {
 	res := base64.StdEncoding.EncodeToString([]byte(encodedPath))
 
 	return res
+}
+
+// EscapeBackslashes escapes backslashes in the given path string by ensuring that all single
+// backslashes are replaced with double backslashes, while retaining already escaped backslashes
+// as single backslashes
+func EscapeBackslashes(path string) string {
+	var builder strings.Builder
+
+	for i := 0; i < len(path); i++ {
+		if path[i] == '\\' {
+			builder.WriteString("\\\\")
+			if i+1 < len(path) && path[i+1] == '\\' {
+				i++
+			}
+		} else {
+			builder.WriteByte(path[i])
+		}
+	}
+
+	return builder.String()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

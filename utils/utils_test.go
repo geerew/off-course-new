@@ -334,6 +334,7 @@ func Test_ValueToString(t *testing.T) {
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func Test_NormalizeWindowsDrive(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -353,5 +354,28 @@ func Test_NormalizeWindowsDrive(t *testing.T) {
 	for _, test := range tests {
 		got := NormalizeWindowsDrive(test.input)
 		require.Equal(t, test.expected, got)
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_EscapeBackslashes(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{`C:\Users\example\path`, `C:\\Users\\example\\path`},
+		{`C:\Users\\example\\path`, `C:\\Users\\example\\path`},
+		{`C:\\Users\\example\\path`, `C:\\Users\\example\\path`},
+		{`\\`, `\\`},
+		{`\`, `\\`},
+		{`C:`, `C:`},
+		{``, ``},
+		{`C:\Users\ex\ample\pa\th`, `C:\\Users\\ex\\ample\\pa\\th`},
+	}
+
+	for _, test := range tests {
+		result := EscapeBackslashes(test.input)
+		require.Equal(t, test.expected, result)
 	}
 }

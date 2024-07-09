@@ -3,6 +3,7 @@ package jobs
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -90,7 +91,6 @@ func (cs *CourseScanner) Add(courseId string) (*models.Scan, error) {
 
 		// Get the scan from the db and return that
 		scan, err := cs.scanDao.Get(courseId, nil)
-
 		if err != nil {
 			return nil, err
 		}
@@ -274,19 +274,21 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 	assetsMap := assetMap{}
 	attachmentsMap := attachmentMap{}
 
-	for _, filePath := range files {
+	for _, fp := range files {
+		normalizedFilePath := utils.NormalizeWindowsDrive(fp)
 		// Get the fileName from the path (ex /path/to/file.txt -> file.txt)
-		fileName := filepath.Base(filePath)
+		fileName := filepath.Base(normalizedFilePath)
 
 		// Get the fileDir from the path (ex /path/to/file.txt -> /path/to)
-		fileDir := filepath.Dir(filePath)
+		fileDir := filepath.Dir(normalizedFilePath)
 		isRootDir := fileDir == course.Path
 
 		// Check if this file is a card. Only check when not yet set and the file exists at the
 		// course root
+		fmt.Println("cardPath", cardPath, "isRootDir", isRootDir, "fileName", fileName)
 		if cardPath == "" && isRootDir {
 			if isCard(fileName) {
-				cardPath = filePath
+				cardPath = normalizedFilePath
 				continue
 			}
 		}
@@ -316,7 +318,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 				"Ignoring file during scan job",
 				loggerType,
 				slog.String("path", scan.CoursePath),
-				slog.String("file", filePath),
+				slog.String("file", normalizedFilePath),
 			)
 
 			continue
@@ -327,7 +329,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 			existing, exists := assetsMap[chapter][pfn.prefix]
 
 			// Get a (partial) hash of the asset
-			hash, err := cs.appFs.PartialHash(filePath, 1024*1024)
+			hash, err := cs.appFs.PartialHash(normalizedFilePath, 1024*1024)
 			if err != nil {
 				return err
 			}
@@ -337,7 +339,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 				Prefix:   sql.NullInt16{Int16: int16(pfn.prefix), Valid: true},
 				CourseID: course.ID,
 				Chapter:  chapter,
-				Path:     filePath,
+				Path:     normalizedFilePath,
 				Type:     *pfn.asset,
 				Hash:     hash,
 			}
@@ -356,7 +358,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 						"Replacing existing asset with new asset",
 						loggerType,
 						slog.String("path", scan.CoursePath),
-						slog.String("file", filePath),
+						slog.String("file", normalizedFilePath),
 					)
 
 					assetsMap[chapter][pfn.prefix] = newAsset
@@ -370,7 +372,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 					// Attachment -> This new asset has a lower priority than the existing asset
 					attachmentsMap[chapter][pfn.prefix] = append(attachmentsMap[chapter][pfn.prefix], &models.Attachment{
 						Title:    pfn.attachmentTitle,
-						Path:     filePath,
+						Path:     normalizedFilePath,
 						CourseID: course.ID,
 					})
 				}
@@ -379,7 +381,7 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 			// Attachment
 			attachmentsMap[chapter][pfn.prefix] = append(attachmentsMap[chapter][pfn.prefix], &models.Attachment{
 				Title:    pfn.attachmentTitle,
-				Path:     filePath,
+				Path:     normalizedFilePath,
 				CourseID: course.ID,
 			})
 		}

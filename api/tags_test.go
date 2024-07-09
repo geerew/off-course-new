@@ -126,7 +126,7 @@ func TestTags_GetTags(t *testing.T) {
 
 		daos.NewTestBuilder(t).
 			Db(router.config.DbManager.DataDb).
-			Courses(1).
+			Courses([]string{"course 1"}).
 			Tags([]string{"slightly", "light", "lighter", "highlight", "ghoul", "lightning", "delight"}).
 			Build()
 
@@ -193,7 +193,7 @@ func TestTags_GetTags(t *testing.T) {
 		// ----------------------------
 		daos.NewTestBuilder(t).
 			Db(router.config.DbManager.DataDb).
-			Courses(1).
+			Courses([]string{"course 2"}).
 			Tags([]string{"Slight"}).
 			Build()
 

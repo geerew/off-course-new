@@ -15,6 +15,7 @@ import (
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/gofiber/fiber/v2"
 	"github.com/spf13/afero"
@@ -493,7 +494,7 @@ func TestCourses_CreateCourse(t *testing.T) {
 		testData := daos.NewTestBuilder(t).Courses(1).Build()
 		router.config.AppFs.Fs.MkdirAll(testData[0].Path, os.ModePerm)
 
-		postData := fmt.Sprintf(`{"title": "%s", "path": "%s" }`, testData[0].Title, testData[0].Path)
+		postData := fmt.Sprintf(`{"title": "%s", "path": "%s" }`, testData[0].Title, utils.EscapeBackslashes(testData[0].Path))
 		req := httptest.NewRequest(http.MethodPost, "/api/courses/", strings.NewReader(postData))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
@@ -1551,24 +1552,24 @@ func TestCourses_DeleteTag(t *testing.T) {
 	t.Run("204 (invalid tag for course)", func(t *testing.T) {
 		router := setup(t)
 
-		course1 := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Tags([]string{"Go"}).Build()
-		course2 := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses(1).Tags([]string{"C"}).Build()
+		course1 := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses([]string{"course 1"}).Tags([]string{"Go"}).Build()[0]
+		course2 := daos.NewTestBuilder(t).Db(router.config.DbManager.DataDb).Courses([]string{"course 2"}).Tags([]string{"C"}).Build()[0]
 
 		courseTagDao := daos.NewCourseTagDao(router.config.DbManager.DataDb)
 
 		// Delete the course2 tag from course1
-		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/courses/"+course1[0].ID+"/tags/"+course2[0].Tags[0].ID, nil))
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/courses/"+course1.ID+"/tags/"+course2.Tags[0].ID, nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNoContent, status)
 
 		// Asset the tag for course 1 has not been deleted
-		tags, err := courseTagDao.List(&database.DatabaseParams{Where: squirrel.Eq{"course_id": course1[0].ID}}, nil)
+		tags, err := courseTagDao.List(&database.DatabaseParams{Where: squirrel.Eq{"course_id": course1.ID}}, nil)
 		require.Nil(t, err)
 		require.Len(t, tags, 1)
 		require.Equal(t, "Go", tags[0].Tag)
 
 		// Asset the tag for course 2 has not been deleted
-		tags, err = courseTagDao.List(&database.DatabaseParams{Where: squirrel.Eq{"course_id": course2[0].ID}}, nil)
+		tags, err = courseTagDao.List(&database.DatabaseParams{Where: squirrel.Eq{"course_id": course2.ID}}, nil)
 		require.Nil(t, err)
 		require.Len(t, tags, 1)
 		require.Equal(t, "C", tags[0].Tag)
