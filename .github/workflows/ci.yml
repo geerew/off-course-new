@@ -14,7 +14,7 @@ jobs:
       - uses: pnpm/action-setup@v4.0.0
         with:
           version: 9.4.0
-          run_install: false
+          run_install: true
       - uses: actions/setup-node@v4.0.3
         with:
           node-version: 20.15.0
@@ -23,4 +23,4 @@ jobs:
         env:
           PUBLIC_BACKEND_HOST: localhost
           PUBLIC_BACKEND_PORT: 9081
-        run: pnpm i && pnpm run build
+        run: pnpm run build
