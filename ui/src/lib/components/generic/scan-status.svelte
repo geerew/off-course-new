@@ -100,7 +100,7 @@
 	});
 </script>
 
-<div class={cn('text-muted-foreground flex items-center justify-center', className)}>
+<div class={cn('flex items-center justify-center text-muted-foreground', className)}>
 	{#if !scanStatus}
 		-
 	{:else if scanStatus === 'waiting'}

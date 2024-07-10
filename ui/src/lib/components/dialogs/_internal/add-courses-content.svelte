@@ -300,7 +300,7 @@
 {#if open}
 	<!-- Header -->
 	<div
-		class="border-alt-1/60 flex h-14 shrink-0 items-center justify-between border-b px-3 text-base font-medium"
+		class="flex h-14 shrink-0 items-center justify-between border-b border-alt-1/60 px-3 text-base font-medium"
 	>
 		<div class="flex items-center gap-2">
 			<Icons.StackPlus class="size-4" />
@@ -311,12 +311,12 @@
 		<Button
 			variant="ghost"
 			disabled={isLoadingOrRefreshing}
-			class="hover:bg-alt-1 group px-2.5 disabled:opacity-100"
+			class="group px-2.5 hover:bg-alt-1 disabled:opacity-100"
 			on:click={refresh}
 		>
 			<Icons.Refresh
 				class={cn(
-					'group-hover:text-foreground text-muted-foreground size-5',
+					'size-5 text-muted-foreground group-hover:text-foreground',
 					refreshing && 'animate-spin'
 				)}
 			/>
@@ -338,11 +338,11 @@
 				<!-- Back button -->
 				{#if paths.length > 0}
 					{#key paths[paths.length - 1]}
-						<div class="border-alt-1/40 flex h-14 flex-row items-center border-b">
+						<div class="flex h-14 flex-row items-center border-b border-alt-1/40">
 							<Button
 								variant="ghost"
 								disabled={loadingPath || refreshing}
-								class="hover:bg-alt-1/40 flex h-14 flex-grow flex-row items-center justify-start rounded-none border-b pr-0"
+								class="flex h-14 flex-grow flex-row items-center justify-start rounded-none border-b pr-0 hover:bg-alt-1/40"
 								on:click={async (el) => {
 									// find this buttons child element and show the loader by removing the hidden and adding the flex
 									if (!el.target || !(el.target instanceof Element)) return;
@@ -363,7 +363,7 @@
 							>
 								<div class="flex grow gap-2 text-sm">
 									<Icons.CornerUpLeft
-										class="text-muted-foreground group-hover:text-foreground size-4"
+										class="size-4 text-muted-foreground group-hover:text-foreground"
 									/>
 									<span>Back</span>
 								</div>
@@ -381,7 +381,7 @@
 
 				<!-- Directories -->
 				{#each pathInfo.directories as dirInfo (dirInfo.path)}
-					<div class="border-alt-1/40 flex h-14 flex-row items-center border-b last:border-none">
+					<div class="flex h-14 flex-row items-center border-b border-alt-1/40 last:border-none">
 						<!-- Path (left) -->
 						<Button
 							variant="ghost"
@@ -389,7 +389,7 @@
 								refreshing ||
 								dirInfo.classification === PathClassification.Course ||
 								dirInfo.isSelected}
-							class="hover:bg-alt-1/20 h-full flex-grow justify-start whitespace-normal rounded-none text-start"
+							class="h-full flex-grow justify-start whitespace-normal rounded-none text-start hover:bg-alt-1/20"
 							on:click={async () => {
 								await moveInto(dirInfo.path);
 							}}
@@ -398,7 +398,7 @@
 						</Button>
 
 						<div class="flex h-full w-20 shrink-0 place-content-center items-center">
-							<Separator orientation="vertical" class="bg-alt-1/40 h-full" />
+							<Separator orientation="vertical" class="h-full bg-alt-1/40" />
 
 							{#if dirInfo.classification !== PathClassification.Course}
 								<!-- Checkbox (right) -->
@@ -411,13 +411,13 @@
 										disabled={loadingPath ||
 											refreshing ||
 											dirInfo.classification === PathClassification.Ancestor}
-										class="hover:bg-alt-1/20 group h-full w-full shrink-0 place-content-center items-center rounded-none duration-200 disabled:opacity-100 sm:w-20"
+										class="group h-full w-full shrink-0 place-content-center items-center rounded-none duration-200 hover:bg-alt-1/20 disabled:opacity-100 sm:w-20"
 										on:click={() => {
 											FlipSelected(dirInfo);
 										}}
 									>
 										<input
-											class="bg-muted group-hover:border-muted-foreground checked:bg-primary checked:hover:bg-primary indeterminate:bg-secondary pointer-events-none cursor-pointer rounded border-2 p-2 duration-200 checked:border-transparent indeterminate:opacity-60 group-hover:checked:border-transparent group-hover:checked:brightness-90"
+											class="pointer-events-none cursor-pointer rounded border-2 bg-muted p-2 duration-200 checked:border-transparent checked:bg-primary indeterminate:bg-secondary indeterminate:opacity-60 checked:hover:bg-primary group-hover:border-muted-foreground group-hover:checked:border-transparent group-hover:checked:brightness-90"
 											tabindex="-1"
 											checked={dirInfo.isSelected ?? false}
 											type="checkbox"
@@ -430,7 +430,7 @@
 									<Badge
 										variant="outline"
 										class={cn(
-											'text-muted-foreground/60 border-muted-foreground/40 rounded px-1.5 text-center text-xs'
+											'rounded border-muted-foreground/40 px-1.5 text-center text-xs text-muted-foreground/60'
 										)}
 									>
 										Added
@@ -446,14 +446,14 @@
 
 	<!-- Footer -->
 	<div
-		class="border-alt-1/60 flex shrink-0 flex-row items-center justify-between gap-3 border-t p-3"
+		class="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-alt-1/60 p-3"
 	>
 		<!-- Select/unselect -->
 		<div class="hidden gap-3 sm:flex">
 			<Button
 				variant="outline"
 				disabled={isLoadingOrRefreshing}
-				class="bg-muted border-alt-1/60 hover:bg-alt-1/60 group h-8 w-24"
+				class="group h-8 w-24 border-alt-1/60 bg-muted hover:bg-alt-1/60"
 				on:click={selectAll}
 			>
 				Select All
@@ -462,7 +462,7 @@
 			<Button
 				variant="outline"
 				disabled={isLoadingOrRefreshing}
-				class="bg-muted border-alt-1/60 hover:bg-alt-1/60 w-26 group h-8"
+				class="w-26 group h-8 border-alt-1/60 bg-muted hover:bg-alt-1/60"
 				on:click={unselectAll}
 			>
 				Unselect All
@@ -473,7 +473,7 @@
 		<div class="flex w-full justify-end gap-3">
 			<Button
 				variant="outline"
-				class="bg-muted border-alt-1/60 hover:bg-alt-1/60 h-8 w-20"
+				class="h-8 w-20 border-alt-1/60 bg-muted hover:bg-alt-1/60"
 				on:click={() => (open = false)}
 			>
 				Cancel

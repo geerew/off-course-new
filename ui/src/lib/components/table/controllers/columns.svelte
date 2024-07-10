@@ -34,7 +34,7 @@
 	<DropdownMenu.Content class="flex flex-col text-sm" align="end" fitViewport={true}>
 		{#each columns as col}
 			<DropdownMenu.Item
-				class="hover:bg-muted relative cursor-pointer select-none rounded-md p-1 pl-8 pr-4 text-left focus:z-10"
+				class="relative cursor-pointer select-none rounded-md p-1 pl-8 pr-4 text-left hover:bg-muted focus:z-10"
 				on:click={() => {
 					if ($columnStore.includes(col.id)) {
 						columnStore.update((store) => store.filter((id) => id !== col.id));

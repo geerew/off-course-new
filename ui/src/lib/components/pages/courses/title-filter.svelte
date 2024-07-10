@@ -12,16 +12,16 @@
 </script>
 
 <div
-	class="border-alt-1/60 focus-within:border-alt-1/100 group relative w-64 rounded-md border md:w-56"
+	class="group relative w-64 rounded-md border border-alt-1/60 focus-within:border-alt-1/100 md:w-56"
 >
 	<label for="tags-input">
-		<Icons.Search class="text-muted-foreground absolute left-2 top-1/2 size-3 -translate-y-1/2" />
+		<Icons.Search class="absolute left-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
 	</label>
 
 	<input
 		id="tags-input"
 		bind:this={inputEl}
-		class="placeholder-muted-foreground/60 text-foreground border-alt-1/60 w-full rounded-md border border-none bg-inherit px-7 text-sm focus-visible:outline-none focus-visible:ring-0"
+		class="w-full rounded-md border border-none border-alt-1/60 bg-inherit px-7 text-sm text-foreground placeholder-muted-foreground/60 focus-visible:outline-none focus-visible:ring-0"
 		placeholder="Filter titles"
 		bind:value={titleValue}
 		on:keydown={(e) => {
@@ -34,7 +34,7 @@
 
 	{#if titleValue.length > 0}
 		<Button
-			class="text-muted-foreground hover:text-foreground absolute right-1 top-1/2 h-auto -translate-y-1/2 transform px-2 py-1 hover:bg-inherit"
+			class="absolute right-1 top-1/2 h-auto -translate-y-1/2 transform px-2 py-1 text-muted-foreground hover:bg-inherit hover:text-foreground"
 			variant="ghost"
 			on:click={() => {
 				titleValue = '';

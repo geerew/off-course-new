@@ -19,7 +19,7 @@
 	<DropdownMenu.Trigger asChild let:builder>
 		<Button
 			variant="ghost"
-			class="text-muted-foreground hover:bg-alt-1/60 data-[state=open]:text-foreground data-[state=open]:bg-alt-1/60 h-auto p-1.5"
+			class="h-auto p-1.5 text-muted-foreground hover:bg-alt-1/60 data-[state=open]:bg-alt-1/60 data-[state=open]:text-foreground"
 			builders={[builder]}
 		>
 			<Icons.MoreHorizontal weight="fill" class="size-4" />
@@ -37,10 +37,10 @@
 			Rename
 		</DropdownMenu.Item>
 
-		<DropdownMenu.Separator class="bg-muted my-1 -ml-1 -mr-1 block h-px" />
+		<DropdownMenu.Separator class="my-1 -ml-1 -mr-1 block h-px bg-muted" />
 
 		<DropdownMenu.Item
-			class="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground cursor-pointer gap-2.5"
+			class="cursor-pointer gap-2.5 text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
 			on:click={() => {
 				dispatch('delete', tagId);
 			}}

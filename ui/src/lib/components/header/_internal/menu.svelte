@@ -34,7 +34,7 @@
 					<a
 						href={navItem.href}
 						class={cn(
-							'hover:text-primary border-alt-1/60 w-full border-b px-1 py-4 text-base font-semibold duration-200',
+							'w-full border-b border-alt-1/60 px-1 py-4 text-base font-semibold duration-200 hover:text-primary',
 							$page.url.pathname.startsWith(navItem.href) && 'text-primary'
 						)}
 						on:click={() => {
@@ -63,7 +63,7 @@
 						target="_blank"
 					>
 						<Icons.Github
-							class="fill-muted-foreground group-hover:fill-foreground size-6 stroke-none duration-200"
+							class="size-6 fill-muted-foreground stroke-none duration-200 group-hover:fill-foreground"
 						/>
 						<span class="sr-only">GitHub</span>
 					</Button>
@@ -93,7 +93,7 @@
 	<div class="flex flex-row gap-2.5">
 		<Button variant="ghost" href={site.links.github} class="group" rel="noreferrer" target="_blank">
 			<Icons.Github
-				class="fill-muted-foreground group-hover:fill-foreground size-5 stroke-none duration-200"
+				class="size-5 fill-muted-foreground stroke-none duration-200 group-hover:fill-foreground"
 			/>
 			<span class="sr-only">GitHub</span>
 		</Button>

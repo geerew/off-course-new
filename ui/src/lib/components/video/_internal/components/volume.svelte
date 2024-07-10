@@ -94,19 +94,19 @@
 >
 	<!-- Volume/mute -->
 	<media-mute-button
-		class="hover:text-secondary group relative inline-flex cursor-pointer items-center justify-center rounded-md outline-none ring-inset ring-sky-400 data-[focus]:ring-4"
+		class="group relative inline-flex cursor-pointer items-center justify-center rounded-md outline-none ring-inset ring-sky-400 hover:text-secondary data-[focus]:ring-4"
 	>
 		<Icons.Mute
 			weight="fill"
-			class="group-hover:fill-secondary hidden size-6 fill-white group-data-[state=muted]:block"
+			class="hidden size-6 fill-white group-hover:fill-secondary group-data-[state=muted]:block"
 		/>
 		<Icons.VolumeLow
 			weight="fill"
-			class="group-hover:fill-secondary hidden size-6 fill-white group-data-[state=low]:block"
+			class="hidden size-6 fill-white group-hover:fill-secondary group-data-[state=low]:block"
 		/>
 		<Icons.VolumeHigh
 			weight="fill"
-			class="group-hover:fill-secondary hidden size-6 fill-white group-data-[state=high]:block"
+			class="hidden size-6 fill-white group-hover:fill-secondary group-data-[state=high]:block"
 		/>
 	</media-mute-button>
 
@@ -124,7 +124,7 @@
 			>
 				<!-- Fill -->
 				<div
-					class="bg-secondary absolute h-full w-[var(--slider-fill)] rounded-sm will-change-[width]"
+					class="absolute h-full w-[var(--slider-fill)] rounded-sm bg-secondary will-change-[width]"
 				/>
 			</div>
 
@@ -152,7 +152,7 @@
 		<!-- Slider Popover -->
 		<div
 			class={cn(
-				'bg-background absolute left-1/2 top-8 flex h-28 w-10 -translate-x-1/2 cursor-auto place-content-center place-items-center items-center rounded-md border py-3'
+				'absolute left-1/2 top-8 flex h-28 w-10 -translate-x-1/2 cursor-auto place-content-center place-items-center items-center rounded-md border bg-background py-3'
 			)}
 			transition:fade={{ duration: 150 }}
 		>
@@ -167,7 +167,7 @@
 				>
 					<!-- Fill -->
 					<div
-						class="bg-secondary absolute bottom-0 h-[var(--slider-fill)] w-full rounded-sm will-change-[height]"
+						class="absolute bottom-0 h-[var(--slider-fill)] w-full rounded-sm bg-secondary will-change-[height]"
 					/>
 				</div>
 

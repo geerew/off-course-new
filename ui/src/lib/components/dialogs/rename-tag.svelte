@@ -84,7 +84,7 @@
 
 <Dialog.Root bind:open>
 	<Dialog.Content
-		class="bg-muted top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md px-0 py-0 duration-200 md:max-w-md [&>button[data-dialog-close]]:hidden"
+		class="top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md bg-muted px-0 py-0 duration-200 md:max-w-md [&>button[data-dialog-close]]:hidden"
 	>
 		<div class="flex flex-col gap-5 overflow-y-scroll px-8 pt-4">
 			<div class="flex flex-row items-center gap-2.5">
@@ -94,7 +94,7 @@
 
 			<div class="flex flex-col items-center gap-3">
 				<span
-					class="border-alt-1/60 text-muted-foreground flex h-10 items-center rounded-md border px-3 text-sm"
+					class="flex h-10 items-center rounded-md border border-alt-1/60 px-3 text-sm text-muted-foreground"
 				>
 					{tag.tag}
 				</span>
@@ -105,7 +105,7 @@
 					id="rename-tag"
 					bind:this={inputEl}
 					bind:value={newTagName}
-					class="placeholder-muted-foreground/60 text-foreground border-alt-1/60 focus-visible:border-alt-1/60 h-10 w-full rounded-md border bg-inherit focus-visible:outline-none focus-visible:ring-0"
+					class="h-10 w-full rounded-md border border-alt-1/60 bg-inherit text-foreground placeholder-muted-foreground/60 focus-visible:border-alt-1/60 focus-visible:outline-none focus-visible:ring-0"
 					placeholder="..."
 					on:keydown={async (e) => {
 						if (e.key === 'Enter') {
@@ -122,11 +122,11 @@
 		</div>
 
 		<Dialog.Footer
-			class="border-alt-1/60 h-14 flex-row items-center justify-end gap-2 border-t px-4"
+			class="h-14 flex-row items-center justify-end gap-2 border-t border-alt-1/60 px-4"
 		>
 			<Button
 				variant="outline"
-				class="bg-muted border-alt-1/60 hover:bg-alt-1/60 h-8 w-20"
+				class="h-8 w-20 border-alt-1/60 bg-muted hover:bg-alt-1/60"
 				on:click={() => {
 					dispatch('cancelled');
 					open = false;

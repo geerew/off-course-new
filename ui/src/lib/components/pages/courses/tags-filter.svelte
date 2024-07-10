@@ -81,7 +81,7 @@
 		<Button
 			builders={[builder]}
 			variant="ghost"
-			class="data-[state=open]:border-alt-1/100 border-alt-1/60 hover:border-alt-1/100 group h-auto w-32 items-center justify-between gap-2.5 border px-2.5 text-xs hover:bg-inherit"
+			class="group h-auto w-32 items-center justify-between gap-2.5 border border-alt-1/60 px-2.5 text-xs hover:border-alt-1/100 hover:bg-inherit data-[state=open]:border-alt-1/100"
 			on:click={(e) => {
 				e.stopPropagation();
 			}}
@@ -96,7 +96,7 @@
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content
-		class="bg-muted text-foreground border-alt-1/60 flex w-48 flex-col"
+		class="flex w-48 flex-col border-alt-1/60 bg-muted text-foreground"
 		fitViewport={true}
 		align="start"
 	>
@@ -114,20 +114,20 @@
 					<div class="relative mb-1.5">
 						<label for="tags-input">
 							<Icons.Search
-								class="text-muted-foreground absolute left-2 top-1/2 size-3 -translate-y-1/2"
+								class="absolute left-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground"
 							/>
 						</label>
 
 						<input
 							id="tags-input"
-							class="placeholder-muted-foreground/60 text-foreground bg-background border-alt-1/60 w-full rounded-md border border-none px-7 text-sm focus-visible:outline-none focus-visible:ring-0"
+							class="w-full rounded-md border border-none border-alt-1/60 bg-background px-7 text-sm text-foreground placeholder-muted-foreground/60 focus-visible:outline-none focus-visible:ring-0"
 							placeholder="Search tags"
 							bind:value={searchValue}
 						/>
 
 						{#if searchValue.length > 0}
 							<Button
-								class="text-muted-foreground hover:text-foreground absolute right-1 top-1/2 h-auto -translate-y-1/2 transform px-2 py-1 hover:bg-inherit"
+								class="absolute right-1 top-1/2 h-auto -translate-y-1/2 transform px-2 py-1 text-muted-foreground hover:bg-inherit hover:text-foreground"
 								variant="ghost"
 								on:click={() => {
 									searchValue = '';
@@ -147,7 +147,7 @@
 					{:else}
 						{#each workingTags as tag}
 							<DropdownMenu.CheckboxItem
-								class="data-[highlighted]:bg-alt-1/40 cursor-pointer"
+								class="cursor-pointer data-[highlighted]:bg-alt-1/40"
 								checked={filterTags[tag.id] ? true : false}
 								onCheckedChange={(checked) => {
 									if (checked) {
@@ -166,7 +166,7 @@
 					{/if}
 				{/if}
 			{:catch error}
-				<Err class="text-muted min-h-[6rem] p-5 text-sm" imgClass="size-6" errorMessage={error} />
+				<Err class="min-h-[6rem] p-5 text-sm text-muted" imgClass="size-6" errorMessage={error} />
 			{/await}
 		</div>
 	</DropdownMenu.Content>

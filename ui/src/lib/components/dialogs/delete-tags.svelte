@@ -50,10 +50,10 @@
 
 <Dialog.Root bind:open>
 	<Dialog.Content
-		class="bg-muted top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md px-0 py-0 duration-200 md:max-w-md [&>button[data-dialog-close]]:hidden"
+		class="top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md bg-muted px-0 py-0 duration-200 md:max-w-md [&>button[data-dialog-close]]:hidden"
 	>
 		<div class="flex flex-col items-center gap-5 overflow-y-scroll px-8 pt-4">
-			<Icons.WarningOctagon class="text-destructive size-10" />
+			<Icons.WarningOctagon class="size-10 text-destructive" />
 
 			{#if tagsCount > 1}
 				<span class="text-center">
@@ -63,7 +63,7 @@
 				<div class="flex flex-col items-center gap-3">
 					Are you sure you want to delete this tag?
 
-					<span class="text-muted-foreground text-sm">
+					<span class="text-sm text-muted-foreground">
 						{Object.values(tags)[0]}
 					</span>
 				</div>
@@ -81,7 +81,7 @@
 									tagsCount === 1 && 'hover:bg-inherit'
 								)}
 							>
-								<Table.Cell class="text-muted-foreground select-none text-wrap px-2.5 py-1.5">
+								<Table.Cell class="select-none text-wrap px-2.5 py-1.5 text-muted-foreground">
 									{t}
 								</Table.Cell>
 							</Table.Row>
@@ -92,11 +92,11 @@
 		{/if}
 
 		<Dialog.Footer
-			class="border-alt-1/60 h-14 flex-row items-center justify-end gap-2 border-t px-4"
+			class="h-14 flex-row items-center justify-end gap-2 border-t border-alt-1/60 px-4"
 		>
 			<Button
 				variant="outline"
-				class="bg-muted border-alt-1/60 hover:bg-alt-1/60 h-8 w-20"
+				class="h-8 w-20 border-alt-1/60 bg-muted hover:bg-alt-1/60"
 				on:click={() => {
 					dispatch('cancelled');
 					open = false;

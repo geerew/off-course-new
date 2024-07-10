@@ -236,7 +236,7 @@
 		<Button
 			builders={[builder]}
 			variant="ghost"
-			class="text-muted-foreground hover:text-foreground h-auto cursor-pointer px-2.5 py-1"
+			class="h-auto cursor-pointer px-2.5 py-1 text-muted-foreground hover:text-foreground"
 			on:click={() => {
 				isDialogOpen = true;
 			}}
@@ -246,7 +246,7 @@
 	</Tooltip.Trigger>
 
 	<Tooltip.Content
-		class="bg-foreground text-background select-none rounded-sm border-none px-1.5 py-1 text-xs"
+		class="select-none rounded-sm border-none bg-foreground px-1.5 py-1 text-xs text-background"
 		transitionConfig={{ y: 8, duration: 100 }}
 		side="bottom"
 	>
@@ -257,21 +257,21 @@
 
 <Dialog.Root bind:open={isDialogOpen} closeOnEscape={false} closeOnOutsideClick={false}>
 	<Dialog.Content
-		class="bg-muted top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md px-0 py-0 duration-200 md:max-w-xl [&>button[data-dialog-close]]:hidden"
+		class="top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md bg-muted px-0 py-0 duration-200 md:max-w-xl [&>button[data-dialog-close]]:hidden"
 	>
 		<!-- Input -->
-		<div class="border-alt-1/60 group relative flex flex-row items-center border-b">
+		<div class="group relative flex flex-row items-center border-b border-alt-1/60">
 			<!-- svelte-ignore a11y-label-has-associated-control - $label contains the 'for' attribute -->
 			<label {...$label} use:label>
 				<Icons.Search
-					class="text-muted-foreground absolute start-3 top-1/2 size-6 -translate-y-1/2"
+					class="absolute start-3 top-1/2 size-6 -translate-y-1/2 text-muted-foreground"
 				/>
 			</label>
 
 			<input
 				{...$input}
 				use:input
-				class="placeholder-muted-foreground/60 text-foreground h-14 w-full rounded-none border-none bg-inherit px-14 focus-visible:outline-none focus-visible:ring-0"
+				class="h-14 w-full rounded-none border-none bg-inherit px-14 text-foreground placeholder-muted-foreground/60 focus-visible:outline-none focus-visible:ring-0"
 				placeholder="Enter a tag..."
 				on:m-keydown={(e) => {
 					if (e.detail.originalEvent.key === 'Enter') {
@@ -290,13 +290,13 @@
 		<!-- Popup for input -->
 		{#if $isComboOpen && filteredTags.length > 0}
 			<div class=" z-50" {...$menu} use:menu transition:fly={{ duration: 150, y: -5 }}>
-				<div class="bg-background ml-10 mr-2 gap-1.5 rounded-b-md py-2">
+				<div class="ml-10 mr-2 gap-1.5 rounded-b-md bg-background py-2">
 					<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 					{#each filteredTags as t (t.tag)}
 						<li
 							{...$option({ value: t.tag, label: t.tag, disabled: isDisabled(t.tag) })}
 							use:option
-							class="rounded-button data-[highlighted]:bg-muted/60 data-[disabled]:text-muted-foreground/70 flex h-10 w-full cursor-pointer select-none items-center p-3 text-sm outline-none transition-all duration-75 data-[disabled]:cursor-auto"
+							class="rounded-button flex h-10 w-full cursor-pointer select-none items-center p-3 text-sm outline-none transition-all duration-75 data-[disabled]:cursor-auto data-[highlighted]:bg-muted/60 data-[disabled]:text-muted-foreground/70"
 							on:m-click={() => {
 								canAppendTag = true;
 							}}
@@ -324,7 +324,7 @@
 						<!-- Tag -->
 						<Badge
 							class={cn(
-								'bg-alt-1 hover:bg-alt-1 text-foreground min-w-0 items-center justify-between gap-1.5 whitespace-nowrap rounded-sm rounded-r-none',
+								'min-w-0 items-center justify-between gap-1.5 whitespace-nowrap rounded-sm rounded-r-none bg-alt-1 text-foreground hover:bg-alt-1',
 								tag.forDeletion && 'text-destructive-foreground opacity-60'
 							)}
 						>
@@ -333,10 +333,10 @@
 
 						<Button
 							class={cn(
-								'bg-alt-1 hover:bg-destructive inline-flex h-auto items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5 duration-200',
+								'inline-flex h-auto items-center rounded-l-none rounded-r-sm border-l bg-alt-1 px-1.5 py-0.5 duration-200 hover:bg-destructive',
 								toAdd.includes(tag.tag) && 'bg-success text-success-foreground',
 								tag.forDeletion &&
-									'text-destructive-foreground hover:bg-alt-1 opacity-60 transition-opacity hover:opacity-100'
+									'text-destructive-foreground opacity-60 transition-opacity hover:bg-alt-1 hover:opacity-100'
 							)}
 							on:click={() => {
 								tag.forDeletion = !tag.forDeletion;
@@ -355,7 +355,7 @@
 						<!-- Tag -->
 						<Badge
 							class={cn(
-								'bg-success text-success-foreground hover:bg-success min-w-0 items-center justify-between gap-1.5 whitespace-nowrap rounded-sm rounded-r-none'
+								'min-w-0 items-center justify-between gap-1.5 whitespace-nowrap rounded-sm rounded-r-none bg-success text-success-foreground hover:bg-success'
 							)}
 						>
 							{tag}
@@ -364,7 +364,7 @@
 						<!-- Delete button -->
 						<Button
 							class={cn(
-								'hover:bg-destructive bg-success text-success-foreground inline-flex h-auto items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5'
+								'inline-flex h-auto items-center rounded-l-none rounded-r-sm border-l bg-success px-1.5 py-0.5 text-success-foreground hover:bg-destructive'
 							)}
 							on:click={() => {
 								toAdd = toAdd.filter((t) => t !== tag);
@@ -378,11 +378,11 @@
 		</div>
 
 		<Dialog.Footer
-			class="border-alt-1/60 h-14 flex-row items-center justify-end gap-2 border-t px-4"
+			class="h-14 flex-row items-center justify-end gap-2 border-t border-alt-1/60 px-4"
 		>
 			<Button
 				variant="outline"
-				class="bg-muted border-alt-1/60 hover:bg-alt-1/60 h-8 w-20"
+				class="h-8 w-20 border-alt-1/60 bg-muted hover:bg-alt-1/60"
 				on:click={() => {
 					isDialogOpen = false;
 				}}

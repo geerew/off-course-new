@@ -120,7 +120,7 @@
 	}
 </script>
 
-<div class="bg-background flex w-full flex-col gap-4 pb-10 pt-6">
+<div class="flex w-full flex-col gap-4 bg-background pb-10 pt-6">
 	<div class="container flex flex-col gap-10">
 		<LogsFilter
 			{filterMessages}

@@ -86,8 +86,8 @@
 		<Icons.Hexagon
 			weight="fill"
 			class={cn(
-				'fill-muted/40 size-12 stroke-none md:size-16',
-				isLoading ? 'duration-2.5s animate-spin' : 'rotate-90'
+				'size-12 fill-muted/40 stroke-none md:size-16',
+				isLoading ? 'animate-spin duration-2.5s' : 'rotate-90'
 			)}
 		/>
 	</div>

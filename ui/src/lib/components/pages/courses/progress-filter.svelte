@@ -24,7 +24,7 @@
 		<Button
 			builders={[builder]}
 			variant="ghost"
-			class="data-[state=open]:border-alt-1/100 border-alt-1/60 hover:border-alt-1/100 group h-auto w-32 items-center justify-between gap-2.5 border px-2.5 text-xs hover:bg-inherit"
+			class="group h-auto w-32 items-center justify-between gap-2.5 border border-alt-1/60 px-2.5 text-xs hover:border-alt-1/100 hover:bg-inherit data-[state=open]:border-alt-1/100"
 			on:click={(e) => {
 				e.stopPropagation();
 			}}
@@ -39,14 +39,14 @@
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content
-		class="bg-muted text-foreground border-alt-1/60 flex w-48 flex-col"
+		class="flex w-48 flex-col border-alt-1/60 bg-muted text-foreground"
 		fitViewport={true}
 		align="start"
 	>
 		<div class="max-h-40 overflow-y-scroll">
 			{#each Object.values(CourseProgress) as cp}
 				<DropdownMenu.CheckboxItem
-					class="data-[highlighted]:bg-alt-1/40 cursor-pointer"
+					class="cursor-pointer data-[highlighted]:bg-alt-1/40"
 					checked={progress === cp}
 					onCheckedChange={(checked) => {
 						if (checked) {

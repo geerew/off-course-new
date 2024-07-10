@@ -119,7 +119,7 @@
 
 <Button
 	variant="outline"
-	class="bg-primary hover:bg-primary group flex h-8 gap-1.5 hover:brightness-110"
+	class="group flex h-8 gap-1.5 bg-primary hover:bg-primary hover:brightness-110"
 	on:click={() => (isOpen = true)}
 >
 	<Icons.Tag class="size-4" />
@@ -128,11 +128,11 @@
 
 <Dialog.Root bind:open={isOpen} closeOnEscape={false} closeOnOutsideClick={false}>
 	<Dialog.Content
-		class="bg-muted top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md px-0 py-0 duration-200 md:max-w-xl [&>button[data-dialog-close]]:hidden"
+		class="top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md bg-muted px-0 py-0 duration-200 md:max-w-xl [&>button[data-dialog-close]]:hidden"
 	>
-		<div class="border-alt-1/60 group relative flex flex-row items-center border-b">
+		<div class="group relative flex flex-row items-center border-b border-alt-1/60">
 			<label class="px-5" for="add-tag-input">
-				<Icons.Search class="text-muted-foreground size-6" />
+				<Icons.Search class="size-6 text-muted-foreground" />
 			</label>
 
 			<input
@@ -140,7 +140,7 @@
 				id="add-tag-input"
 				use:tagInput
 				placeholder="Add tag..."
-				class="placeholder-muted-foreground/60 text-foreground h-14 w-full rounded-none border-none bg-inherit px-0 focus-visible:outline-none focus-visible:ring-0"
+				class="h-14 w-full rounded-none border-none bg-inherit px-0 text-foreground placeholder-muted-foreground/60 focus-visible:outline-none focus-visible:ring-0"
 			/>
 
 			<Loading
@@ -158,7 +158,7 @@
 						<!-- Tag -->
 						<Badge
 							class={cn(
-								'bg-success text-success-foreground hover:bg-success min-w-0 items-center justify-between gap-1.5 whitespace-nowrap rounded-sm rounded-r-none border-none text-sm'
+								'min-w-0 items-center justify-between gap-1.5 whitespace-nowrap rounded-sm rounded-r-none border-none bg-success text-sm text-success-foreground hover:bg-success'
 							)}
 						>
 							{tag}
@@ -167,7 +167,7 @@
 						<!-- Delete button -->
 						<Button
 							class={cn(
-								'hover:bg-destructive bg-success text-success-foreground inline-flex h-auto items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5'
+								'inline-flex h-auto items-center rounded-l-none rounded-r-sm border-l bg-success px-1.5 py-0.5 text-success-foreground hover:bg-destructive'
 							)}
 							on:click={() => {
 								// When its a newly added tag, just delete it completely
@@ -182,11 +182,11 @@
 		</div>
 
 		<Dialog.Footer
-			class="border-alt-1/60 h-14 flex-row items-center justify-end gap-2 border-t px-4"
+			class="h-14 flex-row items-center justify-end gap-2 border-t border-alt-1/60 px-4"
 		>
 			<Button
 				variant="outline"
-				class="bg-muted border-alt-1/60 hover:bg-alt-1/60 h-8 w-20"
+				class="h-8 w-20 border-alt-1/60 bg-muted hover:bg-alt-1/60"
 				on:click={() => {
 					isOpen = false;
 				}}>Cancel</Button
