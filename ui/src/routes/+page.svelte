@@ -26,19 +26,13 @@
 	async function getCourse(): Promise<boolean> {
 		if (!IsBrowser) return false;
 
-		try {
-			const response = await GetCourses({ page: 1, perPage: 1 });
+		const response = await GetCourses({ page: 1, perPage: 1 });
 
-			if (response.totalItems > 0) {
-				showLandingPage = false;
-			}
-			return true;
-		} catch (error) {
-			throw error;
+		if (response.totalItems > 0) {
+			showLandingPage = false;
 		}
+		return true;
 	}
-
-	let open = false;
 </script>
 
 {#await getFirstCourse}

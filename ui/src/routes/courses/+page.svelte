@@ -57,21 +57,16 @@
 
 		params.progress = filterProgress;
 
-		try {
-			const response = await GetCourses(params);
+		const response = await GetCourses(params);
+		fetchedCourses = response.items as Course[];
 
-			fetchedCourses = response.items as Course[];
+		pagination = {
+			...pagination,
+			totalItems: response.totalItems,
+			totalPages: response.totalPages
+		};
 
-			pagination = {
-				...pagination,
-				totalItems: response.totalItems,
-				totalPages: response.totalPages
-			};
-
-			return true;
-		} catch (error) {
-			throw error;
-		}
+		return true;
 	}
 </script>
 
@@ -155,7 +150,7 @@
 						</div>
 
 						<Pagination
-							type={'course'}
+							type="course"
 							{pagination}
 							showPerPage={false}
 							on:pageChange={(ev) => {

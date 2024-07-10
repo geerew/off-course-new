@@ -39,16 +39,12 @@
 	// Get all tags
 	async function getTags(): Promise<boolean> {
 		if (!IsBrowser) return false;
-		try {
-			const response = await GetAllTags();
+		const response = await GetAllTags();
 
-			allTags = response as TagModel[];
-			workingTags = allTags;
+		allTags = response as TagModel[];
+		workingTags = allTags;
 
-			return true;
-		} catch (error) {
-			throw error;
-		}
+		return true;
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

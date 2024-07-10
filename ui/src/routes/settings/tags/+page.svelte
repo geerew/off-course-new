@@ -168,61 +168,57 @@
 
 	// GET a paginated list of tags
 	async function getTags(): Promise<boolean> {
-		try {
-			// sleep for 2 seconds
-			const response = await GetTags({
-				orderBy: FlattenOrderBy($sortKeys),
-				page: pagination.page,
-				perPage: pagination.perPage,
-				expand: true
-			});
+		// sleep for 2 seconds
+		const response = await GetTags({
+			orderBy: FlattenOrderBy($sortKeys),
+			page: pagination.page,
+			perPage: pagination.perPage,
+			expand: true
+		});
 
-			if (!response) {
-				fetchedTags.set([]);
-				pagination = { ...pagination, totalItems: 0, totalPages: 0 };
-				return true;
-			}
-
-			const tags = response.items as Tag[];
-
-			// Find the rows that were checked and keep them
-			const keptRows = Object.keys(workingRows)
-				.filter((id) => get(workingRows[id].checked))
-				.reduce((acc, id) => {
-					return { ...acc, [id]: workingRows[id] };
-				}, {});
-
-			// Create a new working row for each row for the current page + any rows that were
-			// checked on previous pages
-			workingRows = {
-				...tags.reduce(
-					(acc, tag) => ({
-						...acc,
-						[tag.id]: {
-							title: tag.tag,
-							checked: writable(false),
-							rowAction: false
-						}
-					}),
-					{}
-				),
-				...keptRows
-			};
-
-			rowsChange(false);
-
-			fetchedTags.set(response.items as Tag[]);
-
-			pagination = {
-				...pagination,
-				totalItems: response.totalItems,
-				totalPages: response.totalPages
-			};
-
+		if (!response) {
+			fetchedTags.set([]);
+			pagination = { ...pagination, totalItems: 0, totalPages: 0 };
 			return true;
-		} catch (error) {
-			throw error;
 		}
+
+		const tags = response.items as Tag[];
+
+		// Find the rows that were checked and keep them
+		const keptRows = Object.keys(workingRows)
+			.filter((id) => get(workingRows[id].checked))
+			.reduce((acc, id) => {
+				return { ...acc, [id]: workingRows[id] };
+			}, {});
+
+		// Create a new working row for each row for the current page + any rows that were
+		// checked on previous pages
+		workingRows = {
+			...tags.reduce(
+				(acc, tag) => ({
+					...acc,
+					[tag.id]: {
+						title: tag.tag,
+						checked: writable(false),
+						rowAction: false
+					}
+				}),
+				{}
+			),
+			...keptRows
+		};
+
+		rowsChange(false);
+
+		fetchedTags.set(response.items as Tag[]);
+
+		pagination = {
+			...pagination,
+			totalItems: response.totalItems,
+			totalPages: response.totalPages
+		};
+
+		return true;
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

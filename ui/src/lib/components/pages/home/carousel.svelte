@@ -31,23 +31,19 @@
 			params.orderBy = 'progress_updated_at desc';
 		}
 
-		try {
-			const response = await GetCourses(params);
-			if (!response) throw new Error('Failed to get courses');
+		const response = await GetCourses(params);
+		if (!response) throw new Error('Failed to get courses');
 
-			// If the current page is 1, then we can just set the courses to the response, or
-			// else append the response to the current courses
-			fetchedCourses.length === 0
-				? (fetchedCourses = response.items as Course[])
-				: (fetchedCourses = [...fetchedCourses, ...(response.items as Course[])]);
+		// If the current page is 1, then we can just set the courses to the response, or
+		// else append the response to the current courses
+		fetchedCourses.length === 0
+			? (fetchedCourses = response.items as Course[])
+			: (fetchedCourses = [...fetchedCourses, ...(response.items as Course[])]);
 
-			// Are there more courses to get?
-			moreToGet = fetchedCourses.length < response.totalItems;
+		// Are there more courses to get?
+		moreToGet = fetchedCourses.length < response.totalItems;
 
-			return true;
-		} catch (error) {
-			throw error;
-		}
+		return true;
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

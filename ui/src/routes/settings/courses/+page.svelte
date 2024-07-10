@@ -242,60 +242,56 @@
 	async function getCourses(): Promise<boolean> {
 		const orderBy = FlattenOrderBy($sortKeys);
 
-		try {
-			const response = await GetCourses({
-				orderBy: orderBy,
-				page: pagination.page,
-				perPage: pagination.perPage
-			});
+		const response = await GetCourses({
+			orderBy: orderBy,
+			page: pagination.page,
+			perPage: pagination.perPage
+		});
 
-			if (!response) {
-				fetchedCourses.set([]);
-				pagination = { ...pagination, totalItems: 0, totalPages: 0 };
-				return true;
-			}
-
-			const courses = response.items as Course[];
-
-			// Find the rows that were checked and keep them
-			const keptRows = Object.keys(workingRows)
-				.filter((id) => get(workingRows[id].checked))
-				.reduce((acc, id) => {
-					return { ...acc, [id]: workingRows[id] };
-				}, {});
-
-			// Create a new working row for each row for the current page + any rows that were
-			// checked on previous pages
-			workingRows = {
-				...courses.reduce(
-					(acc, course) => ({
-						...acc,
-						[course.id]: {
-							title: course.title,
-							checked: writable(false),
-							scanPoll: course.scanStatus ? writable(true) : writable(false),
-							rowAction: false
-						}
-					}),
-					{}
-				),
-				...keptRows
-			};
-
-			rowsChange(false);
-
-			fetchedCourses.set(courses);
-
-			pagination = {
-				...pagination,
-				totalItems: response.totalItems,
-				totalPages: response.totalPages
-			};
-
+		if (!response) {
+			fetchedCourses.set([]);
+			pagination = { ...pagination, totalItems: 0, totalPages: 0 };
 			return true;
-		} catch (error) {
-			throw error;
 		}
+
+		const courses = response.items as Course[];
+
+		// Find the rows that were checked and keep them
+		const keptRows = Object.keys(workingRows)
+			.filter((id) => get(workingRows[id].checked))
+			.reduce((acc, id) => {
+				return { ...acc, [id]: workingRows[id] };
+			}, {});
+
+		// Create a new working row for each row for the current page + any rows that were
+		// checked on previous pages
+		workingRows = {
+			...courses.reduce(
+				(acc, course) => ({
+					...acc,
+					[course.id]: {
+						title: course.title,
+						checked: writable(false),
+						scanPoll: course.scanStatus ? writable(true) : writable(false),
+						rowAction: false
+					}
+				}),
+				{}
+			),
+			...keptRows
+		};
+
+		rowsChange(false);
+
+		fetchedCourses.set(courses);
+
+		pagination = {
+			...pagination,
+			totalItems: response.totalItems,
+			totalPages: response.totalPages
+		};
+
+		return true;
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -546,7 +542,7 @@
 			</div>
 
 			<Pagination
-				type={'course'}
+				type="course"
 				{pagination}
 				on:pageChange={(ev) => {
 					pagination.page = ev.detail;

@@ -52,16 +52,11 @@
 	async function getCourse(): Promise<boolean> {
 		if (!IsBrowser) false;
 
-		try {
-			const response = await GetCourseFromParams(pageParams);
-			if (!response) throw new Error('Course not found');
+		const response = await GetCourseFromParams(pageParams);
+		if (!response) throw new Error('Course not found');
 
-			fetchedCourse = response;
-			return true;
-		} catch (error) {
-			throw error;
-			return true;
-		}
+		fetchedCourse = response;
+		return true;
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

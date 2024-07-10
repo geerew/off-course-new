@@ -31,15 +31,10 @@
 	// Get all log types
 	async function getLogTypes(): Promise<boolean> {
 		if (!IsBrowser) return false;
-		try {
-			const response = await GetLogTypes();
 
-			workingTypes = response as string[];
-
-			return true;
-		} catch (error) {
-			throw error;
-		}
+		const response = await GetLogTypes();
+		workingTypes = response as string[];
+		return true;
 	}
 </script>
 

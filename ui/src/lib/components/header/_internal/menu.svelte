@@ -59,7 +59,7 @@
 						variant="ghost"
 						href={site.links.github}
 						class="group"
-						rel="noreferrer"
+						rel="noreferrer noopener"
 						target="_blank"
 					>
 						<Icons.Github
@@ -91,7 +91,13 @@
 	<Separator orientation="vertical" class="h-8" />
 
 	<div class="flex flex-row gap-2.5">
-		<Button variant="ghost" href={site.links.github} class="group" rel="noreferrer" target="_blank">
+		<Button
+			variant="ghost"
+			href={site.links.github}
+			class="group"
+			rel="noreferrer noopener"
+			target="_blank"
+		>
 			<Icons.Github
 				class="size-5 fill-muted-foreground stroke-none duration-200 group-hover:fill-foreground"
 			/>

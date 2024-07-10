@@ -12,10 +12,9 @@
 	// ----------------------
 
 	interface $$Slots {
-		// we don't want to render a default slot
 		default: never;
 		// the named slot exposes no variables (use an empty object)
-		named: {};
+		named: object;
 		// we have to use the `$$Slots` interface if we have two slots with the same name exposing differently typed props
 		trigger: { open: () => void };
 	}
