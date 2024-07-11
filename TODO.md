@@ -4,6 +4,7 @@
 
 - [ ] Update makefile to use goreleaser
 - [ ] Rewrite the README
+- [ ] Icon (favicon, application icon)
 
 ## UI
 
@@ -139,6 +140,7 @@
 - [x] Filters (log level, request type, etc)
 - [x] Filter by data.type
 - [ ] Filter by data
+- [ ] Auto refresh?
 
 ## Backend
 
@@ -167,4 +169,4 @@
 
 ### Course Scanner
 
-- [ ] Fix finding card
+- [x] Fix finding card

@@ -281,7 +281,8 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 
 		// Get the fileDir from the path (ex /path/to/file.txt -> /path/to)
 		fileDir := filepath.Dir(normalizedFilePath)
-		isRootDir := fileDir == course.Path
+		fmt.Println("fileDir", fileDir, "course.Path", course.Path)
+		isRootDir := fileDir == utils.NormalizeWindowsDrive(course.Path)
 
 		// Check if this file is a card. Only check when not yet set and the file exists at the
 		// course root
@@ -541,11 +542,13 @@ func parseFileName(fileName string) *parsedFileName {
 func isCard(fileName string) bool {
 	// Get the extension. If there is no extension, return false
 	ext := filepath.Ext(fileName)
+	fmt.Println("ext", ext)
 	if ext == "" {
 		return false
 	}
 
 	fileWithoutExt := fileName[:len(fileName)-len(ext)]
+	fmt.Println("fileWithoutExt", fileWithoutExt)
 	if fileWithoutExt != "card" {
 		return false
 	}
@@ -558,9 +561,11 @@ func isCard(fileName string) bool {
 		"png",
 		"webp",
 		"tiff":
+		fmt.Println("supported ext - true")
 		return true
 	}
 
+	fmt.Println("supported ext - false")
 	return false
 }
 
@@ -624,7 +629,7 @@ func updateAssets(assetDao *daos.AssetDao, tx *database.Tx, courseId string, ass
 	updatedAssets := make([]*models.Asset, 0, len(assets))
 
 	// On the first pass we update the existing assets with details of the new asset. In addition, we
-	// set the path to be path+ranomTempSuffix. This is to prevent a `unique path constraint` error if,
+	// set the path to be path+randomTempSuffix. This is to prevent a `unique path constraint` error if,
 	// for example, 2 files are have their titles swapped.
 	//
 	// On the second pass we update the existing assets and remove the randomTempSuffix from the path
