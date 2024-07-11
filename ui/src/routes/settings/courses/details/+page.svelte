@@ -35,14 +35,8 @@
 	// True when the course is being deleted
 	let openDeleteDialog = false;
 
-	// True when the assets need to be refreshed
-	let assetRefresh = false;
-
-	// True when the card needs to be refreshed
-	let cardRefresh = false;
-
-	// True when the tags need to be refreshed
-	let tagsRefresh = false;
+	// True when a scan is completed and parts of the page need to be refreshed
+	let refresh = false;
 
 	// ----------------------
 	// Functions
@@ -140,10 +134,7 @@
 										class="justify-start text-xs text-foreground"
 										on:empty={(e) => {
 											fetchedCourse = e.detail;
-
-											assetRefresh = true;
-											cardRefresh = true;
-											tagsRefresh = true;
+											refresh = true;
 										}}
 									/>
 								{/if}
@@ -203,7 +194,7 @@
 						</div>
 
 						<!-- Tags -->
-						<CourseDetailsTags courseId={fetchedCourse.id} bind:refresh={tagsRefresh} />
+						<CourseDetailsTags courseId={fetchedCourse.id} bind:refresh />
 					</div>
 
 					<!-- Card -->
@@ -211,7 +202,7 @@
 						<CourseCard
 							courseId={fetchedCourse.id}
 							hasCard={fetchedCourse.hasCard}
-							bind:refresh={cardRefresh}
+							bind:refresh
 							class="flex h-48 max-h-48 w-auto flex-col rounded-none"
 							imgClass="border-alt-1/60 mx-auto min-h-0 max-w-full rounded-lg border"
 							fallbackClass="bg-alt-1 inline-flex grow max-w-72 place-content-center items-center rounded-lg"
@@ -222,7 +213,7 @@
 		</div>
 
 		<!-- Course content -->
-		<CourseDetailsChapters courseId={fetchedCourse.id} bind:refresh={assetRefresh} />
+		<CourseDetailsChapters courseId={fetchedCourse.id} bind:refresh />
 
 		<!-- Delete dialog -->
 		<DeleteCourseDialog

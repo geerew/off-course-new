@@ -66,6 +66,7 @@
 	// When mounted and the course scan status is empty, set the src
 	$: if (mounted && refresh) {
 		isLoading = true;
+		refresh = false;
 		setSrc();
 	}
 

@@ -44,7 +44,6 @@
 	async function getTags(courseId: string): Promise<boolean> {
 		const refreshPromise = new Promise((resolve) => setTimeout(resolve, refresh ? 500 : 0));
 
-		refresh = false;
 		try {
 			let response: CourseTag[];
 
@@ -63,6 +62,7 @@
 	// ----------------------
 
 	$: if (refresh) {
+		refresh = false;
 		tags = getTags(courseId);
 	}
 </script>

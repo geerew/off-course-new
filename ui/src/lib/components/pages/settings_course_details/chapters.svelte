@@ -20,7 +20,7 @@
 	// Variables
 	// ----------------------
 
-	let fectchedCourseChapters: CourseChapters = {};
+	let fetchedCourseChapters: CourseChapters = {};
 
 	let courseChapters = getCourseChapters(courseId);
 
@@ -36,8 +36,6 @@
 	async function getCourseChapters(courseId: string): Promise<boolean> {
 		const refreshPromise = new Promise((resolve) => setTimeout(resolve, refresh ? 500 : 0));
 
-		refresh = false;
-
 		try {
 			let response: Asset[];
 
@@ -49,7 +47,7 @@
 				refreshPromise
 			]);
 
-			fectchedCourseChapters = BuildChapterStructure(response);
+			fetchedCourseChapters = BuildChapterStructure(response);
 
 			return true;
 		} catch (error) {
@@ -72,6 +70,7 @@
 
 	// Update course chapters when `refresh` is set to true
 	$: if (refresh) {
+		refresh = false;
 		courseChapters = getCourseChapters(courseId);
 	}
 </script>
@@ -87,20 +86,20 @@
 		<!-- n chapters / n assets -->
 		<div class="flex flex-row items-center pb-4 pl-2.5">
 			<span class="text-sm text-muted-foreground">
-				{Object.keys(fectchedCourseChapters).length}
-				{Object.keys(fectchedCourseChapters).length ? 'chapters' : 'chapter'}
+				{Object.keys(fetchedCourseChapters).length}
+				{Object.keys(fetchedCourseChapters).length ? 'chapters' : 'chapter'}
 			</span>
 			<Icons.Dot weight="fill" class="size-5 text-muted-foreground" />
 			<span class="text-sm text-muted-foreground">
-				{totalAssetCount(fectchedCourseChapters)}
-				{totalAssetCount(fectchedCourseChapters) ? 'assets' : 'asset'}
+				{totalAssetCount(fetchedCourseChapters)}
+				{totalAssetCount(fetchedCourseChapters) ? 'assets' : 'asset'}
 			</span>
 		</div>
 
 		<Accordion.Root class="w-full rounded-lg border border-muted/70">
-			{#each Object.keys(fectchedCourseChapters) as chapter, i}
-				{@const numAssets = fectchedCourseChapters[chapter].length}
-				{@const lastChapter = Object.keys(fectchedCourseChapters).length - 1 == i}
+			{#each Object.keys(fetchedCourseChapters) as chapter, i}
+				{@const numAssets = fetchedCourseChapters[chapter].length}
+				{@const lastChapter = Object.keys(fetchedCourseChapters).length - 1 == i}
 
 				<Accordion.Item
 					value={chapter}
@@ -123,8 +122,8 @@
 
 					<!-- Assets -->
 					<Accordion.Content class="flex flex-col">
-						{#each fectchedCourseChapters[chapter] as asset, i}
-							{@const lastAsset = fectchedCourseChapters[chapter].length - 1 == i}
+						{#each fetchedCourseChapters[chapter] as asset, i}
+							{@const lastAsset = fetchedCourseChapters[chapter].length - 1 == i}
 
 							<!-- Asset -->
 							<div class={cn(!lastAsset && 'border-b border-muted/70')}>
