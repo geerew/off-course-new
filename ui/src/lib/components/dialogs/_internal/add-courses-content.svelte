@@ -52,8 +52,6 @@
 	// the user is taken to that path
 	let paths: string[] = [];
 
-	let currentLoadingPath = '';
-
 	// This is bound to the content element and used to reset the scroll position to the top
 	// following navigation
 	let body: HTMLElement;
@@ -166,11 +164,13 @@
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Move into a path. This will add the path to the `paths` array then load that path
-	async function moveInto(path: string) {
-		currentLoadingPath = path;
-		await loadPath(path);
-		paths = [...paths, path];
+	async function moveInto(dirInfo: DirInfo) {
+		dirInfo.isMovingInto = true;
+		await loadPath(dirInfo.path);
+		dirInfo.isMovingInto = false;
+		paths = [...paths, dirInfo.path];
 	}
+
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Move back to the previous path. This will pop the last path. If the paths array is empty, the drives will
@@ -189,10 +189,11 @@
 		if (refreshing) return;
 
 		refreshing = true;
+		const path = paths.length === 0 ? '' : paths[paths.length - 1];
 
 		try {
 			const flickerPromise = new Promise((resolve) => setTimeout(resolve, 1000));
-			const [loadResponse] = await Promise.all([load(currentLoadingPath), flickerPromise]);
+			const [loadResponse] = await Promise.all([load(path), flickerPromise]);
 			if (loadResponse) pathInfo = loadResponse;
 		} catch (error) {
 			errorMsg = error instanceof Error ? error.message : (error as string);
@@ -342,7 +343,7 @@
 							<Button
 								variant="ghost"
 								disabled={loadingPath || refreshing}
-								class="flex h-14 flex-grow flex-row items-center justify-start rounded-none border-b pr-0 hover:bg-alt-1/40"
+								class="flex h-14 flex-grow flex-row items-center justify-start rounded-none pr-0 hover:bg-alt-1/40"
 								on:click={async (el) => {
 									// find this buttons child element and show the loader by removing the hidden and adding the flex
 									if (!el.target || !(el.target instanceof Element)) return;
@@ -391,7 +392,7 @@
 								dirInfo.isSelected}
 							class="h-full flex-grow justify-start whitespace-normal rounded-none text-start hover:bg-alt-1/20"
 							on:click={async () => {
-								await moveInto(dirInfo.path);
+								await moveInto(dirInfo);
 							}}
 						>
 							<span class="flex grow text-sm">{dirInfo.title}</span>
@@ -402,7 +403,7 @@
 
 							{#if dirInfo.classification !== PathClassification.Course}
 								<!-- Checkbox (right) -->
-								{#if loadingPath && dirInfo.path === currentLoadingPath}
+								{#if loadingPath && dirInfo.isMovingInto}
 									<Loading class="px-0 py-0" loaderClass="size-5" />
 								{:else}
 									<Button

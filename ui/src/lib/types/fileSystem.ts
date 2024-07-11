@@ -24,7 +24,8 @@ const DirInfoSchema = object({
 	title: string(),
 	path: string(),
 	classification: enum_(PathClassification),
-	isSelected: optional(boolean())
+	isSelected: optional(boolean()),
+	isMovingInto: optional(boolean())
 });
 
 export type DirInfo = Output<typeof DirInfoSchema>;

@@ -100,6 +100,8 @@
 - [x] Add table action `Add Tags`
 - [x] Use shadcn table
 - [x] Fix scan updated_at time .. it should be the time of the last scan
+- [ ] Fix scan then rescan. It does not show the `scan` status
+- [ ] Support the action to update  multiple courses to another path. This 
 
 #####  Add
 
@@ -109,6 +111,7 @@
 - [x] Use drawer for small screens
 - [ ] Fix drawer slider not showing on mobile
 - [ ] fix toast when adding courses on mobile. Hides bottom of the drawer
+- [x] Fix refresh (navigate into dir, navigate up, click refresh)
 
 ##### Details
 
@@ -117,6 +120,7 @@
 - [x] Fix scan updated_at time .. it should be the time of the last scan
 - [x] Cannot add and delete tags at the same time
 - [ ] Rework size of text/icons for lg+
+- [ ] Add move button and file system popup for relocating a course (and assets)
 
 #### Tags
 
@@ -143,6 +147,10 @@
 - [x] Every DAO should support tx
 - [ ] Remove -ST1003 from audit
 
+### API
+
+- [ ] Support moving a course to another path (along with assets) 
+
 ### Logs
 
 - [x] Add a separate logs DB
@@ -156,3 +164,7 @@
 ### Assets and Attachments
 
 - [x] Add column for md5sum of file
+
+### Course Scanner
+
+- [ ] Fix finding card
