@@ -65,11 +65,11 @@
 			Add Tags
 		</DropdownMenu.Item>
 
-		<DropdownMenu.Separator class="bg-muted my-1 -ml-1 -mr-1 block h-px" />
+		<DropdownMenu.Separator class="my-1 -ml-1 -mr-1 block h-px bg-muted" />
 
 		<DropdownMenu.Item
 			disabled={$count === 0}
-			class="text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground cursor-pointer gap-2.5"
+			class="cursor-pointer gap-2.5 text-destructive data-[highlighted]:bg-destructive data-[highlighted]:text-destructive-foreground"
 			on:click={() => {
 				dispatch('delete');
 			}}

@@ -75,52 +75,48 @@
 
 	// GET a paginated set of logs from the backend
 	async function getLogs(): Promise<boolean> {
-		try {
-			const params: LogsGetParams = {
-				page: pagination.page,
-				perPage: pagination.perPage
-			};
+		const params: LogsGetParams = {
+			page: pagination.page,
+			perPage: pagination.perPage
+		};
 
-			if (filterLevels.length > 0) {
-				params.levels = filterLevels
-					.map((level) => {
-						return LogLevelMapping[level];
-					})
-					.join(',');
-			}
-
-			if (filterMessages && filterMessages.length > 0) {
-				params.messages = filterMessages.join(',');
-			}
-
-			if (filterTypes && filterTypes.length > 0) {
-				params.types = filterTypes.join(',');
-			}
-
-			const response = await GetLogs(params);
-
-			if (!response) {
-				fetchedLogs.set([]);
-				pagination = { ...pagination, totalItems: 0, totalPages: 0 };
-				return true;
-			}
-
-			fetchedLogs.set(response.items as Log[]);
-
-			pagination = {
-				...pagination,
-				totalItems: response.totalItems,
-				totalPages: response.totalPages
-			};
-
-			return true;
-		} catch (error) {
-			throw error;
+		if (filterLevels.length > 0) {
+			params.levels = filterLevels
+				.map((level) => {
+					return LogLevelMapping[level];
+				})
+				.join(',');
 		}
+
+		if (filterMessages && filterMessages.length > 0) {
+			params.messages = filterMessages.join(',');
+		}
+
+		if (filterTypes && filterTypes.length > 0) {
+			params.types = filterTypes.join(',');
+		}
+
+		const response = await GetLogs(params);
+
+		if (!response) {
+			fetchedLogs.set([]);
+			pagination = { ...pagination, totalItems: 0, totalPages: 0 };
+			return true;
+		}
+
+		fetchedLogs.set(response.items as Log[]);
+
+		pagination = {
+			...pagination,
+			totalItems: response.totalItems,
+			totalPages: response.totalPages
+		};
+
+		return true;
 	}
 </script>
 
-<div class="bg-background flex w-full flex-col gap-4 pb-10 pt-6">
+<div class="flex w-full flex-col gap-4 bg-background pb-10 pt-6">
 	<div class="container flex flex-col gap-10">
 		<LogsFilter
 			{filterMessages}
@@ -236,7 +232,7 @@
 				</div>
 
 				<Pagination
-					type={'log'}
+					type="log"
 					{pagination}
 					on:pageChange={(ev) => {
 						pagination.page = ev.detail;

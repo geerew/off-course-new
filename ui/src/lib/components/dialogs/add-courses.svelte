@@ -12,10 +12,9 @@
 	// ----------------------
 
 	interface $$Slots {
-		// we don't want to render a default slot
 		default: never;
 		// the named slot exposes no variables (use an empty object)
-		named: {};
+		named: object;
 		// we have to use the `$$Slots` interface if we have two slots with the same name exposing differently typed props
 		trigger: { open: () => void };
 	}
@@ -56,7 +55,7 @@
 <slot name="trigger" open={doOpen}>
 	<Button
 		variant="outline"
-		class="bg-primary hover:bg-primary group flex h-8 w-36 gap-1.5 hover:brightness-110"
+		class="group flex h-8 w-36 gap-1.5 bg-primary hover:bg-primary hover:brightness-110"
 		on:click={async () => {
 			open = true;
 		}}
@@ -78,7 +77,7 @@
 	{:else}
 		<Dialog.Root bind:open closeOnEscape={false} closeOnOutsideClick={false}>
 			<Dialog.Content
-				class="bg-muted top-20 max-w-[calc(100vw-4rem)] translate-y-0 overflow-hidden rounded-md px-0 py-0 sm:max-w-xl [&>button[data-dialog-close]]:hidden"
+				class="top-20 max-w-[calc(100vw-4rem)] translate-y-0 overflow-hidden rounded-md bg-muted px-0 py-0 sm:max-w-xl [&>button[data-dialog-close]]:hidden"
 			>
 				<div class="flex h-[min(calc(100vh-10rem),50rem)] flex-col" data-vaul-no-drag="">
 					<AddCoursesContent bind:open on:added />

@@ -52,16 +52,11 @@
 	async function getCourse(): Promise<boolean> {
 		if (!IsBrowser) false;
 
-		try {
-			const response = await GetCourseFromParams(pageParams);
-			if (!response) throw new Error('Course not found');
+		const response = await GetCourseFromParams(pageParams);
+		if (!response) throw new Error('Course not found');
 
-			fetchedCourse = response;
-			return true;
-		} catch (error) {
-			throw error;
-			return true;
-		}
+		fetchedCourse = response;
+		return true;
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -88,7 +83,7 @@
 	});
 </script>
 
-<div class="bg-background flex w-full flex-col gap-4 pb-10">
+<div class="flex w-full flex-col gap-4 bg-background pb-10">
 	{#await coursePromise}
 		<Loading class="max-h-96" />
 	{:then _}
@@ -122,7 +117,7 @@
 								<NiceDate
 									date={fetchedCourse.createdAt}
 									prefix="Added: "
-									class="text-foreground text-xs"
+									class="text-xs text-foreground"
 								/>
 							</div>
 
@@ -133,7 +128,7 @@
 									<NiceDate
 										date={fetchedCourse.updatedAt}
 										prefix="Last Scanned: "
-										class="text-foreground text-xs"
+										class="text-xs text-foreground"
 									/>
 								{:else}
 									<ScanStatus
@@ -142,7 +137,7 @@
 										poll={writable(true)}
 										waitingText="Queued for scan"
 										processingText="Scanning"
-										class="text-foreground justify-start text-xs"
+										class="justify-start text-xs text-foreground"
 										on:empty={(e) => {
 											fetchedCourse = e.detail;
 
@@ -159,7 +154,7 @@
 								<Icons.Hourglass class="size-4 shrink-0" />
 
 								<div class="flex min-w-24 flex-row items-center gap-2.5">
-									<Progress value={fetchedCourse.percent} class="bg-foreground/40 h-1.5" />
+									<Progress value={fetchedCourse.percent} class="h-1.5 bg-foreground/40" />
 									<span class="min-w-5 text-xs">{fetchedCourse.percent}%</span>
 								</div>
 							</div>
@@ -169,7 +164,7 @@
 						<div class="flex flex-row items-center gap-2.5">
 							<Button
 								variant="outline"
-								class="hover:bg-primary bg-muted border-muted-foreground hover:text-primary-foreground hover:border-primary h-8 cursor-pointer gap-2 px-2.5"
+								class="h-8 cursor-pointer gap-2 border-muted-foreground bg-muted px-2.5 hover:border-primary hover:bg-primary hover:text-primary-foreground"
 								href="/course?id={fetchedCourse.id}"
 							>
 								<Icons.Play class="size-4" />
@@ -184,7 +179,7 @@
 
 							<Button
 								variant="outline"
-								class="hover:bg-primary bg-muted border-muted-foreground hover:text-primary-foreground hover:border-primary h-8 cursor-pointer gap-2 px-2.5"
+								class="h-8 cursor-pointer gap-2 border-muted-foreground bg-muted px-2.5 hover:border-primary hover:bg-primary hover:text-primary-foreground"
 								disabled={fetchedCourse.scanStatus !== ''}
 								on:click={async () => {
 									const s = await startScan(fetchedCourse.id);
@@ -197,7 +192,7 @@
 
 							<Button
 								variant="outline"
-								class="hover:bg-destructive bg-muted border-muted-foreground hover:border-destructive hover:text-destructive-foreground h-8 cursor-pointer gap-2 px-2.5"
+								class="h-8 cursor-pointer gap-2 border-muted-foreground bg-muted px-2.5 hover:border-destructive hover:bg-destructive hover:text-destructive-foreground"
 								on:click={() => {
 									openDeleteDialog = true;
 								}}

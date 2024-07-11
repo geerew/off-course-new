@@ -26,7 +26,7 @@
 </script>
 
 <!-- Filters -->
-<div class="border-alt-1/60 flex w-full flex-col gap-5 border-b pb-5 md:flex-row">
+<div class="flex w-full flex-col gap-5 border-b border-alt-1/60 pb-5 md:flex-row">
 	<MessageFilter
 		on:change={(e) => {
 			filterMessages = [...filterMessages, e.detail];
@@ -52,8 +52,8 @@
 </div>
 
 {#if isFiltering}
-	<div class="border-alt-1/60 flex flex-col gap-4 border-b pb-5">
-		<div class="text-primary flex flex-row items-center gap-2.5 text-sm">
+	<div class="flex flex-col gap-4 border-b border-alt-1/60 pb-5">
+		<div class="flex flex-row items-center gap-2.5 text-sm text-primary">
 			<Icons.Filter class="size-4" />
 			<span class="tracking-wide">ACTIVE FILTERS</span>
 		</div>
@@ -64,7 +64,7 @@
 				<div class="flex flex-row" data-message={message}>
 					<Badge
 						class={cn(
-							'bg-alt-1/60 hover:bg-alt-1/60 text-foreground h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none'
+							'h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none bg-alt-1/60 text-foreground hover:bg-alt-1/60'
 						)}
 					>
 						<Icons.Text class="size-3" />
@@ -73,7 +73,7 @@
 
 					<Button
 						class={cn(
-							'bg-alt-1/60 hover:bg-destructive inline-flex h-6 items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5 duration-200'
+							'inline-flex h-6 items-center rounded-l-none rounded-r-sm border-l bg-alt-1/60 px-1.5 py-0.5 duration-200 hover:bg-destructive'
 						)}
 						on:click={() => {
 							filterMessages = filterMessages.filter((t) => t !== message);
@@ -89,13 +89,13 @@
 			<!-- Levels -->
 			{#if filterLevels.length > 0}
 				{#if filterMessages.length > 0}
-					<Separator orientation="vertical" class="bg-alt-1 h-6" />
+					<Separator orientation="vertical" class="h-6 bg-alt-1" />
 				{/if}
 				{#each filterLevels as level}
 					<div class="flex flex-row" data-level={level}>
 						<Badge
 							class={cn(
-								'bg-alt-1/60 hover:bg-alt-1/60 text-foreground h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none'
+								'h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none bg-alt-1/60 text-foreground hover:bg-alt-1/60'
 							)}
 						>
 							<Icons.Scroll class="size-3" />
@@ -104,7 +104,7 @@
 
 						<Button
 							class={cn(
-								'bg-alt-1/60 hover:bg-destructive inline-flex h-6 items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5 duration-200'
+								'inline-flex h-6 items-center rounded-l-none rounded-r-sm border-l bg-alt-1/60 px-1.5 py-0.5 duration-200 hover:bg-destructive'
 							)}
 							on:click={() => {
 								filterLevels = filterLevels.filter((t) => t !== level);
@@ -121,13 +121,13 @@
 			<!-- Types -->
 			{#if filterTypes.length > 0}
 				{#if filterMessages.length > 0 || filterLevels.length > 0}
-					<Separator orientation="vertical" class="bg-alt-1 h-6" />
+					<Separator orientation="vertical" class="h-6 bg-alt-1" />
 				{/if}
 				{#each filterTypes as t}
 					<div class="flex flex-row" data-type={t}>
 						<Badge
 							class={cn(
-								'bg-alt-1/60 hover:bg-alt-1/60 text-foreground h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none'
+								'h-6 min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-sm rounded-r-none bg-alt-1/60 text-foreground hover:bg-alt-1/60'
 							)}
 						>
 							<Icons.Text class="size-3" />
@@ -136,7 +136,7 @@
 
 						<Button
 							class={cn(
-								'bg-alt-1/60 hover:bg-destructive inline-flex h-6 items-center rounded-l-none rounded-r-sm border-l px-1.5 py-0.5 duration-200'
+								'inline-flex h-6 items-center rounded-l-none rounded-r-sm border-l bg-alt-1/60 px-1.5 py-0.5 duration-200 hover:bg-destructive'
 							)}
 							on:click={() => {
 								filterTypes = filterTypes.filter((type) => type !== t);
@@ -152,7 +152,7 @@
 
 			<Button
 				class={cn(
-					'bg-primary hover:bg-primary inline-flex h-6 items-center rounded-lg px-2.5 py-0.5 duration-200 hover:brightness-110'
+					'inline-flex h-6 items-center rounded-lg bg-primary px-2.5 py-0.5 duration-200 hover:bg-primary hover:brightness-110'
 				)}
 				on:click={() => {
 					filterMessages = [];

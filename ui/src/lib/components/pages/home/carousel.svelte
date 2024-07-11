@@ -31,23 +31,19 @@
 			params.orderBy = 'progress_updated_at desc';
 		}
 
-		try {
-			const response = await GetCourses(params);
-			if (!response) throw new Error('Failed to get courses');
+		const response = await GetCourses(params);
+		if (!response) throw new Error('Failed to get courses');
 
-			// If the current page is 1, then we can just set the courses to the response, or
-			// else append the response to the current courses
-			fetchedCourses.length === 0
-				? (fetchedCourses = response.items as Course[])
-				: (fetchedCourses = [...fetchedCourses, ...(response.items as Course[])]);
+		// If the current page is 1, then we can just set the courses to the response, or
+		// else append the response to the current courses
+		fetchedCourses.length === 0
+			? (fetchedCourses = response.items as Course[])
+			: (fetchedCourses = [...fetchedCourses, ...(response.items as Course[])]);
 
-			// Are there more courses to get?
-			moreToGet = fetchedCourses.length < response.totalItems;
+		// Are there more courses to get?
+		moreToGet = fetchedCourses.length < response.totalItems;
 
-			return true;
-		} catch (error) {
-			throw error;
-		}
+		return true;
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -189,7 +185,7 @@
 						currentSlide -= scrollBy;
 						api.scrollTo(currentSlide);
 					}}
-					class="hover:text-secondary px-3"
+					class="px-3 hover:text-secondary"
 				>
 					<Icons.ArrowLeft class="size-6" />
 				</Button>
@@ -201,7 +197,7 @@
 						currentSlide += scrollBy;
 						api.scrollTo(currentSlide);
 					}}
-					class="hover:text-secondary px-3"
+					class="px-3 hover:text-secondary"
 				>
 					<Icons.ArrowRight class="size-6" />
 				</Button>
@@ -226,12 +222,12 @@
 					{#each fetchedCourses as course}
 						<Carousel.Item class="group basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
 							<a
-								class="bg-muted group relative flex h-full min-h-36 cursor-pointer flex-col gap-4 overflow-hidden whitespace-normal rounded-lg"
+								class="group relative flex h-full min-h-36 cursor-pointer flex-col gap-4 overflow-hidden whitespace-normal rounded-lg bg-muted"
 								href={`/course/?id=${course.id}`}
 							>
 								{#if !course.available}
 									<span
-										class="bg-destructive absolute right-0 top-0 z-10 flex h-1 w-1 items-center justify-center rounded-bl-lg rounded-tr-lg p-3 text-center text-sm"
+										class="absolute right-0 top-0 z-10 flex h-1 w-1 items-center justify-center rounded-bl-lg rounded-tr-lg bg-destructive p-3 text-center text-sm"
 									>
 										!
 									</span>
@@ -240,13 +236,13 @@
 								<CourseCard
 									courseId={course.id}
 									hasCard={course.hasCard}
-									class="aspect-w-16 aspect-h-7 sm:aspect-w-16 sm:aspect-h-7"
+									class="aspect-h-7 aspect-w-16 sm:aspect-h-7 sm:aspect-w-16"
 									imgClass="rounded-t-lg object-cover object-center md:object-top"
 									fallbackClass="bg-alt-1 inline-flex grow place-content-center items-center rounded-t-lg"
 								/>
 
 								<div class="flex h-full flex-grow flex-col justify-between p-2 text-sm">
-									<h3 class="group-hover:text-secondary font-semibold">
+									<h3 class="font-semibold group-hover:text-secondary">
 										{course.title}
 									</h3>
 
@@ -265,7 +261,7 @@
 						<Carousel.Item class="basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
 							<Button
 								variant="outline"
-								class="hover:text-primary h-full w-full rounded-lg text-lg"
+								class="h-full w-full rounded-lg text-lg hover:text-primary"
 								on:click={loadMoreCourses}>Load More</Button
 							>
 						</Carousel.Item>
@@ -274,6 +270,6 @@
 			</Carousel.Root>
 		{/if}
 	{:catch error}
-		<Err class="text-muted min-h-[6rem] p-5 text-sm" imgClass="size-6" errorMessage={error} />
+		<Err class="min-h-[6rem] p-5 text-sm text-muted" imgClass="size-6" errorMessage={error} />
 	{/await}
 </div>

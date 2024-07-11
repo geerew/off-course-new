@@ -43,7 +43,7 @@
 <div class={cn('hidden w-full min-w-64 items-center justify-between py-3', show && 'flex')}>
 	<div class="flex w-full flex-col gap-5">
 		<!-- Auto play -->
-		<div class="bg-muted/60 flex flex-row justify-between px-3 py-3">
+		<div class="flex flex-row justify-between bg-muted/60 px-3 py-3">
 			<Label id="autoplay-label" for="autoplay" class="flex grow cursor-pointer text-sm">
 				Autoplay
 			</Label>
@@ -51,14 +51,14 @@
 				id="autoplay"
 				bind:checked={$preferences.autoplay}
 				aria-labelledby="autoplay-label"
-				class="data-[state=checked]:text-secondary data-[state=checked]:border-secondary border-white data-[state=checked]:bg-transparent"
+				class="border-white data-[state=checked]:border-secondary data-[state=checked]:bg-transparent data-[state=checked]:text-secondary"
 				on:click={() => {
 					preferences.set({ ...$preferences, autoplay: $preferences.autoplay });
 				}}
 			/>
 		</div>
 
-		<div class="bg-muted/60 flex flex-row justify-between px-3 py-3">
+		<div class="flex flex-row justify-between bg-muted/60 px-3 py-3">
 			<Label id="autoload-next-label" for="autoload-next" class="flex grow cursor-pointer text-sm">
 				Autoload Next
 			</Label>
@@ -66,7 +66,7 @@
 				id="autoload-next"
 				bind:checked={$preferences.autoloadNext}
 				aria-labelledby="autoload-next-label"
-				class="data-[state=checked]:text-secondary data-[state=checked]:border-secondary border-white data-[state=checked]:bg-transparent"
+				class="border-white data-[state=checked]:border-secondary data-[state=checked]:bg-transparent data-[state=checked]:text-secondary"
 				on:click={() => {
 					preferences.set({ ...$preferences, autoloadNext: !$preferences.autoloadNext });
 				}}
@@ -75,12 +75,12 @@
 
 		<!-- Speed -->
 		<div class="flex w-full flex-col">
-			<div class="text-muted-foreground/80 flex flex-row justify-between py-2 text-xs">
+			<div class="flex flex-row justify-between py-2 text-xs text-muted-foreground/80">
 				<span>Speed</span>
 				<span>{$preferences.playbackRate === 1 ? 'Normal' : $preferences.playbackRate + 'x'}</span>
 			</div>
 
-			<div class="bg-muted/60 flex w-full flex-row px-2 py-3">
+			<div class="flex w-full flex-row bg-muted/60 px-2 py-3">
 				<Icons.CaretLeft class="size-4 text-white/70" />
 				<media-speed-slider
 					class="group relative mx-[7.5px] inline-flex w-full cursor-pointer touch-none select-none items-center outline-none aria-hidden:hidden"
@@ -92,7 +92,7 @@
 					>
 						<!-- Fill -->
 						<div
-							class="bg-secondary absolute h-full w-[var(--slider-fill)] rounded-sm opacity-100 transition-opacity duration-300 will-change-[width] group-data-[active]:opacity-0"
+							class="absolute h-full w-[var(--slider-fill)] rounded-sm bg-secondary opacity-100 transition-opacity duration-300 will-change-[width] group-data-[active]:opacity-0"
 						/>
 					</div>
 

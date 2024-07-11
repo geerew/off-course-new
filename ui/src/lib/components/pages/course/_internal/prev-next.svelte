@@ -23,7 +23,7 @@
 		{#key prevAsset.id}
 			<Button
 				variant="outline"
-				class="text-muted-foreground hover:text-foreground hover:bg-background hover:border-alt-1 flex h-auto flex-row items-center justify-start gap-4 whitespace-normal rounded-sm border p-3 text-start md:basis-1/2"
+				class="flex h-auto flex-row items-center justify-start gap-4 whitespace-normal rounded-sm border p-3 text-start text-muted-foreground hover:border-alt-1 hover:bg-background hover:text-foreground md:basis-1/2"
 				on:click={() => {
 					dispatch('prev');
 				}}
@@ -42,7 +42,7 @@
 		{#key nextAsset.id}
 			<Button
 				variant="outline"
-				class="text-muted-foreground hover:text-foreground hover:bg-background hover:border-alt-1 flex h-auto flex-row place-content-end items-center justify-end gap-4 whitespace-normal rounded-sm border p-3 text-end md:basis-1/2"
+				class="flex h-auto flex-row place-content-end items-center justify-end gap-4 whitespace-normal rounded-sm border p-3 text-end text-muted-foreground hover:border-alt-1 hover:bg-background hover:text-foreground md:basis-1/2"
 				on:click={() => {
 					dispatch('next');
 				}}

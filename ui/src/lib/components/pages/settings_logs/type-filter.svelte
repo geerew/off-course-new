@@ -31,15 +31,10 @@
 	// Get all log types
 	async function getLogTypes(): Promise<boolean> {
 		if (!IsBrowser) return false;
-		try {
-			const response = await GetLogTypes();
 
-			workingTypes = response as string[];
-
-			return true;
-		} catch (error) {
-			throw error;
-		}
+		const response = await GetLogTypes();
+		workingTypes = response as string[];
+		return true;
 	}
 </script>
 
@@ -48,7 +43,7 @@
 		<Button
 			builders={[builder]}
 			variant="outline"
-			class="border-alt-1/60 group h-auto w-36 justify-between gap-2.5 border px-2"
+			class="group h-auto w-36 justify-between gap-2.5 border border-alt-1/60 px-2"
 			on:click={(e) => {
 				e.stopPropagation();
 			}}
@@ -63,7 +58,7 @@
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content
-		class="bg-muted text-foreground border-alt-1/60 flex w-48 flex-col"
+		class="flex w-48 flex-col border-alt-1/60 bg-muted text-foreground"
 		fitViewport={true}
 		align="start"
 	>
@@ -74,7 +69,7 @@
 				<div class="max-h-40 overflow-y-scroll">
 					{#each workingTypes as t}
 						<DropdownMenu.CheckboxItem
-							class="data-[highlighted]:bg-alt-1/40 cursor-pointer"
+							class="cursor-pointer data-[highlighted]:bg-alt-1/40"
 							checked={filterTypes.find((type) => type === t) ? true : false}
 							onCheckedChange={(checked) => {
 								if (checked) {
@@ -91,7 +86,7 @@
 					{/each}
 				</div>
 			{:catch error}
-				<Err class="text-muted min-h-[6rem] p-5 text-sm" imgClass="size-6" errorMessage={error} />
+				<Err class="min-h-[6rem] p-5 text-sm text-muted" imgClass="size-6" errorMessage={error} />
 			{/await}
 		</div>
 	</DropdownMenu.Content>

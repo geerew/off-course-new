@@ -3,7 +3,7 @@
 </script>
 
 <media-seek-button
-	class="hover:text-secondary media-ended:hidden group relative inline-flex cursor-pointer place-content-center items-center justify-center rounded-full bg-black/60 p-2 outline-none ring-inset ring-sky-400 data-[focus]:ring-4"
+	class="group relative inline-flex cursor-pointer place-content-center items-center justify-center rounded-full bg-black/60 p-2 outline-none ring-inset ring-sky-400 hover:text-secondary data-[focus]:ring-4 media-ended:hidden"
 	seconds={10}
 >
 	<Icons.ArrowClockwise weight="bold" class="size-6 -rotate-45 sm:size-7" />

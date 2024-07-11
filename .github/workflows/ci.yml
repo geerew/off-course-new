@@ -1,13 +1,13 @@
-name: CI
+name: ci
 
-on: 
+on:
   push:
     branches:
       - main
   pull_request:
 
 jobs:
-  UI-Build:
+  lint-ui:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.1.7
@@ -18,9 +18,16 @@ jobs:
       - uses: actions/setup-node@v4.0.3
         with:
           node-version: 20.15.0
-      - name: build
+      - name: lint
         working-directory: ./ui
-        env:
-          PUBLIC_BACKEND_HOST: localhost
-          PUBLIC_BACKEND_PORT: 9081
-        run: pnpm run build
+        run: pnpm run lint
+
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.1.7
+      - uses: actions/setup-go@v5.0.1
+        with:
+          go-version: 1.22.4
+      - name: test
+        run: go test -v ./...

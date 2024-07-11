@@ -51,7 +51,7 @@
 
 			<div
 				class={cn(
-					'hover:bg-muted relative flex select-none items-center justify-between gap-2.5 rounded-md px-2 py-1 focus:z-10'
+					'relative flex select-none items-center justify-between gap-2.5 rounded-md px-2 py-1 hover:bg-muted focus:z-10'
 				)}
 			>
 				<span>{column.label}</span>
@@ -66,7 +66,7 @@
 					>
 						<Icons.CaretUp
 							class={cn(
-								'text-muted-foreground size-4 duration-150',
+								'size-4 text-muted-foreground duration-150',
 								isAscSorted ? 'text-primary' : 'hover:text-foreground'
 							)}
 						/>
@@ -81,7 +81,7 @@
 					>
 						<Icons.CaretDown
 							class={cn(
-								'text-muted-foreground size-4 duration-150',
+								'size-4 text-muted-foreground duration-150',
 								isDescSorted ? 'text-primary' : 'hover:text-foreground'
 							)}
 						/>

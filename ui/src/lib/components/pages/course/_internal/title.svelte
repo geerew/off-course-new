@@ -71,7 +71,7 @@
 						</DropdownMenu.Item>
 
 						{#if !lastAttachment}
-							<DropdownMenu.Separator class="bg-muted my-1 -ml-1 -mr-1 block h-px" />
+							<DropdownMenu.Separator class="my-1 -ml-1 -mr-1 block h-px bg-muted" />
 						{/if}
 					{/each}
 				</DropdownMenu.Content>
@@ -94,7 +94,7 @@
 			</Tooltip.Trigger>
 
 			<Tooltip.Content
-				class="bg-foreground text-background select-none rounded-sm border-none px-1.5 py-1 text-xs"
+				class="select-none rounded-sm border-none bg-foreground px-1.5 py-1 text-xs text-background"
 				transitionConfig={{ y: 8, duration: 100 }}
 				side="bottom"
 			>

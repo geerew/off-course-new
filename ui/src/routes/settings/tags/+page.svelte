@@ -168,61 +168,57 @@
 
 	// GET a paginated list of tags
 	async function getTags(): Promise<boolean> {
-		try {
-			// sleep for 2 seconds
-			const response = await GetTags({
-				orderBy: FlattenOrderBy($sortKeys),
-				page: pagination.page,
-				perPage: pagination.perPage,
-				expand: true
-			});
+		// sleep for 2 seconds
+		const response = await GetTags({
+			orderBy: FlattenOrderBy($sortKeys),
+			page: pagination.page,
+			perPage: pagination.perPage,
+			expand: true
+		});
 
-			if (!response) {
-				fetchedTags.set([]);
-				pagination = { ...pagination, totalItems: 0, totalPages: 0 };
-				return true;
-			}
-
-			const tags = response.items as Tag[];
-
-			// Find the rows that were checked and keep them
-			const keptRows = Object.keys(workingRows)
-				.filter((id) => get(workingRows[id].checked))
-				.reduce((acc, id) => {
-					return { ...acc, [id]: workingRows[id] };
-				}, {});
-
-			// Create a new working row for each row for the current page + any rows that were
-			// checked on previous pages
-			workingRows = {
-				...tags.reduce(
-					(acc, tag) => ({
-						...acc,
-						[tag.id]: {
-							title: tag.tag,
-							checked: writable(false),
-							rowAction: false
-						}
-					}),
-					{}
-				),
-				...keptRows
-			};
-
-			rowsChange(false);
-
-			fetchedTags.set(response.items as Tag[]);
-
-			pagination = {
-				...pagination,
-				totalItems: response.totalItems,
-				totalPages: response.totalPages
-			};
-
+		if (!response) {
+			fetchedTags.set([]);
+			pagination = { ...pagination, totalItems: 0, totalPages: 0 };
 			return true;
-		} catch (error) {
-			throw error;
 		}
+
+		const tags = response.items as Tag[];
+
+		// Find the rows that were checked and keep them
+		const keptRows = Object.keys(workingRows)
+			.filter((id) => get(workingRows[id].checked))
+			.reduce((acc, id) => {
+				return { ...acc, [id]: workingRows[id] };
+			}, {});
+
+		// Create a new working row for each row for the current page + any rows that were
+		// checked on previous pages
+		workingRows = {
+			...tags.reduce(
+				(acc, tag) => ({
+					...acc,
+					[tag.id]: {
+						title: tag.tag,
+						checked: writable(false),
+						rowAction: false
+					}
+				}),
+				{}
+			),
+			...keptRows
+		};
+
+		rowsChange(false);
+
+		fetchedTags.set(response.items as Tag[]);
+
+		pagination = {
+			...pagination,
+			totalItems: response.totalItems,
+			totalPages: response.totalPages
+		};
+
+		return true;
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -282,7 +278,7 @@
 	}
 </script>
 
-<div class="bg-background flex w-full flex-col gap-4 pb-10 pt-6">
+<div class="flex w-full flex-col gap-4 bg-background pb-10 pt-6">
 	<div class="container flex flex-col gap-5 md:gap-10">
 		{#await load}
 			<Loading class="max-h-96" />
@@ -360,11 +356,11 @@
 
 													{#if ascSort}
 														<Icons.CaretUp
-															class="text-secondary/80 absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2]"
+															class="absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2] text-secondary/80"
 														/>
 													{:else if descSort}
 														<Icons.CaretDown
-															class="text-secondary/80 absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2]"
+															class="absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2] text-secondary/80"
 														/>
 													{/if}
 												</div>
@@ -381,7 +377,7 @@
 							<Table.Row class="hover:bg-transparent">
 								<Table.Cell colspan={flatColumns.length}>
 									<div class="flex w-full flex-grow flex-col place-content-center items-center p-5">
-										<p class="text-muted-foreground text-center text-sm">No tags found.</p>
+										<p class="text-center text-sm text-muted-foreground">No tags found.</p>
 									</div>
 								</Table.Cell>
 							</Table.Row>

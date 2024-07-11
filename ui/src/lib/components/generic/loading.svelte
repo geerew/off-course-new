@@ -18,5 +18,5 @@
 		className
 	)}
 >
-	<Icons.Loader class={cn('text-primary size-12 animate-spin', loaderClass)} />
+	<Icons.Loader class={cn('size-12 animate-spin text-primary', loaderClass)} />
 </div>

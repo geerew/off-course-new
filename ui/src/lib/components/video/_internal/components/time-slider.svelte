@@ -12,7 +12,7 @@
 
 		<!-- Fill -->
 		<div
-			class="bg-primary absolute z-[11] h-full w-[var(--slider-fill)] rounded-sm will-change-[width]"
+			class="absolute z-[11] h-full w-[var(--slider-fill)] rounded-sm bg-primary will-change-[width]"
 		/>
 	</div>
 

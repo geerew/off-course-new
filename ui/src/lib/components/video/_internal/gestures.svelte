@@ -5,7 +5,7 @@
 		event="pointerup"
 		action="toggle:paused"
 		data-media-gesture=""
-		style="pointer-events: none;"
+		style:pointer-events="none"
 	/>
 
 	<!-- On single click, show controls (hidden on non-mobile)-->
@@ -14,7 +14,7 @@
 		event="pointerup"
 		action="toggle:controls"
 		data-media-gesture=""
-		style="pointer-events: none;"
+		style:pointer-events="none"
 	/>
 
 	<!-- On double click (center), fullscreen -->
@@ -23,7 +23,7 @@
 		event="dblpointerup"
 		action="toggle:fullscreen"
 		data-media-gesture=""
-		style="pointer-events: none;"
+		style:pointer-events="none"
 	/>
 
 	<!-- On double click (left), seek -10s -->
@@ -32,7 +32,7 @@
 		event="dblpointerup"
 		action="seek:-10"
 		data-media-gesture=""
-		style="pointer-events: none;"
+		style:pointer-events="none"
 	/>
 
 	<!-- On double click (right), seek 10s -->
@@ -41,6 +41,6 @@
 		event="dblpointerup"
 		action="seek:10"
 		data-media-gesture=""
-		style="pointer-events: none;"
+		style:pointer-events="none"
 	/>
 </div>

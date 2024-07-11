@@ -90,7 +90,7 @@
 				<div class="flex flex-row">
 					<!-- Tag -->
 					<Badge
-						class="bg-alt-1 hover:bg-alt-1 text-foreground min-w-0 items-center justify-between gap-1.5 whitespace-nowrap rounded-sm"
+						class="min-w-0 items-center justify-between gap-1.5 whitespace-nowrap rounded-sm bg-alt-1 text-foreground hover:bg-alt-1"
 					>
 						{tag.tag}
 					</Badge>
@@ -99,7 +99,7 @@
 		</div>
 	{:catch _}
 		<Badge
-			class="bg-destructive text-destructive-foreground hover:bg-destructive items-center gap-1.5 rounded-sm"
+			class="items-center gap-1.5 rounded-sm bg-destructive text-destructive-foreground hover:bg-destructive"
 		>
 			Failed to load tags
 		</Badge>

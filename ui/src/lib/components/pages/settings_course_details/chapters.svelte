@@ -86,18 +86,18 @@
 	{:then _}
 		<!-- n chapters / n assets -->
 		<div class="flex flex-row items-center pb-4 pl-2.5">
-			<span class="text-muted-foreground text-sm">
+			<span class="text-sm text-muted-foreground">
 				{Object.keys(fectchedCourseChapters).length}
 				{Object.keys(fectchedCourseChapters).length ? 'chapters' : 'chapter'}
 			</span>
-			<Icons.Dot weight="fill" class="text-muted-foreground size-5" />
-			<span class="text-muted-foreground text-sm">
+			<Icons.Dot weight="fill" class="size-5 text-muted-foreground" />
+			<span class="text-sm text-muted-foreground">
 				{totalAssetCount(fectchedCourseChapters)}
 				{totalAssetCount(fectchedCourseChapters) ? 'assets' : 'asset'}
 			</span>
 		</div>
 
-		<Accordion.Root class="border-muted/70 w-full rounded-lg border">
+		<Accordion.Root class="w-full rounded-lg border border-muted/70">
 			{#each Object.keys(fectchedCourseChapters) as chapter, i}
 				{@const numAssets = fectchedCourseChapters[chapter].length}
 				{@const lastChapter = Object.keys(fectchedCourseChapters).length - 1 == i}
@@ -109,13 +109,13 @@
 					<!-- Chapter -->
 					<Accordion.Trigger
 						class={cn(
-							'bg-muted/70 hover:bg-muted px-5 py-4 hover:no-underline',
+							'bg-muted/70 px-5 py-4 hover:bg-muted hover:no-underline',
 							i === 0 && 'rounded-t-lg',
 							lastChapter && 'rounded-b-lg'
 						)}
 					>
 						<span class="grow text-start text-base font-semibold">{chapter}</span>
-						<span class="text-muted-foreground shrink-0 px-2.5 text-sm">
+						<span class="shrink-0 px-2.5 text-sm text-muted-foreground">
 							{numAssets}
 							{numAssets > 1 ? 'assets' : 'asset'}
 						</span>
@@ -127,7 +127,7 @@
 							{@const lastAsset = fectchedCourseChapters[chapter].length - 1 == i}
 
 							<!-- Asset -->
-							<div class={cn(!lastAsset && 'border-muted/70 border-b')}>
+							<div class={cn(!lastAsset && 'border-b border-muted/70')}>
 								<div class="flex flex-row gap-5 px-5 py-4">
 									<!-- Asset information (left)-->
 									<div class="flex grow flex-col gap-2">
@@ -137,7 +137,7 @@
 										</div>
 
 										<div
-											class="text-muted-foreground flex select-none flex-row flex-wrap items-center gap-y-2 text-xs"
+											class="flex select-none flex-row flex-wrap items-center gap-y-2 text-xs text-muted-foreground"
 										>
 											<!-- Type -->
 											<span>{asset.assetType}</span>
@@ -145,7 +145,7 @@
 											<!-- Progress -->
 											{#if asset.completed}
 												<Icons.Dot weight="fill" class="size-5" />
-												<span class="text-success font-bold"> completed </span>
+												<span class="font-bold text-success"> completed </span>
 											{:else if asset.assetType === 'video' && asset.videoPos > 0}
 												<Icons.Dot weight="fill" class="size-5" />
 												<span class="text-secondary"> in-progress </span>
@@ -196,7 +196,7 @@
 
 															{#if !lastAttachment}
 																<DropdownMenu.Separator
-																	class="bg-muted my-1 -ml-1 -mr-1 block h-px"
+																	class="my-1 -ml-1 -mr-1 block h-px bg-muted"
 																/>
 															{/if}
 														{/each}

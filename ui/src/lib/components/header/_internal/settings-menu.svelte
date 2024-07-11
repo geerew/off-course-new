@@ -51,7 +51,7 @@
 
 <nav class="group relative flex select-none" use:floatingBackground>
 	<div
-		class="background bg-muted pointer-events-none absolute left-0 top-0 h-8 rounded-md opacity-0 transition-opacity duration-200"
+		class="background pointer-events-none absolute left-0 top-0 h-8 rounded-md bg-muted opacity-0 transition-opacity duration-200"
 		style={backgroundStyle}
 	/>
 	{#each settings as settingsItem}
@@ -59,7 +59,7 @@
 			class={cn(
 				'relative inline-flex items-center justify-center whitespace-nowrap rounded px-3 pb-4 pt-2 text-center text-sm duration-200',
 				$page.url.pathname.startsWith(settingsItem.href)
-					? 'text-foreground after:border-foreground after:bg-foreground after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:border-b after:transition-all after:duration-200 after:ease-in-out after:content-[""]'
+					? 'text-foreground after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:border-b after:border-foreground after:bg-foreground after:transition-all after:duration-200 after:ease-in-out after:content-[""]'
 					: 'text-muted-foreground hover:text-foreground'
 			)}
 			href={settingsItem.href}

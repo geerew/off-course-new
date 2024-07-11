@@ -117,7 +117,7 @@
 		<!-- Count -->
 		<div
 			class={cn(
-				'text-muted-foreground order-3 flex items-center justify-end text-sm',
+				'order-3 flex items-center justify-end text-sm text-muted-foreground',
 				pagination.totalPages === 1 ? 'lg:col-span-4' : undefined,
 				!showPerPage && 'hidden lg:flex'
 			)}

@@ -57,21 +57,16 @@
 
 		params.progress = filterProgress;
 
-		try {
-			const response = await GetCourses(params);
+		const response = await GetCourses(params);
+		fetchedCourses = response.items as Course[];
 
-			fetchedCourses = response.items as Course[];
+		pagination = {
+			...pagination,
+			totalItems: response.totalItems,
+			totalPages: response.totalPages
+		};
 
-			pagination = {
-				...pagination,
-				totalItems: response.totalItems,
-				totalPages: response.totalPages
-			};
-
-			return true;
-		} catch (error) {
-			throw error;
-		}
+		return true;
 	}
 </script>
 
@@ -118,12 +113,12 @@
 						>
 							{#each fetchedCourses as course}
 								<a
-									class="bg-muted group relative grid h-full min-h-36 cursor-pointer grid-cols-2 gap-4 overflow-hidden whitespace-normal rounded-lg p-2 sm:flex sm:flex-col sm:gap-0 sm:p-0"
+									class="group relative grid h-full min-h-36 cursor-pointer grid-cols-2 gap-4 overflow-hidden whitespace-normal rounded-lg bg-muted p-2 sm:flex sm:flex-col sm:gap-0 sm:p-0"
 									href={`/course/?id=${course.id}`}
 								>
 									{#if !course.available}
 										<span
-											class="bg-destructive absolute right-0 top-0 z-10 flex h-1 w-1 items-center justify-center rounded-bl-lg rounded-tr-lg p-3 text-center text-sm"
+											class="absolute right-0 top-0 z-10 flex h-1 w-1 items-center justify-center rounded-bl-lg rounded-tr-lg bg-destructive p-3 text-center text-sm"
 										>
 											!
 										</span>
@@ -132,7 +127,7 @@
 									<CourseCard
 										courseId={course.id}
 										hasCard={course.hasCard}
-										class="aspect-w-16 aspect-h-7 sm:aspect-w-16 sm:aspect-h-7"
+										class="aspect-h-7 aspect-w-16 sm:aspect-h-7 sm:aspect-w-16"
 										imgClass="rounded-lg object-cover object-center sm:rounded-b-none md:object-top"
 										fallbackClass="bg-alt-1 inline-flex grow place-content-center items-center rounded-lg sm:rounded-b-none"
 									/>
@@ -140,7 +135,7 @@
 									<div
 										class="flex h-full flex-grow flex-col justify-between text-base sm:p-3 sm:text-sm"
 									>
-										<h3 class="group-hover:text-secondary font-semibold">
+										<h3 class="font-semibold group-hover:text-secondary">
 											{course.title}
 										</h3>
 
@@ -155,7 +150,7 @@
 						</div>
 
 						<Pagination
-							type={'course'}
+							type="course"
 							{pagination}
 							showPerPage={false}
 							on:pageChange={(ev) => {
@@ -166,7 +161,7 @@
 					</div>
 				{/if}
 			{:catch error}
-				<Err class="text-muted min-h-[6rem] p-5 text-sm" imgClass="size-6" errorMessage={error} />
+				<Err class="min-h-[6rem] p-5 text-sm text-muted" imgClass="size-6" errorMessage={error} />
 			{/await}
 		</div>
 	</div>

@@ -67,7 +67,7 @@
 			<Button
 				builders={[builder]}
 				variant="ghost"
-				class="text-muted-foreground hover:text-foreground gap-2 px-0 hover:bg-inherit lg:hidden"
+				class="gap-2 px-0 text-muted-foreground hover:bg-inherit hover:text-foreground lg:hidden"
 			>
 				<Icons.List class="size-5" />
 				<span>Menu</span>
@@ -80,11 +80,11 @@
 		>
 			<!--  X button -->
 			<div
-				class="bg-background absolute right-px top-1 z-10 flex place-content-center items-center rounded-r-md border-y border-r"
+				class="absolute right-px top-1 z-10 flex place-content-center items-center rounded-r-md border-y border-r bg-background"
 			>
 				<Button
 					variant="ghost"
-					class="text-muted-foreground hover:text-foreground hover:bg-background h-auto p-2"
+					class="h-auto p-2 text-muted-foreground hover:bg-background hover:text-foreground"
 					on:click={() => (open = false)}
 				>
 					<Icons.X class="size-5" />
@@ -101,14 +101,14 @@
 			</div>
 
 			<!-- Content -->
-			<div class="bg-background relative h-full w-[22rem] border-r pr-0">
+			<div class="relative h-full w-[22rem] border-r bg-background pr-0">
 				<nav
 					class="relative left-0 top-0 max-h-screen min-h-screen overflow-y-auto overflow-x-hidden"
 					tabindex="-1"
 				>
 					<!-- Course title -->
 					<div
-						class="bg-background sticky top-0 z-[1] flex flex-row items-start gap-3 border-b py-6 pl-6 pr-3"
+						class="sticky top-0 z-[1] flex flex-row items-start gap-3 border-b bg-background py-6 pl-6 pr-3"
 					>
 						<span class="grow text-sm">{title}</span>
 
@@ -118,14 +118,14 @@
 									builders={[builder]}
 									variant="ghost"
 									href="/settings/courses/details?id={id}"
-									class="text-muted-foreground hover:text-foreground mt-1 h-auto px-0 py-0 hover:bg-transparent"
+									class="mt-1 h-auto px-0 py-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
 								>
 									<Icons.Info class="size-4 shrink-0" />
 								</Button>
 							</Tooltip.Trigger>
 
 							<Tooltip.Content
-								class="bg-foreground text-background select-none rounded-sm border-none px-1.5 py-1 text-xs"
+								class="select-none rounded-sm border-none bg-foreground px-1.5 py-1 text-xs text-background"
 								transitionConfig={{ y: 8, duration: 100 }}
 								side="bottom"
 							>
@@ -140,7 +140,7 @@
 							<li class="pb-8 leading-5">
 								<!-- Chapter heading -->
 								<span
-									class="after:bg-alt-1 relative flex w-full pr-2 text-base font-semibold tracking-wide after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full"
+									class="relative flex w-full pr-2 text-base font-semibold tracking-wide after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full after:bg-alt-1"
 								>
 									{chapter}
 								</span>
@@ -168,7 +168,7 @@
 													<!-- Asset title -->
 													<div
 														class={cn(
-															'text-muted-foreground grow pr-2.5',
+															'grow pr-2.5 text-muted-foreground',
 															asset.id === selectedAsset?.id && 'text-foreground'
 														)}
 													>
@@ -179,7 +179,7 @@
 													<!-- Asset completed -->
 													<Icons.CircleCheck
 														class={cn(
-															'text-muted-foreground mt-0.5 size-4 shrink-0',
+															'mt-0.5 size-4 shrink-0 text-muted-foreground',
 															asset.completed &&
 																'fill-success text-success [&>:nth-child(2)]:text-white'
 														)}
@@ -203,10 +203,10 @@
 	class="hidden h-[calc(100vh-var(--header-height))] shrink-0 overflow-hidden lg:block lg:w-[20rem]"
 >
 	<nav
-		class="border-alt-1 relative max-h-[calc(100vh-var(--header-height))] min-h-[calc(100vh-var(--header-height))] overflow-y-auto overflow-x-hidden border-r"
+		class="relative max-h-[calc(100vh-var(--header-height))] min-h-[calc(100vh-var(--header-height))] overflow-y-auto overflow-x-hidden border-r border-alt-1"
 	>
 		<!-- Course title -->
-		<div class="bg-background sticky top-0 z-[1] flex flex-row gap-3 border-b py-5 pl-1.5 pr-3">
+		<div class="sticky top-0 z-[1] flex flex-row gap-3 border-b bg-background py-5 pl-1.5 pr-3">
 			<span class="grow text-sm">{title}</span>
 
 			<span>
@@ -216,14 +216,14 @@
 							builders={[builder]}
 							variant="ghost"
 							href="/settings/courses/details?id={id}"
-							class="text-muted-foreground hover:text-foreground mt-1 h-auto px-0 py-0 hover:bg-transparent"
+							class="mt-1 h-auto px-0 py-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
 						>
 							<Icons.Info class="size-4 shrink-0" />
 						</Button>
 					</Tooltip.Trigger>
 
 					<Tooltip.Content
-						class="bg-foreground text-background select-none rounded-sm border-none px-1.5 py-1 text-xs"
+						class="select-none rounded-sm border-none bg-foreground px-1.5 py-1 text-xs text-background"
 						transitionConfig={{ y: 8, duration: 100 }}
 						side="bottom"
 					>
@@ -239,7 +239,7 @@
 				<li class="pb-8 leading-5">
 					<!-- Chapter heading -->
 					<span
-						class="after:bg-alt-1 relative flex w-full pr-2 text-base font-semibold tracking-wide after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full"
+						class="relative flex w-full pr-2 text-base font-semibold tracking-wide after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full after:bg-alt-1"
 					>
 						{chapter}
 					</span>
@@ -266,7 +266,7 @@
 										<!-- Asset title -->
 										<div
 											class={cn(
-												'text-muted-foreground grow pr-2.5',
+												'grow pr-2.5 text-muted-foreground',
 												asset.id === selectedAsset?.id && 'text-foreground'
 											)}
 										>
@@ -277,7 +277,7 @@
 										<!-- Asset completed -->
 										<Icons.CircleCheck
 											class={cn(
-												'text-muted-foreground mt-0.5 size-4 shrink-0',
+												'mt-0.5 size-4 shrink-0 text-muted-foreground',
 												asset.completed && 'fill-success text-success [&>:nth-child(2)]:text-white'
 											)}
 										/>

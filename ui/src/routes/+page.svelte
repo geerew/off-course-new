@@ -26,19 +26,13 @@
 	async function getCourse(): Promise<boolean> {
 		if (!IsBrowser) return false;
 
-		try {
-			const response = await GetCourses({ page: 1, perPage: 1 });
+		const response = await GetCourses({ page: 1, perPage: 1 });
 
-			if (response.totalItems > 0) {
-				showLandingPage = false;
-			}
-			return true;
-		} catch (error) {
-			throw error;
+		if (response.totalItems > 0) {
+			showLandingPage = false;
 		}
+		return true;
 	}
-
-	let open = false;
 </script>
 
 {#await getFirstCourse}
@@ -52,7 +46,7 @@
 						View and manage course material locally
 					</h1>
 					<p
-						class="text-muted-foreground w-11/12 pb-4 text-center text-sm sm:pb-7 sm:text-start sm:text-base"
+						class="w-11/12 pb-4 text-center text-sm text-muted-foreground sm:pb-7 sm:text-start sm:text-base"
 					>
 						Effortlessly view and organize your course content locally. Dive into learning with ease
 						and let’s get started by adding some courses!
@@ -67,7 +61,7 @@
 							let:open
 							slot="trigger"
 							variant="outline"
-							class="bg-primary hover:bg-primary group flex h-10 w-56 justify-between gap-1.5 hover:brightness-110 sm:w-44"
+							class="group flex h-10 w-56 justify-between gap-1.5 bg-primary hover:bg-primary hover:brightness-110 sm:w-44"
 							on:click={async () => {
 								open();
 							}}
@@ -90,5 +84,5 @@
 		</div>
 	{/if}
 {:catch error}
-	<Err class="text-muted min-h-[6rem] p-5 text-sm" imgClass="size-6" errorMessage={error} />
+	<Err class="min-h-[6rem] p-5 text-sm text-muted" imgClass="size-6" errorMessage={error} />
 {/await}

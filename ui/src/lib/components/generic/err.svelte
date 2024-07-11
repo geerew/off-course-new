@@ -20,12 +20,12 @@
 		className
 	)}
 >
-	<Icons.Bug class={cn('text-destructive size-12', imgClass)} />
+	<Icons.Bug class={cn('size-12 text-destructive', imgClass)} />
 
 	<div class="flex flex-col gap-2.5 text-center">
 		<span class={cn('text-foreground', textClass)}>Oh no! An error occurred</span>
 		{#if errorMessage}
-			<span class={cn('text-muted-foreground text-sm', textClass)}>{errorMessage}</span>
+			<span class={cn('text-sm text-muted-foreground', textClass)}>{errorMessage}</span>
 		{/if}
 	</div>
 </div>
