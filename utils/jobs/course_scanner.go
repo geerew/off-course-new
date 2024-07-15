@@ -3,7 +3,6 @@ package jobs
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -281,12 +280,10 @@ func CourseProcessor(cs *CourseScanner, scan *models.Scan) error {
 
 		// Get the fileDir from the path (ex /path/to/file.txt -> /path/to)
 		fileDir := filepath.Dir(normalizedFilePath)
-		fmt.Println("fileDir", fileDir, "course.Path", course.Path)
 		isRootDir := fileDir == utils.NormalizeWindowsDrive(course.Path)
 
 		// Check if this file is a card. Only check when not yet set and the file exists at the
 		// course root
-		fmt.Println("cardPath", cardPath, "isRootDir", isRootDir, "fileName", fileName)
 		if cardPath == "" && isRootDir {
 			if isCard(fileName) {
 				cardPath = normalizedFilePath
@@ -542,13 +539,11 @@ func parseFileName(fileName string) *parsedFileName {
 func isCard(fileName string) bool {
 	// Get the extension. If there is no extension, return false
 	ext := filepath.Ext(fileName)
-	fmt.Println("ext", ext)
 	if ext == "" {
 		return false
 	}
 
 	fileWithoutExt := fileName[:len(fileName)-len(ext)]
-	fmt.Println("fileWithoutExt", fileWithoutExt)
 	if fileWithoutExt != "card" {
 		return false
 	}
@@ -561,11 +556,9 @@ func isCard(fileName string) bool {
 		"png",
 		"webp",
 		"tiff":
-		fmt.Println("supported ext - true")
 		return true
 	}
 
-	fmt.Println("supported ext - false")
 	return false
 }
 
