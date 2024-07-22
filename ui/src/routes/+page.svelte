@@ -39,14 +39,18 @@
 	<Loading class="max-h-96" />
 {:then _}
 	{#if showLandingPage}
-		<div class="container flex flex-col gap-6 py-6">
-			<div class="flex flex-row pt-10">
-				<div class="flex flex-col items-center gap-4 sm:items-start md:basis-4/5 lg:basis-3/5">
-					<h1 class=" text-center font-sans text-2xl font-bold sm:text-start sm:text-4xl">
+		<div class="container flex flex-col gap-6 pb-6 pt-6 lg:pt-16">
+			<div class="flex flex-col gap-10 lg:flex-row">
+				<div
+					class="order-2 flex flex-col place-items-center gap-4 lg:order-1 lg:basis-3/5 lg:place-content-center lg:place-items-start"
+				>
+					<h1
+						class="w-full items-center text-center font-sans text-2xl font-bold sm:text-4xl lg:text-start"
+					>
 						View and manage course material locally
 					</h1>
 					<p
-						class="w-11/12 pb-4 text-center text-sm text-muted-foreground sm:pb-7 sm:text-start sm:text-base"
+						class="max-w-[35rem] pb-2.5 text-center text-sm text-muted-foreground sm:text-base lg:w-11/12 lg:pb-4 lg:text-start"
 					>
 						Effortlessly view and organize your course content locally. Dive into learning with ease
 						and let’s get started by adding some courses!
@@ -74,6 +78,9 @@
 							<Icons.ArrowRight class="size-4" />
 						</Button>
 					</AddCourses>
+				</div>
+				<div class="order-1 flex w-full place-content-center lg:order-2 lg:basis-2/5">
+					<Icons.Rocket class="size-96" />
 				</div>
 			</div>
 		</div>

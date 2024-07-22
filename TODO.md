@@ -27,6 +27,7 @@
 ### Home
 
 - [BUG] New courses timestamp should be created_at
+- [BUG] Update px to match header when screen size is xs or sm
 - [ENHANCEMENT] Hide ongoing when there are no ongoing courses
 - [ENHANCEMENT] Get image for landing page
 - [ENHANCEMENT] Support adding categories from on the home page
@@ -53,6 +54,8 @@
 ### Settings
 
 #### General
+
+-
 
 #### Courses
 

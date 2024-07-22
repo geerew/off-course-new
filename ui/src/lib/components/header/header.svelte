@@ -12,8 +12,10 @@
 	>
 		<div class="mr-3">
 			<a href="/" class="mr-6 flex items-center gap-2">
-				<Icons.Hexagon weight="fill" class="size-8 rotate-90 fill-primary stroke-none" />
-				<span class="inline-block font-semibold">{site.name}</span>
+				<Icons.Logo
+					class="size-8 [&>:nth-child(1)]:stroke-primary [&>:nth-child(2)]:stroke-secondary"
+				/>
+				<span class="hidden font-semibold md:inline-block">{site.name}</span>
 			</a>
 		</div>
 
