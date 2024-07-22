@@ -56,8 +56,10 @@ import FileVideo from './file-video.svelte';
 import FolderSearch from './folder-search.svelte';
 import Folder from './folder.svelte';
 import Github from './github.svelte';
+import Logo from './logo.svelte';
 import Maximize from './maximize.svelte';
 import Minimize from './minimize.svelte';
+import Rocket from './rocket.svelte';
 import Settings from './settings.svelte';
 import SquareCheck from './square-check.svelte';
 import SquareX from './square-x.svelte';
@@ -102,6 +104,7 @@ export const Icons = {
 	Info,
 	List,
 	Loader: CircleNotch,
+	Logo,
 	Maximize,
 	Minimize,
 	Minus,
@@ -112,6 +115,7 @@ export const Icons = {
 	Play,
 	PlayCircle,
 	Refresh: ArrowsClockwise,
+	Rocket,
 	Scan: FolderSearch,
 	Scroll,
 	Search: MagnifyingGlass,
