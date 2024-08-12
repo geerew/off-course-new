@@ -70,7 +70,7 @@
 	}
 </script>
 
-<div class="container flex flex-col gap-6 py-6">
+<div class="container flex flex-col gap-6">
 	<div class="flex h-full w-full flex-col gap-5">
 		<CoursesFilter
 			on:titleFilter={(ev) => {

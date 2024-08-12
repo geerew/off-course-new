@@ -31,10 +31,12 @@
 - [ENHANCEMENT] Hide ongoing when there are no ongoing courses
 - [ENHANCEMENT] Get image for landing page
 - [ENHANCEMENT] Support adding categories from on the home page
+- [ENHANCEMENT] Fix the difference in location of the loading icon and the error
 
 ### Courses
 
 - [ENHANCEMENT] Rework filters to use shadcn drawer on mobile
+- [ENHANCEMENT] Additional filter for favorites
 
 ### Course
 
@@ -46,6 +48,8 @@
 #### Video
 
 - [BUG] When video becomes unavailable, toast renders again and again
+- [BUG] Sometimes fullscreen button in mobile does not work
+- [BUG] Video settings menu height issue when device is rotated landscape
 
 #### Mobile
 
@@ -55,13 +59,14 @@
 
 #### General
 
--
+- [ENHANCEMENT] Mark a course as complete / reset progress
 
 #### Courses
 
 - [ENHANCEMENT] The scan status should show for at least 1 second (scan then rescan to test)
 - [ENHANCEMENT] Filters
 - [ENHANCEMENT] Support the action to `move` multiple courses to another path
+- [ENHANCEMENT] Add action to set courses as favourite
 
 #####  Add
 
@@ -70,8 +75,11 @@
 
 ##### Details
 
--  [ENHANCEMENT] Add move button and file system popup for relocating a course (and assets)
--  [ENHANCEMENT] Allow changing the course card from the UI
+- [ENHANCEMENT] Add move button and file system popup for relocating a course (and assets)
+- [ENHANCEMENT] Allow changing the course card from the UI
+- [ENHANCEMENT] Mark a course as complete / reset progress
+- [ENHANCEMENT] Rename a file
+- [ENHANCEMENT] Add button to set/remove as favorite
 
 #### Tags
 
@@ -89,10 +97,13 @@
 
 - [ENHANCEMENT] Remove -ST1003 from audit
 - [ENHANCEMENT] Use mattn sqlite3 driver
+- [ENHANCEMENT] Allow settings course as favourite
 
 ### API
 
-- [ENHANCEMENT] Support moving a course to another path (along with assets) 
+- [ENHANCEMENT] Support moving a course to another path (along with assets)
+- [ENHANCEMENT] Mark a course as complete / reset progress
+- [ENHANCEMENT] Rename a file
 
 ### Cron
 

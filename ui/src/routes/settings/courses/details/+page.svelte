@@ -83,7 +83,7 @@
 	{:then _}
 		<!-- Course Details -->
 		<div class="bg-muted">
-			<div class="container flex flex-col gap-4 py-6 md:py-10">
+			<div class="container flex flex-col gap-4">
 				<div class="grid grid-cols-1 gap-5 md:grid-cols-3">
 					<div
 						class="order-2 flex flex-col items-center justify-between gap-5 md:order-1 md:col-span-2 md:items-start md:gap-8"

@@ -39,8 +39,8 @@
 	<Loading class="max-h-96" />
 {:then _}
 	{#if showLandingPage}
-		<div class="container flex flex-col gap-6 pb-6 pt-6 lg:pt-16">
-			<div class="flex flex-col gap-10 lg:flex-row">
+		<div class="container flex flex-col">
+			<div class="flex flex-col gap-10 lg:flex-row lg:pt-16">
 				<div
 					class="order-2 flex flex-col place-items-center gap-4 lg:order-1 lg:basis-3/5 lg:place-content-center lg:place-items-start"
 				>
@@ -79,13 +79,13 @@
 						</Button>
 					</AddCourses>
 				</div>
-				<div class="order-1 flex w-full place-content-center lg:order-2 lg:basis-2/5">
+				<div class="order-1 flex w-full place-content-center pt-10 lg:order-2 lg:basis-2/5 lg:pt-0">
 					<Icons.Rocket class="size-96" />
 				</div>
 			</div>
 		</div>
 	{:else}
-		<div class="container flex flex-col gap-6 py-6">
+		<div class="container flex flex-col gap-6">
 			<Carousel variant="ongoing" />
 			<Carousel variant="latest" />
 		</div>
