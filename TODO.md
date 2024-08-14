@@ -9,13 +9,13 @@
 
 - [ENHANCEMENT] Update goreleaser to build additional versions
 - [ENHANCEMENT] Rewrite the README
+  - Add section on how to override the BACKEND_PORT (`BACKEND_PORT=9000 pnpm run dev`)
 - [ENHANCEMENT] Icon for MAC
 
 ## UI
 
 ### General
 
-- [BUG] Building without .env file (pnpm run build)
 - [BUG] When loading images, the spinner can stop but there is a delay before the image is shown
 - [ENHANCEMENT] theme (https://ui.jln.dev)
 - [ENHANCEMENT] Update query param to all pages like settings -> courses/tags/logs etc as the uses filters

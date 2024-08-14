@@ -1,4 +1,3 @@
-import { PUBLIC_BACKEND_HOST, PUBLIC_BACKEND_PORT } from '$env/static/public';
 import { FileSystemSchema, type FileSystem } from '$lib/types/fileSystem';
 import {
 	AssetSchema,
@@ -37,12 +36,17 @@ export const LOG_API = '/api/logs';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Determine custom backend port. Default to 9081
+const backendPort = import.meta.env.BACKEND_PORT || '9081';
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Get the backend URL based on whether the app is in production or development
 export function GetBackendUrl(api: string) {
 	if (isProduction) {
 		return api;
 	} else {
-		return `http://${PUBLIC_BACKEND_HOST}:${PUBLIC_BACKEND_PORT}${api}`;
+		return `http://localhost:${backendPort}${api}`;
 	}
 }
 
