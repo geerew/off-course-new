@@ -50,13 +50,13 @@
 	async function setSrc() {
 		await new Promise((resolve) => setTimeout(resolve, isLoading ? 500 : 0));
 
-		isLoading = false;
-
 		if (hasCard) {
 			src.set(`${GetBackendUrl(COURSE_API)}/${courseId}/card?b=${new Date().getTime()}`);
 		} else {
 			src.set('');
 		}
+
+		isLoading = false;
 	}
 
 	// ----------------------

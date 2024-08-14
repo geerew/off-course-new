@@ -9,7 +9,7 @@
 
 - [ENHANCEMENT] Update goreleaser to build additional versions
 - [ENHANCEMENT] Rewrite the README
-- [ENHANCEMENT] Icon (favicon, application icon)
+- [ENHANCEMENT] Icon for MAC
 
 ## UI
 
@@ -23,6 +23,7 @@
 - [ENHANCEMENT] Change how frequently the course availability check is run
 - [ENHANCEMENT] Support for FFMPEG path
 - [ENHANCEMENT] On mobile use a drawer for tags
+- [ENHANCEMENT] Add icon to course card to show scanning in progress
 
 ### Home
 
