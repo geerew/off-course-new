@@ -210,7 +210,7 @@
 			<span class="grow text-sm">{title}</span>
 
 			<span>
-				<Tooltip.Root openDelay={100} portal={null} closeOnPointerDown={true}>
+				<Tooltip.Root openDelay={100} closeOnPointerDown={true}>
 					<Tooltip.Trigger asChild let:builder>
 						<Button
 							builders={[builder]}
@@ -226,6 +226,7 @@
 						class="select-none rounded-sm border-none bg-foreground px-1.5 py-1 text-xs text-background"
 						transitionConfig={{ y: 8, duration: 100 }}
 						side="bottom"
+						align="end"
 					>
 						Details
 						<Tooltip.Arrow class="bg-background" />

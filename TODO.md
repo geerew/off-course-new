@@ -16,7 +16,6 @@
 
 ### General
 
-- [BUG] When loading images, the spinner can stop but there is a delay before the image is shown
 - [ENHANCEMENT] theme (https://ui.jln.dev)
 - [ENHANCEMENT] Update query param to all pages like settings -> courses/tags/logs etc as the uses filters
 - [ENHANCEMENT] Add search (https://discord.com/channels/1116682155809067049/1117779396992979024/1163925360228962385)
@@ -27,7 +26,6 @@
 
 ### Home
 
-- [BUG] Update px to match header when screen size is xs or sm
 - [ENHANCEMENT] Hide ongoing when there are no ongoing courses
 - [ENHANCEMENT] Get image for landing page
 - [ENHANCEMENT] Support adding categories from on the home page
@@ -44,7 +42,7 @@
 - [ENHANCEMENT] When a course is unavailable, show a message saying unavailable
 - [ENHANCEMENT] Support PDF
 - [ENHANCEMENT] Show 'scanning' loading page when a course is first added and scanning is in progress'
-- [BUG] Hover over details icon in menu. The tooltip flickers open and closed and part of the menu appears behind
+- [ENHANCEMENT] Rework menu for large and small to use the same content (instead of duplicating)
 
 #### Video
 
