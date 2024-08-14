@@ -247,7 +247,11 @@
 									</h3>
 
 									<div class="flex flex-row justify-between">
-										<NiceDate date={course.progressUpdatedAt} class="shrink-0 pt-3 text-xs" />
+										<NiceDate
+											date={variant === 'latest' ? course.createdAt : course.progressUpdatedAt}
+											prefix={variant === 'latest' ? 'Added:' : 'Last Watched:'}
+											class="shrink-0 pt-3 text-xs"
+										/>
 
 										<span class="flex w-full justify-end pt-3 text-xs">{course.percent}%</span>
 									</div>
