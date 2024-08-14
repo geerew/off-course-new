@@ -22,7 +22,9 @@
 - [ENHANCEMENT] Change how frequently the course availability check is run
 - [ENHANCEMENT] Support for FFMPEG path
 - [ENHANCEMENT] On mobile use a drawer for tags
-- [ENHANCEMENT] Add icon to course card to show scanning in progress
+- [ENHANCEMENT] Write a general scanning monitor util
+  - Add 1 or more scans, do a bulk query for all in the list
+  - take a writable and update the status
 
 ### Home
 
@@ -30,6 +32,7 @@
 - [ENHANCEMENT] Support adding categories from on the home page
 - [ENHANCEMENT] Fix the difference in location of the loading icon and the error
 - [ENHANCEMENT] Change from carousel to no carousel
+- 
 
 ### Courses
 
