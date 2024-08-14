@@ -38,8 +38,8 @@
 {#await getFirstCourse}
 	<Loading class="max-h-96" />
 {:then _}
-	{#if showLandingPage}
-		<div class="container flex flex-col">
+	<div class="main container">
+		{#if showLandingPage}
 			<div class="flex flex-col gap-10 lg:flex-row lg:pt-16">
 				<div
 					class="order-2 flex flex-col place-items-center gap-4 lg:order-1 lg:basis-3/5 lg:place-content-center lg:place-items-start"
@@ -79,17 +79,16 @@
 						</Button>
 					</AddCourses>
 				</div>
-				<div class="order-1 flex w-full place-content-center pt-10 lg:order-2 lg:basis-2/5 lg:pt-0">
+
+				<div class="order-1 flex w-full place-content-center lg:order-2 lg:basis-2/5">
 					<Icons.Rocket class="size-96" />
 				</div>
 			</div>
-		</div>
-	{:else}
-		<div class="container flex flex-col gap-6">
+		{:else}
 			<Carousel variant="ongoing" />
 			<Carousel variant="latest" />
-		</div>
-	{/if}
+		{/if}
+	</div>
 {:catch error}
 	<Err class="min-h-[6rem] p-5 text-sm text-muted" imgClass="size-6" errorMessage={error} />
 {/await}

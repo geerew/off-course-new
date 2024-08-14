@@ -116,137 +116,131 @@
 	}
 </script>
 
-<div class="flex w-full flex-col gap-4 bg-background pb-10 pt-6">
-	<div class="container flex flex-col gap-10">
-		<LogsFilter
-			{filterMessages}
-			{filterLevels}
-			{filterTypes}
-			on:filterMessages={(ev) => {
-				preferences.set({ ...$preferences, messages: ev.detail });
-				filterMessages = ev.detail;
-				pagination.page = 1;
-				load = getLogs();
-			}}
-			on:filterLevels={(ev) => {
-				preferences.set({ ...$preferences, levels: ev.detail });
-				filterLevels = ev.detail;
-				pagination.page = 1;
-				load = getLogs();
-			}}
-			on:filterTypes={(ev) => {
-				preferences.set({ ...$preferences, types: ev.detail });
-				filterTypes = ev.detail;
-				pagination.page = 1;
-				load = getLogs();
-			}}
-			on:clear={() => {
-				filterMessages = [];
-				filterLevels = [];
-				filterTypes = [];
-				preferences.set({ messages: [], levels: [], types: [] });
-				pagination.page = 1;
-				load = getLogs();
-			}}
-		/>
+<div class="main container">
+	<LogsFilter
+		{filterMessages}
+		{filterLevels}
+		{filterTypes}
+		on:filterMessages={(ev) => {
+			preferences.set({ ...$preferences, messages: ev.detail });
+			filterMessages = ev.detail;
+			pagination.page = 1;
+			load = getLogs();
+		}}
+		on:filterLevels={(ev) => {
+			preferences.set({ ...$preferences, levels: ev.detail });
+			filterLevels = ev.detail;
+			pagination.page = 1;
+			load = getLogs();
+		}}
+		on:filterTypes={(ev) => {
+			preferences.set({ ...$preferences, types: ev.detail });
+			filterTypes = ev.detail;
+			pagination.page = 1;
+			load = getLogs();
+		}}
+		on:clear={() => {
+			filterMessages = [];
+			filterLevels = [];
+			filterTypes = [];
+			preferences.set({ messages: [], levels: [], types: [] });
+			pagination.page = 1;
+			load = getLogs();
+		}}
+	/>
 
-		<div class="flex h-full w-full flex-col">
-			{#await load}
-				<Loading class="max-h-96" />
-			{:then _}
-				<div class="flex flex-col gap-5">
-					<Table.Root {...$tableAttrs} class="min-w-[15rem] border-collapse">
-						<Table.Header>
-							{#each $headerRows as headerRow}
-								<Subscribe rowAttrs={headerRow.attrs()}>
-									<Table.Row class="hover:bg-transparent">
-										{#each headerRow.cells as cell (cell.id)}
-											<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()}>
-												<Table.Head
-													{...attrs}
-													class={cn(
-														'relative whitespace-nowrap px-6 tracking-wide [&:has([role=checkbox])]:pl-3',
-														cell.id === 'message' ? 'min-w-96' : 'min-w-[1%]'
-													)}
-												>
-													<div
-														class={cn(
-															'flex select-none items-center gap-2.5',
-															cell.id !== 'message' && 'justify-center'
-														)}
-													>
-														<Render of={cell.render()} />
-													</div>
-												</Table.Head>
-											</Subscribe>
-										{/each}
-									</Table.Row>
-								</Subscribe>
-							{/each}
-						</Table.Header>
-
-						<Table.Body {...$tableBodyAttrs}>
-							{#if $pageRows.length === 0}
-								<Table.Row class="hover:bg-transparent">
-									<Table.Cell colspan={flatColumns.length}>
-										<div
-											class="flex w-full flex-grow flex-col place-content-center items-center p-5"
+	{#await load}
+		<Loading class="max-h-96" />
+	{:then _}
+		<div class="flex flex-col gap-6">
+			<Table.Root {...$tableAttrs} class="min-w-[15rem] border-collapse">
+				<Table.Header>
+					{#each $headerRows as headerRow}
+						<Subscribe rowAttrs={headerRow.attrs()}>
+							<Table.Row class="hover:bg-transparent">
+								{#each headerRow.cells as cell (cell.id)}
+									<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()}>
+										<Table.Head
+											{...attrs}
+											class={cn(
+												'relative whitespace-nowrap px-6 tracking-wide [&:has([role=checkbox])]:pl-3',
+												cell.id === 'message' ? 'min-w-96' : 'min-w-[1%]'
+											)}
 										>
-											{#if filterMessages.length > 0 || filterLevels.length > 0 || filterTypes.length > 0}
-												<span class="text-muted-foreground"
-													>No logs found with the selected filters.</span
-												>
-											{:else}
-												<span class="text-muted-foreground">No logs.</span>
-											{/if}
-										</div>
-									</Table.Cell>
-								</Table.Row>
-							{:else}
-								{#each $pageRows as row (row.id)}
-									<Subscribe rowAttrs={row.attrs()} let:rowAttrs>
-										<Table.Row {...rowAttrs} data-row={row.id}>
-											{#each row.cells as cell (cell.id)}
-												<Subscribe attrs={cell.attrs()} let:attrs>
-													<Table.Cell
-														class={cn(
-															'whitespace-nowrap px-6 text-sm [&:has([role=checkbox])]:pl-3',
-															cell.id === 'message'
-																? 'flex min-w-96 flex-wrap whitespace-normal'
-																: 'min-w-[1%]'
-														)}
-														{...attrs}
-													>
-														<div class={cn(cell.id !== 'message' && 'text-center')}>
-															<Render of={cell.render()} />
-														</div>
-													</Table.Cell>
-												</Subscribe>
-											{/each}
-										</Table.Row>
+											<div
+												class={cn(
+													'flex select-none items-center gap-2.5',
+													cell.id !== 'message' && 'justify-center'
+												)}
+											>
+												<Render of={cell.render()} />
+											</div>
+										</Table.Head>
 									</Subscribe>
 								{/each}
-							{/if}
-						</Table.Body>
-					</Table.Root>
-				</div>
+							</Table.Row>
+						</Subscribe>
+					{/each}
+				</Table.Header>
 
-				<Pagination
-					type="log"
-					{pagination}
-					on:pageChange={(ev) => {
-						pagination.page = ev.detail;
-						load = getLogs();
-					}}
-					on:perPageChange={(ev) => {
-						pagination.perPage = ev.detail;
-						pagination.page = 1;
-						load = getLogs();
-					}}
-				/>
-			{:catch error}
-				<Err errorMessage={error} />
-			{/await}
+				<Table.Body {...$tableBodyAttrs}>
+					{#if $pageRows.length === 0}
+						<Table.Row class="hover:bg-transparent">
+							<Table.Cell colspan={flatColumns.length}>
+								<div class="flex w-full flex-grow flex-col place-content-center items-center p-5">
+									{#if filterMessages.length > 0 || filterLevels.length > 0 || filterTypes.length > 0}
+										<span class="text-muted-foreground"
+											>No logs found with the selected filters.</span
+										>
+									{:else}
+										<span class="text-muted-foreground">No logs.</span>
+									{/if}
+								</div>
+							</Table.Cell>
+						</Table.Row>
+					{:else}
+						{#each $pageRows as row (row.id)}
+							<Subscribe rowAttrs={row.attrs()} let:rowAttrs>
+								<Table.Row {...rowAttrs} data-row={row.id}>
+									{#each row.cells as cell (cell.id)}
+										<Subscribe attrs={cell.attrs()} let:attrs>
+											<Table.Cell
+												class={cn(
+													'whitespace-nowrap px-6 text-sm [&:has([role=checkbox])]:pl-3',
+													cell.id === 'message'
+														? 'flex min-w-96 flex-wrap whitespace-normal'
+														: 'min-w-[1%]'
+												)}
+												{...attrs}
+											>
+												<div class={cn(cell.id !== 'message' && 'text-center')}>
+													<Render of={cell.render()} />
+												</div>
+											</Table.Cell>
+										</Subscribe>
+									{/each}
+								</Table.Row>
+							</Subscribe>
+						{/each}
+					{/if}
+				</Table.Body>
+			</Table.Root>
+
+			<Pagination
+				type="log"
+				{pagination}
+				on:pageChange={(ev) => {
+					pagination.page = ev.detail;
+					load = getLogs();
+				}}
+				on:perPageChange={(ev) => {
+					pagination.perPage = ev.detail;
+					pagination.page = 1;
+					load = getLogs();
+				}}
+			/>
 		</div>
-	</div>
+	{:catch error}
+		<Err errorMessage={error} />
+	{/await}
 </div>

@@ -82,7 +82,7 @@
 		<Loading class="max-h-96" />
 	{:then _}
 		<!-- Course Details -->
-		<div class="bg-muted pb-6 pt-10">
+		<div class="bg-muted pb-6 pt-6">
 			<div class="container flex flex-col gap-4">
 				<div class="grid grid-cols-1 gap-5 md:grid-cols-3">
 					<div

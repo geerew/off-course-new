@@ -26,7 +26,7 @@
 </script>
 
 <!-- Filters -->
-<div class="flex w-full flex-col gap-5 border-b border-alt-1/60 pb-5 md:flex-row">
+<div class="flex w-full flex-col gap-5 md:flex-row">
 	<MessageFilter
 		on:change={(e) => {
 			filterMessages = [...filterMessages, e.detail];
