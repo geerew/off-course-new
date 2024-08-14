@@ -7,14 +7,10 @@
 </script>
 
 <header class="sticky top-0 z-20 w-full border-b bg-background">
-	<div
-		class="container flex h-[var(--header-height)] items-center justify-between gap-8 px-4 md:px-8"
-	>
+	<div class="container flex h-[var(--header-height)] items-center justify-between gap-8">
 		<div class="mr-3">
 			<a href="/" class="mr-6 flex items-center gap-2">
-				<Icons.Logo
-					class="size-8 [&>:nth-child(1)]:stroke-primary [&>:nth-child(2)]:stroke-secondary"
-				/>
+				<Icons.Logo class="size-10 fill-primary" />
 				<span class="hidden font-semibold md:inline-block">{site.name}</span>
 			</a>
 		</div>
@@ -26,7 +22,7 @@
 
 	<!-- /settings/... -->
 	{#if $page.url.pathname.startsWith('/settings')}
-		<div class="container flex items-center px-4 md:px-8">
+		<div class="container flex items-center">
 			<SettingsMenu />
 		</div>
 	{/if}

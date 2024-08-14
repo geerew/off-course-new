@@ -54,7 +54,7 @@
 
 	// This is bound to the content element and used to reset the scroll position to the top
 	// following navigation
-	let body: HTMLElement;
+	let bodyEl: HTMLElement;
 
 	// An array of the selected courses. When first opened this will be empty. As the user selects
 	// and unselects courses, they will be added and removed from this array
@@ -98,7 +98,7 @@
 		try {
 			const response = await GetFileSystem(path);
 
-			if (body) body.scrollTop = 0;
+			if (bodyEl) bodyEl.scrollTop = 0;
 
 			// Set the selected state of the directories. This will ensure previously selected courses are
 			// still selected even as the user navigated
@@ -299,9 +299,8 @@
 </script>
 
 {#if open}
-	<!-- Header -->
-	<div
-		class="flex h-14 shrink-0 items-center justify-between border-b border-alt-1/60 px-3 text-base font-medium"
+	<header
+		class="flex h-16 items-center justify-between border-b border-alt-1/60 px-3 text-base font-medium"
 	>
 		<div class="flex items-center gap-2">
 			<Icons.StackPlus class="size-4" />
@@ -322,12 +321,11 @@
 				)}
 			/>
 		</Button>
-	</div>
+	</header>
 
-	<!-- Body -->
-	<div
-		bind:this={body}
-		class="flex min-h-[10rem] grow flex-col overflow-x-hidden overflow-y-scroll"
+	<main
+		bind:this={bodyEl}
+		class="min-h-[14rem] flex-1 overflow-y-auto overflow-x-hidden"
 		tabindex="-1"
 	>
 		{#if loadingDrives}
@@ -443,44 +441,43 @@
 				{/each}
 			</div>
 		{/if}
-	</div>
+	</main>
 
-	<!-- Footer -->
-	<div
-		class="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-alt-1/60 p-3"
-	>
-		<!-- Select/unselect -->
-		<div class="hidden gap-3 sm:flex">
-			<Button
-				variant="outline"
-				disabled={isLoadingOrRefreshing}
-				class="group h-8 w-24 border-alt-1/60 bg-muted hover:bg-alt-1/60"
-				on:click={selectAll}
-			>
-				Select All
-			</Button>
+	<footer class="h-20 gap-3 overflow-y-auto border-t border-alt-1/60 px-3">
+		<div class="flex h-full flex-row items-center justify-between">
+			<!-- Select/unselect -->
+			<div class="hidden gap-3 sm:flex">
+				<Button
+					variant="outline"
+					disabled={isLoadingOrRefreshing}
+					class="group h-8 w-24 border-alt-1/60 bg-muted hover:bg-alt-1/60"
+					on:click={selectAll}
+				>
+					Select All
+				</Button>
 
-			<Button
-				variant="outline"
-				disabled={isLoadingOrRefreshing}
-				class="w-26 group h-8 border-alt-1/60 bg-muted hover:bg-alt-1/60"
-				on:click={unselectAll}
-			>
-				Unselect All
-			</Button>
+				<Button
+					variant="outline"
+					disabled={isLoadingOrRefreshing}
+					class="w-26 group h-8 border-alt-1/60 bg-muted hover:bg-alt-1/60"
+					on:click={unselectAll}
+				>
+					Unselect All
+				</Button>
+			</div>
+
+			<!-- Close/add -->
+			<div class="flex w-full justify-end gap-3">
+				<Button
+					variant="outline"
+					class="h-8 w-20 border-alt-1/60 bg-muted hover:bg-alt-1/60"
+					on:click={() => (open = false)}
+				>
+					Cancel
+				</Button>
+
+				<Button class="h-8 px-6" disabled={disableAddButton} on:click={add}>Add</Button>
+			</div>
 		</div>
-
-		<!-- Close/add -->
-		<div class="flex w-full justify-end gap-3">
-			<Button
-				variant="outline"
-				class="h-8 w-20 border-alt-1/60 bg-muted hover:bg-alt-1/60"
-				on:click={() => (open = false)}
-			>
-				Cancel
-			</Button>
-
-			<Button class="h-8 px-6" disabled={disableAddButton} on:click={add}>Add</Button>
-		</div>
-	</div>
+	</footer>
 {/if}

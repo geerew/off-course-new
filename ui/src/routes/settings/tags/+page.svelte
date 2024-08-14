@@ -278,159 +278,156 @@
 	}
 </script>
 
-<div class="flex w-full flex-col gap-4 bg-background pb-10 pt-6">
-	<div class="container flex flex-col gap-5 md:gap-10">
-		{#await load}
-			<Loading class="max-h-96" />
-		{:then _}
-			<div class="flex w-full flex-row">
-				<div class="flex w-full flex-col gap-y-5 md:flex-row md:justify-between">
-					<div class="flex">
-						<AddTagsDialog
-							on:added={() => {
-								load = getTags();
-							}}
-						/>
-					</div>
+<div class="main container">
+	{#await load}
+		<Loading class="max-h-96" />
+	{:then _}
+		<div class="flex w-full flex-row pb-3">
+			<div class="flex w-full flex-col gap-y-5 md:flex-row md:justify-between">
+				<div class="flex">
+					<AddTagsDialog
+						on:added={() => {
+							load = getTags();
+						}}
+					/>
+				</div>
 
-					<div class="flex w-full justify-between gap-2.5 md:justify-end">
-						<TagsTableActions
-							count={checkedRowsCount}
-							on:deselect={() => {
-								// Set all rows to unchecked
-								Object.keys(workingRows).forEach((id) => {
-									workingRows[id].checked.set(false);
-								});
+				<div class="flex w-full justify-between gap-2.5 md:justify-end">
+					<TagsTableActions
+						count={checkedRowsCount}
+						on:deselect={() => {
+							// Set all rows to unchecked
+							Object.keys(workingRows).forEach((id) => {
+								workingRows[id].checked.set(false);
+							});
 
-								rowsChange();
-							}}
-							on:delete={() => {
-								openDeleteDialog = true;
-							}}
-						/>
+							rowsChange();
+						}}
+						on:delete={() => {
+							openDeleteDialog = true;
+						}}
+					/>
 
-						<TableSortController
-							columns={availableSortColumns}
-							sortedColumn={sortKeys}
-							on:changed={(ev) => {
-								preferences.set({ ...$preferences, sortBy: ev.detail });
-								getTags();
-							}}
-							disabled={$fetchedTags.length === 0}
-						/>
-					</div>
+					<TableSortController
+						columns={availableSortColumns}
+						sortedColumn={sortKeys}
+						on:changed={(ev) => {
+							preferences.set({ ...$preferences, sortBy: ev.detail });
+							getTags();
+						}}
+						disabled={$fetchedTags.length === 0}
+					/>
 				</div>
 			</div>
+		</div>
 
-			<div class="flex flex-col gap-5">
-				<Table.Root {...$tableAttrs} class="min-w-[15rem] border-collapse">
-					<Table.Header>
-						{#each $headerRows as headerRow}
-							<Subscribe rowAttrs={headerRow.attrs()}>
-								<Table.Row class="hover:bg-transparent">
-									{#each headerRow.cells as cell (cell.id)}
-										{@const ascSort =
-											$sortKeys.length >= 1 &&
-											$sortKeys[0].order === 'asc' &&
-											$sortKeys[0].id === cell.id}
-										{@const descSort =
-											$sortKeys.length >= 1 &&
-											$sortKeys[0].order === 'desc' &&
-											$sortKeys[0].id === cell.id}
+		<div class="flex flex-col gap-5">
+			<Table.Root {...$tableAttrs} class="min-w-[15rem] border-collapse">
+				<Table.Header>
+					{#each $headerRows as headerRow}
+						<Subscribe rowAttrs={headerRow.attrs()}>
+							<Table.Row class="hover:bg-transparent">
+								{#each headerRow.cells as cell (cell.id)}
+									{@const ascSort =
+										$sortKeys.length >= 1 &&
+										$sortKeys[0].order === 'asc' &&
+										$sortKeys[0].id === cell.id}
+									{@const descSort =
+										$sortKeys.length >= 1 &&
+										$sortKeys[0].order === 'desc' &&
+										$sortKeys[0].id === cell.id}
 
-										<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()}>
-											<Table.Head
-												{...attrs}
+									<Subscribe attrs={cell.attrs()} let:attrs props={cell.props()}>
+										<Table.Head
+											{...attrs}
+											class={cn(
+												'relative whitespace-nowrap px-6 tracking-wide [&:has([role=checkbox])]:pl-3',
+												cell.id === 'tag' ? 'min-w-96' : 'min-w-[1%]'
+											)}
+										>
+											<div
 												class={cn(
-													'relative whitespace-nowrap px-6 tracking-wide [&:has([role=checkbox])]:pl-3',
-													cell.id === 'tag' ? 'min-w-96' : 'min-w-[1%]'
+													'flex items-center gap-2.5',
+													cell.id !== 'tag' && 'justify-center'
 												)}
 											>
-												<div
-													class={cn(
-														'flex items-center gap-2.5',
-														cell.id !== 'tag' && 'justify-center'
-													)}
-												>
-													<Render of={cell.render()} />
+												<Render of={cell.render()} />
 
-													{#if ascSort}
-														<Icons.CaretUp
-															class="absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2] text-secondary/80"
-														/>
-													{:else if descSort}
-														<Icons.CaretDown
-															class="absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2] text-secondary/80"
-														/>
-													{/if}
+												{#if ascSort}
+													<Icons.CaretUp
+														class="absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2] text-secondary/80"
+													/>
+												{:else if descSort}
+													<Icons.CaretDown
+														class="absolute right-0 top-1/2 size-4 -translate-y-1/2 stroke-[2] text-secondary/80"
+													/>
+												{/if}
+											</div>
+										</Table.Head>
+									</Subscribe>
+								{/each}
+							</Table.Row>
+						</Subscribe>
+					{/each}
+				</Table.Header>
+
+				<Table.Body {...$tableBodyAttrs}>
+					{#if $rows.length === 0}
+						<Table.Row class="hover:bg-transparent">
+							<Table.Cell colspan={flatColumns.length}>
+								<div class="flex w-full flex-grow flex-col place-content-center items-center p-5">
+									<p class="text-center text-sm text-muted-foreground">No tags found.</p>
+								</div>
+							</Table.Cell>
+						</Table.Row>
+					{:else}
+						{#each $pageRows as row (row.id)}
+							<Subscribe rowAttrs={row.attrs()} let:rowAttrs>
+								<Table.Row
+									{...rowAttrs}
+									data-row={row.id}
+									data-state={workingRows[row.id] && 'selected'}
+								>
+									{#each row.cells as cell (cell.id)}
+										<Subscribe attrs={cell.attrs()} let:attrs>
+											<Table.Cell
+												class={cn(
+													'whitespace-nowrap px-6 text-sm [&:has([role=checkbox])]:pl-3',
+													cell.id === 'tag' ? 'min-w-96' : 'min-w-[1%]'
+												)}
+												{...attrs}
+											>
+												<div class={cn(cell.id !== 'tag' && 'text-center')}>
+													<Render of={cell.render()} />
 												</div>
-											</Table.Head>
+											</Table.Cell>
 										</Subscribe>
 									{/each}
 								</Table.Row>
 							</Subscribe>
 						{/each}
-					</Table.Header>
+					{/if}
+				</Table.Body>
+			</Table.Root>
 
-					<Table.Body {...$tableBodyAttrs}>
-						{#if $rows.length === 0}
-							<Table.Row class="hover:bg-transparent">
-								<Table.Cell colspan={flatColumns.length}>
-									<div class="flex w-full flex-grow flex-col place-content-center items-center p-5">
-										<p class="text-center text-sm text-muted-foreground">No tags found.</p>
-									</div>
-								</Table.Cell>
-							</Table.Row>
-						{:else}
-							{#each $pageRows as row (row.id)}
-								<Subscribe rowAttrs={row.attrs()} let:rowAttrs>
-									<Table.Row
-										{...rowAttrs}
-										data-row={row.id}
-										data-state={workingRows[row.id] && 'selected'}
-									>
-										{#each row.cells as cell (cell.id)}
-											<Subscribe attrs={cell.attrs()} let:attrs>
-												<Table.Cell
-													class={cn(
-														'whitespace-nowrap px-6 text-sm [&:has([role=checkbox])]:pl-3',
-														cell.id === 'tag' ? 'min-w-96' : 'min-w-[1%]'
-													)}
-													{...attrs}
-												>
-													<div class={cn(cell.id !== 'tag' && 'text-center')}>
-														<Render of={cell.render()} />
-													</div>
-												</Table.Cell>
-											</Subscribe>
-										{/each}
-									</Table.Row>
-								</Subscribe>
-							{/each}
-						{/if}
-					</Table.Body>
-				</Table.Root>
-
-				<Pagination
-					type="tag"
-					{pagination}
-					on:pageChange={(ev) => {
-						pagination.page = ev.detail;
-						load = getTags();
-					}}
-					on:perPageChange={(ev) => {
-						pagination.perPage = ev.detail;
-						pagination.page = 1;
-						load = getTags();
-					}}
-				/>
-			</div>
-		{:catch error}
-			<Err errorMessage={error} />
-		{/await}
-	</div>
+			<Pagination
+				type="tag"
+				{pagination}
+				on:pageChange={(ev) => {
+					pagination.page = ev.detail;
+					load = getTags();
+				}}
+				on:perPageChange={(ev) => {
+					pagination.perPage = ev.detail;
+					pagination.page = 1;
+					load = getTags();
+				}}
+			/>
+		</div>
+	{:catch error}
+		<Err errorMessage={error} />
+	{/await}
 </div>
-
 <!-- Delete dialog -->
 {#if openDeleteDialog}
 	<DeleteTagsDialog

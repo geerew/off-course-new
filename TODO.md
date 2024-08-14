@@ -9,69 +9,77 @@
 
 - [ENHANCEMENT] Update goreleaser to build additional versions
 - [ENHANCEMENT] Rewrite the README
-- [ENHANCEMENT] Icon (favicon, application icon)
+  - Add section on how to override the PORT and HOST (`VITE_HOST=xxxx VITE_PORT=xxxx pnpm run dev`)
+- [ENHANCEMENT] Icon for MAC
 
 ## UI
 
 ### General
 
-- [BUG] Building without .env file (pnpm run build)
-- [BUG] When loading images, the spinner can stop but there is a delay before the image is shown
-- [ENHANCEMENT] theme (https://ui.jln.dev)
+- [ENHANCEMENT] Theme (https://ui.jln.dev)
 - [ENHANCEMENT] Update query param to all pages like settings -> courses/tags/logs etc as the uses filters
 - [ENHANCEMENT] Add search (https://discord.com/channels/1116682155809067049/1117779396992979024/1163925360228962385)
 - [ENHANCEMENT] Change how frequently the course availability check is run
 - [ENHANCEMENT] Support for FFMPEG path
 - [ENHANCEMENT] On mobile use a drawer for tags
+- [ENHANCEMENT] Write a general scanning monitor util
+  - Add 1 or more scans, do a bulk query for all in the list
+  - take a writable and update the status
 
 ### Home
 
-- [BUG] New courses timestamp should be created_at
-- [BUG] Update px to match header when screen size is xs or sm
 - [ENHANCEMENT] Hide ongoing when there are no ongoing courses
-- [ENHANCEMENT] Get image for landing page
 - [ENHANCEMENT] Support adding categories from on the home page
+- [ENHANCEMENT] Fix the difference in location of the loading icon and the error
+- [ENHANCEMENT] Change from carousel to no carousel
+- 
 
 ### Courses
 
 - [ENHANCEMENT] Rework filters to use shadcn drawer on mobile
+- [ENHANCEMENT] Additional filter for favorites
 
 ### Course
 
 - [ENHANCEMENT] When a course is unavailable, show a message saying unavailable
 - [ENHANCEMENT] Support PDF
 - [ENHANCEMENT] Show 'scanning' loading page when a course is first added and scanning is in progress'
-- [BUG] Hover over details icon in menu. The tooltip flickers open and closed and part of the menu appears behind
+- [ENHANCEMENT] Rework menu for large and small to use the same content (instead of duplicating)
 
 #### Video
 
 - [BUG] When video becomes unavailable, toast renders again and again
+- [BUG] Sometimes full screen button in mobile does not work
+- [BUG] Video settings menu height issue when device is rotated landscape
 
 #### Mobile
 
 - [BUG] Sometimes the menu opens and is empty. A quick scroll fixes things
+  - Fixed?
 
 ### Settings
 
 #### General
 
--
+- [ENHANCEMENT] Mark a course as complete / reset progress
 
 #### Courses
 
 - [ENHANCEMENT] The scan status should show for at least 1 second (scan then rescan to test)
 - [ENHANCEMENT] Filters
 - [ENHANCEMENT] Support the action to `move` multiple courses to another path
+- [ENHANCEMENT] Add action to set courses as favourite
 
 #####  Add
 
-- [BUG] The mobile drawer slider (line at the top) does not show when scrolling is in play
-- [BUG] On mobile, show the toast at the top of the screen
 
 ##### Details
 
--  [ENHANCEMENT] Add move button and file system popup for relocating a course (and assets)
--  [ENHANCEMENT] Allow changing the course card from the UI
+- [ENHANCEMENT] Add move button and file system popup for relocating a course (and assets)
+- [ENHANCEMENT] Allow changing the course card from the UI
+- [ENHANCEMENT] Mark a course as complete / reset progress
+- [ENHANCEMENT] Rename a file
+- [ENHANCEMENT] Add button to set/remove as favorite
 
 #### Tags
 
@@ -89,10 +97,13 @@
 
 - [ENHANCEMENT] Remove -ST1003 from audit
 - [ENHANCEMENT] Use mattn sqlite3 driver
+- [ENHANCEMENT] Allow settings course as favourite
 
 ### API
 
-- [ENHANCEMENT] Support moving a course to another path (along with assets) 
+- [ENHANCEMENT] Support moving a course to another path (along with assets)
+- [ENHANCEMENT] Mark a course as complete / reset progress
+- [ENHANCEMENT] Rename a file
 
 ### Cron
 

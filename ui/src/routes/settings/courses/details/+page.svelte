@@ -77,13 +77,13 @@
 	});
 </script>
 
-<div class="flex w-full flex-col gap-4 bg-background pb-10">
+<div class="main pt-0">
 	{#await coursePromise}
 		<Loading class="max-h-96" />
 	{:then _}
 		<!-- Course Details -->
-		<div class="bg-muted">
-			<div class="container flex flex-col gap-4 py-6 md:py-10">
+		<div class="bg-muted pb-6 pt-6">
+			<div class="container flex flex-col gap-4">
 				<div class="grid grid-cols-1 gap-5 md:grid-cols-3">
 					<div
 						class="order-2 flex flex-col items-center justify-between gap-5 md:order-1 md:col-span-2 md:items-start md:gap-8"
@@ -203,9 +203,9 @@
 							courseId={fetchedCourse.id}
 							hasCard={fetchedCourse.hasCard}
 							bind:refresh
-							class="flex h-48 max-h-48 w-auto flex-col rounded-none"
-							imgClass="border-alt-1/60 mx-auto min-h-0 max-w-full rounded-lg border"
-							fallbackClass="bg-alt-1 inline-flex grow max-w-72 place-content-center items-center rounded-lg"
+							class="flex h-48 max-h-48 w-auto flex-col items-center rounded-none md:items-end"
+							imgClass="border-alt-1/60 min-h-0 max-w-full rounded-lg border"
+							fallbackClass="bg-alt-1 inline-flex  grow max-w-72 place-content-center items-center w-full rounded-lg"
 						/>
 					</div>
 				</div>

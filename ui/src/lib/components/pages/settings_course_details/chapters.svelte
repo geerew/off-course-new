@@ -75,7 +75,7 @@
 	}
 </script>
 
-<div class="container flex flex-col gap-2 py-4">
+<div class="container flex flex-col gap-2">
 	<div class="flex flex-col pl-2">
 		<span class="text-xl font-bold">Course Content</span>
 	</div>

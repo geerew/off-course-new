@@ -25,7 +25,7 @@
 </script>
 
 <!-- Filters -->
-<div class="flex w-full flex-col gap-5 border-b border-alt-1/60 pb-5 md:flex-row">
+<div class="flex w-full flex-col gap-5 sm:flex-row">
 	<CoursesTitleFilter
 		on:change={(e) => {
 			filterTitles = [...filterTitles, e.detail];

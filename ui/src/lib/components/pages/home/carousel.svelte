@@ -225,9 +225,17 @@
 								class="group relative flex h-full min-h-36 cursor-pointer flex-col gap-4 overflow-hidden whitespace-normal rounded-lg bg-muted"
 								href={`/course/?id=${course.id}`}
 							>
+								{#if course.scanStatus !== ''}
+									<span
+										class="absolute left-0 top-0 z-10 flex h-1 items-center justify-center rounded-br-lg rounded-tl-lg bg-primary p-3 text-center text-xs"
+									>
+										Scanning
+									</span>
+								{/if}
+
 								{#if !course.available}
 									<span
-										class="absolute right-0 top-0 z-10 flex h-1 w-1 items-center justify-center rounded-bl-lg rounded-tr-lg bg-destructive p-3 text-center text-sm"
+										class="absolute right-0 top-0 z-10 flex h-1 w-1 items-center justify-center rounded-bl-lg rounded-tr-lg bg-destructive p-3 text-center text-xs"
 									>
 										!
 									</span>
@@ -247,7 +255,11 @@
 									</h3>
 
 									<div class="flex flex-row justify-between">
-										<NiceDate date={course.progressUpdatedAt} class="shrink-0 pt-3 text-xs" />
+										<NiceDate
+											date={variant === 'latest' ? course.createdAt : course.progressUpdatedAt}
+											prefix={variant === 'latest' ? 'Added:' : 'Last Watched:'}
+											class="shrink-0 pt-3 text-xs"
+										/>
 
 										<span class="flex w-full justify-end pt-3 text-xs">{course.percent}%</span>
 									</div>
