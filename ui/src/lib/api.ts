@@ -37,7 +37,8 @@ export const LOG_API = '/api/logs';
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Determine custom backend port. Default to 9081
-const backendPort = import.meta.env.BACKEND_PORT || '9081';
+const backendHost = import.meta.env.VITE_HOST || 'localhost';
+const backendPort = import.meta.env.VITE_PORT || '9081';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -46,7 +47,7 @@ export function GetBackendUrl(api: string) {
 	if (isProduction) {
 		return api;
 	} else {
-		return `http://localhost:${backendPort}${api}`;
+		return `http://${backendHost}:${backendPort}${api}`;
 	}
 }
 

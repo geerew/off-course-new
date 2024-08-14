@@ -9,7 +9,7 @@
 
 - [ENHANCEMENT] Update goreleaser to build additional versions
 - [ENHANCEMENT] Rewrite the README
-  - Add section on how to override the BACKEND_PORT (`BACKEND_PORT=9000 pnpm run dev`)
+  - Add section on how to override the PORT and HOST (`VITE_HOST=xxxx VITE_PORT=xxxx pnpm run dev`)
 - [ENHANCEMENT] Icon for MAC
 
 ## UI
@@ -47,12 +47,13 @@
 #### Video
 
 - [BUG] When video becomes unavailable, toast renders again and again
-- [BUG] Sometimes fullscreen button in mobile does not work
+- [BUG] Sometimes full screen button in mobile does not work
 - [BUG] Video settings menu height issue when device is rotated landscape
 
 #### Mobile
 
 - [BUG] Sometimes the menu opens and is empty. A quick scroll fixes things
+  - Fixed?
 
 ### Settings
 
