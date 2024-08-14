@@ -16,7 +16,7 @@
 
 ### General
 
-- [ENHANCEMENT] theme (https://ui.jln.dev)
+- [ENHANCEMENT] Theme (https://ui.jln.dev)
 - [ENHANCEMENT] Update query param to all pages like settings -> courses/tags/logs etc as the uses filters
 - [ENHANCEMENT] Add search (https://discord.com/channels/1116682155809067049/1117779396992979024/1163925360228962385)
 - [ENHANCEMENT] Change how frequently the course availability check is run
@@ -27,7 +27,6 @@
 ### Home
 
 - [ENHANCEMENT] Hide ongoing when there are no ongoing courses
-- [ENHANCEMENT] Get image for landing page
 - [ENHANCEMENT] Support adding categories from on the home page
 - [ENHANCEMENT] Fix the difference in location of the loading icon and the error
 - [ENHANCEMENT] Change from carousel to no carousel
@@ -70,8 +69,6 @@
 
 #####  Add
 
-- [BUG] The mobile drawer slider (line at the top) does not show when scrolling is in play
-- [BUG] On mobile, show the toast at the top of the screen
 
 ##### Details
 

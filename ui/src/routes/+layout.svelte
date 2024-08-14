@@ -17,7 +17,7 @@
 
 <ModeWatcher />
 
-<Toaster richColors />
+<Toaster richColors position="top-center" />
 
 <div class="flex min-h-screen flex-col">
 	<Header />
