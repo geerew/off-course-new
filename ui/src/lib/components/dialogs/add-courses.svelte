@@ -24,7 +24,7 @@
 	// ----------------------
 
 	// True when the sheet is open. This is used to reset stuff on open
-	let open = true;
+	let open = false;
 
 	// The breakpoint for md
 	const mdPx = +theme.screens.md.replace('px', '');
