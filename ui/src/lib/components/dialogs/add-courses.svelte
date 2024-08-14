@@ -24,7 +24,7 @@
 	// ----------------------
 
 	// True when the sheet is open. This is used to reset stuff on open
-	let open = false;
+	let open = true;
 
 	// The breakpoint for md
 	const mdPx = +theme.screens.md.replace('px', '');
@@ -69,7 +69,8 @@
 	{#if isMobile}
 		<Drawer.Root bind:open closeOnOutsideClick={false} closeOnEscape={false}>
 			<Drawer.Content class="mx-auto h-[90%] w-full p-0">
-				<div class="flex h-full w-full flex-col px-0 pb-5 pt-5">
+				<div class="flex h-full w-full flex-col px-0">
+					<div class="mx-auto mt-4 h-2 w-[100px] shrink-0 rounded-full bg-muted"></div>
 					<AddCoursesContent bind:open on:added />
 				</div>
 			</Drawer.Content>
