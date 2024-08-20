@@ -95,6 +95,8 @@
 			</Drawer.Trigger>
 
 			<Drawer.Content class="mx-auto min-h-28 max-w-sm">
+				<div class="mx-auto mt-4 h-2 w-[100px] shrink-0 rounded-full bg-muted"></div>
+
 				<div class="flex h-full w-full flex-col px-2.5 pt-5">
 					<Playback
 						show={section === 'playback'}
