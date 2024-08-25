@@ -1,4 +1,4 @@
-import { array, boolean, enum_, number, object, optional, string, type Output } from 'valibot';
+import { array, boolean, enum_, number, object, optional, string, type InferOutput } from 'valibot';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -16,7 +16,7 @@ const FileInfoSchema = object({
 	path: string()
 });
 
-export type FileInfo = Output<typeof FileInfoSchema>;
+export type FileInfo = InferOutput<typeof FileInfoSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -28,7 +28,7 @@ const DirInfoSchema = object({
 	isMovingInto: optional(boolean())
 });
 
-export type DirInfo = Output<typeof DirInfoSchema>;
+export type DirInfo = InferOutput<typeof DirInfoSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -38,4 +38,4 @@ export const FileSystemSchema = object({
 	files: array(FileInfoSchema)
 });
 
-export type FileSystem = Output<typeof FileSystemSchema>;
+export type FileSystem = InferOutput<typeof FileSystemSchema>;

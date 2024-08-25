@@ -2,14 +2,13 @@ import {
 	any,
 	array,
 	boolean,
-	merge,
 	number,
 	object,
 	optional,
 	picklist,
 	record,
 	string,
-	type Output
+	type InferOutput
 } from 'valibot';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -17,7 +16,7 @@ import {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 const ScanStatusSchema = picklist(['waiting', 'processing', '']);
-export type ScanStatus = Output<typeof ScanStatusSchema>;
+export type ScanStatus = InferOutput<typeof ScanStatusSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -31,30 +30,30 @@ export const BaseSchema = object({
 // Attachment
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export const AttachmentSchema = merge([
-	BaseSchema,
-	object({
+export const AttachmentSchema = object({
+	...BaseSchema.entries,
+	...object({
 		courseId: string(),
 		assetId: string(),
 		title: string(),
 		path: string()
-	})
-]);
+	}).entries
+});
 
-export type Attachment = Output<typeof AttachmentSchema>;
+export type Attachment = InferOutput<typeof AttachmentSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Asset
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 const AssetTypeSchema = picklist(['video', 'html', 'pdf']);
-export type AssetType = Output<typeof AssetTypeSchema>;
+export type AssetType = InferOutput<typeof AssetTypeSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export const AssetSchema = merge([
-	BaseSchema,
-	object({
+export const AssetSchema = object({
+	...BaseSchema.entries,
+	...object({
 		courseId: string(),
 		title: string(),
 		prefix: number(),
@@ -69,10 +68,10 @@ export const AssetSchema = merge([
 
 		// Attachments
 		attachments: optional(array(AttachmentSchema))
-	})
-]);
+	}).entries
+});
 
-export type Asset = Output<typeof AssetSchema>;
+export type Asset = InferOutput<typeof AssetSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -87,9 +86,9 @@ export type AssetsGetParams = {
 // Course
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export const CourseSchema = merge([
-	BaseSchema,
-	object({
+export const CourseSchema = object({
+	...BaseSchema.entries,
+	...object({
 		title: string(),
 		path: string(),
 		hasCard: boolean(),
@@ -104,10 +103,10 @@ export const CourseSchema = merge([
 		percent: number(),
 		completedAt: string(),
 		progressUpdatedAt: string()
-	})
-]);
+	}).entries
+});
 
-export type Course = Output<typeof CourseSchema>;
+export type Course = InferOutput<typeof CourseSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -150,15 +149,15 @@ export const CourseTagSchema = object({
 	forDeletion: optional(boolean())
 });
 
-export type CourseTag = Output<typeof CourseTagSchema>;
+export type CourseTag = InferOutput<typeof CourseTagSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Tags
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export const TagSchema = merge([
-	BaseSchema,
-	object({
+export const TagSchema = object({
+	...BaseSchema.entries,
+	...object({
 		tag: string(),
 		courseCount: number(),
 		courses: optional(
@@ -169,10 +168,10 @@ export const TagSchema = merge([
 				})
 			)
 		)
-	})
-]);
+	}).entries
+});
 
-export type Tag = Output<typeof TagSchema>;
+export type Tag = InferOutput<typeof TagSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -195,15 +194,15 @@ export type TagsGetParams = {
 // Scan
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export const ScanSchema = merge([
-	BaseSchema,
-	object({
+export const ScanSchema = object({
+	...BaseSchema.entries,
+	...object({
 		courseId: string(),
 		status: ScanStatusSchema
-	})
-]);
+	}).entries
+});
 
-export type Scan = Output<typeof ScanSchema>;
+export type Scan = InferOutput<typeof ScanSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -223,7 +222,7 @@ export const LogSchema = object({
 	createdAt: string()
 });
 
-export type Log = Output<typeof LogSchema>;
+export type Log = InferOutput<typeof LogSchema>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
