@@ -101,7 +101,6 @@
 			const response = await GetTag(tag, { byName: true, insensitive: true });
 
 			if (response) {
-				console.log('found tag', response);
 				tag = response.tag;
 			}
 		} catch (error) {

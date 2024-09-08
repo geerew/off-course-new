@@ -34,7 +34,7 @@
 	// Reactive
 	// ----------------------
 
-	$: if (!open) {
+	$: if (!isOpen) {
 		toAdd = [];
 	}
 

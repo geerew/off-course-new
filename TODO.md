@@ -78,6 +78,8 @@
 - [ENHANCEMENT] Mark a course as complete / reset progress
 - [ENHANCEMENT] Rename a file
 - [ENHANCEMENT] Add button to set/remove as favorite
+- [ENHANCEMENT] Support course synopsis
+
 
 #### Tags
 

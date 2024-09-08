@@ -101,7 +101,6 @@
 			const response = await GetTag(tag, { byName: true, insensitive: true });
 
 			if (response) {
-				console.log('found tag', response);
 				tag = response.tag;
 			}
 		} catch (error) {
@@ -224,7 +223,7 @@
 	}
 
 	// Reset the state when the dialog is closed
-	$: if (!open) {
+	$: if (!isOpen) {
 		toAdd = [];
 		changes = 0;
 		filteredTags = [];
