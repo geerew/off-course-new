@@ -49,8 +49,6 @@
 #### Video
 
 - [BUG] When video becomes unavailable, toast renders again and again
-- [BUG] Sometimes full screen button in mobile does not work
-- [BUG] Video settings menu height issue when device is rotated landscape
 
 #### Mobile
 

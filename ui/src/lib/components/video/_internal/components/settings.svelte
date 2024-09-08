@@ -24,10 +24,10 @@
 	let menuEl: HTMLDivElement;
 
 	// Whether the menu is open
-	let open = false;
+	let open = true;
 
 	// The current section of the menu
-	let section: 'top' | 'playback' = 'top';
+	let section: 'top' | 'playback' = 'playback';
 
 	// The breakpoint for md
 	const mdPx = +theme.screens.md.replace('px', '');
@@ -96,10 +96,9 @@
 				<Trigger {builder} />
 			</Drawer.Trigger>
 
-			<Drawer.Content class="mx-auto min-h-28 max-w-sm">
-				<div class="mx-auto mt-4 h-2 w-[100px] shrink-0 rounded-full bg-muted"></div>
-
-				<div class="flex h-full w-full flex-col px-2.5 pt-5">
+			<Drawer.Content class="mx-auto max-h-[70%] min-h-28 max-w-sm">
+				<div class="mx-auto mb-2 mt-4 h-2 w-[100px] shrink-0 rounded-full bg-muted"></div>
+				<div class="flex h-full w-full flex-col overflow-y-auto px-2.5 pt-5" data-vaul-no-drag="">
 					<Playback
 						show={section === 'playback'}
 						on:close={() => {
@@ -118,6 +117,7 @@
 			portal={null}
 			closeOnItemClick={false}
 			typeahead={false}
+			preventScroll={false}
 			onOpenChange={(o) => {
 				if (!o) section = 'top';
 			}}
