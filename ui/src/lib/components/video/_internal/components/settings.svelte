@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import theme from 'tailwindcss/defaultTheme';
 	import { MediaRemoteControl } from 'vidstack';
-	import { preferences } from '../store';
+	import { isSettingsMenuOpen, preferences } from '../store';
 	import Playback from './_settings/playback.svelte';
 	import Trigger from './_settings/trigger.svelte';
 
@@ -41,9 +41,11 @@
 		if (open) {
 			// Update the video ctx to mark settings as open
 			remote.pauseControls();
+			isSettingsMenuOpen.set(true);
 		} else {
 			// Update the video ctx to mark settings as closed and resume idle tracking
 			remote.resumeControls();
+			isSettingsMenuOpen.set(false);
 		}
 	}
 

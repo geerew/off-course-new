@@ -14,7 +14,7 @@
 	import Gestures from './_internal/gestures.svelte';
 	import MobileControlsLayout from './_internal/mobile-controls-layout.svelte';
 	import NormalControlsLayout from './_internal/normal-controls-layout.svelte';
-	import { preferences } from './_internal/store';
+	import { isSettingsMenuOpen, preferences } from './_internal/store';
 
 	// ----------------------
 	// Exports
@@ -50,6 +50,9 @@
 	// When loading the component store the local storage volume in a variable. We do this because vidstack tries to set it
 	// to 1 initially, triggering a volume change event, which result in the local storage volume being set to 1
 	let storageVolume = $preferences.volume ?? 1;
+
+	// Holds the current timeout for hiding the controls (when the pointer is coarse)
+	let courseControlsTimeout: number = -1;
 
 	// ----------------------
 	// Functions
@@ -121,6 +124,15 @@
 			dispatch('progress', currentSecond);
 		}
 	}
+
+	// ----------------------
+	// Reactive
+	// ----------------------
+
+	// When the settings menu is open clear the courseControlsTimeout
+	$: if ($isSettingsMenuOpen && courseControlsTimeout !== -1) {
+		clearTimeout(courseControlsTimeout);
+	}
 </script>
 
 <media-player
@@ -147,9 +159,11 @@
 	on:controls-change={(e) => {
 		if (!player) return;
 
+		// If the pointer is coarse, when the controls show, set a timer to hid them again
+		// after 2.5 seconds
 		const pointerValue = player.getAttribute('data-pointer');
 		if (e.detail && pointerValue === 'coarse') {
-			setTimeout(() => {
+			courseControlsTimeout = setTimeout(() => {
 				if (player && pointerValue === 'coarse') {
 					player.remoteControl.resumeControls();
 				}
