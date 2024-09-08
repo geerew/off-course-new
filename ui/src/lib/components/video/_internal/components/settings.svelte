@@ -24,10 +24,10 @@
 	let menuEl: HTMLDivElement;
 
 	// Whether the menu is open
-	let open = true;
+	let open = false;
 
 	// The current section of the menu
-	let section: 'top' | 'playback' = 'playback';
+	let section: 'top' | 'playback' = 'top';
 
 	// The breakpoint for md
 	const mdPx = +theme.screens.md.replace('px', '');
