@@ -11,6 +11,7 @@
 - [ENHANCEMENT] Rewrite the README
   - Add section on how to override the PORT and HOST (`VITE_HOST=xxxx VITE_PORT=xxxx pnpm run dev`)
 - [ENHANCEMENT] Icon for MAC
+- [ENHANCEMENT] Add dockerfile and docker compose
 
 ## UI
 
@@ -70,6 +71,7 @@
 
 #####  Add
 
+-
 
 ##### Details
 
@@ -79,6 +81,7 @@
 - [ENHANCEMENT] Rename a file
 - [ENHANCEMENT] Add button to set/remove as favorite
 - [ENHANCEMENT] Support course synopsis
+- [ENHANCEMENT] Support alt name for course
 
 
 #### Tags
