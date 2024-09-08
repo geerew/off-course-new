@@ -81,7 +81,6 @@
 
 #### Tags
 
-- [BUG] Adding the same tag with different case (upper/lower/capital)
 - [ENHANCEMENT] Add courses to tag(s)
 
 #### Logs
