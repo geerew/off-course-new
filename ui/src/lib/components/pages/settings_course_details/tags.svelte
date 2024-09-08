@@ -67,7 +67,7 @@
 	}
 </script>
 
-<div class="flex flex-col gap-3.5">
+<div class="flex w-full flex-col gap-3.5">
 	<div class="flex flex-row items-center gap-2">
 		<span class="font-bold">Tags</span>
 		{#await tags then _}

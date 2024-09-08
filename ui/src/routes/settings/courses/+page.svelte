@@ -600,7 +600,7 @@
 {#if openAddTagsDialog}
 	<AddCourseTagsDialog
 		courseIds={Object.keys(getRowActionOrChecked())}
-		bind:open={openAddTagsDialog}
+		bind:isOpen={openAddTagsDialog}
 		on:updated={() => {
 			// Set checked to false for all rows
 			Object.keys(workingRows).forEach((id) => {

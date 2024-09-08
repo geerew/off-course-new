@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import theme from 'tailwindcss/defaultTheme';
 	import { MediaRemoteControl } from 'vidstack';
-	import { preferences } from '../store';
+	import { isSettingsMenuOpen, preferences } from '../store';
 	import Playback from './_settings/playback.svelte';
 	import Trigger from './_settings/trigger.svelte';
 
@@ -41,9 +41,11 @@
 		if (open) {
 			// Update the video ctx to mark settings as open
 			remote.pauseControls();
+			isSettingsMenuOpen.set(true);
 		} else {
 			// Update the video ctx to mark settings as closed and resume idle tracking
 			remote.resumeControls();
+			isSettingsMenuOpen.set(false);
 		}
 	}
 
@@ -94,8 +96,9 @@
 				<Trigger {builder} />
 			</Drawer.Trigger>
 
-			<Drawer.Content class="mx-auto min-h-28 max-w-sm">
-				<div class="flex h-full w-full flex-col px-2.5 pt-5">
+			<Drawer.Content class="mx-auto max-h-[70%] min-h-28 max-w-sm">
+				<div class="mx-auto mb-2 mt-4 h-2 w-[100px] shrink-0 rounded-full bg-muted"></div>
+				<div class="flex h-full w-full flex-col overflow-y-auto px-2.5 pt-5" data-vaul-no-drag="">
 					<Playback
 						show={section === 'playback'}
 						on:close={() => {
@@ -114,6 +117,7 @@
 			portal={null}
 			closeOnItemClick={false}
 			typeahead={false}
+			preventScroll={false}
 			onOpenChange={(o) => {
 				if (!o) section = 'top';
 			}}

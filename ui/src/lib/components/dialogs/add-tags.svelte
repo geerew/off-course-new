@@ -1,120 +1,49 @@
 <!-- TODO: Handle adding a tag that goes off screen (scroll to it?) -->
 <script lang="ts">
-	import Loading from '$components/generic/loading.svelte';
 	import { Icons } from '$components/icons';
-	import { Badge } from '$components/ui/badge';
 	import { Button } from '$components/ui/button';
 	import * as Dialog from '$components/ui/dialog';
-	import { AddTag, GetTag } from '$lib/api';
-	import { cn } from '$lib/utils';
-	import axios from 'axios';
-	import { createEventDispatcher } from 'svelte';
-	import { toast } from 'svelte-sonner';
+	import * as Drawer from '$components/ui/drawer';
+	import { onMount } from 'svelte';
+	import theme from 'tailwindcss/defaultTheme';
+	import AddTagsContent from './_internal/add-tags-content.svelte';
 
 	// ----------------------
 	// Variables
 	// ----------------------
 
-	const dispatch = createEventDispatcher();
-
+	// True when the dialog is open
 	let isOpen = false;
 
-	let showSpinner = false;
-
+	// An array of tags that should be added to the course. When first opened this will be empty and
+	// when the dialog is closed it will be reset to empty. If the user resizes the window while the dialog
+	// is open, the tags will remain in the array and passed to the new dialog
 	let toAdd: string[] = [];
 
-	let tagsEl: HTMLDivElement;
+	// The breakpoint for md
+	const mdPx = +theme.screens.md.replace('px', '');
+
+	// True when the window size is < md. Set once the window size is known, which happens in onMount
+	let isMobile: boolean | null = null;
 
 	// ----------------------
-	// Functions
+	// Reactive
 	// ----------------------
 
-	// Use:action for inputting tags
-	const tagInput = (node: HTMLInputElement) => {
-		async function handleInput(e: KeyboardEvent) {
-			if (e.key === 'Enter') {
-				e.preventDefault();
-
-				if (!node.value) return;
-
-				showSpinner = true;
-
-				const tagToAdd = node.value.trim();
-
-				// Check if the tag already exists in the list
-				const foundTag = toAdd.find((tag) => tag.toLowerCase() === tagToAdd.toLowerCase());
-
-				if (foundTag) {
-					toast.error(`Tag '${tagToAdd}' is already added`);
-					showSpinner = false;
-
-					if (tagsEl) {
-						const tagEl = tagsEl.querySelector(`[data-tag="${foundTag}"]`);
-						if (tagEl) {
-							if (tagEl.classList.contains('animate-shake')) return;
-
-							tagEl.classList.add('animate-shake');
-							setTimeout(() => {
-								tagEl.classList.remove('animate-shake');
-							}, 1000);
-						}
-					}
-
-					return;
-				}
-
-				// Check if tag already exists in the backend
-				try {
-					await GetTag(tagToAdd, { byName: true, insensitive: true });
-
-					toast.error(`Tag '${tagToAdd}' is an existing tag`);
-					showSpinner = false;
-					return;
-				} catch (error) {
-					if (!axios.isAxiosError(error) || (error.response && error.response.status !== 404)) {
-						toast.error(error instanceof Error ? error.message : String(error));
-					}
-				}
-
-				toAdd = [...toAdd, tagToAdd];
-				node.value = '';
-
-				showSpinner = false;
-			}
-		}
-
-		node.addEventListener('keydown', handleInput);
-
-		return {
-			destroy() {
-				node.removeEventListener('keydown', handleInput);
-			}
-		};
-	};
-
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	async function addTags() {
-		try {
-			await Promise.all(
-				toAdd.map(async (tag) => {
-					try {
-						await AddTag(tag);
-					} catch (error) {
-						toast.error('Failed to add tag: ' + tag);
-					}
-				})
-			);
-		} catch (error) {
-			toast.error(error instanceof Error ? error.message : (error as string));
-		}
+	$: if (!isOpen) {
+		toAdd = [];
 	}
 
-	$: (() => {
-		if (!isOpen) {
-			toAdd = [];
-		}
-	})();
+	// ----------------------
+	// Lifecycle
+	// ----------------------
+
+	onMount(() => {
+		isMobile = window.innerWidth < mdPx;
+		window.addEventListener('resize', () => {
+			isMobile = window.innerWidth < mdPx;
+		});
+	});
 </script>
 
 <Button
@@ -126,84 +55,25 @@
 	<span>Add Tags</span>
 </Button>
 
-<Dialog.Root bind:open={isOpen} closeOnEscape={false} closeOnOutsideClick={false}>
-	<Dialog.Content
-		class="top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md bg-muted px-0 py-0 duration-200 md:max-w-xl [&>button[data-dialog-close]]:hidden"
-	>
-		<div class="group relative flex flex-row items-center border-b border-alt-1/60">
-			<label class="px-5" for="add-tag-input">
-				<Icons.Search class="size-6 text-muted-foreground" />
-			</label>
-
-			<input
-				type="text"
-				id="add-tag-input"
-				use:tagInput
-				placeholder="Add tag..."
-				class="h-14 w-full rounded-none border-none bg-inherit px-0 text-foreground placeholder-muted-foreground/60 focus-visible:outline-none focus-visible:ring-0"
-			/>
-
-			<Loading
-				class={cn('absolute right-3 h-auto min-h-0 w-auto p-0', !showSpinner && 'hidden')}
-				loaderClass="size-5"
-			/>
-		</div>
-
-		<div
-			class="flex max-h-[20rem] min-h-[7rem] flex-col gap-2 overflow-hidden overflow-y-auto px-4"
-		>
-			<div class="flex flex-row flex-wrap gap-2.5" bind:this={tagsEl}>
-				{#each toAdd as tag}
-					<div class="flex flex-row" data-tag={tag}>
-						<!-- Tag -->
-						<Badge
-							class={cn(
-								'min-w-0 items-center justify-between gap-1.5 whitespace-nowrap rounded-sm rounded-r-none border-none bg-success text-sm text-success-foreground hover:bg-success'
-							)}
-						>
-							{tag}
-						</Badge>
-
-						<!-- Delete button -->
-						<Button
-							class={cn(
-								'inline-flex h-auto items-center rounded-l-none rounded-r-sm border-l bg-success px-1.5 py-0.5 text-success-foreground hover:bg-destructive'
-							)}
-							on:click={() => {
-								// When its a newly added tag, just delete it completely
-								toAdd = toAdd.filter((t) => t !== tag);
-							}}
-						>
-							<Icons.X class="size-3" />
-						</Button>
+{#if isMobile !== null}
+	{#if isMobile}
+		<Drawer.Root bind:open={isOpen} closeOnOutsideClick={false} closeOnEscape={false}>
+			<Drawer.Content class="mx-auto w-full max-w-xl p-0">
+				<div class="flex h-full w-full flex-col px-0">
+					<div class="mx-auto mt-4 h-2 w-[100px] shrink-0 rounded-full bg-muted"></div>
+					<div class="flex h-full w-full flex-col gap-4 px-0">
+						<AddTagsContent bind:isOpen bind:toAdd on:added />
 					</div>
-				{/each}
-			</div>
-		</div>
-
-		<Dialog.Footer
-			class="h-14 flex-row items-center justify-end gap-2 border-t border-alt-1/60 px-4"
-		>
-			<Button
-				variant="outline"
-				class="h-8 w-20 border-alt-1/60 bg-muted hover:bg-alt-1/60"
-				on:click={() => {
-					isOpen = false;
-				}}>Cancel</Button
+				</div>
+			</Drawer.Content>
+		</Drawer.Root>
+	{:else}
+		<Dialog.Root bind:open={isOpen} closeOnEscape={false} closeOnOutsideClick={false}>
+			<Dialog.Content
+				class="top-20 min-w-[20rem] max-w-[26rem] translate-y-0 rounded-md bg-muted px-0 py-0 duration-200 md:max-w-xl [&>button[data-dialog-close]]:hidden"
 			>
-
-			<Button
-				class="h-8 px-6"
-				disabled={toAdd.length === 0}
-				on:click={async () => {
-					await addTags();
-					dispatch('added');
-					toAdd = [];
-					isOpen = false;
-				}}
-			>
-				Add {toAdd.length > 0 ? `(${toAdd.length})` : ''}
-			</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+				<AddTagsContent bind:isOpen bind:toAdd on:added />
+			</Dialog.Content>
+		</Dialog.Root>
+	{/if}
+{/if}

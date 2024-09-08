@@ -11,6 +11,7 @@
 - [ENHANCEMENT] Rewrite the README
   - Add section on how to override the PORT and HOST (`VITE_HOST=xxxx VITE_PORT=xxxx pnpm run dev`)
 - [ENHANCEMENT] Icon for MAC
+- [ENHANCEMENT] Add dockerfile and docker compose
 
 ## UI
 
@@ -49,8 +50,6 @@
 #### Video
 
 - [BUG] When video becomes unavailable, toast renders again and again
-- [BUG] Sometimes full screen button in mobile does not work
-- [BUG] Video settings menu height issue when device is rotated landscape
 
 #### Mobile
 
@@ -72,6 +71,7 @@
 
 #####  Add
 
+-
 
 ##### Details
 
@@ -80,10 +80,12 @@
 - [ENHANCEMENT] Mark a course as complete / reset progress
 - [ENHANCEMENT] Rename a file
 - [ENHANCEMENT] Add button to set/remove as favorite
+- [ENHANCEMENT] Support course synopsis
+- [ENHANCEMENT] Support alt name for course
+
 
 #### Tags
 
-- [BUG] Adding the same tag with different case (upper/lower/capital)
 - [ENHANCEMENT] Add courses to tag(s)
 
 #### Logs

@@ -1,4 +1,4 @@
-import { array, number, object, union, type Output } from 'valibot';
+import { array, number, object, union, type InferOutput } from 'valibot';
 import { AssetSchema, CourseSchema, LogSchema, TagSchema } from './models';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -21,4 +21,4 @@ export const PaginationSchema = object({
 	items: union([array(CourseSchema), array(AssetSchema), array(TagSchema), array(LogSchema)])
 });
 
-export type Pagination = Output<typeof PaginationSchema>;
+export type Pagination = InferOutput<typeof PaginationSchema>;
