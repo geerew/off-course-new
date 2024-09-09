@@ -35,25 +35,47 @@ func (dao *AssetProgressDao) Table() string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Create inserts a new asset progress, then refreshes the course progress
+// Create creates an asset progress, then refreshes the course progress
 //
-// If `tx` is nil, the function will create a new transaction, else it will use the current
-// transaction
+// A new transaction is created if `tx` is nil
 func (dao *AssetProgressDao) Create(ap *models.AssetProgress, tx *database.Tx) error {
+	createFn := func(tx *database.Tx) error {
+		if ap.ID == "" {
+			ap.RefreshId()
+		}
+
+		ap.RefreshCreatedAt()
+		ap.RefreshUpdatedAt()
+
+		query, args, _ := squirrel.
+			StatementBuilder.
+			Insert(dao.Table()).
+			SetMap(dao.data(ap)).
+			ToSql()
+
+		_, err := tx.Exec(query, args...)
+
+		if err != nil {
+			return err
+		}
+
+		// Refresh course progress
+		cpDao := NewCourseProgressDao(dao.db)
+		return cpDao.Refresh(ap.CourseID, tx)
+	}
+
 	if tx == nil {
 		return dao.db.RunInTransaction(func(tx *database.Tx) error {
-			return dao.create(ap, tx)
+			return createFn(tx)
 		})
 	} else {
-		return dao.create(ap, tx)
+		return createFn(tx)
 	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get selects an asset progress with the given asset ID
-//
-// `tx` allows for the function to be run within a transaction
+// Get gets an asset progress with the given ID
 func (dao *AssetProgressDao) Get(assetId string, tx *database.Tx) (*models.AssetProgress, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -77,130 +99,96 @@ func (dao *AssetProgressDao) Get(assetId string, tx *database.Tx) (*models.Asset
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Update updates the `video_pos` (for video assets) and `completed`, then refreshes the course progress
+// Update updates select columns of an asset progress, then refresh course progress
 //
-// When `completed` is true, `completed_at` is set to the current time. When the `completed`
-// is false, `completed_at` is set to null
+//   - `video_pos` (for video assets)
+//   - `completed` (for all assets)
 //
-// If `tx` is nil, the function will create a new transaction, else it will use the current
-// transaction
+// When `completed` is true, `completed_at` is set to the current time, else it will be null
+//
+// A new transaction is created if `tx` is nil
 func (dao *AssetProgressDao) Update(ap *models.AssetProgress, tx *database.Tx) error {
+	updateFn := func(tx *database.Tx) error {
+		if ap.AssetID == "" {
+			return ErrEmptyId
+		}
+
+		if tx == nil {
+			return ErrNilTransaction
+		}
+
+		// Normalize video position
+		if ap.VideoPos < 0 {
+			ap.VideoPos = 0
+		}
+
+		// Get the asset
+		assetDao := NewAssetDao(dao.db)
+		asset, err := assetDao.Get(ap.AssetID, nil, tx)
+		if err != nil {
+			return err
+		}
+
+		// Return when nothing has changed
+		if asset.VideoPos == ap.VideoPos && asset.Completed == ap.Completed {
+			return nil
+		}
+
+		// Set an id (if empty)
+		if ap.ID == "" {
+			ap.RefreshId()
+		}
+
+		// Set course id (if empty)
+		if ap.CourseID == "" {
+			ap.CourseID = asset.CourseID
+		}
+
+		ap.RefreshCreatedAt()
+		ap.RefreshUpdatedAt()
+
+		if ap.Completed {
+			if !asset.CompletedAt.IsZero() {
+				ap.CompletedAt = asset.CompletedAt
+			} else {
+				ap.CompletedAt = time.Now()
+			}
+		} else {
+			ap.CompletedAt = time.Time{}
+		}
+
+		// Update (or create if it doesn't exist)
+		query, args, _ := squirrel.
+			StatementBuilder.
+			Insert(dao.Table()).
+			SetMap(dao.data(ap)).
+			Suffix(
+				"ON CONFLICT (asset_id) DO UPDATE SET video_pos = ?, completed = ?, completed_at = ?, updated_at = ?",
+				ap.VideoPos, ap.Completed, FormatTime(ap.CompletedAt), FormatTime(ap.UpdatedAt),
+			).
+			ToSql()
+
+		_, err = tx.Exec(query, args...)
+		if err != nil {
+			return err
+		}
+
+		// Refresh course progress
+		cpDao := NewCourseProgressDao(dao.db)
+		return cpDao.Refresh(ap.CourseID, tx)
+	}
+
 	if tx == nil {
 		return dao.db.RunInTransaction(func(tx *database.Tx) error {
-			return dao.update(ap, tx)
+			return updateFn(tx)
 		})
 	} else {
-		return dao.update(ap, tx)
+		return updateFn(tx)
 	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Internal
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// create inserts a new asset progress, then refreshes the course progress
-//
-// This function is used by Create() and always runs within a transaction
-func (dao *AssetProgressDao) create(ap *models.AssetProgress, tx *database.Tx) error {
-	if ap.ID == "" {
-		ap.RefreshId()
-	}
-
-	ap.RefreshCreatedAt()
-	ap.RefreshUpdatedAt()
-
-	query, args, _ := squirrel.
-		StatementBuilder.
-		Insert(dao.Table()).
-		SetMap(dao.data(ap)).
-		ToSql()
-
-	_, err := tx.Exec(query, args...)
-
-	if err != nil {
-		return err
-	}
-
-	// Refresh course progress
-	cpDao := NewCourseProgressDao(dao.db)
-	return cpDao.Refresh(ap.CourseID, tx)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// update updates the asset progress, then refreshes the course progress
-//
-// This function is used by Update() and always runs within a transaction
-func (dao *AssetProgressDao) update(ap *models.AssetProgress, tx *database.Tx) error {
-	if ap.AssetID == "" {
-		return ErrEmptyId
-	}
-
-	if tx == nil {
-		return ErrNilTransaction
-	}
-
-	// Normalize video position
-	if ap.VideoPos < 0 {
-		ap.VideoPos = 0
-	}
-
-	// Get the asset
-	assetDao := NewAssetDao(dao.db)
-	asset, err := assetDao.Get(ap.AssetID, nil, tx)
-	if err != nil {
-		return err
-	}
-
-	// Return when nothing has changed
-	if asset.VideoPos == ap.VideoPos && asset.Completed == ap.Completed {
-		return nil
-	}
-
-	// Set an id (if empty)
-	if ap.ID == "" {
-		ap.RefreshId()
-	}
-
-	// Set course id (if empty)
-	if ap.CourseID == "" {
-		ap.CourseID = asset.CourseID
-	}
-
-	ap.RefreshCreatedAt()
-	ap.RefreshUpdatedAt()
-
-	if ap.Completed {
-		if !asset.CompletedAt.IsZero() {
-			ap.CompletedAt = asset.CompletedAt
-		} else {
-			ap.CompletedAt = time.Now()
-		}
-	} else {
-		ap.CompletedAt = time.Time{}
-	}
-
-	// Update (or create if it doesn't exist)
-	query, args, _ := squirrel.
-		StatementBuilder.
-		Insert(dao.Table()).
-		SetMap(dao.data(ap)).
-		Suffix(
-			"ON CONFLICT (asset_id) DO UPDATE SET video_pos = ?, completed = ?, completed_at = ?, updated_at = ?",
-			ap.VideoPos, ap.Completed, FormatTime(ap.CompletedAt), FormatTime(ap.UpdatedAt),
-		).
-		ToSql()
-
-	_, err = tx.Exec(query, args...)
-	if err != nil {
-		return err
-	}
-
-	// Refresh course progress
-	cpDao := NewCourseProgressDao(dao.db)
-	return cpDao.Refresh(ap.CourseID, tx)
-}
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // countSelect returns the default count select builder

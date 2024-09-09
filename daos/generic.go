@@ -27,17 +27,10 @@ func NewGenericDao(db database.Database, caller daoer) *GenericDao {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Count returns the number of rows in a table
-//
-// `tx` allows for the function to be run within a transaction
-func (dao *GenericDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	builder := dao.caller.countSelect().
-		Columns("COUNT(DISTINCT " + dao.caller.Table() + ".id)")
+// GenericCount counts the number of rows in a table
+func GenericCount(baseSelect squirrel.SelectBuilder, table string, dbParams *database.DatabaseParams, queryRowFn database.QueryRowFn) (int, error) {
+	builder := baseSelect.
+		Columns("COUNT(DISTINCT " + table + ".id)")
 
 	if dbParams != nil && dbParams.Where != nil {
 		builder = builder.Where(dbParams.Where)
@@ -118,16 +111,16 @@ func (dao *GenericDao) List(dbParams *database.DatabaseParams, tx *database.Tx) 
 			builder = builder.OrderBy(dbParams.OrderBy...)
 		}
 
-		if dbParams.Pagination != nil {
-			if count, err := dao.Count(dbParams, tx); err != nil {
-				return nil, err
-			} else {
-				dbParams.Pagination.SetCount(count)
-				builder = builder.
-					Offset(uint64(dbParams.Pagination.Offset())).
-					Limit(uint64(dbParams.Pagination.Limit()))
-			}
-		}
+		// if dbParams.Pagination != nil {
+		// 	if count, err := dao.Count(dbParams, tx); err != nil {
+		// 		return nil, err
+		// 	} else {
+		// 		dbParams.Pagination.SetCount(count)
+		// 		builder = builder.
+		// 			Offset(uint64(dbParams.Pagination.Offset())).
+		// 			Limit(uint64(dbParams.Pagination.Limit()))
+		// 	}
+		// }
 
 		if dbParams.GroupBys != nil {
 			builder = builder.GroupBy(dbParams.GroupBys...)

@@ -33,15 +33,19 @@ func (dao *LogDao) Table() string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Count returns the number of logs
-func (dao *LogDao) Count(params *database.DatabaseParams, tx *database.Tx) (int, error) {
-	generic := NewGenericDao(dao.db, dao)
-	return generic.Count(params, tx)
+// Count counts the logs
+func (dao *LogDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
+	}
+
+	return GenericCount(dao.countSelect(), dao.Table(), dbParams, queryRowFn)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Write inserts a new log
+// Write writes a new log
 func (dao *LogDao) Write(l *models.Log, tx *database.Tx) error {
 	if l.ID == "" {
 		l.RefreshId()
@@ -68,9 +72,7 @@ func (dao *LogDao) Write(l *models.Log, tx *database.Tx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// List selects logs
-//
-// `tx` allows for the function to be run within a transaction
+// List lists logs
 func (dao *LogDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Log, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -113,8 +115,6 @@ func (dao *LogDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Delete deletes logs based upon the where clause
-//
-// `tx` allows for the function to be run within a transaction
 func (dao *LogDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere

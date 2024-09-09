@@ -33,15 +33,19 @@ func (dao *UserDao) Table() string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Count users
-func (dao *UserDao) Count(params *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao)
-	return generic.Count(params, nil)
+// Count counts the users
+func (dao *UserDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
+	}
+
+	return GenericCount(dao.countSelect(), dao.Table(), dbParams, queryRowFn)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Create user
+// Create creates a user
 func (dao *UserDao) Create(u *models.User, tx *database.Tx) error {
 	if u.ID == "" {
 		u.RefreshId()
@@ -68,7 +72,7 @@ func (dao *UserDao) Create(u *models.User, tx *database.Tx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get user with the given username
+// Get gets user with the given username
 func (dao *UserDao) Get(username string, tx *database.Tx) (*models.User, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -92,7 +96,7 @@ func (dao *UserDao) Get(username string, tx *database.Tx) (*models.User, error) 
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// List users
+// List lists users
 func (dao *UserDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.User, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -134,7 +138,7 @@ func (dao *UserDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Delete a user based on the given where clause
+// Delete deletes users based on the where clause
 func (dao *UserDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere

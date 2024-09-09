@@ -37,15 +37,19 @@ func (dao *AssetDao) Table() string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Count returns the number of assets
-func (dao *AssetDao) Count(params *database.DatabaseParams, tx *database.Tx) (int, error) {
-	generic := NewGenericDao(dao.db, dao)
-	return generic.Count(params, tx)
+// Count counts the assets
+func (dao *AssetDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
+	}
+
+	return GenericCount(dao.countSelect(), dao.Table(), dbParams, queryRowFn)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Create inserts a new asset
+// Create creates an asset
 func (dao *AssetDao) Create(a *models.Asset, tx *database.Tx) error {
 	if a.Prefix.Valid && a.Prefix.Int16 < 0 {
 		return ErrInvalidPrefix
@@ -76,11 +80,7 @@ func (dao *AssetDao) Create(a *models.Asset, tx *database.Tx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get selects an asset with the given ID.
-//
-// `dbparams` can be used to order the attachments
-//
-// `tx` allows for the function to be run within a transaction
+// Get gets an asset with the given ID
 func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *database.Tx) (*models.Asset, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -121,9 +121,7 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *datab
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// List selects assets
-//
-// `tx` allows for the function to be run within a transaction
+// List lists assets
 func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Asset, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -197,9 +195,13 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Update updates an asset
+// Update updates select columns of an asset
 //
-// Note: Only `title`, `prefix`, `chapter`, `type`, and `path` can be updated
+//   - title
+//   - prefix
+//   - chapter
+//   - type
+//   - path
 func (dao *AssetDao) Update(asset *models.Asset, tx *database.Tx) error {
 	if asset.ID == "" {
 		return ErrEmptyId
@@ -230,9 +232,7 @@ func (dao *AssetDao) Update(asset *models.Asset, tx *database.Tx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Delete deletes an asset based upon the where clause
-//
-// `tx` allows for the function to be run within a transaction
+// Delete deletes assets based upon the where clause
 func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere

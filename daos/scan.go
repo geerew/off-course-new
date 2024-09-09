@@ -36,7 +36,7 @@ func (dao *ScanDao) Table() string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Create inserts a new scan
+// Create creates a scan
 func (dao *ScanDao) Create(s *models.Scan, tx *database.Tx) error {
 	if s.ID == "" {
 		s.RefreshId()
@@ -70,7 +70,7 @@ func (dao *ScanDao) Create(s *models.Scan, tx *database.Tx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get selects a scan with the given course ID
+// Get gets a scan with the given course ID
 func (dao *ScanDao) Get(courseId string, tx *database.Tx) (*models.Scan, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -94,9 +94,7 @@ func (dao *ScanDao) Get(courseId string, tx *database.Tx) (*models.Scan, error) 
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Update updates a scan
-//
-// Note: Only the `status` can be updated
+// Update updates status of a scan
 func (dao *ScanDao) Update(scan *models.Scan, tx *database.Tx) error {
 	if scan.ID == "" {
 		return ErrEmptyId
@@ -123,9 +121,7 @@ func (dao *ScanDao) Update(scan *models.Scan, tx *database.Tx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Delete deletes a scan based upon the where clause
-//
-// `tx` allows for the function to be run within a transaction
+// Delete deletes scans based upon the where clause
 func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere
@@ -137,7 +133,7 @@ func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) e
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Next returns the next scan whose status is `waiting“
+// Next gets the next scan whose status is `waiting“
 func (dao *ScanDao) Next(tx *database.Tx) (*models.Scan, error) {
 	generic := NewGenericDao(dao.db, dao)
 

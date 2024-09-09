@@ -33,15 +33,19 @@ func (dao *AttachmentDao) Table() string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Count returns the number of attachments
-func (dao *AttachmentDao) Count(params *database.DatabaseParams, tx *database.Tx) (int, error) {
-	generic := NewGenericDao(dao.db, dao)
-	return generic.Count(params, tx)
+// Count counts the attachments
+func (dao *AttachmentDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
+	}
+
+	return GenericCount(dao.countSelect(), dao.Table(), dbParams, queryRowFn)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Create inserts a new attachment
+// Create creates an attachment
 func (dao *AttachmentDao) Create(a *models.Attachment, tx *database.Tx) error {
 	if a.ID == "" {
 		a.RefreshId()
@@ -68,9 +72,7 @@ func (dao *AttachmentDao) Create(a *models.Attachment, tx *database.Tx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get selects an attachment with the given ID
-//
-// `tx` allows for the function to be run within a transaction
+// Get gets attachment with the given ID
 func (dao *AttachmentDao) Get(id string, tx *database.Tx) (*models.Attachment, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -94,9 +96,7 @@ func (dao *AttachmentDao) Get(id string, tx *database.Tx) (*models.Attachment, e
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// List selects attachments
-//
-// `tx` allows for the function to be run within a transaction
+// List lists attachments
 func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Attachment, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -138,9 +138,7 @@ func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *database.T
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Delete deletes an attachment based upon the where clause
-//
-// `tx` allows for the function to be run within a transaction
+// Delete deletes attachments based upon the where clause
 func (dao *AttachmentDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere

@@ -102,7 +102,7 @@ func TestAsset_Create(t *testing.T) {
 
 		// Create the course
 		courseDao := NewCourseDao(db)
-		require.Nil(t, courseDao.Create(testData[0].Course))
+		require.Nil(t, courseDao.Create(testData[0].Course, nil))
 
 		// Create the asset
 		err := dao.Create(testData[0].Assets[0], nil)

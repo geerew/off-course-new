@@ -37,9 +37,7 @@ func (dao *CourseProgressDao) Table() string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Create inserts a new course progress
-//
-// `tx` allows for the function to be run within a transaction
+// Create create a course progress
 func (dao *CourseProgressDao) Create(cp *models.CourseProgress, tx *database.Tx) error {
 	execFn := dao.db.Exec
 	if tx != nil {
@@ -66,9 +64,7 @@ func (dao *CourseProgressDao) Create(cp *models.CourseProgress, tx *database.Tx)
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get selects a course progress with the given course ID
-//
-// `tx` allows for the function to be run within a transaction
+// Get gets a course progress with the given course ID
 func (dao *CourseProgressDao) Get(courseId string, tx *database.Tx) (*models.CourseProgress, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -92,18 +88,16 @@ func (dao *CourseProgressDao) Get(courseId string, tx *database.Tx) (*models.Cou
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Refresh does a refresh of the current course progress for the given ID
+// Refresh refreshes the current course progress for the given ID
 //
-// It calculates the number of assets, number of completed assets and number of video assets started. It
-// then calculates the percent complete and whether the course has been started or not.
+// It calculates the number of assets, number of completed assets and number of started video assets,
+// then calculates the percent complete and whether the course has been started
 //
 // Based upon this calculation,
-//   - If the course has been started but `started_at` is null, `started_at` will be set to the current time
+//   - If the course has been started and `started_at` is null, `started_at` will be set to NOW
 //   - If the course is not started, `started_at` is set to null
-//   - If the course is 100% complete but `completed_at` is null, `completed_at` is set to the current time
+//   - If the course is complete and `completed_at` is null, `completed_at` is set to NOW
 //   - If the course is not complete, `completed_at` is set to null
-//
-// `tx` allows for the function to be run within a transaction
 func (dao *CourseProgressDao) Refresh(courseId string, tx *database.Tx) error {
 	if courseId == "" {
 		return ErrEmptyId

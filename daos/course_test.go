@@ -31,7 +31,7 @@ func TestCourse_Count(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
 		dao, _ := courseSetup(t)
 
-		count, err := dao.Count(nil)
+		count, err := dao.Count(nil, nil)
 		require.Nil(t, err)
 		require.Zero(t, count)
 	})
@@ -41,7 +41,7 @@ func TestCourse_Count(t *testing.T) {
 
 		NewTestBuilder(t).Db(db).Courses(5).Build()
 
-		count, err := dao.Count(nil)
+		count, err := dao.Count(nil, nil)
 		require.Nil(t, err)
 		require.Equal(t, count, 5)
 	})
@@ -54,21 +54,21 @@ func TestCourse_Count(t *testing.T) {
 		// ----------------------------
 		// EQUALS ID
 		// ----------------------------
-		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table() + ".id": testData[2].ID}})
+		count, err := dao.Count(&database.DatabaseParams{Where: squirrel.Eq{dao.Table() + ".id": testData[2].ID}}, nil)
 		require.Nil(t, err)
 		require.Equal(t, 1, count)
 
 		// ----------------------------
 		// NOT EQUALS ID
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table() + ".id": testData[2].ID}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.NotEq{dao.Table() + ".id": testData[2].ID}}, nil)
 		require.Nil(t, err)
 		require.Equal(t, 2, count)
 
 		// ----------------------------
 		// ERROR
 		// ----------------------------
-		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{"": ""}})
+		count, err = dao.Count(&database.DatabaseParams{Where: squirrel.Eq{"": ""}}, nil)
 		require.ErrorContains(t, err, "syntax error")
 		require.Zero(t, count)
 	})
@@ -79,7 +79,7 @@ func TestCourse_Count(t *testing.T) {
 		_, err := db.Exec("DROP TABLE IF EXISTS " + dao.Table())
 		require.Nil(t, err)
 
-		_, err = dao.Count(nil)
+		_, err = dao.Count(nil, nil)
 		require.ErrorContains(t, err, "no such table: "+dao.Table())
 	})
 }
@@ -92,7 +92,7 @@ func TestCourse_Create(t *testing.T) {
 
 		testData := NewTestBuilder(t).Courses(1).Build()
 
-		err := dao.Create(testData[0].Course)
+		err := dao.Create(testData[0].Course, nil)
 		require.Nil(t, err)
 
 		newC, err := dao.Get(testData[0].ID, nil, nil)
@@ -118,10 +118,10 @@ func TestCourse_Create(t *testing.T) {
 
 		testData := NewTestBuilder(t).Courses(1).Build()
 
-		err := dao.Create(testData[0].Course)
+		err := dao.Create(testData[0].Course, nil)
 		require.Nil(t, err)
 
-		err = dao.Create(testData[0].Course)
+		err = dao.Create(testData[0].Course, nil)
 		require.ErrorContains(t, err, fmt.Sprintf("UNIQUE constraint failed: %s.path", dao.Table()))
 	})
 
@@ -130,19 +130,19 @@ func TestCourse_Create(t *testing.T) {
 
 		// No title
 		c := &models.Course{}
-		require.ErrorContains(t, dao.Create(c), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table()))
+		require.ErrorContains(t, dao.Create(c, nil), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table()))
 		c.Title = ""
-		require.ErrorContains(t, dao.Create(c), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table()))
+		require.ErrorContains(t, dao.Create(c, nil), fmt.Sprintf("NOT NULL constraint failed: %s.title", dao.Table()))
 		c.Title = "Course 1"
 
 		// No path
-		require.ErrorContains(t, dao.Create(c), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
+		require.ErrorContains(t, dao.Create(c, nil), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
 		c.Path = ""
-		require.ErrorContains(t, dao.Create(c), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
+		require.ErrorContains(t, dao.Create(c, nil), fmt.Sprintf("NOT NULL constraint failed: %s.path", dao.Table()))
 		c.Path = "/course 1"
 
 		// Success
-		require.Nil(t, dao.Create(c))
+		require.Nil(t, dao.Create(c, nil))
 	})
 }
 

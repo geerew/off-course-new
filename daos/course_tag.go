@@ -33,33 +33,84 @@ func (dao *CourseTagDao) Table() string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Count returns the number of course-tags
+// Count the course tags
 func (dao *CourseTagDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	generic := NewGenericDao(dao.db, dao)
-	return generic.Count(dbParams, nil)
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
+	}
+
+	return GenericCount(dao.countSelect(), dao.Table(), dbParams, queryRowFn)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Create inserts a new course-tag and tag if it does not exist
+// Create a course tag and the tag itself if it does not exist
 //
-// If `tx` is nil, the function will create a new transaction, else it will use the current
-// transaction
+// A new transaction is created if `tx` is nil
 func (dao *CourseTagDao) Create(ct *models.CourseTag, tx *database.Tx) error {
+	createFn := func(tx *database.Tx) error {
+		if ct.Tag == "" {
+			return ErrMissingTag
+		}
+
+		if ct.CourseId == "" {
+			return ErrMissingCourseId
+		}
+
+		if ct.ID == "" {
+			ct.RefreshId()
+		}
+
+		ct.RefreshCreatedAt()
+		ct.RefreshUpdatedAt()
+
+		// Check if the tag exists. Tags are unique so this wil return 0 or 1
+		tagDao := NewTagDao(dao.db)
+		tags, err := tagDao.List(&database.DatabaseParams{Where: squirrel.Eq{"tag": ct.Tag}}, tx)
+		if err != nil {
+			return err
+		}
+
+		// Create the tag if it doesn't exist
+		if len(tags) == 0 {
+			tag := &models.Tag{
+				Tag: ct.Tag,
+			}
+
+			if err := tagDao.Create(tag, tx); err != nil {
+				return err
+			}
+
+			ct.TagId = tag.ID
+		} else {
+			ct.TagId = tags[0].ID
+		}
+
+		// Insert the course-tag
+		query, args, _ := squirrel.
+			StatementBuilder.
+			Insert(dao.Table()).
+			SetMap(dao.data(ct)).
+			ToSql()
+
+		_, err = tx.Exec(query, args...)
+
+		return err
+	}
+
 	if tx == nil {
 		return dao.db.RunInTransaction(func(tx *database.Tx) error {
-			return dao.create(ct, tx)
+			return createFn(tx)
 		})
 	} else {
-		return dao.create(ct, tx)
+		return createFn(tx)
 	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// List selects courses
-//
-// `tx` allows for the function to be run within a transaction
+// List lists course tags
 func (dao *CourseTagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.CourseTag, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -101,7 +152,7 @@ func (dao *CourseTagDao) List(dbParams *database.DatabaseParams, tx *database.Tx
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ListCourseIdsByTags selects course ids which have all the tags.
+// ListCourseIdsByTags lists course IDs containing all tags in the slice
 func (dao *CourseTagDao) ListCourseIdsByTags(tags []string, dbParams *database.DatabaseParams) ([]string, error) {
 	if len(tags) == 0 {
 		return nil, nil
@@ -145,9 +196,7 @@ func (dao *CourseTagDao) ListCourseIdsByTags(tags []string, dbParams *database.D
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Delete deletes a course-tag based upon the where clause
-//
-// `tx` allows for the function to be run within a transaction
+// Delete deletes course tags based upon the where clause
 func (dao *CourseTagDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere
@@ -175,66 +224,6 @@ func (dao *CourseTagDao) ProcessOrderBy(orderBy []string, explicit bool) []strin
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Internal
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// create inserts a new course-tag and tag if it does not exist
-//
-// This function is used by Create() and always runs within a transaction
-func (dao *CourseTagDao) create(ct *models.CourseTag, tx *database.Tx) error {
-	if tx == nil {
-		return ErrNilTransaction
-	}
-
-	if ct.Tag == "" {
-		return ErrMissingTag
-	}
-
-	if ct.CourseId == "" {
-		return ErrMissingCourseId
-	}
-
-	if ct.ID == "" {
-		ct.RefreshId()
-	}
-
-	ct.RefreshCreatedAt()
-	ct.RefreshUpdatedAt()
-
-	// Check if the tag exists. This should return 0 or 1 tags as tags are unique
-	tagDao := NewTagDao(dao.db)
-
-	tags, err := tagDao.List(&database.DatabaseParams{Where: squirrel.Eq{"tag": ct.Tag}}, tx)
-	if err != nil {
-		return err
-	}
-
-	// Create the tag if it doesn't exist
-	if len(tags) == 0 {
-		tag := &models.Tag{
-			Tag: ct.Tag,
-		}
-
-		if err := tagDao.Create(tag, tx); err != nil {
-			return err
-		}
-
-		ct.TagId = tag.ID
-	} else {
-		ct.TagId = tags[0].ID
-	}
-
-	// Insert the course-tag
-	query, args, _ := squirrel.
-		StatementBuilder.
-		Insert(dao.Table()).
-		SetMap(dao.data(ct)).
-		ToSql()
-
-	_, err = tx.Exec(query, args...)
-
-	return err
-}
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // countSelect returns the default count select builder

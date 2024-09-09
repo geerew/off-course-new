@@ -35,17 +35,19 @@ func (dao *TagDao) Table() string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Count returns the number of tags
-func (dao *TagDao) Count(params *database.DatabaseParams, tx *database.Tx) (int, error) {
-	generic := NewGenericDao(dao.db, dao)
-	return generic.Count(params, tx)
+// Count counts the tags
+func (dao *TagDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
+	}
+
+	return GenericCount(dao.countSelect(), dao.Table(), dbParams, queryRowFn)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Create inserts a new tag
-//
-// `tx` allows for the function to be run within a transaction
+// Create creates a tag
 func (dao *TagDao) Create(t *models.Tag, tx *database.Tx) error {
 	execFn := dao.db.Exec
 	if tx != nil {
@@ -72,9 +74,7 @@ func (dao *TagDao) Create(t *models.Tag, tx *database.Tx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get selects a tag with the given ID or name
-//
-// `tx` allows for the function to be run within a transaction
+// Get gets a tag with the given ID or name
 func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams, tx *database.Tx) (*models.Tag, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -124,9 +124,7 @@ func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// List selects tags
-//
-// `tx` allows for the function to be run within a transaction
+// List lists tags
 func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Tag, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -200,9 +198,7 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Update updates a tag
-//
-// Note: Only `tag` can be updated
+// Update updates the tag column in a tag
 func (dao *TagDao) Update(tag *models.Tag, tx *database.Tx) error {
 	if tag.ID == "" {
 		return ErrEmptyId
@@ -229,9 +225,7 @@ func (dao *TagDao) Update(tag *models.Tag, tx *database.Tx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Delete deletes a tag based upon the where clause
-//
-// `tx` allows for the function to be run within a transaction
+// Delete deletes tags based upon the where clause
 func (dao *TagDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere

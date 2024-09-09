@@ -38,33 +38,39 @@ func (dao *CourseDao) Table() string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Count returns the number of courses
-func (dao *CourseDao) Count(params *database.DatabaseParams) (int, error) {
-	generic := NewGenericDao(dao.db, dao)
-	return generic.Count(params, nil)
+// Count counts the courses
+func (dao *CourseDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
+	}
+
+	return GenericCount(dao.countSelect(), dao.Table(), dbParams, queryRowFn)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Create inserts a new course and courses_progress row within a transaction
+// Create creates a course and courses progress
+//
+// # A new transaction is created if `tx` is nil
 //
 // NOTE: There is currently no support for users, but when there is, the default courses_progress
 // should be inserted for the admin user
-func (dao *CourseDao) Create(c *models.Course) error {
-	if c.ID == "" {
-		c.RefreshId()
-	}
+func (dao *CourseDao) Create(c *models.Course, tx *database.Tx) error {
+	createFn := func(tx *database.Tx) error {
+		if c.ID == "" {
+			c.RefreshId()
+		}
 
-	c.RefreshCreatedAt()
-	c.RefreshUpdatedAt()
+		c.RefreshCreatedAt()
+		c.RefreshUpdatedAt()
 
-	query, args, _ := squirrel.
-		StatementBuilder.
-		Insert(dao.Table()).
-		SetMap(dao.data(c)).
-		ToSql()
+		query, args, _ := squirrel.
+			StatementBuilder.
+			Insert(dao.Table()).
+			SetMap(dao.data(c)).
+			ToSql()
 
-	return dao.db.RunInTransaction(func(tx *database.Tx) error {
 		// Create the course
 		if _, err := tx.Exec(query, args...); err != nil {
 			return err
@@ -77,14 +83,20 @@ func (dao *CourseDao) Create(c *models.Course) error {
 
 		cpDao := NewCourseProgressDao(dao.db)
 		return cpDao.Create(cp, tx)
-	})
+	}
+
+	if tx == nil {
+		return dao.db.RunInTransaction(func(tx *database.Tx) error {
+			return createFn(tx)
+		})
+	} else {
+		return createFn(tx)
+	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get selects a course with the given ID
-//
-// `tx` allows for the function to be run within a transaction
+// Get gets a course with the given ID
 func (dao *CourseDao) Get(id string, dbParams *database.DatabaseParams, tx *database.Tx) (*models.Course, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -108,9 +120,7 @@ func (dao *CourseDao) Get(id string, dbParams *database.DatabaseParams, tx *data
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// List selects courses
-//
-// `tx` allows for the function to be run within a transaction
+// List lists courses
 func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Course, error) {
 	generic := NewGenericDao(dao.db, dao)
 
@@ -152,9 +162,10 @@ func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *database.Tx) (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Update updates a course
+// Update updates selected columns of a course
 //
-// Note: Only `card_path` and `available` can be updated
+//   - card_path
+//   - available
 func (dao *CourseDao) Update(course *models.Course, tx *database.Tx) error {
 	if course.ID == "" {
 		return ErrEmptyId
@@ -182,9 +193,7 @@ func (dao *CourseDao) Update(course *models.Course, tx *database.Tx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Delete deletes a course based upon the where clause
-//
-// `tx` allows for the function to be run within a transaction
+// Delete deletes courses based upon the where clause
 func (dao *CourseDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	if dbParams == nil || dbParams.Where == nil {
 		return ErrMissingWhere

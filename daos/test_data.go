@@ -178,7 +178,7 @@ func (builder *TestBuilder) newTestCourse(title string) *models.Course {
 	if builder.db != nil {
 		dao := NewCourseDao(builder.db)
 
-		err := dao.Create(c)
+		err := dao.Create(c, nil)
 		require.NoError(builder.t, err, "Failed to create course")
 
 		time.Sleep(time.Millisecond * 1)

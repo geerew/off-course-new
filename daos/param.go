@@ -33,7 +33,7 @@ func (dao *ParamDao) Table() string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get retrieves a parameter by its key
+// Get gets a parameter by its key
 func (dao *ParamDao) Get(key string, tx *database.Tx) (*models.Param, error) {
 	generic := NewGenericDao(dao.db, dao)
 
