@@ -15,7 +15,6 @@ import (
 // AssetDao is the data access object for assets
 type AssetDao struct {
 	BaseDao
-	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -23,16 +22,11 @@ type AssetDao struct {
 // NewAssetDao returns a new AssetDao
 func NewAssetDao(db database.Database) *AssetDao {
 	return &AssetDao{
-		BaseDao: BaseDao{db: db},
-		table:   "assets",
+		BaseDao: BaseDao{
+			db:    db,
+			table: "assets",
+		},
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Table returns the table name
-func (dao *AssetDao) Table() string {
-	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
