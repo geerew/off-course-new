@@ -12,7 +12,7 @@ import (
 
 // TagDao is the data access object for tags
 type TagDao struct {
-	db    database.Database
+	BaseDao
 	table string
 }
 
@@ -21,8 +21,8 @@ type TagDao struct {
 // NewTagDao returns a new TagDao
 func NewTagDao(db database.Database) *TagDao {
 	return &TagDao{
-		db:    db,
-		table: "tags",
+		BaseDao: BaseDao{db: db},
+		table:   "tags",
 	}
 }
 
@@ -37,12 +37,7 @@ func (dao *TagDao) Table() string {
 
 // Count counts the tags
 func (dao *TagDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	return GenericCount(dao.countSelect(), dao.Table(), dbParams, queryRowFn)
+	return GenericCount(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -90,12 +85,7 @@ func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams
 		tagDbParams.Where = squirrel.Eq{dao.Table() + ".id": id}
 	}
 
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	tag, err := GenericGet(dao.baseSelect(), dao.Table(), tagDbParams, dao.scanRow, queryRowFn)
+	tag, err := GenericGet(dao, tagDbParams, dao.scanRow, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -124,8 +114,6 @@ func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams
 
 // List lists tags
 func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Tag, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
 	}
@@ -139,32 +127,20 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*
 		dbParams.Columns = dao.columns()
 	}
 
-	rows, err := generic.List(dbParams, tx)
+	tags, err := GenericList(dao, dbParams, dao.scanRow, tx)
 	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var tags []*models.Tag
-	tagIds := []string{}
-
-	for rows.Next() {
-		t, err := dao.scanRow(rows)
-		if err != nil {
-			return nil, err
-		}
-
-		tags = append(tags, t)
-		tagIds = append(tagIds, t.ID)
-	}
-
-	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
 	// Get the course_tags
 	courseTagDao := NewCourseTagDao(dao.db)
 	if len(tags) > 0 && slices.Contains(dbParams.IncludeRelations, courseTagDao.Table()) {
+		// Get the tag IDs
+		tagIds := []string{}
+		for _, t := range tags {
+			tagIds = append(tagIds, t.ID)
+		}
+
 		// Reduce the order by clause to only include columns specific to the course_tags table
 		reducedOrderBy := courseTagDao.ProcessOrderBy(origOrderBy, true)
 

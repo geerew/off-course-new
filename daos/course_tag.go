@@ -10,7 +10,7 @@ import (
 
 // CourseTagDao is the data access object for courses tags
 type CourseTagDao struct {
-	db    database.Database
+	BaseDao
 	table string
 }
 
@@ -19,8 +19,8 @@ type CourseTagDao struct {
 // NewCourseTagDao returns a new CourseTagDao
 func NewCourseTagDao(db database.Database) *CourseTagDao {
 	return &CourseTagDao{
-		db:    db,
-		table: "courses_tags",
+		BaseDao: BaseDao{db: db},
+		table:   "courses_tags",
 	}
 }
 
@@ -35,12 +35,7 @@ func (dao *CourseTagDao) Table() string {
 
 // Count the course tags
 func (dao *CourseTagDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	return GenericCount(dao.countSelect(), dao.Table(), dbParams, queryRowFn)
+	return GenericCount(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -112,8 +107,6 @@ func (dao *CourseTagDao) Create(ct *models.CourseTag, tx *database.Tx) error {
 
 // List lists course tags
 func (dao *CourseTagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.CourseTag, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
 	}
@@ -126,39 +119,16 @@ func (dao *CourseTagDao) List(dbParams *database.DatabaseParams, tx *database.Tx
 		dbParams.Columns = dao.columns()
 	}
 
-	rows, err := generic.List(dbParams, tx)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var cts []*models.CourseTag
-
-	for rows.Next() {
-		ct, err := dao.scanRow(rows)
-		if err != nil {
-			return nil, err
-		}
-
-		cts = append(cts, ct)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return cts, nil
+	return GenericList(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // ListCourseIdsByTags lists course IDs containing all tags in the slice
-func (dao *CourseTagDao) ListCourseIdsByTags(tags []string, dbParams *database.DatabaseParams) ([]string, error) {
+func (dao *CourseTagDao) ListCourseIdsByTags(tags []string, dbParams *database.DatabaseParams, tx *database.Tx) ([]string, error) {
 	if len(tags) == 0 {
 		return nil, nil
 	}
-
-	generic := NewGenericDao(dao.db, dao)
 
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
@@ -171,7 +141,7 @@ func (dao *CourseTagDao) ListCourseIdsByTags(tags []string, dbParams *database.D
 	dbParams.Having = squirrel.Expr("COUNT(DISTINCT "+NewTagDao(dao.db).Table()+".tag) = ?", len(tags))
 	dbParams.Pagination = nil
 
-	rows, err := generic.List(dbParams, nil)
+	rows, err := GenericListWithoutScan(dao, dbParams, tx)
 	if err != nil {
 		return nil, err
 	}

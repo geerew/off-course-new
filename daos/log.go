@@ -10,7 +10,7 @@ import (
 
 // LogDao is the data access object for logs
 type LogDao struct {
-	db    database.Database
+	BaseDao
 	table string
 }
 
@@ -19,8 +19,8 @@ type LogDao struct {
 // NewLogDao returns a new LogDao
 func NewLogDao(db database.Database) *LogDao {
 	return &LogDao{
-		db:    db,
-		table: "logs",
+		BaseDao: BaseDao{db: db},
+		table:   "logs",
 	}
 }
 
@@ -35,12 +35,7 @@ func (dao *LogDao) Table() string {
 
 // Count counts the logs
 func (dao *LogDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	return GenericCount(dao.countSelect(), dao.Table(), dbParams, queryRowFn)
+	return GenericCount(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,8 +69,6 @@ func (dao *LogDao) Write(l *models.Log, tx *database.Tx) error {
 
 // List lists logs
 func (dao *LogDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Log, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
 	}
@@ -88,28 +81,7 @@ func (dao *LogDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*
 		dbParams.Columns = dao.columns()
 	}
 
-	rows, err := generic.List(dbParams, tx)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var logs []*models.Log
-
-	for rows.Next() {
-		log, err := dao.scanRow(rows)
-		if err != nil {
-			return nil, err
-		}
-
-		logs = append(logs, log)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return logs, nil
+	return GenericList(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

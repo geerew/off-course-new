@@ -10,7 +10,7 @@ import (
 
 // AttachmentDao is the data access object for attachments
 type AttachmentDao struct {
-	db    database.Database
+	BaseDao
 	table string
 }
 
@@ -19,8 +19,8 @@ type AttachmentDao struct {
 // NewAttachmentDao returns a new AttachmentDao
 func NewAttachmentDao(db database.Database) *AttachmentDao {
 	return &AttachmentDao{
-		db:    db,
-		table: "attachments",
+		BaseDao: BaseDao{db: db},
+		table:   "attachments",
 	}
 }
 
@@ -35,12 +35,7 @@ func (dao *AttachmentDao) Table() string {
 
 // Count counts the attachments
 func (dao *AttachmentDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	return GenericCount(dao.countSelect(), dao.Table(), dbParams, queryRowFn)
+	return GenericCount(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -79,20 +74,13 @@ func (dao *AttachmentDao) Get(id string, tx *database.Tx) (*models.Attachment, e
 		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	return GenericGet(dao.baseSelect(), dao.Table(), dbParams, dao.scanRow, queryRowFn)
+	return GenericGet(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // List lists attachments
 func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Attachment, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
 	}
@@ -105,28 +93,7 @@ func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *database.T
 		dbParams.Columns = dao.columns()
 	}
 
-	rows, err := generic.List(dbParams, tx)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var attachments []*models.Attachment
-
-	for rows.Next() {
-		a, err := dao.scanRow(rows)
-		if err != nil {
-			return nil, err
-		}
-
-		attachments = append(attachments, a)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return attachments, nil
+	return GenericList(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

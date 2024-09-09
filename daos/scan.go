@@ -13,7 +13,7 @@ import (
 
 // ScanDao is the data access object for scans
 type ScanDao struct {
-	db    database.Database
+	BaseDao
 	table string
 }
 
@@ -22,8 +22,8 @@ type ScanDao struct {
 // NewScanDao returns a new ScanDao
 func NewScanDao(db database.Database) *ScanDao {
 	return &ScanDao{
-		db:    db,
-		table: "scans",
+		BaseDao: BaseDao{db: db},
+		table:   "scans",
 	}
 }
 
@@ -77,12 +77,7 @@ func (dao *ScanDao) Get(courseId string, tx *database.Tx) (*models.Scan, error) 
 		Where:   squirrel.Eq{dao.Table() + ".course_id": courseId},
 	}
 
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	return GenericGet(dao.baseSelect(), dao.Table(), dbParams, dao.scanRow, queryRowFn)
+	return GenericGet(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -134,12 +129,7 @@ func (dao *ScanDao) Next(tx *database.Tx) (*models.Scan, error) {
 		OrderBy: []string{"created_at ASC"},
 	}
 
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	scan, err := GenericGet(dao.baseSelect(), dao.Table(), dbParams, dao.scanRow, queryRowFn)
+	scan, err := GenericGet(dao, dbParams, dao.scanRow, tx)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

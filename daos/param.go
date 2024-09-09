@@ -10,7 +10,7 @@ import (
 
 // ParamDao is the data access object for params
 type ParamDao struct {
-	db    database.Database
+	BaseDao
 	table string
 }
 
@@ -19,8 +19,8 @@ type ParamDao struct {
 // NewParamDao returns a new ParamDao
 func NewParamDao(db database.Database) *ParamDao {
 	return &ParamDao{
-		db:    db,
-		table: "params",
+		BaseDao: BaseDao{db: db},
+		table:   "params",
 	}
 }
 
@@ -40,12 +40,7 @@ func (dao *ParamDao) Get(key string, tx *database.Tx) (*models.Param, error) {
 		Where:   squirrel.Eq{dao.Table() + ".key": key},
 	}
 
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	return GenericGet(dao.baseSelect(), dao.Table(), dbParams, dao.scanRow, queryRowFn)
+	return GenericGet(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -43,7 +43,7 @@ func TestTag_Count(t *testing.T) {
 
 		count, err := dao.Count(nil, nil)
 		require.Nil(t, err)
-		require.Equal(t, count, len(test_tags))
+		require.Equal(t, len(test_tags), count)
 	})
 
 	t.Run("where", func(t *testing.T) {

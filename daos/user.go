@@ -10,7 +10,7 @@ import (
 
 // UserDao is the data access object for users
 type UserDao struct {
-	db    database.Database
+	BaseDao
 	table string
 }
 
@@ -19,8 +19,8 @@ type UserDao struct {
 // NewUserDao returns a new UserDao
 func NewUserDao(db database.Database) *UserDao {
 	return &UserDao{
-		db:    db,
-		table: "users",
+		BaseDao: BaseDao{db: db},
+		table:   "users",
 	}
 }
 
@@ -35,12 +35,7 @@ func (dao *UserDao) Table() string {
 
 // Count counts the users
 func (dao *UserDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	return GenericCount(dao.countSelect(), dao.Table(), dbParams, queryRowFn)
+	return GenericCount(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -79,20 +74,13 @@ func (dao *UserDao) Get(username string, tx *database.Tx) (*models.User, error) 
 		Where:   squirrel.Eq{dao.Table() + ".username": username},
 	}
 
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	return GenericGet(dao.baseSelect(), dao.Table(), dbParams, dao.scanRow, queryRowFn)
+	return GenericGet(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // List lists users
 func (dao *UserDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.User, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
 	}
@@ -105,28 +93,7 @@ func (dao *UserDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]
 		dbParams.Columns = dao.columns()
 	}
 
-	rows, err := generic.List(dbParams, tx)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var users []*models.User
-
-	for rows.Next() {
-		u, err := dao.scanRow(rows)
-		if err != nil {
-			return nil, err
-		}
-
-		users = append(users, u)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return users, nil
+	return GenericList(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

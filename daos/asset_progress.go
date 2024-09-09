@@ -12,7 +12,7 @@ import (
 
 // AssetProgressDao is the data access object for assets progress
 type AssetProgressDao struct {
-	db    database.Database
+	BaseDao
 	table string
 }
 
@@ -21,8 +21,8 @@ type AssetProgressDao struct {
 // NewAssetProgressDao returns a new AssetProgressDao
 func NewAssetProgressDao(db database.Database) *AssetProgressDao {
 	return &AssetProgressDao{
-		db:    db,
-		table: "assets_progress",
+		BaseDao: BaseDao{db: db},
+		table:   "assets_progress",
 	}
 }
 
@@ -82,12 +82,7 @@ func (dao *AssetProgressDao) Get(assetId string, tx *database.Tx) (*models.Asset
 		Where:   squirrel.Eq{dao.Table() + ".asset_id": assetId},
 	}
 
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	return GenericGet(dao.baseSelect(), dao.Table(), dbParams, dao.scanRow, queryRowFn)
+	return GenericGet(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

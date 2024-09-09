@@ -28,9 +28,14 @@ func NewGenericDao(db database.Database, caller daoer) *GenericDao {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GenericCount counts the number of rows in a table
-func GenericCount(baseSelect squirrel.SelectBuilder, table string, dbParams *database.DatabaseParams, queryRowFn database.QueryRowFn) (int, error) {
-	builder := baseSelect.
-		Columns("COUNT(DISTINCT " + table + ".id)")
+func GenericCount(dao daoer, dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
+	queryRowFn := dao.Db().QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
+	}
+
+	builder := dao.countSelect().
+		Columns("COUNT(DISTINCT " + dao.Table() + ".id)")
 
 	if dbParams != nil && dbParams.Where != nil {
 		builder = builder.Where(dbParams.Where)
@@ -48,20 +53,24 @@ func GenericCount(baseSelect squirrel.SelectBuilder, table string, dbParams *dat
 
 // GenericGet gets a row from the given table
 func GenericGet[T any](
-	baseSelect squirrel.SelectBuilder,
-	table string,
+	dao daoer,
 	dbParams *database.DatabaseParams,
 	scanFn ScanFn[T],
-	queryRowFn database.QueryRowFn,
+	tx *database.Tx,
 ) (*T, error) {
+	queryRowFn := dao.Db().QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
+	}
+
 	if dbParams == nil || dbParams.Where == nil {
 		return nil, ErrMissingWhere
 	}
 
-	builder := baseSelect
+	builder := dao.baseSelect()
 
 	if dbParams.Columns == nil {
-		builder = builder.Columns(table + ".*")
+		builder = builder.Columns(dao.Table() + ".*")
 	} else {
 		builder = builder.Columns(dbParams.Columns...)
 	}
@@ -89,20 +98,55 @@ func GenericGet[T any](
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// List returns rows from a table
-//
-// `tx` allows for the function to be run within a transaction
-func (dao *GenericDao) List(dbParams *database.DatabaseParams, tx *database.Tx) (*sql.Rows, error) {
-	queryFn := dao.db.Query
+// GenericList lists rows from the given table
+func GenericList[T any](
+	dao daoer,
+	dbParams *database.DatabaseParams,
+	scanFn ScanFn[T],
+	tx *database.Tx,
+) ([]*T, error) {
+	rows, err := GenericListWithoutScan(dao, dbParams, tx)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []*T
+	for rows.Next() {
+		r, err := scanFn(rows)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, r)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GenericListWithoutScan lists rows from the given table but leaves the scanning to the
+// caller
+func GenericListWithoutScan(
+	dao daoer,
+	dbParams *database.DatabaseParams,
+	tx *database.Tx,
+) (*sql.Rows, error) {
+	queryFn := dao.Db().Query
 	if tx != nil {
 		queryFn = tx.Query
 	}
 
-	builder := dao.caller.baseSelect()
+	builder := dao.baseSelect()
 
 	if dbParams != nil {
 		if dbParams.Columns == nil {
-			builder = builder.Columns(dao.caller.Table() + ".*")
+			builder = builder.Columns(dao.Table() + ".*")
 		} else {
 			builder = builder.Columns(dbParams.Columns...)
 		}
@@ -115,16 +159,16 @@ func (dao *GenericDao) List(dbParams *database.DatabaseParams, tx *database.Tx) 
 			builder = builder.OrderBy(dbParams.OrderBy...)
 		}
 
-		// if dbParams.Pagination != nil {
-		// 	if count, err := dao.Count(dbParams, tx); err != nil {
-		// 		return nil, err
-		// 	} else {
-		// 		dbParams.Pagination.SetCount(count)
-		// 		builder = builder.
-		// 			Offset(uint64(dbParams.Pagination.Offset())).
-		// 			Limit(uint64(dbParams.Pagination.Limit()))
-		// 	}
-		// }
+		if dbParams.Pagination != nil {
+			if count, err := dao.Count(dbParams, tx); err != nil {
+				return nil, err
+			} else {
+				dbParams.Pagination.SetCount(count)
+				builder = builder.
+					Offset(uint64(dbParams.Pagination.Offset())).
+					Limit(uint64(dbParams.Pagination.Limit()))
+			}
+		}
 
 		if dbParams.GroupBys != nil {
 			builder = builder.GroupBy(dbParams.GroupBys...)

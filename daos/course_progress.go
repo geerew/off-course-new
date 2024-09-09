@@ -14,7 +14,7 @@ import (
 
 // CourseProgressDao is the data access object for courses progress
 type CourseProgressDao struct {
-	db    database.Database
+	BaseDao
 	table string
 }
 
@@ -23,8 +23,8 @@ type CourseProgressDao struct {
 // NewCourseProgressDao returns a new CourseProgressDao
 func NewCourseProgressDao(db database.Database) *CourseProgressDao {
 	return &CourseProgressDao{
-		db:    db,
-		table: "courses_progress",
+		BaseDao: BaseDao{db: db},
+		table:   "courses_progress",
 	}
 }
 
@@ -71,12 +71,7 @@ func (dao *CourseProgressDao) Get(courseId string, tx *database.Tx) (*models.Cou
 		Where:   squirrel.Eq{dao.Table() + ".course_id": courseId},
 	}
 
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	return GenericGet(dao.baseSelect(), dao.Table(), dbParams, dao.scanRow, queryRowFn)
+	return GenericGet(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

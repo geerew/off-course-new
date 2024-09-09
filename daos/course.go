@@ -15,7 +15,7 @@ import (
 
 // CourseDao is the data access object for courses
 type CourseDao struct {
-	db    database.Database
+	BaseDao
 	table string
 }
 
@@ -24,8 +24,8 @@ type CourseDao struct {
 // NewCourseDao returns a new CourseDao
 func NewCourseDao(db database.Database) *CourseDao {
 	return &CourseDao{
-		db:    db,
-		table: "courses",
+		BaseDao: BaseDao{db: db},
+		table:   "courses",
 	}
 }
 
@@ -40,12 +40,7 @@ func (dao *CourseDao) Table() string {
 
 // Count counts the courses
 func (dao *CourseDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	return GenericCount(dao.countSelect(), dao.Table(), dbParams, queryRowFn)
+	return GenericCount(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -103,20 +98,13 @@ func (dao *CourseDao) Get(id string, dbParams *database.DatabaseParams, tx *data
 		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	return GenericGet(dao.baseSelect(), dao.Table(), courseDbParams, dao.scanRow, queryRowFn)
+	return GenericGet(dao, courseDbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // List lists courses
 func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Course, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
 	}
@@ -129,28 +117,7 @@ func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *database.Tx) (
 		dbParams.Columns = dao.columns()
 	}
 
-	rows, err := generic.List(dbParams, tx)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var courses []*models.Course
-
-	for rows.Next() {
-		c, err := dao.scanRow(rows)
-		if err != nil {
-			return nil, err
-		}
-
-		courses = append(courses, c)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return courses, nil
+	return GenericList(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -14,7 +14,7 @@ import (
 
 // AssetDao is the data access object for assets
 type AssetDao struct {
-	db    database.Database
+	BaseDao
 	table string
 }
 
@@ -23,8 +23,8 @@ type AssetDao struct {
 // NewAssetDao returns a new AssetDao
 func NewAssetDao(db database.Database) *AssetDao {
 	return &AssetDao{
-		db:    db,
-		table: "assets",
+		BaseDao: BaseDao{db: db},
+		table:   "assets",
 	}
 }
 
@@ -39,12 +39,7 @@ func (dao *AssetDao) Table() string {
 
 // Count counts the assets
 func (dao *AssetDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	return GenericCount(dao.countSelect(), dao.Table(), dbParams, queryRowFn)
+	return GenericCount(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -87,12 +82,7 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *datab
 		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
-	asset, err := GenericGet(dao.baseSelect(), dao.Table(), assetDbParams, dao.scanRow, queryRowFn)
+	asset, err := GenericGet(dao, assetDbParams, dao.scanRow, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -121,8 +111,6 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *datab
 
 // List lists assets
 func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Asset, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}
 	}
@@ -135,32 +123,18 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([
 		dbParams.Columns = dao.columns()
 	}
 
-	rows, err := generic.List(dbParams, tx)
+	assets, err := GenericList(dao, dbParams, dao.scanRow, tx)
 	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var assets []*models.Asset
-	assetIds := []string{}
-
-	for rows.Next() {
-		a, err := dao.scanRow(rows)
-		if err != nil {
-			return nil, err
-		}
-
-		assets = append(assets, a)
-		assetIds = append(assetIds, a.ID)
-	}
-
-	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
 	// Get the attachments
 	attachmentDao := NewAttachmentDao(dao.db)
 	if len(assets) > 0 && slices.Contains(dbParams.IncludeRelations, attachmentDao.Table()) {
+		assetIds := []string{}
+		for _, asset := range assets {
+			assetIds = append(assetIds, asset.ID)
+		}
 
 		// Reduce the order by clause to only include columns specific to the attachments table
 		reducedOrderBy := attachmentDao.ProcessOrderBy(origOrderBy, true)

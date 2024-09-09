@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/squirrel"
+	"github.com/geerew/off-course/database"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -22,10 +23,23 @@ type Scannable interface {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type daoer interface {
-	Table() string
-	countSelect() squirrel.SelectBuilder
-	baseSelect() squirrel.SelectBuilder
+// BaseDao
+type BaseDao struct {
+	db database.Database
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Db returns the database
+func (dao *BaseDao) Db() database.Database {
+	return dao.db
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Count satisfies the daoer interface for Daos that do not require a count method
+func (dao *BaseDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
+	return 0, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -39,6 +53,16 @@ var (
 	ErrNilTransaction  = errors.New("transaction cannot be nil")
 	ErrMissingTag      = errors.New("tag cannot be empty")
 )
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+type daoer interface {
+	Db() database.Database
+	Table() string
+	Count(*database.DatabaseParams, *database.Tx) (int, error)
+	countSelect() squirrel.SelectBuilder
+	baseSelect() squirrel.SelectBuilder
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
