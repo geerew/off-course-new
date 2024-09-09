@@ -11,7 +11,6 @@ import (
 // CourseTagDao is the data access object for courses tags
 type CourseTagDao struct {
 	BaseDao
-	string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

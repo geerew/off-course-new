@@ -11,7 +11,6 @@ import (
 // AttachmentDao is the data access object for attachments
 type AttachmentDao struct {
 	BaseDao
-	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
