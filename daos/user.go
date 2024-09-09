@@ -86,7 +86,7 @@ func (dao *UserDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]
 	}
 
 	// Process the order by clauses
-	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy, false)
+	dbParams.OrderBy = GenericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
@@ -151,22 +151,6 @@ func (dao *UserDao) data(u *models.User) map[string]any {
 		"created_at":    FormatTime(u.CreatedAt),
 		"updated_at":    FormatTime(u.UpdatedAt),
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// ProcessOrderBy takes an array of strings representing orderBy clauses and returns a processed
-// version of this array
-//
-// It will creates a new list of valid table columns based upon columns() for the current
-// DAO
-func (dao *UserDao) ProcessOrderBy(orderBy []string, explicit bool) []string {
-	if len(orderBy) == 0 {
-		return orderBy
-	}
-
-	generic := NewGenericDao(dao.db, dao)
-	return generic.ProcessOrderBy(orderBy, dao.columns(), explicit)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

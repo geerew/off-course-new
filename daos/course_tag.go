@@ -112,7 +112,7 @@ func (dao *CourseTagDao) List(dbParams *database.DatabaseParams, tx *database.Tx
 	}
 
 	// Process the order by clauses
-	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy, false)
+	dbParams.OrderBy = GenericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
@@ -134,7 +134,7 @@ func (dao *CourseTagDao) ListCourseIdsByTags(tags []string, dbParams *database.D
 		dbParams = &database.DatabaseParams{}
 	}
 
-	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy, false)
+	dbParams.OrderBy = GenericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
 	dbParams.Columns = []string{dao.Table() + ".course_id"}
 	dbParams.Where = squirrel.Eq{NewTagDao(dao.db).Table() + ".tag": tags}
 	dbParams.GroupBys = []string{dao.Table() + ".course_id"}
@@ -169,22 +169,6 @@ func (dao *CourseTagDao) ListCourseIdsByTags(tags []string, dbParams *database.D
 // Delete deletes course tags based upon the where clause
 func (dao *CourseTagDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	return GenericDelete(dao, dbParams, tx)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// ProcessOrderBy takes an array of strings representing orderBy clauses and returns a processed
-// version of this array
-//
-// It will creates a new list of valid table columns based upon columns() for the current
-// DAO
-func (dao *CourseTagDao) ProcessOrderBy(orderBy []string, explicit bool) []string {
-	if len(orderBy) == 0 {
-		return orderBy
-	}
-
-	generic := NewGenericDao(dao.db, dao)
-	return generic.ProcessOrderBy(orderBy, dao.columns(), explicit)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -92,7 +92,7 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *datab
 	if dbParams != nil && slices.Contains(dbParams.IncludeRelations, attachmentDao.Table()) {
 		// Set the DB params
 		attachmentDbParams := &database.DatabaseParams{
-			OrderBy: attachmentDao.ProcessOrderBy(dbParams.OrderBy, true),
+			OrderBy: GenericProcessOrderBy(dbParams.OrderBy, attachmentDao.columns(), true),
 			Where:   squirrel.Eq{"asset_id": asset.ID},
 		}
 
@@ -116,7 +116,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([
 	}
 
 	origOrderBy := dbParams.OrderBy
-	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy, false)
+	dbParams.OrderBy = GenericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
@@ -137,7 +137,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([
 		}
 
 		// Reduce the order by clause to only include columns specific to the attachments table
-		reducedOrderBy := attachmentDao.ProcessOrderBy(origOrderBy, true)
+		reducedOrderBy := GenericProcessOrderBy(origOrderBy, attachmentDao.columns(), true)
 
 		dbParams = &database.DatabaseParams{
 			OrderBy: reducedOrderBy,
@@ -207,22 +207,6 @@ func (dao *AssetDao) Update(asset *models.Asset, tx *database.Tx) error {
 // Delete deletes assets based upon the where clause
 func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	return GenericDelete(dao, dbParams, tx)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// ProcessOrderBy takes an array of strings representing orderBy clauses and returns a processed
-// version of this array
-//
-// It will creates a new list of valid table columns based upon columns() for the current
-// DAO
-func (dao *AssetDao) ProcessOrderBy(orderBy []string, explicit bool) []string {
-	if len(orderBy) == 0 {
-		return orderBy
-	}
-
-	generic := NewGenericDao(dao.db, dao)
-	return generic.ProcessOrderBy(orderBy, dao.columns(), explicit)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

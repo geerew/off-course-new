@@ -94,7 +94,7 @@ func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams
 	courseTagDao := NewCourseTagDao(dao.db)
 	if dbParams != nil && slices.Contains(dbParams.IncludeRelations, courseTagDao.Table()) {
 		courseTagDbParams := &database.DatabaseParams{
-			OrderBy: courseTagDao.ProcessOrderBy(dbParams.OrderBy, true),
+			OrderBy: GenericProcessOrderBy(dbParams.OrderBy, courseTagDao.columns(), true),
 			Where:   squirrel.Eq{"tag_id": id},
 		}
 
@@ -120,7 +120,7 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*
 
 	origOrderBy := dbParams.OrderBy
 
-	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy, false)
+	dbParams.OrderBy = GenericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
@@ -142,7 +142,7 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*
 		}
 
 		// Reduce the order by clause to only include columns specific to the course_tags table
-		reducedOrderBy := courseTagDao.ProcessOrderBy(origOrderBy, true)
+		reducedOrderBy := GenericProcessOrderBy(origOrderBy, courseTagDao.columns(), true)
 
 		dbParams = &database.DatabaseParams{
 			OrderBy: reducedOrderBy,
@@ -202,22 +202,6 @@ func (dao *TagDao) Update(tag *models.Tag, tx *database.Tx) error {
 // Delete deletes tags based upon the where clause
 func (dao *TagDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
 	return GenericDelete(dao, dbParams, tx)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// ProcessOrderBy takes an array of strings representing orderBy clauses and returns a processed
-// version of this array
-//
-// It will creates a new list of valid table columns based upon columns() for the current
-// DAO
-func (dao *TagDao) ProcessOrderBy(orderBy []string, explicit bool) []string {
-	if len(orderBy) == 0 {
-		return orderBy
-	}
-
-	generic := NewGenericDao(dao.db, dao)
-	return generic.ProcessOrderBy(orderBy, dao.columns(), explicit)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
