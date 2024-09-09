@@ -113,7 +113,6 @@
 
 ### Tags
 
-- [ENHANCEMENT] Currently uppercase and lowercase tags are different and so uppercase are ordered first. Make them case insensitive
 - [ENHANCEMENT] Analyze and optimize the DB
 
 ### Assets and Attachments
