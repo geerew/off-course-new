@@ -38,10 +38,13 @@ type Scannable interface {
 type ScanFn[T any] func(Scannable) (*T, error)
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // BaseDao
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// BaseDao is the base data access object that all other daos inherit from
 type BaseDao struct {
-	db database.Database
+	db    database.Database
+	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -49,6 +52,13 @@ type BaseDao struct {
 // Db returns the database
 func (dao *BaseDao) Db() database.Database {
 	return dao.db
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Table returns the table name
+func (dao *BaseDao) Table() string {
+	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -166,6 +176,8 @@ func isValidOrderBy(table, column string, validateTableColumns []string) bool {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GenericProcessOrderBy processes the orderBy strings to ensure they are valid
+//
+// When explicit is true, only orderBy strings with a table prefix are considered valid
 func GenericProcessOrderBy(orderBy []string, validColumns []string, explicit bool) []string {
 	if len(orderBy) == 0 {
 		return orderBy

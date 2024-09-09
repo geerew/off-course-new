@@ -14,7 +14,6 @@ import (
 // ScanDao is the data access object for scans
 type ScanDao struct {
 	BaseDao
-	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -22,16 +21,11 @@ type ScanDao struct {
 // NewScanDao returns a new ScanDao
 func NewScanDao(db database.Database) *ScanDao {
 	return &ScanDao{
-		BaseDao: BaseDao{db: db},
-		table:   "scans",
+		BaseDao: BaseDao{
+			db:    db,
+			table: "scans",
+		},
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Table returns the table name
-func (dao *ScanDao) Table() string {
-	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

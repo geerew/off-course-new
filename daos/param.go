@@ -11,7 +11,6 @@ import (
 // ParamDao is the data access object for params
 type ParamDao struct {
 	BaseDao
-	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -19,16 +18,11 @@ type ParamDao struct {
 // NewParamDao returns a new ParamDao
 func NewParamDao(db database.Database) *ParamDao {
 	return &ParamDao{
-		BaseDao: BaseDao{db: db},
-		table:   "params",
+		BaseDao: BaseDao{
+			db:    db,
+			table: "params",
+		},
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Table returns the table name
-func (dao *ParamDao) Table() string {
-	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

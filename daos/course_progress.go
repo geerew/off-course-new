@@ -15,7 +15,6 @@ import (
 // CourseProgressDao is the data access object for courses progress
 type CourseProgressDao struct {
 	BaseDao
-	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -23,16 +22,11 @@ type CourseProgressDao struct {
 // NewCourseProgressDao returns a new CourseProgressDao
 func NewCourseProgressDao(db database.Database) *CourseProgressDao {
 	return &CourseProgressDao{
-		BaseDao: BaseDao{db: db},
-		table:   "courses_progress",
+		BaseDao: BaseDao{
+			db:    db,
+			table: "courses_progress",
+		},
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Table returns the table name
-func (dao *CourseProgressDao) Table() string {
-	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

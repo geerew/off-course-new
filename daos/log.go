@@ -11,7 +11,6 @@ import (
 // LogDao is the data access object for logs
 type LogDao struct {
 	BaseDao
-	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -19,16 +18,11 @@ type LogDao struct {
 // NewLogDao returns a new LogDao
 func NewLogDao(db database.Database) *LogDao {
 	return &LogDao{
-		BaseDao: BaseDao{db: db},
-		table:   "logs",
+		BaseDao: BaseDao{
+			db:    db,
+			table: "logs",
+		},
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Table returns the table name
-func (dao *LogDao) Table() string {
-	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

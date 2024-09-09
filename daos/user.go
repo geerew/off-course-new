@@ -11,7 +11,6 @@ import (
 // UserDao is the data access object for users
 type UserDao struct {
 	BaseDao
-	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -19,16 +18,11 @@ type UserDao struct {
 // NewUserDao returns a new UserDao
 func NewUserDao(db database.Database) *UserDao {
 	return &UserDao{
-		BaseDao: BaseDao{db: db},
-		table:   "users",
+		BaseDao: BaseDao{
+			db:    db,
+			table: "users",
+		},
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Table returns the table name
-func (dao *UserDao) Table() string {
-	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

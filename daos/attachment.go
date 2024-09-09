@@ -19,16 +19,11 @@ type AttachmentDao struct {
 // NewAttachmentDao returns a new AttachmentDao
 func NewAttachmentDao(db database.Database) *AttachmentDao {
 	return &AttachmentDao{
-		BaseDao: BaseDao{db: db},
-		table:   "attachments",
+		BaseDao: BaseDao{
+			db:    db,
+			table: "attachments",
+		},
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Table returns the table name
-func (dao *AttachmentDao) Table() string {
-	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

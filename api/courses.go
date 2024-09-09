@@ -116,7 +116,7 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 			return errorResponse(c, fiber.StatusBadRequest, "Invalid tags parameter", err)
 		}
 
-		courseIds, err := api.courseTagDao.ListCourseIdsByTags(filtered, nil)
+		courseIds, err := api.courseTagDao.ListCourseIdsByTags(filtered, nil, nil)
 		if err != nil {
 			return errorResponse(c, fiber.StatusInternalServerError, "Error looking up courses by tags", err)
 		}

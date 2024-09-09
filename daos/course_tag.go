@@ -11,7 +11,7 @@ import (
 // CourseTagDao is the data access object for courses tags
 type CourseTagDao struct {
 	BaseDao
-	table string
+	string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -19,16 +19,11 @@ type CourseTagDao struct {
 // NewCourseTagDao returns a new CourseTagDao
 func NewCourseTagDao(db database.Database) *CourseTagDao {
 	return &CourseTagDao{
-		BaseDao: BaseDao{db: db},
-		table:   "courses_tags",
+		BaseDao: BaseDao{
+			db:    db,
+			table: "courses_tags",
+		},
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Table returns the table name
-func (dao *CourseTagDao) Table() string {
-	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

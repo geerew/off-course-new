@@ -13,7 +13,6 @@ import (
 // AssetProgressDao is the data access object for assets progress
 type AssetProgressDao struct {
 	BaseDao
-	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -21,16 +20,11 @@ type AssetProgressDao struct {
 // NewAssetProgressDao returns a new AssetProgressDao
 func NewAssetProgressDao(db database.Database) *AssetProgressDao {
 	return &AssetProgressDao{
-		BaseDao: BaseDao{db: db},
-		table:   "assets_progress",
+		BaseDao: BaseDao{
+			db:    db,
+			table: "assets_progress",
+		},
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Table returns the table name
-func (dao *AssetProgressDao) Table() string {
-	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

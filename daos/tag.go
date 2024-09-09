@@ -13,7 +13,6 @@ import (
 // TagDao is the data access object for tags
 type TagDao struct {
 	BaseDao
-	table string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -21,16 +20,11 @@ type TagDao struct {
 // NewTagDao returns a new TagDao
 func NewTagDao(db database.Database) *TagDao {
 	return &TagDao{
-		BaseDao: BaseDao{db: db},
-		table:   "tags",
+		BaseDao: BaseDao{
+			db:    db,
+			table: "tags",
+		},
 	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Table returns the table name
-func (dao *TagDao) Table() string {
-	return dao.table
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
