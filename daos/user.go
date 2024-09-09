@@ -100,12 +100,7 @@ func (dao *UserDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]
 
 // Delete deletes users based on the where clause
 func (dao *UserDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
-	if dbParams == nil || dbParams.Where == nil {
-		return ErrMissingWhere
-	}
-
-	generic := NewGenericDao(dao.db, dao)
-	return generic.Delete(dbParams, tx)
+	return GenericDelete(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

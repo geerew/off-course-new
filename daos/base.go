@@ -1,5 +1,7 @@
 package daos
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 import (
 	"database/sql"
 	"errors"
@@ -12,7 +14,15 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type ScanFn[T any] func(Scannable) (*T, error)
+// Errors
+var (
+	ErrEmptyId         = errors.New("id cannot be empty")
+	ErrMissingCourseId = errors.New("course id cannot be empty")
+	ErrMissingWhere    = errors.New("where clause cannot be empty")
+	ErrInvalidPrefix   = errors.New("prefix must be greater than 0")
+	ErrNilTransaction  = errors.New("transaction cannot be nil")
+	ErrMissingTag      = errors.New("tag cannot be empty")
+)
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -20,6 +30,12 @@ type ScanFn[T any] func(Scannable) (*T, error)
 type Scannable interface {
 	Scan(dest ...interface{}) error
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ScanFn is a type representing a generic function that scans a Scannable into
+// a struct
+type ScanFn[T any] func(Scannable) (*T, error)
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -41,18 +57,6 @@ func (dao *BaseDao) Db() database.Database {
 func (dao *BaseDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
 	return 0, nil
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Errors
-var (
-	ErrEmptyId         = errors.New("id cannot be empty")
-	ErrMissingCourseId = errors.New("course id cannot be empty")
-	ErrMissingWhere    = errors.New("where clause cannot be empty")
-	ErrInvalidPrefix   = errors.New("prefix must be greater than 0")
-	ErrNilTransaction  = errors.New("transaction cannot be nil")
-	ErrMissingTag      = errors.New("tag cannot be empty")
-)
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

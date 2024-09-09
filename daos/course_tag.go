@@ -168,12 +168,7 @@ func (dao *CourseTagDao) ListCourseIdsByTags(tags []string, dbParams *database.D
 
 // Delete deletes course tags based upon the where clause
 func (dao *CourseTagDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
-	if dbParams == nil || dbParams.Where == nil {
-		return ErrMissingWhere
-	}
-
-	generic := NewGenericDao(dao.db, dao)
-	return generic.Delete(dbParams, tx)
+	return GenericDelete(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

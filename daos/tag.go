@@ -201,12 +201,7 @@ func (dao *TagDao) Update(tag *models.Tag, tx *database.Tx) error {
 
 // Delete deletes tags based upon the where clause
 func (dao *TagDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
-	if dbParams == nil || dbParams.Where == nil {
-		return ErrMissingWhere
-	}
-
-	generic := NewGenericDao(dao.db, dao)
-	return generic.Delete(dbParams, tx)
+	return GenericDelete(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -187,22 +187,20 @@ func GenericListWithoutScan(
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Delete deletes a row from a table based upon a where clause
-//
-// `tx` allows for the function to be run within a transaction
-func (dao *GenericDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
-	if dbParams == nil || dbParams.Where == nil {
-		return ErrMissingWhere
-	}
-
-	execFn := dao.db.Exec
+func GenericDelete(dao daoer, dbParams *database.DatabaseParams, tx *database.Tx) error {
+	execFn := dao.Db().Exec
 	if tx != nil {
 		execFn = tx.Exec
+	}
+
+	if dbParams == nil || dbParams.Where == nil {
+		return ErrMissingWhere
 	}
 
 	query, args, _ := squirrel.
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
-		Delete(dao.caller.Table()).
+		Delete(dao.Table()).
 		Where(dbParams.Where).
 		ToSql()
 

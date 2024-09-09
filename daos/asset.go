@@ -206,12 +206,7 @@ func (dao *AssetDao) Update(asset *models.Asset, tx *database.Tx) error {
 
 // Delete deletes assets based upon the where clause
 func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
-	if dbParams == nil || dbParams.Where == nil {
-		return ErrMissingWhere
-	}
-
-	generic := NewGenericDao(dao.db, dao)
-	return generic.Delete(dbParams, tx)
+	return GenericDelete(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

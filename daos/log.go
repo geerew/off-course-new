@@ -88,12 +88,7 @@ func (dao *LogDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*
 
 // Delete deletes logs based upon the where clause
 func (dao *LogDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
-	if dbParams == nil || dbParams.Where == nil {
-		return ErrMissingWhere
-	}
-
-	generic := NewGenericDao(dao.db, dao)
-	return generic.Delete(dbParams, tx)
+	return GenericDelete(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
