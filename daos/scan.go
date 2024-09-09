@@ -72,24 +72,17 @@ func (dao *ScanDao) Create(s *models.Scan, tx *database.Tx) error {
 
 // Get gets a scan with the given course ID
 func (dao *ScanDao) Get(courseId string, tx *database.Tx) (*models.Scan, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table() + ".course_id": courseId},
 	}
 
-	row, err := generic.Get(dbParams, tx)
-	if err != nil {
-		return nil, err
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
 	}
 
-	scan, err := dao.scanRow(row)
-	if err != nil {
-		return nil, err
-	}
-
-	return scan, nil
+	return GenericGet(dao.baseSelect(), dao.Table(), dbParams, dao.scanRow, queryRowFn)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -135,20 +128,18 @@ func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) e
 
 // Next gets the next scan whose status is `waiting“
 func (dao *ScanDao) Next(tx *database.Tx) (*models.Scan, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table() + ".status": types.ScanStatusWaiting},
 		OrderBy: []string{"created_at ASC"},
 	}
 
-	row, err := generic.Get(dbParams, tx)
-	if err != nil {
-		return nil, err
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
 	}
 
-	scan, err := dao.scanRow(row)
+	scan, err := GenericGet(dao.baseSelect(), dao.Table(), dbParams, dao.scanRow, queryRowFn)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -158,7 +149,6 @@ func (dao *ScanDao) Next(tx *database.Tx) (*models.Scan, error) {
 	}
 
 	return scan, nil
-
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

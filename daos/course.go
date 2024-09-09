@@ -98,24 +98,17 @@ func (dao *CourseDao) Create(c *models.Course, tx *database.Tx) error {
 
 // Get gets a course with the given ID
 func (dao *CourseDao) Get(id string, dbParams *database.DatabaseParams, tx *database.Tx) (*models.Course, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	courseDbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
-	row, err := generic.Get(courseDbParams, tx)
-	if err != nil {
-		return nil, err
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
 	}
 
-	course, err := dao.scanRow(row)
-	if err != nil {
-		return nil, err
-	}
-
-	return course, nil
+	return GenericGet(dao.baseSelect(), dao.Table(), courseDbParams, dao.scanRow, queryRowFn)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

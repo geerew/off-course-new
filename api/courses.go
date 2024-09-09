@@ -209,7 +209,7 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 	// Set the course to available
 	course.Available = true
 
-	if err := api.courseDao.Create(course); err != nil {
+	if err := api.courseDao.Create(course, nil); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return errorResponse(c, fiber.StatusBadRequest, "A course with this path already exists", err)
 		}

@@ -74,24 +74,17 @@ func (dao *UserDao) Create(u *models.User, tx *database.Tx) error {
 
 // Get gets user with the given username
 func (dao *UserDao) Get(username string, tx *database.Tx) (*models.User, error) {
-	generic := NewGenericDao(dao.db, dao)
-
-	courseDbParams := &database.DatabaseParams{
+	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table() + ".username": username},
 	}
 
-	row, err := generic.Get(courseDbParams, tx)
-	if err != nil {
-		return nil, err
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
 	}
 
-	course, err := dao.scanRow(row)
-	if err != nil {
-		return nil, err
-	}
-
-	return course, nil
+	return GenericGet(dao.baseSelect(), dao.Table(), dbParams, dao.scanRow, queryRowFn)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

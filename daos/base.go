@@ -11,6 +11,10 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+type ScanFn[T any] func(Scannable) (*T, error)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Scannable is an interface for a database row that can be scanned into a struct
 type Scannable interface {
 	Scan(dest ...interface{}) error

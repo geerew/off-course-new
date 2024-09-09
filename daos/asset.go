@@ -82,19 +82,17 @@ func (dao *AssetDao) Create(a *models.Asset, tx *database.Tx) error {
 
 // Get gets an asset with the given ID
 func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *database.Tx) (*models.Asset, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	assetDbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
-	row, err := generic.Get(assetDbParams, tx)
-	if err != nil {
-		return nil, err
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
 	}
 
-	asset, err := dao.scanRow(row)
+	asset, err := GenericGet(dao.baseSelect(), dao.Table(), assetDbParams, dao.scanRow, queryRowFn)
 	if err != nil {
 		return nil, err
 	}

@@ -66,24 +66,17 @@ func (dao *CourseProgressDao) Create(cp *models.CourseProgress, tx *database.Tx)
 
 // Get gets a course progress with the given course ID
 func (dao *CourseProgressDao) Get(courseId string, tx *database.Tx) (*models.CourseProgress, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table() + ".course_id": courseId},
 	}
 
-	row, err := generic.Get(dbParams, tx)
-	if err != nil {
-		return nil, err
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
 	}
 
-	cp, err := dao.scanRow(row)
-	if err != nil {
-		return nil, err
-	}
-
-	return cp, nil
+	return GenericGet(dao.baseSelect(), dao.Table(), dbParams, dao.scanRow, queryRowFn)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

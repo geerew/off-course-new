@@ -76,8 +76,6 @@ func (dao *TagDao) Create(t *models.Tag, tx *database.Tx) error {
 
 // Get gets a tag with the given ID or name
 func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams, tx *database.Tx) (*models.Tag, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	tagDbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 	}
@@ -92,12 +90,12 @@ func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams
 		tagDbParams.Where = squirrel.Eq{dao.Table() + ".id": id}
 	}
 
-	row, err := generic.Get(tagDbParams, tx)
-	if err != nil {
-		return nil, err
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
 	}
 
-	tag, err := dao.scanRow(row)
+	tag, err := GenericGet(dao.baseSelect(), dao.Table(), tagDbParams, dao.scanRow, queryRowFn)
 	if err != nil {
 		return nil, err
 	}

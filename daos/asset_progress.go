@@ -77,24 +77,17 @@ func (dao *AssetProgressDao) Create(ap *models.AssetProgress, tx *database.Tx) e
 
 // Get gets an asset progress with the given ID
 func (dao *AssetProgressDao) Get(assetId string, tx *database.Tx) (*models.AssetProgress, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table() + ".asset_id": assetId},
 	}
 
-	row, err := generic.Get(dbParams, tx)
-	if err != nil {
-		return nil, err
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
 	}
 
-	cp, err := dao.scanRow(row)
-	if err != nil {
-		return nil, err
-	}
-
-	return cp, nil
+	return GenericGet(dao.baseSelect(), dao.Table(), dbParams, dao.scanRow, queryRowFn)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

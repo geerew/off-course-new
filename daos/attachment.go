@@ -74,24 +74,17 @@ func (dao *AttachmentDao) Create(a *models.Attachment, tx *database.Tx) error {
 
 // Get gets attachment with the given ID
 func (dao *AttachmentDao) Get(id string, tx *database.Tx) (*models.Attachment, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
-	row, err := generic.Get(dbParams, tx)
-	if err != nil {
-		return nil, err
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
 	}
 
-	attachment, err := dao.scanRow(row)
-	if err != nil {
-		return nil, err
-	}
-
-	return attachment, nil
+	return GenericGet(dao.baseSelect(), dao.Table(), dbParams, dao.scanRow, queryRowFn)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

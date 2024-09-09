@@ -46,23 +46,22 @@ func GenericCount(baseSelect squirrel.SelectBuilder, table string, dbParams *dat
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get returns a row from a table
-//
-// `tx` allows for the function to be run within a transaction
-func (dao *GenericDao) Get(dbParams *database.DatabaseParams, tx *database.Tx) (*sql.Row, error) {
-	queryRowFn := dao.db.QueryRow
-	if tx != nil {
-		queryRowFn = tx.QueryRow
-	}
-
+// GenericGet gets a row from the given table
+func GenericGet[T any](
+	baseSelect squirrel.SelectBuilder,
+	table string,
+	dbParams *database.DatabaseParams,
+	scanFn ScanFn[T],
+	queryRowFn database.QueryRowFn,
+) (*T, error) {
 	if dbParams == nil || dbParams.Where == nil {
 		return nil, ErrMissingWhere
 	}
 
-	builder := dao.caller.baseSelect()
+	builder := baseSelect
 
 	if dbParams.Columns == nil {
-		builder = builder.Columns(dao.caller.Table() + ".*")
+		builder = builder.Columns(table + ".*")
 	} else {
 		builder = builder.Columns(dbParams.Columns...)
 	}
@@ -80,7 +79,12 @@ func (dao *GenericDao) Get(dbParams *database.DatabaseParams, tx *database.Tx) (
 		return nil, row.Err()
 	}
 
-	return row, nil
+	res, err := scanFn(row)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

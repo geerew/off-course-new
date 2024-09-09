@@ -35,24 +35,17 @@ func (dao *ParamDao) Table() string {
 
 // Get gets a parameter by its key
 func (dao *ParamDao) Get(key string, tx *database.Tx) (*models.Param, error) {
-	generic := NewGenericDao(dao.db, dao)
-
 	dbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table() + ".key": key},
 	}
 
-	row, err := generic.Get(dbParams, tx)
-	if err != nil {
-		return nil, err
+	queryRowFn := dao.db.QueryRow
+	if tx != nil {
+		queryRowFn = tx.QueryRow
 	}
 
-	param, err := dao.scanRow(row)
-	if err != nil {
-		return nil, err
-	}
-
-	return param, nil
+	return GenericGet(dao.baseSelect(), dao.Table(), dbParams, dao.scanRow, queryRowFn)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
