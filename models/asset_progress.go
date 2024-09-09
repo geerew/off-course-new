@@ -4,8 +4,6 @@ import "time"
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // AssetProgress defines the model for a course progress (table: assets_progress)
 type AssetProgress struct {
 	BaseModel
