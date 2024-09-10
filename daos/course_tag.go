@@ -170,15 +170,18 @@ func (dao *CourseTagDao) Delete(dbParams *database.DatabaseParams, tx *database.
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // countSelect returns the default count select builder
+//
+// It performs 2 left joins
+//   - courses table to get `title`
+//   - tags table to get `tag`
+//
+// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
+// this select builder
 func (dao *CourseTagDao) countSelect() squirrel.SelectBuilder {
 	tagDao := NewTagDao(dao.db)
 	courseDao := NewCourseDao(dao.db)
 
-	return squirrel.
-		StatementBuilder.
-		PlaceholderFormat(squirrel.Question).
-		Select("").
-		From(dao.Table()).
+	return dao.BaseDao.countSelect().
 		LeftJoin(courseDao.Table() + " ON " + dao.Table() + ".course_id = " + courseDao.Table() + ".id").
 		LeftJoin(tagDao.Table() + " ON " + dao.Table() + ".tag_id = " + tagDao.Table() + ".id").
 		RemoveColumns()
@@ -187,12 +190,7 @@ func (dao *CourseTagDao) countSelect() squirrel.SelectBuilder {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // baseSelect returns the default select builder
 //
-// It performs 2 left joins
-//   - courses table to get `title`
-//   - tags table to get `tag`
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
+
 func (dao *CourseTagDao) baseSelect() squirrel.SelectBuilder {
 	return dao.countSelect()
 }

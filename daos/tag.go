@@ -206,11 +206,7 @@ func (dao *TagDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) er
 func (dao *TagDao) countSelect() squirrel.SelectBuilder {
 	courseTagDao := NewCourseTagDao(dao.db)
 
-	return squirrel.
-		StatementBuilder.
-		PlaceholderFormat(squirrel.Question).
-		Select("").
-		From(dao.Table()).
+	return dao.BaseDao.countSelect().
 		LeftJoin(courseTagDao.Table() + " ON " + dao.Table() + ".id = " + courseTagDao.Table() + ".tag_id").
 		RemoveColumns()
 }
@@ -223,7 +219,6 @@ func (dao *TagDao) countSelect() squirrel.SelectBuilder {
 // this select builder
 func (dao *TagDao) baseSelect() squirrel.SelectBuilder {
 	return dao.countSelect().GroupBy("tags.id")
-	// GroupBy("tags.id", "tags.tag", "tags.created_at", "tags.updated_at").
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

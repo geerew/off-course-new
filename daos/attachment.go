@@ -101,28 +101,6 @@ func (dao *AttachmentDao) Delete(dbParams *database.DatabaseParams, tx *database
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// countSelect returns the default count select builder
-func (dao *AttachmentDao) countSelect() squirrel.SelectBuilder {
-	return squirrel.
-		StatementBuilder.
-		PlaceholderFormat(squirrel.Question).
-		Select("").
-		From(dao.Table()).
-		RemoveColumns()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// baseSelect returns the default select builder
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
-func (dao *AttachmentDao) baseSelect() squirrel.SelectBuilder {
-	return dao.countSelect()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // columns returns the columns to select
 func (dao *AttachmentDao) columns() []string {
 	return []string{

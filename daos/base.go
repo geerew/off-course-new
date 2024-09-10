@@ -70,6 +70,33 @@ func (dao *BaseDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (i
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// countSelect returns the default count select builder
+//
+// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
+// this select builder
+func (dao *BaseDao) countSelect() squirrel.SelectBuilder {
+	return squirrel.
+		StatementBuilder.
+		PlaceholderFormat(squirrel.Question).
+		Select("").
+		From(dao.Table()).
+		RemoveColumns()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// baseSelect returns the default select builder
+//
+// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
+// this select builder
+func (dao *BaseDao) baseSelect() squirrel.SelectBuilder {
+	return dao.countSelect()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// daoer is an interface for a data access object to be able to use the generic
+// functions
 type daoer interface {
 	Db() database.Database
 	Table() string

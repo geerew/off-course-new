@@ -135,13 +135,16 @@ func (dao *ScanDao) Next(tx *database.Tx) (*models.Scan, error) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // countSelect returns the default count select builder
+//
+// It performs 1 left join
+//   - courses table to get `course_path`
+//
+// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
+// this select builder
 func (dao *ScanDao) countSelect() squirrel.SelectBuilder {
 	courseDao := NewCourseDao(dao.db)
 
-	return squirrel.StatementBuilder.
-		PlaceholderFormat(squirrel.Question).
-		Select("").
-		From(dao.Table()).
+	return dao.BaseDao.countSelect().
 		LeftJoin(courseDao.Table() + " ON " + dao.Table() + ".course_id = " + courseDao.Table() + ".id").
 		RemoveColumns()
 }
@@ -149,12 +152,6 @@ func (dao *ScanDao) countSelect() squirrel.SelectBuilder {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // baseSelect returns the default select builder
-//
-// It performs 1 left join
-//   - courses table to get `course_path`
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
 func (dao *ScanDao) baseSelect() squirrel.SelectBuilder {
 	return dao.countSelect()
 }

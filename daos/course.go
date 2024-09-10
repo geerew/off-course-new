@@ -286,15 +286,18 @@ func (dao *CourseDao) ProcessOrderBy(orderBy []string) []string {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // countSelect returns the default select builder for counting
+//
+// It performs 2 left joins
+//   - scans table to get `scan_status`
+//   - courses progress table to get `started`, `started_at`, `percent`, and `completed_at`
+//
+// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
+// this select builder
 func (dao *CourseDao) countSelect() squirrel.SelectBuilder {
 	sDao := NewScanDao(dao.db)
 	cpDao := NewCourseProgressDao(dao.db)
 
-	return squirrel.
-		StatementBuilder.
-		PlaceholderFormat(squirrel.Question).
-		Select("").
-		From(dao.Table()).
+	return dao.BaseDao.countSelect().
 		LeftJoin(sDao.Table() + " ON " + dao.Table() + ".id = " + sDao.Table() + ".course_id").
 		LeftJoin(cpDao.Table() + " ON " + dao.Table() + ".id = " + cpDao.Table() + ".course_id").
 		RemoveColumns()
@@ -303,13 +306,6 @@ func (dao *CourseDao) countSelect() squirrel.SelectBuilder {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // baseSelect returns the default select builder
-//
-// It performs 2 left joins
-//   - scans table to get `scan_status`
-//   - courses progress table to get `started`, `started_at`, `percent`, and `completed_at`
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
 func (dao *CourseDao) baseSelect() squirrel.SelectBuilder {
 	return dao.countSelect()
 }

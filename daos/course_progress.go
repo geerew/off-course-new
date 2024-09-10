@@ -167,27 +167,6 @@ func (dao *CourseProgressDao) Refresh(courseId string, tx *database.Tx) error {
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// countSelect returns the default count select builder
-func (dao *CourseProgressDao) countSelect() squirrel.SelectBuilder {
-	return squirrel.StatementBuilder.
-		PlaceholderFormat(squirrel.Question).
-		Select("").
-		From(dao.Table()).
-		RemoveColumns()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// baseSelect returns the default select builder
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
-func (dao *CourseProgressDao) baseSelect() squirrel.SelectBuilder {
-	return dao.countSelect()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // columns returns the columns to select
 func (dao *CourseProgressDao) columns() []string {
 	return []string{

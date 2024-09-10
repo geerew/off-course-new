@@ -68,25 +68,6 @@ func (dao *ParamDao) Update(p *models.Param, tx *database.Tx) error {
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// countSelect returns the default select builder for counting
-func (dao *ParamDao) countSelect() squirrel.SelectBuilder {
-	return squirrel.
-		StatementBuilder.
-		PlaceholderFormat(squirrel.Question).
-		Select("").
-		From(dao.Table()).
-		RemoveColumns()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// baseSelect returns the default select builder
-func (dao *ParamDao) baseSelect() squirrel.SelectBuilder {
-	return dao.countSelect()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // columns returns the columns to select
 func (dao *ParamDao) columns() []string {
 	return []string{

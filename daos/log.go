@@ -89,25 +89,6 @@ func (dao *LogDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) er
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// countSelect returns the default count select builder
-func (dao *LogDao) countSelect() squirrel.SelectBuilder {
-	return squirrel.
-		StatementBuilder.
-		PlaceholderFormat(squirrel.Question).
-		Select("").
-		From(dao.Table()).
-		RemoveColumns()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// baseSelect returns the default select builder
-func (dao *LogDao) baseSelect() squirrel.SelectBuilder {
-	return dao.countSelect()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // columns returns the columns to select
 func (dao *LogDao) columns() []string {
 	return []string{

@@ -101,31 +101,6 @@ func (dao *UserDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) e
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// countSelect returns the default select builder for counting
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
-func (dao *UserDao) countSelect() squirrel.SelectBuilder {
-	return squirrel.
-		StatementBuilder.
-		PlaceholderFormat(squirrel.Question).
-		Select("").
-		From(dao.Table()).
-		RemoveColumns()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// baseSelect returns the default select builder
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
-func (dao *UserDao) baseSelect() squirrel.SelectBuilder {
-	return dao.countSelect()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // columns returns the columns to select
 func (dao *UserDao) columns() []string {
 	return []string{

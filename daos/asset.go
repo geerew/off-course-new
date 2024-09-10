@@ -208,27 +208,22 @@ func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // countSelect returns the default count select builder
+// It performs 1 left join
+//   - assets progress table to get `video_pos`, `completed` and `completed_at`
+//
+// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
+// this select builder
 func (dao *AssetDao) countSelect() squirrel.SelectBuilder {
 	apDao := NewAssetProgressDao(dao.db)
 
-	return squirrel.
-		StatementBuilder.
-		PlaceholderFormat(squirrel.Question).
-		Select("").
-		From(dao.Table()).
+	return dao.BaseDao.countSelect().
 		LeftJoin(apDao.Table() + " ON " + dao.Table() + ".id = " + apDao.Table() + ".asset_id").
 		RemoveColumns()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// baseSelect returns the default select builder
-//
-// It performs 1 left join
-//   - assets progress table to get `video_pos`, `completed` and `completed_at`
-//
-// Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using
-// this select builder
+// baseSelect returns 0 default select builder
 func (dao *AssetDao) baseSelect() squirrel.SelectBuilder {
 	return dao.countSelect()
 }
