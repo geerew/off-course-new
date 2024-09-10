@@ -69,6 +69,10 @@ func (dao *AssetDao) Create(a *models.Asset, tx *database.Tx) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Get gets an asset with the given ID
+//
+// Attachments can be included by setting the `IncludeRelations` field in the dbParams. The attachments
+// can then be ordered by setting the `OrderBy` field in the dbParams, specifically referencing
+// attachements.[column]
 func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *database.Tx) (*models.Asset, error) {
 	assetDbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
@@ -103,6 +107,10 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *datab
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // List lists assets
+//
+// Attachments can be included by setting the `IncludeRelations` field in the dbParams. The attachments
+// can then be ordered by setting the `OrderBy` field in the dbParams, specifically referencing
+// attachements.[column]
 func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Asset, error) {
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}

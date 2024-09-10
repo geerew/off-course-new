@@ -169,7 +169,7 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 func (api *courses) getCourse(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	course, err := api.courseDao.Get(id, nil, nil)
+	course, err := api.courseDao.Get(id, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -245,7 +245,7 @@ func (api *courses) deleteCourse(c *fiber.Ctx) error {
 func (api *courses) getCard(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	course, err := api.courseDao.Get(id, nil, nil)
+	course, err := api.courseDao.Get(id, nil)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -277,7 +277,7 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 	expand := c.QueryBool("expand", false)
 
 	// Get the course
-	_, err := api.courseDao.Get(id, nil, nil)
+	_, err := api.courseDao.Get(id, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
@@ -316,7 +316,7 @@ func (api *courses) getAsset(c *fiber.Ctx) error {
 	assetId := c.Params("asset")
 	expand := c.QueryBool("expand", false)
 
-	_, err := api.courseDao.Get(id, nil, nil)
+	_, err := api.courseDao.Get(id, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
@@ -356,7 +356,7 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 	orderBy := c.Query("orderBy", "title asc")
 
 	// Get the course
-	_, err := api.courseDao.Get(id, nil, nil)
+	_, err := api.courseDao.Get(id, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
@@ -406,7 +406,7 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 	attachmentId := c.Params("attachment")
 
 	// Get the course
-	_, err := api.courseDao.Get(id, nil, nil)
+	_, err := api.courseDao.Get(id, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
@@ -452,7 +452,7 @@ func (api *courses) getTags(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// Get the course
-	_, err := api.courseDao.Get(id, nil, nil)
+	_, err := api.courseDao.Get(id, nil)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)

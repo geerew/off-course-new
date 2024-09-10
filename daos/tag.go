@@ -64,6 +64,10 @@ func (dao *TagDao) Create(t *models.Tag, tx *database.Tx) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Get gets a tag with the given ID or name
+//
+// CourseTags can be included by setting the `IncludeRelations` field in the dbParams. The coutseTags
+// can then be ordered by setting the `OrderBy` field in the dbParams, specifically referencing
+// courses_tags.[column]
 func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams, tx *database.Tx) (*models.Tag, error) {
 	tagDbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
@@ -107,6 +111,10 @@ func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // List lists tags
+//
+// CourseTags can be included by setting the `IncludeRelations` field in the dbParams. The coutseTags
+// can then be ordered by setting the `OrderBy` field in the dbParams, specifically referencing
+// courses_tags.[column]
 func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*models.Tag, error) {
 	if dbParams == nil {
 		dbParams = &database.DatabaseParams{}

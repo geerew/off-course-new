@@ -38,7 +38,7 @@ func TestCourseAvailability_Run(t *testing.T) {
 		require.Nil(t, err)
 
 		// Check the course is marked as unavailable
-		course, err := daos.NewCourseDao(dbManager.DataDb).Get(testData[0].Course.ID, nil, nil)
+		course, err := daos.NewCourseDao(dbManager.DataDb).Get(testData[0].Course.ID, nil)
 		require.Nil(t, err)
 		require.False(t, course.Available)
 
@@ -53,7 +53,7 @@ func TestCourseAvailability_Run(t *testing.T) {
 		require.Nil(t, err)
 
 		// Check the course is marked as available
-		course, err = daos.NewCourseDao(dbManager.DataDb).Get(testData[0].Course.ID, nil, nil)
+		course, err = daos.NewCourseDao(dbManager.DataDb).Get(testData[0].Course.ID, nil)
 		require.Nil(t, err)
 		require.True(t, course.Available)
 	})
@@ -85,7 +85,7 @@ func TestCourseAvailability_Run(t *testing.T) {
 
 		// Check the courses are marked as unavailable
 		for _, data := range testData {
-			course, err := daos.NewCourseDao(dbManager.DataDb).Get(data.Course.ID, nil, nil)
+			course, err := daos.NewCourseDao(dbManager.DataDb).Get(data.Course.ID, nil)
 			require.Nil(t, err)
 			require.False(t, course.Available)
 		}
@@ -104,7 +104,7 @@ func TestCourseAvailability_Run(t *testing.T) {
 
 		// Check the courses are marked as available
 		for _, data := range testData {
-			course, err := daos.NewCourseDao(dbManager.DataDb).Get(data.Course.ID, nil, nil)
+			course, err := daos.NewCourseDao(dbManager.DataDb).Get(data.Course.ID, nil)
 			require.Nil(t, err)
 			require.True(t, course.Available)
 		}

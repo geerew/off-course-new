@@ -86,7 +86,7 @@ func (dao *CourseDao) Create(c *models.Course, tx *database.Tx) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Get gets a course with the given ID
-func (dao *CourseDao) Get(id string, dbParams *database.DatabaseParams, tx *database.Tx) (*models.Course, error) {
+func (dao *CourseDao) Get(id string, tx *database.Tx) (*models.Course, error) {
 	courseDbParams := &database.DatabaseParams{
 		Columns: dao.columns(),
 		Where:   squirrel.Eq{dao.Table() + ".id": id},

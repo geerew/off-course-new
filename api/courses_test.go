@@ -642,7 +642,7 @@ func TestCourses_DeleteCourse(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNoContent, status)
 
-		_, err = courseDao.Get(testData[2].ID, nil, nil)
+		_, err = courseDao.Get(testData[2].ID, nil)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 
 		// ----------------------------
