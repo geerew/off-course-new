@@ -167,15 +167,6 @@ func (dao *CourseProgressDao) Refresh(courseId string, tx *database.Tx) error {
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// columns returns the columns to select
-func (dao *CourseProgressDao) columns() []string {
-	return []string{
-		dao.Table() + ".*",
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // data generates a map of key/values for a course progress
 func (dao *CourseProgressDao) data(cp *models.CourseProgress) map[string]any {
 	return map[string]any{

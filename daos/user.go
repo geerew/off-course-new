@@ -101,15 +101,6 @@ func (dao *UserDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) e
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// columns returns the columns to select
-func (dao *UserDao) columns() []string {
-	return []string{
-		dao.Table() + ".*",
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // data generates a map of key/values for a course
 func (dao *UserDao) data(u *models.User) map[string]any {
 	return map[string]any{

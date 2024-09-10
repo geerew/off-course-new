@@ -173,17 +173,6 @@ func (dao *AssetProgressDao) Update(ap *models.AssetProgress, tx *database.Tx) e
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// columns returns the columns to select
-func (dao *AssetProgressDao) columns() []string {
-	return []string{
-		dao.Table() + ".*",
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // data generates a map of key/values for thane asset progress
 func (dao *AssetProgressDao) data(ap *models.AssetProgress) map[string]any {
 	return map[string]any{

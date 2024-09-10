@@ -234,12 +234,14 @@ func (dao *AssetDao) baseSelect() squirrel.SelectBuilder {
 func (dao *AssetDao) columns() []string {
 	apDao := NewAssetProgressDao(dao.db)
 
-	return []string{
-		dao.Table() + ".*",
-		apDao.Table() + ".video_pos",
-		apDao.Table() + ".completed",
-		apDao.Table() + ".completed_at",
-	}
+	return append(
+		dao.BaseDao.columns(),
+		[]string{
+			apDao.Table() + ".video_pos",
+			apDao.Table() + ".completed",
+			apDao.Table() + ".completed_at",
+		}...,
+	)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -162,10 +162,10 @@ func (dao *ScanDao) baseSelect() squirrel.SelectBuilder {
 func (dao *ScanDao) columns() []string {
 	courseDao := NewCourseDao(dao.db)
 
-	return []string{
-		dao.Table() + ".*",
-		courseDao.Table() + ".path AS course_path",
-	}
+	return append(
+		dao.BaseDao.columns(),
+		courseDao.Table()+".path AS course_path",
+	)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

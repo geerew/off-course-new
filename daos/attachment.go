@@ -101,15 +101,6 @@ func (dao *AttachmentDao) Delete(dbParams *database.DatabaseParams, tx *database
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// columns returns the columns to select
-func (dao *AttachmentDao) columns() []string {
-	return []string{
-		dao.Table() + ".*",
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // data generates a map of key/values for an attachment
 func (dao *AttachmentDao) data(a *models.Attachment) map[string]any {
 	return map[string]any{

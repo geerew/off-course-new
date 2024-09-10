@@ -202,11 +202,13 @@ func (dao *CourseTagDao) columns() []string {
 	tagDao := NewTagDao(dao.db)
 	courseDao := NewCourseDao(dao.db)
 
-	return []string{
-		dao.Table() + ".*",
-		courseDao.Table() + ".title as course",
-		tagDao.Table() + ".tag",
-	}
+	return append(
+		dao.BaseDao.columns(),
+		[]string{
+			courseDao.Table() + ".title as course",
+			tagDao.Table() + ".tag",
+		}...,
+	)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

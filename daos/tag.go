@@ -227,10 +227,10 @@ func (dao *TagDao) baseSelect() squirrel.SelectBuilder {
 func (dao *TagDao) columns() []string {
 	courseTagDao := NewCourseTagDao(dao.db)
 
-	return []string{
-		dao.Table() + ".*",
-		"COALESCE(COUNT(" + courseTagDao.Table() + ".id), 0) AS course_count",
-	}
+	return append(
+		dao.BaseDao.columns(),
+		"COALESCE(COUNT("+courseTagDao.Table()+".id), 0) AS course_count",
+	)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

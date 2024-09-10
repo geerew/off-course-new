@@ -68,19 +68,6 @@ func (dao *ParamDao) Update(p *models.Param, tx *database.Tx) error {
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// columns returns the columns to select
-func (dao *ParamDao) columns() []string {
-	return []string{
-		"id",
-		"key",
-		"value",
-		"created_at",
-		"updated_at",
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // scanRow scans a parameter row
 func (dao *ParamDao) scanRow(scannable Scannable) (*models.Param, error) {
 	var p models.Param

@@ -89,15 +89,6 @@ func (dao *LogDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) er
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// columns returns the columns to select
-func (dao *LogDao) columns() []string {
-	return []string{
-		dao.Table() + ".*",
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // data generates a map of key/values for a log
 func (dao *LogDao) data(a *models.Log) map[string]any {
 	return map[string]any{

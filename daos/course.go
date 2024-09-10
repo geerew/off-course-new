@@ -317,15 +317,17 @@ func (dao *CourseDao) columns() []string {
 	sDao := NewScanDao(dao.db)
 	cpDao := NewCourseProgressDao(dao.db)
 
-	return []string{
-		dao.Table() + ".*",
-		sDao.Table() + ".status as scan_status",
-		cpDao.Table() + ".started",
-		cpDao.Table() + ".started_at",
-		cpDao.Table() + ".percent",
-		cpDao.Table() + ".completed_at",
-		cpDao.Table() + ".updated_at as progress_updated_at",
-	}
+	return append(
+		dao.BaseDao.columns(),
+		[]string{
+			sDao.Table() + ".status as scan_status",
+			cpDao.Table() + ".started",
+			cpDao.Table() + ".started_at",
+			cpDao.Table() + ".percent",
+			cpDao.Table() + ".completed_at",
+			cpDao.Table() + ".updated_at as progress_updated_at",
+		}...,
+	)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
