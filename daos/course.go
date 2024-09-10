@@ -34,7 +34,7 @@ func NewCourseDao(db database.Database) *CourseDao {
 
 // Count counts the courses
 func (dao *CourseDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	return GenericCount(dao, dbParams, tx)
+	return genericCount(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -57,7 +57,7 @@ func (dao *CourseDao) Create(c *models.Course, tx *database.Tx) error {
 		query, args, _ := squirrel.
 			StatementBuilder.
 			Insert(dao.Table()).
-			SetMap(dao.data(c)).
+			SetMap(toDBMapOrPanic(c)).
 			ToSql()
 
 		// Create the course
@@ -92,7 +92,7 @@ func (dao *CourseDao) Get(id string, dbParams *database.DatabaseParams, tx *data
 		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
-	return GenericGet(dao, courseDbParams, dao.scanRow, tx)
+	return genericGet(dao, courseDbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -111,7 +111,7 @@ func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *database.Tx) (
 		dbParams.Columns = dao.columns()
 	}
 
-	return GenericList(dao, dbParams, dao.scanRow, tx)
+	return genericList(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -127,13 +127,16 @@ func (dao *CourseDao) Update(course *models.Course, tx *database.Tx) error {
 
 	course.RefreshUpdatedAt()
 
+	// Convert to a map so we have the rendered values
+	data := toDBMapOrPanic(course)
+
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Update(dao.Table()).
-		Set("card_path", NilStr(course.CardPath)).
-		Set("available", course.Available).
-		Set("updated_at", FormatTime(course.UpdatedAt)).
-		Where("id = ?", course.ID).
+		Set("card_path", data["card_path"]).
+		Set("available", data["available"]).
+		Set("updated_at", data["updated_at"]).
+		Where("id = ?", data["id"]).
 		ToSql()
 
 	execFn := dao.db.Exec
@@ -149,7 +152,7 @@ func (dao *CourseDao) Update(course *models.Course, tx *database.Tx) error {
 
 // Delete deletes courses based upon the where clause
 func (dao *CourseDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
-	return GenericDelete(dao, dbParams, tx)
+	return genericDelete(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -332,21 +335,6 @@ func (dao *CourseDao) columns() []string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// data generates a map of key/values for a course
-func (dao *CourseDao) data(c *models.Course) map[string]any {
-	return map[string]any{
-		"id":         c.ID,
-		"title":      NilStr(c.Title),
-		"path":       NilStr(c.Path),
-		"card_path":  NilStr(c.CardPath),
-		"available":  c.Available,
-		"created_at": FormatTime(c.CreatedAt),
-		"updated_at": FormatTime(c.UpdatedAt),
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // scanRow scans a course row
 func (dao *CourseDao) scanRow(scannable Scannable) (*models.Course, error) {
 	var c models.Course
@@ -354,11 +342,6 @@ func (dao *CourseDao) scanRow(scannable Scannable) (*models.Course, error) {
 	// Nullable fields
 	var cardPath sql.NullString
 	var scanStatus sql.NullString
-	var createdAt string
-	var updatedAt string
-	var startedAt sql.NullString
-	var completedAt sql.NullString
-	var progressUpdatedAt sql.NullString
 
 	err := scannable.Scan(
 		// Course
@@ -367,16 +350,16 @@ func (dao *CourseDao) scanRow(scannable Scannable) (*models.Course, error) {
 		&c.Path,
 		&cardPath,
 		&c.Available,
-		&createdAt,
-		&updatedAt,
+		&c.CreatedAt,
+		&c.UpdatedAt,
 		// Scan
 		&scanStatus,
 		// Course progress
 		&c.Started,
-		&startedAt,
+		&c.StartedAt,
 		&c.Percent,
-		&completedAt,
-		&progressUpdatedAt,
+		&c.CompletedAt,
+		&c.ProgressUpdatedAt,
 	)
 
 	if err != nil {
@@ -389,26 +372,6 @@ func (dao *CourseDao) scanRow(scannable Scannable) (*models.Course, error) {
 
 	if scanStatus.Valid {
 		c.ScanStatus = scanStatus.String
-	}
-
-	if c.CreatedAt, err = ParseTime(createdAt); err != nil {
-		return nil, err
-	}
-
-	if c.UpdatedAt, err = ParseTime(updatedAt); err != nil {
-		return nil, err
-	}
-
-	if c.StartedAt, err = ParseTimeNull(startedAt); err != nil {
-		return nil, err
-	}
-
-	if c.CompletedAt, err = ParseTimeNull(completedAt); err != nil {
-		return nil, err
-	}
-
-	if c.ProgressUpdatedAt, err = ParseTime(progressUpdatedAt.String); err != nil {
-		return nil, err
 	}
 
 	return &c, nil

@@ -1,6 +1,14 @@
 package daos
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils/types"
+	"github.com/stretchr/testify/require"
+)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func Test_IsValidOrderBy(t *testing.T) {
 	t.Run("with wildcard", func(t *testing.T) {
@@ -84,5 +92,67 @@ func Test_IsValidOrderBy(t *testing.T) {
 				}
 			})
 		}
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_ToDBMapOrPanic(t *testing.T) {
+	t.Run("panic", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Expected to panic.")
+			}
+		}()
+
+		toDBMapOrPanic("test")
+	})
+
+	t.Run("success", func(t *testing.T) {
+		course := &models.Course{
+			BaseModel: models.BaseModel{
+				ID:        "1",
+				CreatedAt: types.NowDateTime(),
+				UpdatedAt: types.NowDateTime(),
+			},
+			Title:     "Test Course",
+			Path:      "test-course",
+			CardPath:  "test-card-path",
+			Available: true,
+		}
+
+		result := toDBMapOrPanic(course)
+
+		require.Equal(t, result["id"], course.ID)
+		require.Equal(t, result["created_at"], course.CreatedAt.String())
+		require.Equal(t, result["updated_at"], course.UpdatedAt.String())
+		require.Equal(t, result["title"], course.Title)
+		require.Equal(t, result["path"], course.Path)
+		require.Equal(t, result["card_path"], course.CardPath)
+		require.Equal(t, result["available"], course.Available)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		course := &models.Course{
+			BaseModel: models.BaseModel{
+				ID:        "",
+				CreatedAt: types.DateTime{},
+				UpdatedAt: types.DateTime{},
+			},
+			Title:     "",
+			Path:      "test-course",
+			CardPath:  "test-card-path",
+			Available: true,
+		}
+
+		result := toDBMapOrPanic(course)
+
+		require.Nil(t, result["id"])
+		require.Nil(t, result["created_at"])
+		require.Nil(t, result["updated_at"])
+		require.Nil(t, result["title"], course.Title)
+		require.Equal(t, result["path"], course.Path)
+		require.Equal(t, result["card_path"], course.CardPath)
+		require.Equal(t, result["available"], course.Available)
 	})
 }

@@ -1,16 +1,17 @@
 package models
 
-import "time"
+import "github.com/geerew/off-course/utils/types"
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Course defines the model for a course  (table: courses)
 type Course struct {
-	BaseModel
-	Title     string
-	Path      string
-	CardPath  string
-	Available bool
+	BaseModel `db:":nested"`
+
+	Title     string `db:"title:required"`
+	Path      string `db:"path:required"`
+	CardPath  string `db:"card_path"`
+	Available bool   `db:"available"`
 
 	// --------------------------------
 	// Not in this table, but added via join
@@ -21,8 +22,8 @@ type Course struct {
 
 	// Course Progress
 	Started           bool
-	StartedAt         time.Time
+	StartedAt         types.DateTime
 	Percent           int
-	CompletedAt       time.Time
-	ProgressUpdatedAt time.Time
+	CompletedAt       types.DateTime
+	ProgressUpdatedAt types.DateTime
 }

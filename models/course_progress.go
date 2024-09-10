@@ -1,16 +1,16 @@
 package models
 
-import "time"
+import "github.com/geerew/off-course/utils/types"
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // CourseProgress defines the model for a course progress (table: courses_progress)
 type CourseProgress struct {
-	BaseModel
+	BaseModel `db:":nested"`
 
-	CourseID    string
-	Started     bool
-	StartedAt   time.Time
-	Percent     int
-	CompletedAt time.Time
+	CourseID    string         `db:"course_id:required"`
+	Started     bool           `db:"started"`
+	StartedAt   types.DateTime `db:"started_at"`
+	Percent     int            `db:"percent"`
+	CompletedAt types.DateTime `db:"completed_at"`
 }

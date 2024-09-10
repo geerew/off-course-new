@@ -31,7 +31,7 @@ func NewTagDao(db database.Database) *TagDao {
 
 // Count counts the tags
 func (dao *TagDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	return GenericCount(dao, dbParams, tx)
+	return genericCount(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -53,7 +53,7 @@ func (dao *TagDao) Create(t *models.Tag, tx *database.Tx) error {
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.Table()).
-		SetMap(dao.data(t)).
+		SetMap(toDBMapOrPanic(t)).
 		ToSql()
 
 	_, err := execFn(query, args...)
@@ -79,7 +79,7 @@ func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams
 		tagDbParams.Where = squirrel.Eq{dao.Table() + ".id": id}
 	}
 
-	tag, err := GenericGet(dao, tagDbParams, dao.scanRow, tx)
+	tag, err := genericGet(dao, tagDbParams, dao.scanRow, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams
 	courseTagDao := NewCourseTagDao(dao.db)
 	if dbParams != nil && slices.Contains(dbParams.IncludeRelations, courseTagDao.Table()) {
 		courseTagDbParams := &database.DatabaseParams{
-			OrderBy: GenericProcessOrderBy(dbParams.OrderBy, courseTagDao.columns(), true),
+			OrderBy: genericProcessOrderBy(dbParams.OrderBy, courseTagDao.columns(), true),
 			Where:   squirrel.Eq{"tag_id": id},
 		}
 
@@ -114,14 +114,14 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*
 
 	origOrderBy := dbParams.OrderBy
 
-	dbParams.OrderBy = GenericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
+	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
 		dbParams.Columns = dao.columns()
 	}
 
-	tags, err := GenericList(dao, dbParams, dao.scanRow, tx)
+	tags, err := genericList(dao, dbParams, dao.scanRow, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*
 		}
 
 		// Reduce the order by clause to only include columns specific to the course_tags table
-		reducedOrderBy := GenericProcessOrderBy(origOrderBy, courseTagDao.columns(), true)
+		reducedOrderBy := genericProcessOrderBy(origOrderBy, courseTagDao.columns(), true)
 
 		dbParams = &database.DatabaseParams{
 			OrderBy: reducedOrderBy,
@@ -174,12 +174,15 @@ func (dao *TagDao) Update(tag *models.Tag, tx *database.Tx) error {
 
 	tag.RefreshUpdatedAt()
 
+	// Convert to a map so we have the rendered values
+	data := toDBMapOrPanic(tag)
+
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Update(dao.Table()).
-		Set("tag", NilStr(tag.Tag)).
-		Set("updated_at", FormatTime(tag.UpdatedAt)).
-		Where("id = ?", tag.ID).
+		Set("tag", data["tag"]).
+		Set("updated_at", data["updated_at"]).
+		Where("id = ?", data["id"]).
 		ToSql()
 
 	execFn := dao.db.Exec
@@ -195,7 +198,7 @@ func (dao *TagDao) Update(tag *models.Tag, tx *database.Tx) error {
 
 // Delete deletes tags based upon the where clause
 func (dao *TagDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
-	return GenericDelete(dao, dbParams, tx)
+	return genericDelete(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -235,42 +238,19 @@ func (dao *TagDao) columns() []string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// data generates a map of key/values for a tag
-func (dao *TagDao) data(t *models.Tag) map[string]any {
-	return map[string]any{
-		"id":         t.ID,
-		"tag":        NilStr(t.Tag),
-		"created_at": FormatTime(t.CreatedAt),
-		"updated_at": FormatTime(t.UpdatedAt),
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // scanRow scans an tag row
 func (dao *TagDao) scanRow(scannable Scannable) (*models.Tag, error) {
 	var t models.Tag
 
-	var createdAt string
-	var updatedAt string
-
 	err := scannable.Scan(
 		&t.ID,
 		&t.Tag,
-		&createdAt,
-		&updatedAt,
+		&t.CreatedAt,
+		&t.UpdatedAt,
 		&t.CourseCount,
 	)
 
 	if err != nil {
-		return nil, err
-	}
-
-	if t.CreatedAt, err = ParseTime(createdAt); err != nil {
-		return nil, err
-	}
-
-	if t.UpdatedAt, err = ParseTime(updatedAt); err != nil {
 		return nil, err
 	}
 

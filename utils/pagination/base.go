@@ -121,7 +121,6 @@ func (p *Pagination) Apply(queryBuilder sq.SelectBuilder) sq.SelectBuilder {
 // BuildResult builds a result object from the pagination values, which is suitable for a HTTP
 // response
 func (p *Pagination) BuildResult(m any) (*PaginationResult, error) {
-
 	// Slice to hold the marshaled items
 	items := []json.RawMessage{}
 

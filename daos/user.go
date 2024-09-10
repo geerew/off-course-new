@@ -29,7 +29,7 @@ func NewUserDao(db database.Database) *UserDao {
 
 // Count counts the users
 func (dao *UserDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	return GenericCount(dao, dbParams, tx)
+	return genericCount(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -46,7 +46,7 @@ func (dao *UserDao) Create(u *models.User, tx *database.Tx) error {
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.Table()).
-		SetMap(dao.data(u)).
+		SetMap((toDBMapOrPanic(u))).
 		ToSql()
 
 	execFn := dao.db.Exec
@@ -68,7 +68,7 @@ func (dao *UserDao) Get(username string, tx *database.Tx) (*models.User, error) 
 		Where:   squirrel.Eq{dao.Table() + ".username": username},
 	}
 
-	return GenericGet(dao, dbParams, dao.scanRow, tx)
+	return genericGet(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -80,67 +80,41 @@ func (dao *UserDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]
 	}
 
 	// Process the order by clauses
-	dbParams.OrderBy = GenericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
+	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
 		dbParams.Columns = dao.columns()
 	}
 
-	return GenericList(dao, dbParams, dao.scanRow, tx)
+	return genericList(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Delete deletes users based on the where clause
 func (dao *UserDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
-	return GenericDelete(dao, dbParams, tx)
+	return genericDelete(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// data generates a map of key/values for a course
-func (dao *UserDao) data(u *models.User) map[string]any {
-	return map[string]any{
-		"id":            u.ID,
-		"username":      NilStr(u.Username),
-		"password_hash": NilStr(u.PasswordHash),
-		"role":          NilStr(u.Role.String()),
-		"created_at":    FormatTime(u.CreatedAt),
-		"updated_at":    FormatTime(u.UpdatedAt),
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // scanRow scans a course row
 func (dao *UserDao) scanRow(scannable Scannable) (*models.User, error) {
 	var u models.User
-
-	// Nullable fields
-	var createdAt string
-	var updatedAt string
 
 	err := scannable.Scan(
 		&u.ID,
 		&u.Username,
 		&u.PasswordHash,
 		&u.Role,
-		&createdAt,
-		&updatedAt,
+		&u.CreatedAt,
+		&u.UpdatedAt,
 	)
 
 	if err != nil {
-		return nil, err
-	}
-
-	if u.CreatedAt, err = ParseTime(createdAt); err != nil {
-		return nil, err
-	}
-
-	if u.UpdatedAt, err = ParseTime(updatedAt); err != nil {
 		return nil, err
 	}
 

@@ -13,7 +13,7 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type Log struct {
-	Time    time.Time
+	Time    types.DateTime
 	Message string
 	Level   slog.Level
 	Data    types.JsonMap

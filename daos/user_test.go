@@ -118,8 +118,8 @@ func TestUser_Create(t *testing.T) {
 		u := &models.User{
 			BaseModel: models.BaseModel{
 				ID:        "1234",
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
+				CreatedAt: types.NowDateTime(),
+				UpdatedAt: types.NowDateTime(),
 			},
 			Username:     "test",
 			PasswordHash: "test",
@@ -144,8 +144,8 @@ func TestUser_Create(t *testing.T) {
 		u := &models.User{
 			BaseModel: models.BaseModel{
 				ID:        "1234",
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
+				CreatedAt: types.NowDateTime(),
+				UpdatedAt: types.NowDateTime(),
 			},
 			Username:     "test",
 			PasswordHash: "test",

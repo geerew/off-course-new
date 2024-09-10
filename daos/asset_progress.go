@@ -1,11 +1,10 @@
 package daos
 
 import (
-	"time"
-
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -44,7 +43,7 @@ func (dao *AssetProgressDao) Create(ap *models.AssetProgress, tx *database.Tx) e
 		query, args, _ := squirrel.
 			StatementBuilder.
 			Insert(dao.Table()).
-			SetMap(dao.data(ap)).
+			SetMap(toDBMapOrPanic(ap)).
 			ToSql()
 
 		_, err := tx.Exec(query, args...)
@@ -76,7 +75,7 @@ func (dao *AssetProgressDao) Get(assetId string, tx *database.Tx) (*models.Asset
 		Where:   squirrel.Eq{dao.Table() + ".asset_id": assetId},
 	}
 
-	return GenericGet(dao, dbParams, dao.scanRow, tx)
+	return genericGet(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -133,20 +132,20 @@ func (dao *AssetProgressDao) Update(ap *models.AssetProgress, tx *database.Tx) e
 			if !asset.CompletedAt.IsZero() {
 				ap.CompletedAt = asset.CompletedAt
 			} else {
-				ap.CompletedAt = time.Now()
+				ap.CompletedAt = types.NowDateTime()
 			}
 		} else {
-			ap.CompletedAt = time.Time{}
+			ap.CompletedAt = types.DateTime{}
 		}
 
 		// Update (or create if it doesn't exist)
 		query, args, _ := squirrel.
 			StatementBuilder.
 			Insert(dao.Table()).
-			SetMap(dao.data(ap)).
+			SetMap(toDBMapOrPanic(ap)).
 			Suffix(
 				"ON CONFLICT (asset_id) DO UPDATE SET video_pos = ?, completed = ?, completed_at = ?, updated_at = ?",
-				ap.VideoPos, ap.Completed, FormatTime(ap.CompletedAt), FormatTime(ap.UpdatedAt),
+				ap.VideoPos, ap.Completed, ap.CompletedAt, ap.UpdatedAt,
 			).
 			ToSql()
 
@@ -173,29 +172,9 @@ func (dao *AssetProgressDao) Update(ap *models.AssetProgress, tx *database.Tx) e
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// data generates a map of key/values for thane asset progress
-func (dao *AssetProgressDao) data(ap *models.AssetProgress) map[string]any {
-	return map[string]any{
-		"id":           ap.ID,
-		"asset_id":     NilStr(ap.AssetID),
-		"course_id":    NilStr(ap.CourseID),
-		"video_pos":    ap.VideoPos,
-		"completed":    ap.Completed,
-		"completed_at": FormatTime(ap.CompletedAt),
-		"created_at":   FormatTime(ap.CreatedAt),
-		"updated_at":   FormatTime(ap.UpdatedAt),
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // scanRow scans an assets progress row
 func (dao *AssetProgressDao) scanRow(scannable Scannable) (*models.AssetProgress, error) {
 	var ap models.AssetProgress
-
-	var createdAt string
-	var updatedAt string
-	var completedAt string
 
 	err := scannable.Scan(
 		&ap.ID,
@@ -203,24 +182,12 @@ func (dao *AssetProgressDao) scanRow(scannable Scannable) (*models.AssetProgress
 		&ap.CourseID,
 		&ap.VideoPos,
 		&ap.Completed,
-		&completedAt,
-		&createdAt,
-		&updatedAt,
+		&ap.CompletedAt,
+		&ap.CreatedAt,
+		&ap.UpdatedAt,
 	)
 
 	if err != nil {
-		return nil, err
-	}
-
-	if ap.CompletedAt, err = ParseTime(completedAt); err != nil {
-		return nil, err
-	}
-
-	if ap.CreatedAt, err = ParseTime(createdAt); err != nil {
-		return nil, err
-	}
-
-	if ap.UpdatedAt, err = ParseTime(updatedAt); err != nil {
 		return nil, err
 	}
 

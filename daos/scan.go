@@ -49,7 +49,7 @@ func (dao *ScanDao) Create(s *models.Scan, tx *database.Tx) error {
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.Table()).
-		SetMap(dao.data(s)).
+		SetMap(toDBMapOrPanic(s)).
 		ToSql()
 
 	execFn := dao.db.Exec
@@ -71,7 +71,7 @@ func (dao *ScanDao) Get(courseId string, tx *database.Tx) (*models.Scan, error) 
 		Where:   squirrel.Eq{dao.Table() + ".course_id": courseId},
 	}
 
-	return GenericGet(dao, dbParams, dao.scanRow, tx)
+	return genericGet(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -84,12 +84,15 @@ func (dao *ScanDao) Update(scan *models.Scan, tx *database.Tx) error {
 
 	scan.RefreshUpdatedAt()
 
+	// Convert to a map so we have the rendered values
+	data := toDBMapOrPanic(scan)
+
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Update(dao.Table()).
-		Set("status", NilStr(scan.Status.String())).
-		Set("updated_at", FormatTime(scan.UpdatedAt)).
-		Where("id = ?", scan.ID).
+		Set("status", data["status"]).
+		Set("updated_at", data["updated_at"]).
+		Where("id = ?", data["id"]).
 		ToSql()
 
 	execFn := dao.db.Exec
@@ -105,7 +108,7 @@ func (dao *ScanDao) Update(scan *models.Scan, tx *database.Tx) error {
 
 // Delete deletes scans based upon the where clause
 func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
-	return GenericDelete(dao, dbParams, tx)
+	return genericDelete(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -118,7 +121,7 @@ func (dao *ScanDao) Next(tx *database.Tx) (*models.Scan, error) {
 		OrderBy: []string{"created_at ASC"},
 	}
 
-	scan, err := GenericGet(dao, dbParams, dao.scanRow, tx)
+	scan, err := genericGet(dao, dbParams, dao.scanRow, tx)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -170,44 +173,20 @@ func (dao *ScanDao) columns() []string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// data generates a map of key/values for a scan
-func (dao *ScanDao) data(s *models.Scan) map[string]any {
-	return map[string]any{
-		"id":         s.ID,
-		"course_id":  NilStr(s.CourseID),
-		"status":     NilStr(s.Status.String()),
-		"created_at": FormatTime(s.CreatedAt),
-		"updated_at": FormatTime(s.UpdatedAt),
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // scanRow scans a scan row
 func (dao *ScanDao) scanRow(scannable Scannable) (*models.Scan, error) {
 	var s models.Scan
-
-	var createdAt string
-	var updatedAt string
 
 	err := scannable.Scan(
 		&s.ID,
 		&s.CourseID,
 		&s.Status,
-		&createdAt,
-		&updatedAt,
+		&s.CreatedAt,
+		&s.UpdatedAt,
 		&s.CoursePath,
 	)
 
 	if err != nil {
-		return nil, err
-	}
-
-	if s.CreatedAt, err = ParseTime(createdAt); err != nil {
-		return nil, err
-	}
-
-	if s.UpdatedAt, err = ParseTime(updatedAt); err != nil {
 		return nil, err
 	}
 

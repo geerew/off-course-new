@@ -3,7 +3,6 @@ package daos
 import (
 	"database/sql"
 	"slices"
-	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
@@ -33,7 +32,7 @@ func NewAssetDao(db database.Database) *AssetDao {
 
 // Count counts the assets
 func (dao *AssetDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	return GenericCount(dao, dbParams, tx)
+	return genericCount(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -54,7 +53,7 @@ func (dao *AssetDao) Create(a *models.Asset, tx *database.Tx) error {
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.Table()).
-		SetMap(dao.data(a)).
+		SetMap(toDBMapOrPanic(a)).
 		ToSql()
 
 	execFn := dao.db.Exec
@@ -76,7 +75,7 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *datab
 		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
-	asset, err := GenericGet(dao, assetDbParams, dao.scanRow, tx)
+	asset, err := genericGet(dao, assetDbParams, dao.scanRow, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +85,7 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *datab
 	if dbParams != nil && slices.Contains(dbParams.IncludeRelations, attachmentDao.Table()) {
 		// Set the DB params
 		attachmentDbParams := &database.DatabaseParams{
-			OrderBy: GenericProcessOrderBy(dbParams.OrderBy, attachmentDao.columns(), true),
+			OrderBy: genericProcessOrderBy(dbParams.OrderBy, attachmentDao.columns(), true),
 			Where:   squirrel.Eq{"asset_id": asset.ID},
 		}
 
@@ -110,14 +109,14 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([
 	}
 
 	origOrderBy := dbParams.OrderBy
-	dbParams.OrderBy = GenericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
+	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
 		dbParams.Columns = dao.columns()
 	}
 
-	assets, err := GenericList(dao, dbParams, dao.scanRow, tx)
+	assets, err := genericList(dao, dbParams, dao.scanRow, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +130,7 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([
 		}
 
 		// Reduce the order by clause to only include columns specific to the attachments table
-		reducedOrderBy := GenericProcessOrderBy(origOrderBy, attachmentDao.columns(), true)
+		reducedOrderBy := genericProcessOrderBy(origOrderBy, attachmentDao.columns(), true)
 
 		dbParams = &database.DatabaseParams{
 			OrderBy: reducedOrderBy,
@@ -175,16 +174,19 @@ func (dao *AssetDao) Update(asset *models.Asset, tx *database.Tx) error {
 
 	asset.RefreshUpdatedAt()
 
+	// Convert to a map so we have the rendered values
+	data := toDBMapOrPanic(asset)
+
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Update(dao.Table()).
-		Set("title", NilStr(asset.Title)).
-		Set("prefix", asset.Prefix).
-		Set("chapter", NilStr(asset.Chapter)).
-		Set("type", NilStr(asset.Type.String())).
-		Set("path", NilStr(asset.Path)).
-		Set("updated_at", FormatTime(asset.UpdatedAt)).
-		Where("id = ?", asset.ID).
+		Set("title", data["title"]).
+		Set("prefix", data["prefix"]).
+		Set("chapter", data["chapter"]).
+		Set("type", data["type"]).
+		Set("path", data["path"]).
+		Set("updated_at", data["updated_at"]).
+		Where("id = ?", data["id"]).
 		ToSql()
 
 	execFn := dao.db.Exec
@@ -200,7 +202,7 @@ func (dao *AssetDao) Update(asset *models.Asset, tx *database.Tx) error {
 
 // Delete deletes assets based upon the where clause
 func (dao *AssetDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
-	return GenericDelete(dao, dbParams, tx)
+	return genericDelete(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -246,24 +248,6 @@ func (dao *AssetDao) columns() []string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// data generates a map of key/values for an asset
-func (dao *AssetDao) data(a *models.Asset) map[string]any {
-	return map[string]any{
-		"id":         a.ID,
-		"course_id":  NilStr(a.CourseID),
-		"title":      NilStr(a.Title),
-		"prefix":     a.Prefix,
-		"chapter":    NilStr(a.Chapter),
-		"type":       NilStr(a.Type.String()),
-		"path":       NilStr(a.Path),
-		"hash":       NilStr(a.Hash),
-		"created_at": FormatTime(a.CreatedAt),
-		"updated_at": FormatTime(a.UpdatedAt),
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // scanRow scans an asset row
 func (dao *AssetDao) scanRow(scannable Scannable) (*models.Asset, error) {
 	var a models.Asset
@@ -272,9 +256,6 @@ func (dao *AssetDao) scanRow(scannable Scannable) (*models.Asset, error) {
 	var chapter sql.NullString
 	var videoPos sql.NullInt16
 	var completed sql.NullBool
-	var createdAt string
-	var updatedAt string
-	var completedAt sql.NullString
 
 	err := scannable.Scan(
 		&a.ID,
@@ -285,13 +266,13 @@ func (dao *AssetDao) scanRow(scannable Scannable) (*models.Asset, error) {
 		&a.Type,
 		&a.Path,
 		&a.Hash,
-		&createdAt,
-		&updatedAt,
+		&a.CreatedAt,
+		&a.UpdatedAt,
 
 		// Asset progress
 		&videoPos,
 		&completed,
-		&completedAt,
+		&a.CompletedAt,
 	)
 
 	if err != nil {
@@ -300,22 +281,6 @@ func (dao *AssetDao) scanRow(scannable Scannable) (*models.Asset, error) {
 
 	if chapter.Valid {
 		a.Chapter = chapter.String
-	}
-
-	if a.CreatedAt, err = ParseTime(createdAt); err != nil {
-		return nil, err
-	}
-
-	if a.UpdatedAt, err = ParseTime(updatedAt); err != nil {
-		return nil, err
-	}
-
-	if completedAt.Valid {
-		if a.CompletedAt, err = ParseTime(completedAt.String); err != nil {
-			return nil, err
-		}
-	} else {
-		a.CompletedAt = time.Time{}
 	}
 
 	a.VideoPos = int(videoPos.Int16)

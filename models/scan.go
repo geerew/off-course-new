@@ -10,10 +10,10 @@ import (
 
 // Scan defines the model for a scan  (table: scans)
 type Scan struct {
-	BaseModel
+	BaseModel `db:":nested"`
 
-	CourseID string
-	Status   types.ScanStatus
+	CourseID string           `db:"course_id:required"`
+	Status   types.ScanStatus `db:"status:required"`
 
 	// --------------------------------
 	// Not in this table, but added via join

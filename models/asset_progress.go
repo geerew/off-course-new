@@ -1,16 +1,16 @@
 package models
 
-import "time"
+import "github.com/geerew/off-course/utils/types"
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // AssetProgress defines the model for a course progress (table: assets_progress)
 type AssetProgress struct {
-	BaseModel
+	BaseModel `db:":nested"`
 
-	AssetID     string
-	CourseID    string
-	VideoPos    int
-	Completed   bool
-	CompletedAt time.Time
+	AssetID     string         `db:"asset_id:required"`
+	CourseID    string         `db:"course_id:required"`
+	VideoPos    int            `db:"video_pos"`
+	Completed   bool           `db:"completed"`
+	CompletedAt types.DateTime `db:"completed_at"`
 }

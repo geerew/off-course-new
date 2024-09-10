@@ -190,8 +190,13 @@ func (h *BatchHandler) Handle(ctx context.Context, r slog.Record) error {
 		return true
 	})
 
+	t, err := types.ParseDateTime(r.Time)
+	if err != nil {
+		return err
+	}
+
 	log := &Log{
-		Time:    r.Time,
+		Time:    t,
 		Level:   r.Level,
 		Message: r.Message,
 		Data:    types.JsonMap(data),

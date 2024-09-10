@@ -29,7 +29,7 @@ func NewAttachmentDao(db database.Database) *AttachmentDao {
 
 // Count counts the attachments
 func (dao *AttachmentDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	return GenericCount(dao, dbParams, tx)
+	return genericCount(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -46,7 +46,7 @@ func (dao *AttachmentDao) Create(a *models.Attachment, tx *database.Tx) error {
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.Table()).
-		SetMap(dao.data(a)).
+		SetMap(toDBMapOrPanic(a)).
 		ToSql()
 
 	execFn := dao.db.Exec
@@ -68,7 +68,7 @@ func (dao *AttachmentDao) Get(id string, tx *database.Tx) (*models.Attachment, e
 		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
-	return GenericGet(dao, dbParams, dao.scanRow, tx)
+	return genericGet(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -80,48 +80,30 @@ func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *database.T
 	}
 
 	// Process the order by clauses
-	dbParams.OrderBy = GenericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
+	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
 		dbParams.Columns = dao.columns()
 	}
 
-	return GenericList(dao, dbParams, dao.scanRow, tx)
+	return genericList(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Delete deletes attachments based upon the where clause
 func (dao *AttachmentDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
-	return GenericDelete(dao, dbParams, tx)
+	return genericDelete(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Internal
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// data generates a map of key/values for an attachment
-func (dao *AttachmentDao) data(a *models.Attachment) map[string]any {
-	return map[string]any{
-		"id":         a.ID,
-		"course_id":  NilStr(a.CourseID),
-		"asset_id":   NilStr(a.AssetID),
-		"title":      NilStr(a.Title),
-		"path":       NilStr(a.Path),
-		"created_at": FormatTime(a.CreatedAt),
-		"updated_at": FormatTime(a.UpdatedAt),
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // scanRow scans an attachment row
 func (dao *AttachmentDao) scanRow(scannable Scannable) (*models.Attachment, error) {
 	var a models.Attachment
-
-	var createdAt string
-	var updatedAt string
 
 	err := scannable.Scan(
 		&a.ID,
@@ -129,19 +111,11 @@ func (dao *AttachmentDao) scanRow(scannable Scannable) (*models.Attachment, erro
 		&a.AssetID,
 		&a.Title,
 		&a.Path,
-		&createdAt,
-		&updatedAt,
+		&a.CreatedAt,
+		&a.UpdatedAt,
 	)
 
 	if err != nil {
-		return nil, err
-	}
-
-	if a.CreatedAt, err = ParseTime(createdAt); err != nil {
-		return nil, err
-	}
-
-	if a.UpdatedAt, err = ParseTime(updatedAt); err != nil {
 		return nil, err
 	}
 

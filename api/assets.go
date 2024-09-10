@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
@@ -34,20 +33,20 @@ type assets struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type assetResponse struct {
-	ID        string      `json:"id"`
-	CourseID  string      `json:"courseId"`
-	Title     string      `json:"title"`
-	Prefix    int         `json:"prefix"`
-	Chapter   string      `json:"chapter"`
-	Path      string      `json:"path"`
-	Type      types.Asset `json:"assetType"`
-	CreatedAt time.Time   `json:"createdAt"`
-	UpdatedAt time.Time   `json:"updatedAt"`
+	ID        string         `json:"id"`
+	CourseID  string         `json:"courseId"`
+	Title     string         `json:"title"`
+	Prefix    int            `json:"prefix"`
+	Chapter   string         `json:"chapter"`
+	Path      string         `json:"path"`
+	Type      types.Asset    `json:"assetType"`
+	CreatedAt types.DateTime `json:"createdAt"`
+	UpdatedAt types.DateTime `json:"updatedAt"`
 
 	// Progress
-	VideoPos    int       `json:"videoPos"`
-	Completed   bool      `json:"completed"`
-	CompletedAt time.Time `json:"completedAt"`
+	VideoPos    int            `json:"videoPos"`
+	Completed   bool           `json:"completed"`
+	CompletedAt types.DateTime `json:"completedAt"`
 
 	// Attachments
 	Attachments []*attachmentResponse `json:"attachments,omitempty"`

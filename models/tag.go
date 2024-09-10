@@ -4,9 +4,9 @@ package models
 
 // Tag defines the model for a tag (table: tags)
 type Tag struct {
-	BaseModel
+	BaseModel `db:":nested"`
 
-	Tag string
+	Tag string `db:"tag:required"`
 
 	// --------------------------------
 	// Not in this table, but added via a join

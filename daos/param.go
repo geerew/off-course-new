@@ -34,7 +34,7 @@ func (dao *ParamDao) Get(key string, tx *database.Tx) (*models.Param, error) {
 		Where:   squirrel.Eq{dao.Table() + ".key": key},
 	}
 
-	return GenericGet(dao, dbParams, dao.scanRow, tx)
+	return genericGet(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -47,12 +47,15 @@ func (dao *ParamDao) Update(p *models.Param, tx *database.Tx) error {
 
 	p.RefreshUpdatedAt()
 
+	// Convert to a map so we have the rendered values
+	data := toDBMapOrPanic(p)
+
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Update(dao.Table()).
-		Set("value", p.Value).
-		Set("updated_at", FormatTime(p.UpdatedAt)).
-		Where("id = ?", p.ID).
+		Set("value", data["value"]).
+		Set("updated_at", data["updated_at"]).
+		Where("id = ?", data["id"]).
 		ToSql()
 
 	execFn := dao.db.Exec
@@ -72,26 +75,15 @@ func (dao *ParamDao) Update(p *models.Param, tx *database.Tx) error {
 func (dao *ParamDao) scanRow(scannable Scannable) (*models.Param, error) {
 	var p models.Param
 
-	var createdAt string
-	var updatedAt string
-
 	err := scannable.Scan(
 		&p.ID,
 		&p.Key,
 		&p.Value,
-		&createdAt,
-		&updatedAt,
+		&p.CreatedAt,
+		&p.UpdatedAt,
 	)
 
 	if err != nil {
-		return nil, err
-	}
-
-	if p.CreatedAt, err = ParseTime(createdAt); err != nil {
-		return nil, err
-	}
-
-	if p.UpdatedAt, err = ParseTime(updatedAt); err != nil {
 		return nil, err
 	}
 

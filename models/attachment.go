@@ -4,10 +4,10 @@ package models
 
 // Attachment defines the model for an attachment (table: attachments)
 type Attachment struct {
-	BaseModel
+	BaseModel `db:":nested"`
 
-	CourseID string
-	AssetID  string
-	Title    string
-	Path     string
+	CourseID string `db:"course_id:required"`
+	AssetID  string `db:"asset_id:required"`
+	Title    string `db:"title:required"`
+	Path     string `db:"path:required"`
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
@@ -379,7 +378,7 @@ func TestAsset_List(t *testing.T) {
 			AssetID:     testData[1].Assets[1].ID,
 			CourseID:    testData[1].ID,
 			Completed:   true,
-			CompletedAt: time.Now(),
+			CompletedAt: types.NowDateTime(),
 		}
 
 		require.Nil(t, apDao.Update(ap2, nil))

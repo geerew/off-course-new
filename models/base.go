@@ -1,18 +1,17 @@
 package models
 
 import (
-	"time"
-
 	"github.com/geerew/off-course/utils/security"
+	"github.com/geerew/off-course/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // BaseModel defines the base model for all models
 type BaseModel struct {
-	ID        string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID        string         `db:"id:required"`
+	CreatedAt types.DateTime `db:"created_at:required"`
+	UpdatedAt types.DateTime `db:"updated_at:required"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -33,12 +32,19 @@ func (b *BaseModel) SetId(id string) {
 
 // RefreshCreatedAt updates the Created At field to the current date/time
 func (b *BaseModel) RefreshCreatedAt() {
-	b.CreatedAt = time.Now()
+	b.CreatedAt = types.NowDateTime()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // RefreshUpdatedAt updates the Updated At field to the current date/time
 func (b *BaseModel) RefreshUpdatedAt() {
-	b.UpdatedAt = time.Now()
+	b.UpdatedAt = types.NowDateTime()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Scannable is an interface for a database row that can be scanned into a struct
+type Scannable interface {
+	Scan(dest ...interface{}) error
 }

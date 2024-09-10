@@ -4,13 +4,13 @@ import (
 	"database/sql"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
+	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/spf13/afero"
@@ -27,13 +27,13 @@ type attachments struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type attachmentResponse struct {
-	ID        string    `json:"id"`
-	AssetId   string    `json:"assetId"`
-	CourseID  string    `json:"courseId"`
-	Title     string    `json:"title"`
-	Path      string    `json:"path"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID        string         `json:"id"`
+	AssetId   string         `json:"assetId"`
+	CourseID  string         `json:"courseId"`
+	Title     string         `json:"title"`
+	Path      string         `json:"path"`
+	CreatedAt types.DateTime `json:"createdAt"`
+	UpdatedAt types.DateTime `json:"updatedAt"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -29,7 +29,7 @@ func NewCourseTagDao(db database.Database) *CourseTagDao {
 
 // Count the course tags
 func (dao *CourseTagDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (int, error) {
-	return GenericCount(dao, dbParams, tx)
+	return genericCount(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -80,7 +80,7 @@ func (dao *CourseTagDao) Create(ct *models.CourseTag, tx *database.Tx) error {
 		query, args, _ := squirrel.
 			StatementBuilder.
 			Insert(dao.Table()).
-			SetMap(dao.data(ct)).
+			SetMap(toDBMapOrPanic(ct)).
 			ToSql()
 
 		_, err = tx.Exec(query, args...)
@@ -106,14 +106,14 @@ func (dao *CourseTagDao) List(dbParams *database.DatabaseParams, tx *database.Tx
 	}
 
 	// Process the order by clauses
-	dbParams.OrderBy = GenericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
+	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
 		dbParams.Columns = dao.columns()
 	}
 
-	return GenericList(dao, dbParams, dao.scanRow, tx)
+	return genericList(dao, dbParams, dao.scanRow, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -128,14 +128,14 @@ func (dao *CourseTagDao) ListCourseIdsByTags(tags []string, dbParams *database.D
 		dbParams = &database.DatabaseParams{}
 	}
 
-	dbParams.OrderBy = GenericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
+	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
 	dbParams.Columns = []string{dao.Table() + ".course_id"}
 	dbParams.Where = squirrel.Eq{NewTagDao(dao.db).Table() + ".tag": tags}
 	dbParams.GroupBys = []string{dao.Table() + ".course_id"}
 	dbParams.Having = squirrel.Expr("COUNT(DISTINCT "+NewTagDao(dao.db).Table()+".tag) = ?", len(tags))
 	dbParams.Pagination = nil
 
-	rows, err := GenericListWithoutScan(dao, dbParams, tx)
+	rows, err := genericListWithoutScan(dao, dbParams, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (dao *CourseTagDao) ListCourseIdsByTags(tags []string, dbParams *database.D
 
 // Delete deletes course tags based upon the where clause
 func (dao *CourseTagDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) error {
-	return GenericDelete(dao, dbParams, tx)
+	return genericDelete(dao, dbParams, tx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -213,45 +213,21 @@ func (dao *CourseTagDao) columns() []string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// data generates a map of key/values for a course-tag
-func (dao *CourseTagDao) data(ct *models.CourseTag) map[string]any {
-	return map[string]any{
-		"id":         ct.ID,
-		"tag_id":     NilStr(ct.TagId),
-		"course_id":  NilStr(ct.CourseId),
-		"created_at": FormatTime(ct.CreatedAt),
-		"updated_at": FormatTime(ct.UpdatedAt),
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // scanRow scans a course-tag row
 func (dao *CourseTagDao) scanRow(scannable Scannable) (*models.CourseTag, error) {
 	var ct models.CourseTag
-
-	var createdAt string
-	var updatedAt string
 
 	err := scannable.Scan(
 		&ct.ID,
 		&ct.TagId,
 		&ct.CourseId,
-		&createdAt,
-		&updatedAt,
+		&ct.CreatedAt,
+		&ct.UpdatedAt,
 		&ct.Course,
 		&ct.Tag,
 	)
 
 	if err != nil {
-		return nil, err
-	}
-
-	if ct.CreatedAt, err = ParseTime(createdAt); err != nil {
-		return nil, err
-	}
-
-	if ct.UpdatedAt, err = ParseTime(updatedAt); err != nil {
 		return nil, err
 	}
 
