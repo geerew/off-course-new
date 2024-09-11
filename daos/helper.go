@@ -288,10 +288,10 @@ func genericDelete(dao daoer, dbParams *database.DatabaseParams, tx *database.Tx
 // and the value is the value
 //
 // Only fields with a `db` tag will be included in the map
-func modelToMapOrPanic(input any) map[string]any {
+func modelToMapOrPanic(model any) map[string]any {
 	result := make(map[string]any)
 
-	v, t := utils.ReflectValueAndType(input)
+	v, t := utils.ReflectValueAndType(model)
 
 	if v.Kind() != reflect.Struct {
 		panic(fmt.Errorf("input is not a struct: %v", v.Kind()))
@@ -379,18 +379,19 @@ func processDbTags(value any, tag string) any {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// tableColumnsOrPanic looks up the `db` and `db_join` tags of a struct and builds 2 slices
+// tableColumnsOrPanic takes a model and looks up the `db` and `db_join` tags to build a list of
+// valid table.column names. It will return 2 slices:
 //
 // Slice 1 will contain the table.column names with an optional alias. This can be used
 // when building a select statement to ensure the correct table.column is selected.
 //
 // Slice 2 will contain the column names or alias names if applicable. This can be used when
 // reducing the orderBy clause to only include valid columns
-func tableColumnsOrPanic(input any, table string) ([]string, []string) {
+func tableColumnsOrPanic(model any, table string) ([]string, []string) {
 	var selectColumns []string
 	var orderByColumns []string
 
-	v, t := utils.ReflectValueAndType(input)
+	v, t := utils.ReflectValueAndType(model)
 
 	if v.Kind() != reflect.Struct {
 		panic(fmt.Errorf("input is not a struct: %v", v.Kind()))
