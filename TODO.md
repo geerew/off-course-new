@@ -17,6 +17,7 @@
 
 ### General
 
+- [ENHANCEMENT] Add completed tick to courses
 - [ENHANCEMENT] Theme (https://ui.jln.dev)
 - [ENHANCEMENT] Update query param to all pages like settings -> courses/tags/logs etc as the uses filters
 - [ENHANCEMENT] Add search (https://discord.com/channels/1116682155809067049/1117779396992979024/1163925360228962385)
@@ -113,12 +114,11 @@
 
 ### Tags
 
-- [ENHANCEMENT] Currently uppercase and lowercase tags are different and so uppercase are ordered first. Make them case insensitive
 - [ENHANCEMENT] Analyze and optimize the DB
 
-### Assets and Attachments
+### Course Scan
 
-- 
+- [BUG] After scanning a course, run a course refresh incase new assets were added, removed 
 
 ### Course Scanner
 
