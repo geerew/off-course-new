@@ -47,9 +47,11 @@
 	// Set by the player
 	let duration = -1;
 
-	// When loading the component store the local storage volume in a variable. We do this because vidstack tries to set it
-	// to 1 initially, triggering a volume change event, which result in the local storage volume being set to 1
+	// When loading the component store the local storage values. We do this because vidstack tries to set
+	// them to defaults like volume 1 and muted false. So until the bug is fixed, we force override
+	let storagePlaybackRate = $preferences.playbackRate ?? 1;
 	let storageVolume = $preferences.volume ?? 1;
+	let storageMuted = $preferences.muted ?? false;
 
 	// Holds the current timeout for hiding the controls (when the pointer is coarse)
 	let courseControlsTimeout: number = -1;
@@ -66,6 +68,7 @@
 		completeDispatched = false;
 
 		if (!player) return;
+
 		if (Math.floor(startTime) == Math.floor(duration)) {
 			player.currentTime = 0;
 		} else {
@@ -84,6 +87,13 @@
 		} else {
 			player.currentTime = startTime ?? 0;
 		}
+
+		// This is a temporary fix until vidstack respects setting these in the <media-player>
+		setTimeout(() => {
+			player.volume = storageVolume;
+			player.muted = storageMuted;
+			player.playbackRate = storagePlaybackRate;
+		}, 0);
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -140,13 +150,13 @@
 	{title}
 	playsInline
 	autoPlay={$preferences.autoplay}
-	playbackRate={$preferences.playbackRate}
 	src={{
 		src: GetBackendUrl(ASSET_API) + '/' + src + '/serve',
 		type: 'video/mp4'
 	}}
+	playbackRate={storagePlaybackRate}
 	volume={storageVolume}
-	muted={$preferences.muted}
+	muted={storageMuted}
 	on:source-change={srcChange}
 	on:can-play={canPlay}
 	on:duration-change={durationChange}
@@ -160,7 +170,8 @@
 		if (!player) return;
 
 		// If the pointer is coarse, when the controls show, set a timer to hid them again
-		// after 2.5 seconds
+		// after 2.5 seconds. The timeout will be cancelled when the video settings menu
+		// is open and restarted when closed
 		const pointerValue = player.getAttribute('data-pointer');
 		if (e.detail && pointerValue === 'coarse') {
 			courseControlsTimeout = setTimeout(() => {
