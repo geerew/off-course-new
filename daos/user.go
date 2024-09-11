@@ -63,8 +63,10 @@ func (dao *UserDao) Create(u *models.User, tx *database.Tx) error {
 
 // Get gets user with the given username
 func (dao *UserDao) Get(username string, tx *database.Tx) (*models.User, error) {
+	selectColumns, _ := tableColumnsOrPanic(models.User{}, dao.Table())
+
 	dbParams := &database.DatabaseParams{
-		Columns: dao.columns(),
+		Columns: selectColumns,
 		Where:   squirrel.Eq{dao.Table() + ".username": username},
 	}
 
@@ -79,13 +81,12 @@ func (dao *UserDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]
 		dbParams = &database.DatabaseParams{}
 	}
 
-	// Process the order by clauses
-	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
+	selectColumns, orderByColumns := tableColumnsOrPanic(models.User{}, dao.Table())
 
-	// Default the columns if not specified
-	if len(dbParams.Columns) == 0 {
-		dbParams.Columns = dao.columns()
-	}
+	dbParams.Columns = selectColumns
+
+	// Remove invalid orderBy columns
+	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, orderByColumns, dao, false)
 
 	return genericList(dao, dbParams, dao.scanRow, tx)
 }
@@ -107,11 +108,11 @@ func (dao *UserDao) scanRow(scannable Scannable) (*models.User, error) {
 
 	err := scannable.Scan(
 		&u.ID,
+		&u.CreatedAt,
+		&u.UpdatedAt,
 		&u.Username,
 		&u.PasswordHash,
 		&u.Role,
-		&u.CreatedAt,
-		&u.UpdatedAt,
 	)
 
 	if err != nil {

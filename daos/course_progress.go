@@ -60,8 +60,10 @@ func (dao *CourseProgressDao) Create(cp *models.CourseProgress, tx *database.Tx)
 
 // Get gets a course progress with the given course ID
 func (dao *CourseProgressDao) Get(courseId string, tx *database.Tx) (*models.CourseProgress, error) {
+	selectColumns, _ := tableColumnsOrPanic(models.CourseProgress{}, dao.Table())
+
 	dbParams := &database.DatabaseParams{
-		Columns: dao.columns(),
+		Columns: selectColumns,
 		Where:   squirrel.Eq{dao.Table() + ".course_id": courseId},
 	}
 
@@ -173,13 +175,13 @@ func (dao *CourseProgressDao) scanRow(scannable Scannable) (*models.CourseProgre
 
 	err := scannable.Scan(
 		&cp.ID,
+		&cp.CreatedAt,
+		&cp.UpdatedAt,
 		&cp.CourseID,
 		&cp.Started,
 		&cp.StartedAt,
 		&cp.Percent,
 		&cp.CompletedAt,
-		&cp.CreatedAt,
-		&cp.UpdatedAt,
 	)
 
 	if err != nil {

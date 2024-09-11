@@ -10,9 +10,9 @@ type CourseTag struct {
 	CourseId string `db:"course_id:required"`
 
 	// --------------------------------
-	// Not in this table, but added via join
+	// Added via join
 	// --------------------------------
 
-	Course string
-	Tag    string
+	Course string `db_join:"courses:title"`
+	Tag    string `db_join:"tags:tag"`
 }

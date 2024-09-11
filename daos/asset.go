@@ -74,8 +74,10 @@ func (dao *AssetDao) Create(a *models.Asset, tx *database.Tx) error {
 // can then be ordered by setting the `OrderBy` field in the dbParams, specifically referencing
 // attachements.[column]
 func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *database.Tx) (*models.Asset, error) {
+	selectColumns, _ := tableColumnsOrPanic(models.Asset{}, dao.Table())
+
 	assetDbParams := &database.DatabaseParams{
-		Columns: dao.columns(),
+		Columns: selectColumns,
 		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
@@ -87,9 +89,12 @@ func (dao *AssetDao) Get(id string, dbParams *database.DatabaseParams, tx *datab
 	// Get the attachments
 	attachmentDao := NewAttachmentDao(dao.db)
 	if dbParams != nil && slices.Contains(dbParams.IncludeRelations, attachmentDao.Table()) {
+
+		_, orderByColumns := tableColumnsOrPanic(models.Attachment{}, attachmentDao.Table())
+
 		// Set the DB params
 		attachmentDbParams := &database.DatabaseParams{
-			OrderBy: genericProcessOrderBy(dbParams.OrderBy, attachmentDao.columns(), true),
+			OrderBy: genericProcessOrderBy(dbParams.OrderBy, orderByColumns, attachmentDao, true),
 			Where:   squirrel.Eq{"asset_id": asset.ID},
 		}
 
@@ -116,12 +121,16 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([
 		dbParams = &database.DatabaseParams{}
 	}
 
+	selectColumns, orderByColumns := tableColumnsOrPanic(models.Asset{}, dao.Table())
+
+	// Backup the original order by then remove invalid orderBy columns
 	origOrderBy := dbParams.OrderBy
-	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
+
+	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, orderByColumns, dao, false)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
-		dbParams.Columns = dao.columns()
+		dbParams.Columns = selectColumns
 	}
 
 	assets, err := genericList(dao, dbParams, dao.scanRow, tx)
@@ -137,8 +146,10 @@ func (dao *AssetDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([
 			assetIds = append(assetIds, asset.ID)
 		}
 
+		_, orderByColumns := tableColumnsOrPanic(models.Attachment{}, attachmentDao.Table())
+
 		// Reduce the order by clause to only include columns specific to the attachments table
-		reducedOrderBy := genericProcessOrderBy(origOrderBy, attachmentDao.columns(), true)
+		reducedOrderBy := genericProcessOrderBy(origOrderBy, orderByColumns, attachmentDao, true)
 
 		dbParams = &database.DatabaseParams{
 			OrderBy: reducedOrderBy,
@@ -240,22 +251,6 @@ func (dao *AssetDao) baseSelect() squirrel.SelectBuilder {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// columns returns the columns to select
-func (dao *AssetDao) columns() []string {
-	apDao := NewAssetProgressDao(dao.db)
-
-	return append(
-		dao.BaseDao.columns(),
-		[]string{
-			apDao.Table() + ".video_pos",
-			apDao.Table() + ".completed",
-			apDao.Table() + ".completed_at",
-		}...,
-	)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // scanRow scans an asset row
 func (dao *AssetDao) scanRow(scannable Scannable) (*models.Asset, error) {
 	var a models.Asset
@@ -267,6 +262,8 @@ func (dao *AssetDao) scanRow(scannable Scannable) (*models.Asset, error) {
 
 	err := scannable.Scan(
 		&a.ID,
+		&a.CreatedAt,
+		&a.UpdatedAt,
 		&a.CourseID,
 		&a.Title,
 		&a.Prefix,
@@ -274,8 +271,6 @@ func (dao *AssetDao) scanRow(scannable Scannable) (*models.Asset, error) {
 		&a.Type,
 		&a.Path,
 		&a.Hash,
-		&a.CreatedAt,
-		&a.UpdatedAt,
 
 		// Asset progress
 		&videoPos,

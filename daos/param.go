@@ -29,8 +29,10 @@ func NewParamDao(db database.Database) *ParamDao {
 
 // Get gets a parameter by its key
 func (dao *ParamDao) Get(key string, tx *database.Tx) (*models.Param, error) {
+	selectColumns, _ := tableColumnsOrPanic(models.Param{}, dao.Table())
+
 	dbParams := &database.DatabaseParams{
-		Columns: dao.columns(),
+		Columns: selectColumns,
 		Where:   squirrel.Eq{dao.Table() + ".key": key},
 	}
 
@@ -77,10 +79,10 @@ func (dao *ParamDao) scanRow(scannable Scannable) (*models.Param, error) {
 
 	err := scannable.Scan(
 		&p.ID,
-		&p.Key,
-		&p.Value,
 		&p.CreatedAt,
 		&p.UpdatedAt,
+		&p.Key,
+		&p.Value,
 	)
 
 	if err != nil {

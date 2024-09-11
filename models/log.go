@@ -8,7 +8,7 @@ import "github.com/geerew/off-course/utils/types"
 type Log struct {
 	BaseModel `db:":nested"`
 
-	Data    types.JsonMap `db:"data"`
 	Level   int           `db:"level"`
 	Message string        `db:"message:required"`
+	Data    types.JsonMap `db:"data"`
 }

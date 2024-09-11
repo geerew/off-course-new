@@ -372,7 +372,7 @@ func TestCourseScanner_CourseProcessor(t *testing.T) {
 		require.Nil(t, err)
 
 		err = CourseProcessor(scanner, testData[0].Scan)
-		require.ErrorContains(t, err, "no such column: card_path")
+		require.ErrorContains(t, err, "no such column: "+courseDao.Table()+".card_path")
 	})
 
 	t.Run("ignore files", func(t *testing.T) {

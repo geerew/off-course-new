@@ -63,8 +63,10 @@ func (dao *AttachmentDao) Create(a *models.Attachment, tx *database.Tx) error {
 
 // Get gets attachment with the given ID
 func (dao *AttachmentDao) Get(id string, tx *database.Tx) (*models.Attachment, error) {
+	selectColumns, _ := tableColumnsOrPanic(models.Attachment{}, dao.Table())
+
 	dbParams := &database.DatabaseParams{
-		Columns: dao.columns(),
+		Columns: selectColumns,
 		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
@@ -79,13 +81,12 @@ func (dao *AttachmentDao) List(dbParams *database.DatabaseParams, tx *database.T
 		dbParams = &database.DatabaseParams{}
 	}
 
-	// Process the order by clauses
-	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
+	selectColumns, orderByColumns := tableColumnsOrPanic(models.Attachment{}, dao.Table())
 
-	// Default the columns if not specified
-	if len(dbParams.Columns) == 0 {
-		dbParams.Columns = dao.columns()
-	}
+	dbParams.Columns = selectColumns
+
+	// Remove invalid orderBy columns
+	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, orderByColumns, dao, false)
 
 	return genericList(dao, dbParams, dao.scanRow, tx)
 }
@@ -107,12 +108,12 @@ func (dao *AttachmentDao) scanRow(scannable Scannable) (*models.Attachment, erro
 
 	err := scannable.Scan(
 		&a.ID,
+		&a.CreatedAt,
+		&a.UpdatedAt,
 		&a.CourseID,
 		&a.AssetID,
 		&a.Title,
 		&a.Path,
-		&a.CreatedAt,
-		&a.UpdatedAt,
 	)
 
 	if err != nil {

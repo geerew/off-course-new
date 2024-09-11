@@ -279,13 +279,6 @@ func TestCourseTag_List(t *testing.T) {
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, "Go", result[0].Tag)
-
-		// ----------------------------
-		// Error
-		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"unit_test asc"}}, nil)
-		require.ErrorContains(t, err, "no such column")
-		require.Nil(t, result)
 	})
 
 	t.Run("where", func(t *testing.T) {
@@ -328,7 +321,7 @@ func TestCourseTag_List(t *testing.T) {
 		// ----------------------------
 		p := pagination.New(1, 10)
 
-		result, err := dao.List(&database.DatabaseParams{Pagination: p, OrderBy: []string{"tag asc"}}, nil)
+		result, err := dao.List(&database.DatabaseParams{Pagination: p, OrderBy: []string{"tags.tag asc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, 20, p.TotalItems())
@@ -339,7 +332,7 @@ func TestCourseTag_List(t *testing.T) {
 		// ----------------------------
 		p = pagination.New(2, 10)
 
-		result, err = dao.List(&database.DatabaseParams{Pagination: p, OrderBy: []string{"tag asc"}}, nil)
+		result, err = dao.List(&database.DatabaseParams{Pagination: p, OrderBy: []string{"tags.tag asc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 10)
 		require.Equal(t, 20, p.TotalItems())

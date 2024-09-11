@@ -7,6 +7,13 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+const (
+	DB_TAG      = "db"
+	DB_JOIN_TAG = "db_join"
+)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // BaseModel defines the base model for all models
 type BaseModel struct {
 	ID        string         `db:"id:required"`

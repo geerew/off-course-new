@@ -66,8 +66,10 @@ func (dao *ScanDao) Create(s *models.Scan, tx *database.Tx) error {
 
 // Get gets a scan with the given course ID
 func (dao *ScanDao) Get(courseId string, tx *database.Tx) (*models.Scan, error) {
+	selectColumns, _ := tableColumnsOrPanic(models.Scan{}, dao.Table())
+
 	dbParams := &database.DatabaseParams{
-		Columns: dao.columns(),
+		Columns: selectColumns,
 		Where:   squirrel.Eq{dao.Table() + ".course_id": courseId},
 	}
 
@@ -115,10 +117,12 @@ func (dao *ScanDao) Delete(dbParams *database.DatabaseParams, tx *database.Tx) e
 
 // Next gets the next scan whose status is `waiting“
 func (dao *ScanDao) Next(tx *database.Tx) (*models.Scan, error) {
+	selectColumns, _ := tableColumnsOrPanic(models.Scan{}, dao.Table())
+
 	dbParams := &database.DatabaseParams{
-		Columns: dao.columns(),
+		Columns: selectColumns,
 		Where:   squirrel.Eq{dao.Table() + ".status": types.ScanStatusWaiting},
-		OrderBy: []string{"created_at ASC"},
+		OrderBy: []string{dao.Table() + ".created_at ASC"},
 	}
 
 	scan, err := genericGet(dao, dbParams, dao.scanRow, tx)
@@ -161,28 +165,16 @@ func (dao *ScanDao) baseSelect() squirrel.SelectBuilder {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// columns returns the columns to select
-func (dao *ScanDao) columns() []string {
-	courseDao := NewCourseDao(dao.db)
-
-	return append(
-		dao.BaseDao.columns(),
-		courseDao.Table()+".path AS course_path",
-	)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // scanRow scans a scan row
 func (dao *ScanDao) scanRow(scannable Scannable) (*models.Scan, error) {
 	var s models.Scan
 
 	err := scannable.Scan(
 		&s.ID,
-		&s.CourseID,
-		&s.Status,
 		&s.CreatedAt,
 		&s.UpdatedAt,
+		&s.CourseID,
+		&s.Status,
 		&s.CoursePath,
 	)
 

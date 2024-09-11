@@ -67,15 +67,6 @@ func (dao *BaseDao) Count(dbParams *database.DatabaseParams, tx *database.Tx) (i
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// columns returns the columns to select
-func (dao *BaseDao) columns() []string {
-	return []string{
-		dao.Table() + ".*",
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // countSelect returns the default count select builder
 //
 // Note: The columns are removed, so you must specify the columns with `.Columns(...)` when using

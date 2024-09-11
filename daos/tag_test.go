@@ -294,13 +294,6 @@ func TestTag_List(t *testing.T) {
 		require.Len(t, result, 5)
 		require.Equal(t, "C", result[0].Tag)
 		require.Equal(t, testData[2].ID, result[0].CourseTags[0].CourseId)
-
-		// ----------------------------
-		// Error
-		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"unit_test asc"}}, nil)
-		require.ErrorContains(t, err, "no such column")
-		require.Nil(t, result)
 	})
 
 	t.Run("where", func(t *testing.T) {

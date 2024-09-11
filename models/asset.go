@@ -23,14 +23,16 @@ type Asset struct {
 	Hash     string        `db:"hash:required"`
 
 	// --------------------------------
-	// Not in this table, but added via a join
+	// Added via a join
 	// --------------------------------
 
 	// Asset Progress
-	VideoPos    int
-	Completed   bool
-	CompletedAt types.DateTime
+	VideoPos    int            `db_join:"assets_progress:video_pos"`
+	Completed   bool           `db_join:"assets_progress:completed"`
+	CompletedAt types.DateTime `db_join:"assets_progress:completed_at"`
 
-	// Attachments
+	// --------------------------------
+	// Manually added
+	// --------------------------------
 	Attachments []*Attachment
 }

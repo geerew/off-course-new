@@ -105,13 +105,12 @@ func (dao *CourseTagDao) List(dbParams *database.DatabaseParams, tx *database.Tx
 		dbParams = &database.DatabaseParams{}
 	}
 
-	// Process the order by clauses
-	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
+	selectColumns, orderByColumns := tableColumnsOrPanic(models.CourseTag{}, dao.Table())
 
-	// Default the columns if not specified
-	if len(dbParams.Columns) == 0 {
-		dbParams.Columns = dao.columns()
-	}
+	dbParams.Columns = selectColumns
+
+	// Remove invalid orderBy columns
+	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, orderByColumns, dao, false)
 
 	return genericList(dao, dbParams, dao.scanRow, tx)
 }
@@ -128,7 +127,9 @@ func (dao *CourseTagDao) ListCourseIdsByTags(tags []string, dbParams *database.D
 		dbParams = &database.DatabaseParams{}
 	}
 
-	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
+	selectColumns, _ := tableColumnsOrPanic(models.CourseTag{}, dao.Table())
+
+	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, selectColumns, dao, false)
 	dbParams.Columns = []string{dao.Table() + ".course_id"}
 	dbParams.Where = squirrel.Eq{NewTagDao(dao.db).Table() + ".tag": tags}
 	dbParams.GroupBys = []string{dao.Table() + ".course_id"}
@@ -197,32 +198,16 @@ func (dao *CourseTagDao) baseSelect() squirrel.SelectBuilder {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// columns returns the columns to select
-func (dao *CourseTagDao) columns() []string {
-	tagDao := NewTagDao(dao.db)
-	courseDao := NewCourseDao(dao.db)
-
-	return append(
-		dao.BaseDao.columns(),
-		[]string{
-			courseDao.Table() + ".title as course",
-			tagDao.Table() + ".tag",
-		}...,
-	)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // scanRow scans a course-tag row
 func (dao *CourseTagDao) scanRow(scannable Scannable) (*models.CourseTag, error) {
 	var ct models.CourseTag
 
 	err := scannable.Scan(
 		&ct.ID,
-		&ct.TagId,
-		&ct.CourseId,
 		&ct.CreatedAt,
 		&ct.UpdatedAt,
+		&ct.TagId,
+		&ct.CourseId,
 		&ct.Course,
 		&ct.Tag,
 	)

@@ -14,16 +14,16 @@ type Course struct {
 	Available bool   `db:"available"`
 
 	// --------------------------------
-	// Not in this table, but added via join
+	// Added via join
 	// --------------------------------
 
 	// Scan status
-	ScanStatus string
+	ScanStatus string `db_join:"scans:status:scan_status"`
 
 	// Course Progress
-	Started           bool
-	StartedAt         types.DateTime
-	Percent           int
-	CompletedAt       types.DateTime
-	ProgressUpdatedAt types.DateTime
+	Started           bool           `db_join:"courses_progress:started"`
+	StartedAt         types.DateTime `db_join:"courses_progress:started_at"`
+	Percent           int            `db_join:"courses_progress:percent"`
+	CompletedAt       types.DateTime `db_join:"courses_progress:completed_at"`
+	ProgressUpdatedAt types.DateTime `db_join:"courses_progress:updated_at:progress_updated_at"`
 }

@@ -303,3 +303,20 @@ func Map[T, V any](ts []T, fn func(T) V) []V {
 	}
 	return result
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ReflectValueAndType is a helper function that takes an interface{} and returns
+// the reflect.Value and reflect.Type of the input. If the input is a pointer, it
+// dereferences it and returns the value and type of the underlying value
+func ReflectValueAndType(input any) (reflect.Value, reflect.Type) {
+	v := reflect.ValueOf(input)
+	t := reflect.TypeOf(input)
+
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+		t = t.Elem()
+	}
+
+	return v, t
+}

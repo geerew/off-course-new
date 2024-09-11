@@ -72,7 +72,8 @@ func (dao *LogDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
-		dbParams.Columns = dao.columns()
+		selectColumns, _ := tableColumnsOrPanic(models.Log{}, dao.Table())
+		dbParams.Columns = selectColumns
 	}
 
 	return genericList(dao, dbParams, dao.scanRow, tx)
@@ -95,11 +96,11 @@ func (dao *LogDao) scanRow(scannable Scannable) (*models.Log, error) {
 
 	err := scannable.Scan(
 		&l.ID,
+		&l.CreatedAt,
+		&l.UpdatedAt,
 		&l.Level,
 		&l.Message,
 		&l.Data,
-		&l.CreatedAt,
-		&l.UpdatedAt,
 	)
 
 	if err != nil {

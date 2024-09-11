@@ -279,18 +279,6 @@ func TestAsset_Get(t *testing.T) {
 		require.Equal(t, testData[0].Assets[0].ID, result.ID)
 		require.Equal(t, testData[0].Assets[0].Attachments[0].ID, result.Attachments[0].ID)
 		require.Equal(t, testData[0].Assets[0].Attachments[1].ID, result.Attachments[1].ID)
-
-		// ----------------------------
-		// Error
-		// ----------------------------
-		dbParams = &database.DatabaseParams{
-			OrderBy:          []string{attDao.Table() + ".unit_test desc"},
-			IncludeRelations: []string{attDao.Table()},
-		}
-
-		result, err = dao.Get(testData[0].Assets[0].ID, dbParams, nil)
-		require.ErrorContains(t, err, "no such column")
-		require.Nil(t, result)
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -442,14 +430,6 @@ func TestAsset_List(t *testing.T) {
 		require.Len(t, result, 3)
 		require.Equal(t, testData[0].Assets[0].ID, result[0].ID)
 		require.Equal(t, testData[0].Assets[0].Attachments[1].ID, result[0].Attachments[0].ID)
-
-		// ----------------------------
-		// Error
-		// ----------------------------
-		dbParams = &database.DatabaseParams{OrderBy: []string{"unit_test asc"}}
-		result, err = dao.List(dbParams, nil)
-		require.ErrorContains(t, err, "no such column")
-		require.Nil(t, result)
 	})
 
 	t.Run("where", func(t *testing.T) {

@@ -70,8 +70,10 @@ func (dao *AssetProgressDao) Create(ap *models.AssetProgress, tx *database.Tx) e
 
 // Get gets an asset progress with the given ID
 func (dao *AssetProgressDao) Get(assetId string, tx *database.Tx) (*models.AssetProgress, error) {
+	selectColumns, _ := tableColumnsOrPanic(models.AssetProgress{}, dao.Table())
+
 	dbParams := &database.DatabaseParams{
-		Columns: dao.columns(),
+		Columns: selectColumns,
 		Where:   squirrel.Eq{dao.Table() + ".asset_id": assetId},
 	}
 
@@ -178,13 +180,13 @@ func (dao *AssetProgressDao) scanRow(scannable Scannable) (*models.AssetProgress
 
 	err := scannable.Scan(
 		&ap.ID,
+		&ap.CreatedAt,
+		&ap.UpdatedAt,
 		&ap.AssetID,
 		&ap.CourseID,
 		&ap.VideoPos,
 		&ap.Completed,
 		&ap.CompletedAt,
-		&ap.CreatedAt,
-		&ap.UpdatedAt,
 	)
 
 	if err != nil {

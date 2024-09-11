@@ -9,10 +9,13 @@ type Tag struct {
 	Tag string `db:"tag:required"`
 
 	// --------------------------------
-	// Not in this table, but added via a join
+	// Added via a join
 	// --------------------------------
 
-	// Courses
-	CourseCount int
-	CourseTags  []*CourseTag
+	CourseCount int `db_join:"courses_tags:id:course_count:COALESCE(COUNT(courses_tags.id), 0)"`
+
+	// --------------------------------
+	// Manually added
+	// --------------------------------
+	CourseTags []*CourseTag
 }

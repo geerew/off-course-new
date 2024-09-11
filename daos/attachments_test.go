@@ -259,13 +259,6 @@ func TestAttachment_List(t *testing.T) {
 		require.Equal(t, testData[0].Assets[0].Attachments[0].ID, result[0].ID)
 		require.Equal(t, testData[1].Assets[0].Attachments[0].ID, result[1].ID)
 		require.Equal(t, testData[2].Assets[0].Attachments[0].ID, result[2].ID)
-
-		// ----------------------------
-		// Error
-		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{"unit_test asc"}}, nil)
-		require.ErrorContains(t, err, "no such column")
-		require.Nil(t, result)
 	})
 
 	t.Run("where", func(t *testing.T) {

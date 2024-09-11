@@ -353,7 +353,7 @@ func TestCourse_List(t *testing.T) {
 		testData[2].Scan.Status = types.NewScanStatus(types.ScanStatusProcessing)
 		require.Nil(t, scanDao.Update(testData[2].Scan, nil))
 
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{scanDao.Table() + ".status desc"}}, nil)
+		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{dao.Table() + ".scan_status desc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
 
@@ -364,21 +364,13 @@ func TestCourse_List(t *testing.T) {
 		// ----------------------------
 		// SCAN_STATUS ASC
 		// ----------------------------
-		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{scanDao.Table() + ".status asc"}}, nil)
+		result, err = dao.List(&database.DatabaseParams{OrderBy: []string{dao.Table() + ".scan_status asc"}}, nil)
 		require.Nil(t, err)
 		require.Len(t, result, 3)
 
 		require.Equal(t, testData[0].ID, result[0].ID)
 		require.Equal(t, testData[1].ID, result[1].ID)
 		require.Equal(t, testData[2].ID, result[2].ID)
-
-		// ----------------------------
-		// Error
-		// ----------------------------
-		dbParams = &database.DatabaseParams{OrderBy: []string{"unit_test asc"}}
-		result, err = dao.List(dbParams, nil)
-		require.ErrorContains(t, err, "no such column")
-		require.Nil(t, result)
 	})
 
 	t.Run("where", func(t *testing.T) {

@@ -16,8 +16,8 @@ type Scan struct {
 	Status   types.ScanStatus `db:"status:required"`
 
 	// --------------------------------
-	// Not in this table, but added via join
+	// Added via join
 	// --------------------------------
 
-	CoursePath string
+	CoursePath string `db_join:"courses:path:course_path"`
 }

@@ -87,8 +87,10 @@ func (dao *CourseDao) Create(c *models.Course, tx *database.Tx) error {
 
 // Get gets a course with the given ID
 func (dao *CourseDao) Get(id string, tx *database.Tx) (*models.Course, error) {
+	selectColumns, _ := tableColumnsOrPanic(models.Course{}, dao.Table())
+
 	courseDbParams := &database.DatabaseParams{
-		Columns: dao.columns(),
+		Columns: selectColumns,
 		Where:   squirrel.Eq{dao.Table() + ".id": id},
 	}
 
@@ -103,13 +105,12 @@ func (dao *CourseDao) List(dbParams *database.DatabaseParams, tx *database.Tx) (
 		dbParams = &database.DatabaseParams{}
 	}
 
-	// Process the order by clauses
-	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy)
+	selectColumns, orderByColumns := tableColumnsOrPanic(models.Course{}, dao.Table())
 
-	// Default the columns if not specified
-	if len(dbParams.Columns) == 0 {
-		dbParams.Columns = dao.columns()
-	}
+	dbParams.Columns = selectColumns
+
+	// Remove invalid orderBy columns
+	dbParams.OrderBy = dao.ProcessOrderBy(dbParams.OrderBy, orderByColumns)
 
 	return genericList(dao, dbParams, dao.scanRow, tx)
 }
@@ -245,22 +246,25 @@ func (dao *CourseDao) ClassifyPaths(paths []string) (map[string]types.PathClassi
 //   - NULL values are treated as the lowest value (sorted first in ASC, last in DESC)
 //   - 'waiting' status is treated as the second value
 //   - 'processing' status is treated as the third value
-func (dao *CourseDao) ProcessOrderBy(orderBy []string) []string {
+func (dao *CourseDao) ProcessOrderBy(orderBy []string, validOrderByColumns []string) []string {
 	if len(orderBy) == 0 {
 		return orderBy
 	}
 
-	validTableColumns := dao.columns()
 	var processedOrderBy []string
 
-	scanDao := NewScanDao(dao.db)
-
 	for _, ob := range orderBy {
-		table, column := extractTableColumn(ob)
+		t, c := extractTableAndColumn(ob)
 
-		if isValidOrderBy(table, column, validTableColumns) {
+		// Prefix the table with the dao's table if not found
+		if t == "" {
+			t = dao.Table()
+			ob = t + "." + ob
+		}
+
+		if isValidOrderBy(t, c, validOrderByColumns) {
 			// When the column is 'scan_status', apply the custom sorting logic
-			if column == "scan_status" || table+"."+column == scanDao.Table()+".status" {
+			if c == "scan_status" {
 				// Determine the sort direction, defaulting to ASC if not specified
 				parts := strings.Fields(ob)
 				sortDirection := "ASC"
@@ -315,26 +319,6 @@ func (dao *CourseDao) baseSelect() squirrel.SelectBuilder {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// columns returns the columns to select
-func (dao *CourseDao) columns() []string {
-	sDao := NewScanDao(dao.db)
-	cpDao := NewCourseProgressDao(dao.db)
-
-	return append(
-		dao.BaseDao.columns(),
-		[]string{
-			sDao.Table() + ".status as scan_status",
-			cpDao.Table() + ".started",
-			cpDao.Table() + ".started_at",
-			cpDao.Table() + ".percent",
-			cpDao.Table() + ".completed_at",
-			cpDao.Table() + ".updated_at as progress_updated_at",
-		}...,
-	)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // scanRow scans a course row
 func (dao *CourseDao) scanRow(scannable Scannable) (*models.Course, error) {
 	var c models.Course
@@ -344,16 +328,17 @@ func (dao *CourseDao) scanRow(scannable Scannable) (*models.Course, error) {
 	var scanStatus sql.NullString
 
 	err := scannable.Scan(
-		// Course
 		&c.ID,
+		&c.CreatedAt,
+		&c.UpdatedAt,
 		&c.Title,
 		&c.Path,
 		&cardPath,
 		&c.Available,
-		&c.CreatedAt,
-		&c.UpdatedAt,
+
 		// Scan
 		&scanStatus,
+
 		// Course progress
 		&c.Started,
 		&c.StartedAt,

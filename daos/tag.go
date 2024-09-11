@@ -69,8 +69,10 @@ func (dao *TagDao) Create(t *models.Tag, tx *database.Tx) error {
 // can then be ordered by setting the `OrderBy` field in the dbParams, specifically referencing
 // courses_tags.[column]
 func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams, tx *database.Tx) (*models.Tag, error) {
+	selectColumns, _ := tableColumnsOrPanic(models.Tag{}, dao.Table())
+
 	tagDbParams := &database.DatabaseParams{
-		Columns: dao.columns(),
+		Columns: selectColumns,
 	}
 
 	if byName {
@@ -91,8 +93,10 @@ func (dao *TagDao) Get(id string, byName bool, dbParams *database.DatabaseParams
 	// Get the course tags
 	courseTagDao := NewCourseTagDao(dao.db)
 	if dbParams != nil && slices.Contains(dbParams.IncludeRelations, courseTagDao.Table()) {
+		_, orderByColumns := tableColumnsOrPanic(models.CourseTag{}, courseTagDao.Table())
+
 		courseTagDbParams := &database.DatabaseParams{
-			OrderBy: genericProcessOrderBy(dbParams.OrderBy, courseTagDao.columns(), true),
+			OrderBy: genericProcessOrderBy(dbParams.OrderBy, orderByColumns, courseTagDao, true),
 			Where:   squirrel.Eq{"tag_id": id},
 		}
 
@@ -120,13 +124,15 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*
 		dbParams = &database.DatabaseParams{}
 	}
 
-	origOrderBy := dbParams.OrderBy
+	selectColumns, orderByColumns := tableColumnsOrPanic(models.Tag{}, dao.Table())
 
-	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, dao.columns(), false)
+	// Backup the original order by then remove invalid orderBy columns
+	origOrderBy := dbParams.OrderBy
+	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, orderByColumns, dao, false)
 
 	// Default the columns if not specified
 	if len(dbParams.Columns) == 0 {
-		dbParams.Columns = dao.columns()
+		dbParams.Columns = selectColumns
 	}
 
 	tags, err := genericList(dao, dbParams, dao.scanRow, tx)
@@ -143,8 +149,10 @@ func (dao *TagDao) List(dbParams *database.DatabaseParams, tx *database.Tx) ([]*
 			tagIds = append(tagIds, t.ID)
 		}
 
+		_, orderByColumns := tableColumnsOrPanic(models.CourseTag{}, courseTagDao.Table())
+
 		// Reduce the order by clause to only include columns specific to the course_tags table
-		reducedOrderBy := genericProcessOrderBy(origOrderBy, courseTagDao.columns(), true)
+		reducedOrderBy := genericProcessOrderBy(origOrderBy, orderByColumns, courseTagDao, true)
 
 		dbParams = &database.DatabaseParams{
 			OrderBy: reducedOrderBy,
@@ -234,27 +242,15 @@ func (dao *TagDao) baseSelect() squirrel.SelectBuilder {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// columns returns the columns to select
-func (dao *TagDao) columns() []string {
-	courseTagDao := NewCourseTagDao(dao.db)
-
-	return append(
-		dao.BaseDao.columns(),
-		"COALESCE(COUNT("+courseTagDao.Table()+".id), 0) AS course_count",
-	)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // scanRow scans an tag row
 func (dao *TagDao) scanRow(scannable Scannable) (*models.Tag, error) {
 	var t models.Tag
 
 	err := scannable.Scan(
 		&t.ID,
-		&t.Tag,
 		&t.CreatedAt,
 		&t.UpdatedAt,
+		&t.Tag,
 		&t.CourseCount,
 	)
 

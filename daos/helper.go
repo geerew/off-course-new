@@ -10,13 +10,15 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
+	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// extractTableColumn extracts the table and column name from an orderBy string. If no table prefix
-// is found, the table part is returned as an empty string
-func extractTableColumn(orderBy string) (string, string) {
+// extractTableAndColumn extracts the table and column name from a string. If a table prefix
+// is not found, it will return as an empty string
+func extractTableAndColumn(orderBy string) (string, string) {
 	parts := strings.Fields(orderBy)
 	tableColumn := strings.Split(parts[0], ".")
 
@@ -64,10 +66,11 @@ func isValidOrderBy(table, column string, validateTableColumns []string) bool {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// genericProcessOrderBy processes the orderBy strings to ensure they are valid
+// genericProcessOrderBy processes an orderBy slice and returns a new slice with only the valid
+// order by strings
 //
-// When explicit is true, only orderBy strings with a table prefix are considered valid
-func genericProcessOrderBy(orderBy []string, validColumns []string, explicit bool) []string {
+// When an orderBy string does not contain a table prefix, it will be set to the dao's table
+func genericProcessOrderBy(orderBy []string, validColumns []string, dao daoer, exactMatch bool) []string {
 	if len(orderBy) == 0 {
 		return orderBy
 	}
@@ -75,13 +78,20 @@ func genericProcessOrderBy(orderBy []string, validColumns []string, explicit boo
 	var processedOrderBy []string
 
 	for _, ob := range orderBy {
-		Table, column := extractTableColumn(ob)
+		t, c := extractTableAndColumn(ob)
 
-		if explicit && Table == "" {
+		// If exact match is set, the table must match the dao's table
+		if exactMatch && t == "" {
 			continue
 		}
 
-		if isValidOrderBy(Table, column, validColumns) {
+		// Prefix the table with the dao's table if not found
+		if t == "" {
+			t = dao.Table()
+			ob = t + "." + ob
+		}
+
+		if isValidOrderBy(t, c, validColumns) {
 			processedOrderBy = append(processedOrderBy, ob)
 		}
 	}
@@ -278,13 +288,7 @@ func genericDelete(dao daoer, dbParams *database.DatabaseParams, tx *database.Tx
 func toDBMapOrPanic(input any) map[string]any {
 	result := make(map[string]any)
 
-	v := reflect.ValueOf(input)
-	t := reflect.TypeOf(input)
-
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-		t = t.Elem()
-	}
+	v, t := utils.ReflectValueAndType(input)
 
 	if v.Kind() != reflect.Struct {
 		panic(fmt.Errorf("input is not a struct: %v", v.Kind()))
@@ -294,36 +298,37 @@ func toDBMapOrPanic(input any) map[string]any {
 		field := v.Field(i)
 		fieldType := t.Field(i)
 
-		dbTag := fieldType.Tag.Get("db")
+		dbTag := fieldType.Tag.Get(models.DB_TAG)
+		if dbTag == "" {
+			continue
+		}
 
-		if dbTag != "" {
-			tagParts := strings.Split(dbTag, ":")
-			columnName := tagParts[0]
+		tagParts := strings.Split(dbTag, ":")
+		columnName := tagParts[0]
 
-			if slices.Contains(tagParts[1:], "nested") {
-				if field.Kind() == reflect.Struct {
-					nestedMap := toDBMapOrPanic(field.Interface())
+		if slices.Contains(tagParts[1:], "nested") && field.Kind() == reflect.Struct {
+			nestedMap := toDBMapOrPanic(field.Interface())
 
-					for k, v := range nestedMap {
-						result[k] = v
-					}
-				}
-			} else {
-				var processedValue any
-				processedValue = valueOrPanic(columnName, field.Interface(), field.Kind())
-
-				// Loop over the extra tags and format the field accordingly
-				for _, extraTag := range tagParts[1:] {
-					processedValue = processExtraTags(processedValue, extraTag)
-				}
-
-				result[columnName] = processedValue
+			for k, v := range nestedMap {
+				result[k] = v
 			}
+		} else {
+			var processedValue any
+			processedValue = valueOrPanic(columnName, field.Interface(), field.Kind())
+
+			// Loop over the extra tags and format the field accordingly
+			for _, extraTag := range tagParts[1:] {
+				processedValue = processExtraTags(processedValue, extraTag)
+			}
+
+			result[columnName] = processedValue
 		}
 	}
 
 	return result
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -352,6 +357,7 @@ func valueOrPanic(columnName string, value any, kind reflect.Kind) any {
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // processExtraTags applies additional tag logic
 //
 // Currently supports:
@@ -366,4 +372,88 @@ func processExtraTags(value any, tag string) any {
 		}
 	}
 	return value
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// tableColumnsOrPanic looks up the `db` and `db_join` tags of a struct and builds 2 slices
+//
+// Slice 1 will contain the table.column names with an optional alias. This can be used
+// when building a select statement to ensure the correct table.column is selected.
+//
+// Slice 2 will contain the column names or alias names if applicable. This can be used when
+// reducing the orderBy clause to only include valid columns
+func tableColumnsOrPanic(input any, table string) ([]string, []string) {
+	var selectColumns []string
+	var orderByColumns []string
+
+	v, t := utils.ReflectValueAndType(input)
+
+	if v.Kind() != reflect.Struct {
+		panic(fmt.Errorf("input is not a struct: %v", v.Kind()))
+	}
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		fieldType := t.Field(i)
+
+		dbTag := fieldType.Tag.Get(models.DB_TAG)
+		dbJoinTag := fieldType.Tag.Get(models.DB_JOIN_TAG)
+
+		if dbTag == "" && dbJoinTag == "" {
+			continue
+		}
+
+		if dbTag != "" {
+			tagParts := strings.Split(dbTag, ":")
+
+			if len(tagParts) > 1 && slices.Contains(tagParts[1:], "nested") && field.Kind() == reflect.Struct {
+				// Recursively get the columns for the nested struct
+				nestedSelect, nestedOrderBy := tableColumnsOrPanic(field.Interface(), table)
+				selectColumns = append(selectColumns, nestedSelect...)
+				orderByColumns = append(orderByColumns, nestedOrderBy...)
+			} else {
+				selectColumns = append(selectColumns, table+"."+tagParts[0])
+				orderByColumns = append(orderByColumns, table+"."+tagParts[0])
+			}
+		} else {
+			tagParts := strings.Split(dbJoinTag, ":")
+
+			if len(tagParts) < 2 {
+				panic(fmt.Errorf("db_join tag must contain table:column - %s", dbJoinTag))
+			}
+
+			joinTable := tagParts[0]
+			column := tagParts[1]
+			alias := ""
+			expression := ""
+
+			// Check for alias and expression (like COALESCE) in the db_join tag
+			if len(tagParts) > 2 {
+				alias = tagParts[2]
+
+				if len(tagParts) > 3 {
+					expression = tagParts[3]
+				}
+			}
+
+			// Build the select column, either with the expression or as a normal table.column
+			selectColumn := joinTable + "." + column
+			if expression != "" {
+				selectColumn = expression
+			}
+
+			// Add alias if present
+			if alias != "" {
+				selectColumn += " AS " + alias
+				orderByColumns = append(orderByColumns, alias)
+			} else {
+				orderByColumns = append(orderByColumns, selectColumn)
+			}
+
+			selectColumns = append(selectColumns, selectColumn)
+		}
+	}
+
+	return selectColumns, orderByColumns
 }
