@@ -43,7 +43,7 @@ func (dao *AssetProgressDao) Create(ap *models.AssetProgress, tx *database.Tx) e
 		query, args, _ := squirrel.
 			StatementBuilder.
 			Insert(dao.Table()).
-			SetMap(toDBMapOrPanic(ap)).
+			SetMap(modelToMapOrPanic(ap)).
 			ToSql()
 
 		_, err := tx.Exec(query, args...)
@@ -144,7 +144,7 @@ func (dao *AssetProgressDao) Update(ap *models.AssetProgress, tx *database.Tx) e
 		query, args, _ := squirrel.
 			StatementBuilder.
 			Insert(dao.Table()).
-			SetMap(toDBMapOrPanic(ap)).
+			SetMap(modelToMapOrPanic(ap)).
 			Suffix(
 				"ON CONFLICT (asset_id) DO UPDATE SET video_pos = ?, completed = ?, completed_at = ?, updated_at = ?",
 				ap.VideoPos, ap.Completed, ap.CompletedAt, ap.UpdatedAt,

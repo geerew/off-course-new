@@ -284,8 +284,11 @@ func genericDelete(dao daoer, dbParams *database.DatabaseParams, tx *database.Tx
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// toDBMapOrPanic converts a struct into a map[string]any based on the `db` tags of its fields
-func toDBMapOrPanic(input any) map[string]any {
+// modelToMapOrPanic takes a model and builds a map where the key is the name of the column
+// and the value is the value
+//
+// Only fields with a `db` tag will be included in the map
+func modelToMapOrPanic(input any) map[string]any {
 	result := make(map[string]any)
 
 	v, t := utils.ReflectValueAndType(input)
@@ -307,7 +310,7 @@ func toDBMapOrPanic(input any) map[string]any {
 		columnName := tagParts[0]
 
 		if slices.Contains(tagParts[1:], "nested") && field.Kind() == reflect.Struct {
-			nestedMap := toDBMapOrPanic(field.Interface())
+			nestedMap := modelToMapOrPanic(field.Interface())
 
 			for k, v := range nestedMap {
 				result[k] = v
@@ -318,7 +321,7 @@ func toDBMapOrPanic(input any) map[string]any {
 
 			// Loop over the extra tags and format the field accordingly
 			for _, extraTag := range tagParts[1:] {
-				processedValue = processExtraTags(processedValue, extraTag)
+				processedValue = processDbTags(processedValue, extraTag)
 			}
 
 			result[columnName] = processedValue
@@ -332,8 +335,8 @@ func toDBMapOrPanic(input any) map[string]any {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// valueOrPanic handles custom types that need to be converted to a value by
-// calling the Value() method
+// valueOrPanic handles getting values from base types and custom types. Custom
+// types must implement the driver.Valuer interface from sql
 //
 // If the value is a struct and it does NOT implement driver.Valuer, it will panic
 func valueOrPanic(columnName string, value any, kind reflect.Kind) any {
@@ -358,11 +361,11 @@ func valueOrPanic(columnName string, value any, kind reflect.Kind) any {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// processExtraTags applies additional tag logic
+// processDbTags applies additional tag logic
 //
 // Currently supports:
 //   - required: if the field is a string and has a length of 0, it will be set to nil
-func processExtraTags(value any, tag string) any {
+func processDbTags(value any, tag string) any {
 	v := reflect.ValueOf(value)
 
 	switch tag {

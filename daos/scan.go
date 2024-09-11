@@ -49,7 +49,7 @@ func (dao *ScanDao) Create(s *models.Scan, tx *database.Tx) error {
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.Table()).
-		SetMap(toDBMapOrPanic(s)).
+		SetMap(modelToMapOrPanic(s)).
 		ToSql()
 
 	execFn := dao.db.Exec
@@ -87,7 +87,7 @@ func (dao *ScanDao) Update(scan *models.Scan, tx *database.Tx) error {
 	scan.RefreshUpdatedAt()
 
 	// Convert to a map so we have the rendered values
-	data := toDBMapOrPanic(scan)
+	data := modelToMapOrPanic(scan)
 
 	query, args, _ := squirrel.
 		StatementBuilder.

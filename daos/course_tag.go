@@ -80,7 +80,7 @@ func (dao *CourseTagDao) Create(ct *models.CourseTag, tx *database.Tx) error {
 		query, args, _ := squirrel.
 			StatementBuilder.
 			Insert(dao.Table()).
-			SetMap(toDBMapOrPanic(ct)).
+			SetMap(modelToMapOrPanic(ct)).
 			ToSql()
 
 		_, err = tx.Exec(query, args...)

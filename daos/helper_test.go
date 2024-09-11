@@ -97,7 +97,7 @@ func Test_IsValidOrderBy(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func Test_ToDBMapOrPanic(t *testing.T) {
+func Test_ModelToMapOrPanic(t *testing.T) {
 	t.Run("panic", func(t *testing.T) {
 		defer func() {
 			if r := recover(); r == nil {
@@ -105,7 +105,7 @@ func Test_ToDBMapOrPanic(t *testing.T) {
 			}
 		}()
 
-		toDBMapOrPanic("test")
+		modelToMapOrPanic("test")
 	})
 
 	t.Run("success", func(t *testing.T) {
@@ -121,7 +121,7 @@ func Test_ToDBMapOrPanic(t *testing.T) {
 			Available: true,
 		}
 
-		result := toDBMapOrPanic(course)
+		result := modelToMapOrPanic(course)
 
 		require.Equal(t, result["id"], course.ID)
 		require.Equal(t, result["created_at"], course.CreatedAt.String())
@@ -145,7 +145,7 @@ func Test_ToDBMapOrPanic(t *testing.T) {
 			Available: true,
 		}
 
-		result := toDBMapOrPanic(course)
+		result := modelToMapOrPanic(course)
 
 		require.Nil(t, result["id"])
 		require.Nil(t, result["created_at"])

@@ -48,7 +48,7 @@ func (dao *CourseProgressDao) Create(cp *models.CourseProgress, tx *database.Tx)
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.Table()).
-		SetMap(toDBMapOrPanic(cp)).
+		SetMap(modelToMapOrPanic(cp)).
 		ToSql()
 
 	_, err := execFn(query, args...)

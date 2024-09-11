@@ -57,7 +57,7 @@ func (dao *CourseDao) Create(c *models.Course, tx *database.Tx) error {
 		query, args, _ := squirrel.
 			StatementBuilder.
 			Insert(dao.Table()).
-			SetMap(toDBMapOrPanic(c)).
+			SetMap(modelToMapOrPanic(c)).
 			ToSql()
 
 		// Create the course
@@ -129,7 +129,7 @@ func (dao *CourseDao) Update(course *models.Course, tx *database.Tx) error {
 	course.RefreshUpdatedAt()
 
 	// Convert to a map so we have the rendered values
-	data := toDBMapOrPanic(course)
+	data := modelToMapOrPanic(course)
 
 	query, args, _ := squirrel.
 		StatementBuilder.

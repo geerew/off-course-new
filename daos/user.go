@@ -46,7 +46,7 @@ func (dao *UserDao) Create(u *models.User, tx *database.Tx) error {
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.Table()).
-		SetMap((toDBMapOrPanic(u))).
+		SetMap((modelToMapOrPanic(u))).
 		ToSql()
 
 	execFn := dao.db.Exec

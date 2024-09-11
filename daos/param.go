@@ -50,7 +50,7 @@ func (dao *ParamDao) Update(p *models.Param, tx *database.Tx) error {
 	p.RefreshUpdatedAt()
 
 	// Convert to a map so we have the rendered values
-	data := toDBMapOrPanic(p)
+	data := modelToMapOrPanic(p)
 
 	query, args, _ := squirrel.
 		StatementBuilder.

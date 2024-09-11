@@ -46,7 +46,7 @@ func (dao *AttachmentDao) Create(a *models.Attachment, tx *database.Tx) error {
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.Table()).
-		SetMap(toDBMapOrPanic(a)).
+		SetMap(modelToMapOrPanic(a)).
 		ToSql()
 
 	execFn := dao.db.Exec

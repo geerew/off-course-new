@@ -53,7 +53,7 @@ func (dao *TagDao) Create(t *models.Tag, tx *database.Tx) error {
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.Table()).
-		SetMap(toDBMapOrPanic(t)).
+		SetMap(modelToMapOrPanic(t)).
 		ToSql()
 
 	_, err := execFn(query, args...)
@@ -191,7 +191,7 @@ func (dao *TagDao) Update(tag *models.Tag, tx *database.Tx) error {
 	tag.RefreshUpdatedAt()
 
 	// Convert to a map so we have the rendered values
-	data := toDBMapOrPanic(tag)
+	data := modelToMapOrPanic(tag)
 
 	query, args, _ := squirrel.
 		StatementBuilder.

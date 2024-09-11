@@ -46,7 +46,7 @@ func (dao *LogDao) Write(l *models.Log, tx *database.Tx) error {
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.Table()).
-		SetMap(toDBMapOrPanic(l)).
+		SetMap(modelToMapOrPanic(l)).
 		ToSql()
 
 	execFn := dao.db.Exec

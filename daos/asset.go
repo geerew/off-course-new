@@ -53,7 +53,7 @@ func (dao *AssetDao) Create(a *models.Asset, tx *database.Tx) error {
 	query, args, _ := squirrel.
 		StatementBuilder.
 		Insert(dao.Table()).
-		SetMap(toDBMapOrPanic(a)).
+		SetMap(modelToMapOrPanic(a)).
 		ToSql()
 
 	execFn := dao.db.Exec
@@ -194,7 +194,7 @@ func (dao *AssetDao) Update(asset *models.Asset, tx *database.Tx) error {
 	asset.RefreshUpdatedAt()
 
 	// Convert to a map so we have the rendered values
-	data := toDBMapOrPanic(asset)
+	data := modelToMapOrPanic(asset)
 
 	query, args, _ := squirrel.
 		StatementBuilder.
