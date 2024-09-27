@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -67,6 +68,29 @@ func Test_EncodeString(t *testing.T) {
 		res := EncodeString("/test/data")
 		require.Equal(t, "JTJGdGVzdCUyRmRhdGE=", res)
 	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_CheckTruth(t *testing.T) {
+	checkTruthTests := []struct {
+		v   string
+		out bool
+	}{
+		{"123", true},
+		{"true", true},
+		{"", false},
+		{"false", false},
+		{"False", false},
+		{"FALSE", false},
+		{"\u0046alse", false},
+	}
+
+	for _, test := range checkTruthTests {
+		t.Run(test.v, func(t *testing.T) {
+			assert.Equal(t, test.out, CheckTruth(test.v))
+		})
+	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
