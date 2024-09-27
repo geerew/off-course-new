@@ -55,7 +55,8 @@ func (d DateTime) IsZero() bool {
 
 // Equal checks if two DateTime instances represent the same point in time
 func (d DateTime) Equal(other DateTime) bool {
-	return d.t.Equal(other.t)
+	return d.t.UTC().Truncate(time.Millisecond).Equal(other.t.UTC().Truncate(time.Millisecond))
+
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
