@@ -113,6 +113,18 @@ func EscapeBackslashes(path string) string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// CheckTruth check string true or not
+func CheckTruth(vals ...string) bool {
+	for _, val := range vals {
+		if val != "" && !strings.EqualFold(val, "false") {
+			return true
+		}
+	}
+	return false
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // DiffSliceOfStructsByKey takes in two slices of type T (left and right) and a key (string) as
 // arguments. The key defines the which key to use when comparing.
 //
