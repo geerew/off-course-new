@@ -97,7 +97,13 @@ func Parse(input any, cache *sync.Map) (*Schema, error) {
 	for _, f := range schema.Fields {
 		schema.FieldCols = append(schema.FieldCols, f.Column)
 		schema.FieldsByName[f.Name] = f
-		schema.FieldsByColumn[f.Column] = f
+
+		if f.Alias != "" {
+			schema.FieldsByColumn[f.Alias] = f
+		} else {
+			schema.FieldsByColumn[f.Column] = f
+		}
+
 		f.setCallbacks()
 	}
 

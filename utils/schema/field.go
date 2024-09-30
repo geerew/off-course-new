@@ -44,8 +44,14 @@ type Field struct {
 	// NotNull is a flag that indicates if the field is not null
 	NotNull bool
 
+	// Alias is the alias of the field in the database
+	Alias string
+
 	// IsJoin is a flag that indicates if the field is a join field
 	IsJoin bool
+
+	// Join is the join information, set when IsJoin is true
+	Join map[string]string
 
 	// ValueOf is a callback that returns the field's actual value and if it is zero from the given
 	// struct. The callback differs based on whether the field is a simple field in the root struct
@@ -80,6 +86,20 @@ func ParseField(sf reflect.StructField, cache *sync.Map) (*Field, error) {
 		Column:       tagSetting["COL"],
 		NotNull:      utils.CheckTruth(tagSetting["NOT NULL"], tagSetting["NOTNULL"]),
 		IsJoin:       utils.CheckTruth(tagSetting["JOIN"]),
+	}
+
+	if field.IsJoin {
+		field.Join = map[string]string{
+			"JOIN":   tagSetting["JOIN"],
+			"TABLE":  tagSetting["TABLE"],
+			"COLUMN": tagSetting["COL"],
+			"ON":     tagSetting["ON"],
+		}
+	}
+
+	// Set the alias of the field
+	if alias, ok := tagSetting["ALIAS"]; ok {
+		field.Alias = alias
 	}
 
 	// Skip fields that are not db columns or embedded
