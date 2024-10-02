@@ -1,4 +1,4 @@
-package schema
+package db_schema
 
 import (
 	"errors"
