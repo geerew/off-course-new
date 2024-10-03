@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/stretchr/testify/require"
 )
@@ -48,26 +49,26 @@ func Test_SchemaParse(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		schema, err := Parse(nil, tableMapper, &sync.Map{})
 		require.Nil(t, schema)
-		require.ErrorIs(t, err, ErrNilType)
+		require.ErrorIs(t, err, utils.ErrNilType)
 	})
 
 	t.Run("unsupported type", func(t *testing.T) {
 		schema, err := Parse(10, tableMapper, &sync.Map{})
 		require.Nil(t, schema)
-		require.ErrorIs(t, err, ErrUnsupportedType)
+		require.ErrorIs(t, err, utils.ErrUnsupportedType)
 	})
 
 	t.Run("nil struct", func(t *testing.T) {
 		var user *TestUser
 		schema, err := Parse(user, tableMapper, &sync.Map{})
 		require.Nil(t, schema)
-		require.ErrorIs(t, err, ErrInvalidValue)
+		require.ErrorIs(t, err, utils.ErrInvalidValue)
 	})
 
 	t.Run("nil table mapper", func(t *testing.T) {
 		schema, err := Parse(TestUser{}, nil, &sync.Map{})
 		require.Nil(t, schema)
-		require.ErrorIs(t, err, ErrNilTableMapper)
+		require.ErrorIs(t, err, utils.ErrNilTableMapper)
 	})
 
 	t.Run("no table mapping", func(t *testing.T) {

@@ -54,6 +54,10 @@ type Field struct {
 	// Alias is the alias of the field in the database
 	Alias string
 
+	// Immutable is a flag that indicates if the field is immutable. It can be used during the update
+	// operation to determine if the field should be updated
+	Immutable bool
+
 	// IsJoin is a flag that indicates if the field is a join field
 	IsJoin bool
 
@@ -94,8 +98,10 @@ func ParseField(sf reflect.StructField, cache *sync.Map) (*Field, error) {
 		IndirectType: sf.Type,
 		StructField:  sf,
 		Column:       tagSetting["COL"],
+		Alias:        tagSetting["ALIAS"],
 		NotNull:      utils.CheckTruth(tagSetting["NOT NULL"], tagSetting["NOTNULL"]),
 		SkipNull:     utils.CheckTruth(tagSetting["SKIP NULL"], tagSetting["SKIPNULL"]),
+		Immutable:    utils.CheckTruth(tagSetting["IMMUTABLE"]),
 		IsJoin:       utils.CheckTruth(tagSetting["JOIN"]),
 	}
 
@@ -106,11 +112,6 @@ func ParseField(sf reflect.StructField, cache *sync.Map) (*Field, error) {
 			"THIS":  tagSetting["THIS"],
 			"THAT":  tagSetting["THAT"],
 		}
-	}
-
-	// Set the alias of the field
-	if alias, ok := tagSetting["ALIAS"]; ok {
-		field.Alias = alias
 	}
 
 	// Skip fields that are not db columns or embedded

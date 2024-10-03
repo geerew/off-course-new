@@ -1,19 +1,13 @@
 package db_schema
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"sync"
 	"time"
+
+	"github.com/geerew/off-course/utils"
 )
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-var ErrUnsupportedType = errors.New("unsupported type")
-var ErrNilType = errors.New("nil model")
-var ErrNilTableMapper = errors.New("nil table mapper")
-var ErrInvalidValue = errors.New("invalid value")
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -64,11 +58,11 @@ type Schema struct {
 // multiple times
 func Parse(input any, tableMapper map[string]string, cache *sync.Map) (*Schema, error) {
 	if input == nil {
-		return nil, ErrNilType
+		return nil, utils.ErrNilType
 	}
 
 	if tableMapper == nil {
-		return nil, ErrNilTableMapper
+		return nil, utils.ErrNilTableMapper
 	}
 
 	// Get the reflect value of the input and unwrap pointers
@@ -84,7 +78,7 @@ func Parse(input any, tableMapper map[string]string, cache *sync.Map) (*Schema, 
 	// Error if the reflect value is invalid. This can happen if the input is nil, or an
 	// uninitialized pointer like `var test *Test`
 	if !reflectValue.IsValid() {
-		return nil, ErrInvalidValue
+		return nil, utils.ErrInvalidValue
 	}
 
 	// Parse the fields of the input
@@ -146,7 +140,7 @@ func Parse(input any, tableMapper map[string]string, cache *sync.Map) (*Schema, 
 // struct (schema), it recursively adds its fields to the final schema
 func validateAndParseFields(input any, cache *sync.Map) (*Schema, bool, error) {
 	if input == nil {
-		return nil, false, ErrNilType
+		return nil, false, utils.ErrNilType
 	}
 
 	// Get the concrete value of the input. If it is a pointer and is nil, create a new instance
@@ -168,7 +162,7 @@ func validateAndParseFields(input any, cache *sync.Map) (*Schema, bool, error) {
 
 	// If the type is not a struct, return an error
 	if inputType.Kind() != reflect.Struct {
-		return nil, false, fmt.Errorf("%w: %+v", ErrUnsupportedType, input)
+		return nil, false, fmt.Errorf("%w: %+v", utils.ErrUnsupportedType, input)
 	}
 
 	// Attempt to load the schema from cache
