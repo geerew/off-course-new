@@ -1,0 +1,146 @@
+package schema
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Modeler defines the interface that each struct (model) should implement in order to be used
+type Modeler interface {
+	Table() string
+	Definer
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Definer defines the interface that each struct (model) should implement in order to be used
+type Definer interface {
+	Define(*ModelConfig)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ModelConfig defines the configuration for the model
+type ModelConfig struct {
+	// The fields of the model
+	fields map[string]*modelFieldConfig
+
+	// A slice of left joins
+	leftJoins []*modelLeftJoinConfig
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// modelFieldConfig defines the configuration for a field in the model
+type modelFieldConfig struct {
+	// The name of the struct field
+	name string
+	// True when, the field is an embedded struct
+	embedded bool
+	// Override for the db column name
+	column string
+	// When true, the field cannot be null in the database
+	notNull bool
+	// A db column alias
+	alias string
+	// When true, the field can be updated
+	mutable bool
+	// When true, the field will be skipped during create if it is null
+	ignoreIfNull bool
+	// The name of the join table that this field is associated with
+	joinTable string
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Field adds a field to the model
+func (m *ModelConfig) Field(name string) *modelFieldConfig {
+	field := &modelFieldConfig{name: name}
+
+	if m.fields == nil {
+		m.fields = make(map[string]*modelFieldConfig)
+	}
+
+	m.fields[name] = field
+	return field
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Embedded sets the field to be an embedded struct
+func (f *modelFieldConfig) Embedded() {
+	f.embedded = true
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Column sets the name of the column in the database
+func (f *modelFieldConfig) Column(name string) *modelFieldConfig {
+	f.column = name
+	return f
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// NotNull signals that the field cannot be null in the database
+func (f *modelFieldConfig) NotNull() *modelFieldConfig {
+	f.notNull = true
+	return f
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Alias sets the alias for the column
+func (f *modelFieldConfig) Alias(name string) *modelFieldConfig {
+	f.alias = name
+	return f
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Mutable signals that the field can be updated
+func (f *modelFieldConfig) Mutable() *modelFieldConfig {
+	f.mutable = true
+	return f
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// IgnoreIfNull signals that the field should be skipped during create if it is null
+func (f *modelFieldConfig) IgnoreIfNull() *modelFieldConfig {
+	f.ignoreIfNull = true
+	return f
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// JoinTable sets the name of the join table
+func (f *modelFieldConfig) JoinTable(name string) *modelFieldConfig {
+	f.joinTable = name
+	return f
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// modelLeftJoinConfig defines the configuration for a left join
+type modelLeftJoinConfig struct {
+	// The name of the table to join with
+	table string
+	// The condition for the join, e.g. "table1.id = table2.id"
+	on string
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// LeftJoin adds a left join to the model
+func (m *ModelConfig) LeftJoin(table string) *modelLeftJoinConfig {
+	join := &modelLeftJoinConfig{table: table}
+	m.leftJoins = append(m.leftJoins, join)
+
+	return join
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// On sets the condition for the join
+func (j *modelLeftJoinConfig) On(condition string) *modelLeftJoinConfig {
+	j.on = condition
+	return j
+}

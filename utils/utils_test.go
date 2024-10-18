@@ -403,3 +403,31 @@ func Test_EscapeBackslashes(t *testing.T) {
 		require.Equal(t, test.expected, result)
 	}
 }
+
+// -------------------------------------------------------
+
+func Test_SnakeCase(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"camelCase", "camel_case"},
+		{"PascalCase", "pascal_case"},
+		{"snake_case", "snake_case"},
+		{"Already_Snake_Case", "already_snake_case"},
+		{"UpperCase", "upper_case"},
+		{"lowercase", "lowercase"},
+		{"SimpleTest", "simple_test"},
+		{"TestID", "test_id"},
+		{"AnotherTestCase", "another_test_case"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			actual := SnakeCase(tt.input)
+			if actual != tt.expected {
+				t.Errorf("snakeCase(%q) = %q; want %q", tt.input, actual, tt.expected)
+			}
+		})
+	}
+}

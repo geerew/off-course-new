@@ -318,17 +318,21 @@ func Map[T, V any](ts []T, fn func(T) V) []V {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ReflectValueAndType is a helper function that takes an interface{} and returns
-// the reflect.Value and reflect.Type of the input. If the input is a pointer, it
-// dereferences it and returns the value and type of the underlying value
-func ReflectValueAndType(input any) (reflect.Value, reflect.Type) {
-	v := reflect.ValueOf(input)
-	t := reflect.TypeOf(input)
+// snakeCase converts a string to snake_case
+func SnakeCase(s string) string {
+	var b strings.Builder
+	b.Grow(len(s) + 5)
 
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-		t = t.Elem()
+	for i, r := range s {
+		// Check if the current rune is uppercase
+		if i > 0 && 'A' <= r && r <= 'Z' {
+			// Add underscore if previous rune is lowercase (or non-uppercase letter)
+			if 'a' <= rune(s[i-1]) && rune(s[i-1]) <= 'z' {
+				b.WriteByte('_')
+			}
+		}
+		b.WriteRune(r)
 	}
 
-	return v, t
+	return strings.ToLower(b.String())
 }
