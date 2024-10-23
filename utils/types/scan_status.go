@@ -27,17 +27,18 @@ const (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// NewScanStatus creates a ScanStatus type with the status of
+// NewScanStatusWaiting creates a ScanStatus type with the status of
 // waiting
-func NewScanStatus(s ScanStatusType) ScanStatus {
-	switch s {
-	case ScanStatusWaiting:
-		return ScanStatus{s: ScanStatusWaiting}
-	case ScanStatusProcessing:
-		return ScanStatus{s: ScanStatusProcessing}
-	}
-
+func NewScanStatusWaiting() ScanStatus {
 	return ScanStatus{s: ScanStatusWaiting}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// NewScanStatusProcessing creates a ScanStatus type with the status of
+// processing
+func NewScanStatusProcessing() ScanStatus {
+	return ScanStatus{s: ScanStatusProcessing}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -72,7 +73,12 @@ func (ss ScanStatus) String() string {
 
 // MarshalJSON implements the `json.Marshaler` interface
 func (ss ScanStatus) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + ss.s + `"`), nil
+	s := ss.String()
+	if s == "" {
+		s = fmt.Sprint(ScanStatusWaiting)
+	}
+
+	return []byte(`"` + s + `"`), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -91,6 +97,10 @@ func (ss *ScanStatus) UnmarshalJSON(b []byte) error {
 
 // Value implements the `driver.Valuer` interface
 func (ss ScanStatus) Value() (driver.Value, error) {
+	if ss == (ScanStatus{}) || ss.s == "" {
+		return fmt.Sprint(ScanStatusWaiting), nil
+	}
+
 	return ss.String(), nil
 }
 
@@ -98,7 +108,6 @@ func (ss ScanStatus) Value() (driver.Value, error) {
 
 // Scan implements `sql.Scanner` interface
 func (ss *ScanStatus) Scan(value any) error {
-
 	vv := cast.ToString(value)
 
 	switch vv {

@@ -8,29 +8,20 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestScanStatus_NewScanStatus(t *testing.T) {
+func TestScanStatus_NewScanStatusWaiting(t *testing.T) {
+	require.Equal(t, ScanStatusWaiting, NewScanStatusWaiting().s)
+}
 
-	tests := []struct {
-		input    ScanStatusType
-		expected ScanStatusType
-	}{
-		{ScanStatusWaiting, ScanStatusWaiting},
-		{ScanStatusProcessing, ScanStatusProcessing},
-		{"sdf", ScanStatusWaiting},
-	}
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	for _, tt := range tests {
-		s := NewScanStatus(tt.input)
-		require.Equal(t, tt.expected, s.s)
-	}
+func TestScanStatus_NewScanStatusProcessing(t *testing.T) {
+	require.Equal(t, ScanStatusProcessing, NewScanStatusProcessing().s)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestScanStatus_SetWaiting(t *testing.T) {
-	s := NewScanStatus(ScanStatusProcessing)
-	require.Equal(t, ScanStatusProcessing, s.s)
-
+	s := NewScanStatusProcessing()
 	s.SetWaiting()
 	require.Equal(t, ScanStatusWaiting, s.s)
 }
@@ -38,9 +29,7 @@ func TestScanStatus_SetWaiting(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestScanStatus_SetProcessing(t *testing.T) {
-	s := NewScanStatus(ScanStatusWaiting)
-	require.Equal(t, ScanStatusWaiting, s.s)
-
+	s := NewScanStatusWaiting()
 	s.SetProcessing()
 	require.Equal(t, ScanStatusProcessing, s.s)
 }
@@ -48,38 +37,27 @@ func TestScanStatus_SetProcessing(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestScanStatus_IsWaiting(t *testing.T) {
-	tests := []struct {
-		input    ScanStatusType
-		expected bool
-	}{
-		{ScanStatusWaiting, true},
-		{ScanStatusProcessing, false},
-	}
-
-	for _, tt := range tests {
-		s := NewScanStatus(tt.input)
-		require.Equal(t, tt.expected, s.IsWaiting())
-	}
+	require.True(t, NewScanStatusWaiting().IsWaiting())
+	require.False(t, NewScanStatusProcessing().IsWaiting())
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestScanStatus_MarshalJSON(t *testing.T) {
-	tests := []struct {
-		input    ScanStatusType
-		expected string
-	}{
-		{ScanStatusWaiting, `"waiting"`},
-		{ScanStatusProcessing, `"processing"`},
-	}
+	waiting := NewScanStatusWaiting()
+	res, err := waiting.MarshalJSON()
+	require.Nil(t, err)
+	require.Equal(t, `"waiting"`, string(res))
 
-	for _, tt := range tests {
-		s := NewScanStatus(tt.input)
+	processing := NewScanStatusProcessing()
+	res, err = processing.MarshalJSON()
+	require.Nil(t, err)
+	require.Equal(t, `"processing"`, string(res))
 
-		res, err := s.MarshalJSON()
-		require.Nil(t, err)
-		require.Equal(t, tt.expected, string(res))
-	}
+	empty := ScanStatus{}
+	res, err = empty.MarshalJSON()
+	require.Nil(t, err)
+	require.Equal(t, `"waiting"`, string(res))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -116,21 +94,20 @@ func TestScanStatus_UnmarshalJSON(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestScanStatus_Value(t *testing.T) {
-	tests := []struct {
-		input    ScanStatusType
-		expected string
-	}{
-		{ScanStatusWaiting, "waiting"},
-		{ScanStatusProcessing, "processing"},
-	}
+	waiting := NewScanStatusWaiting()
+	res, err := waiting.Value()
+	require.Nil(t, err)
+	require.Equal(t, "waiting", res)
 
-	for _, tt := range tests {
-		s := NewScanStatus(tt.input)
+	processing := NewScanStatusProcessing()
+	res, err = processing.Value()
+	require.Nil(t, err)
+	require.Equal(t, "processing", res)
 
-		res, err := s.Value()
-		require.Nil(t, err)
-		require.Equal(t, tt.expected, res)
-	}
+	empty := ScanStatus{}
+	res, err = empty.Value()
+	require.Nil(t, err)
+	require.Equal(t, "waiting", res)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
