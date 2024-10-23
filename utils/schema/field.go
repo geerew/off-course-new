@@ -41,85 +41,23 @@ type field struct {
 	// value of the field and whether it is zero
 	ValueOf func(reflect.Value) (any, bool)
 
+	// The concrete type of the field
 	concreteType reflect.Type
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func parseFields(model reflect.Type, config *ModelConfig) ([]*field, error) {
-	fields := []*field{}
-
-	for i := range model.NumField() {
-		sf := model.Field(i)
-
-		for sf.Type.Kind() == reflect.Ptr {
-			sf.Type = sf.Type.Elem()
-		}
-
-		// Parse the field if has been defined by the Modeler interface
-		if fieldConfig, ok := config.fields[sf.Name]; ok {
-			if sf.Type.Kind() == reflect.Struct && fieldConfig.embedded {
-				fs, err := parseEmbeddedFields(sf)
-				if err != nil {
-					return nil, err
-				}
-
-				fields = append(fields, fs...)
-				continue
-			} else {
-				fields = append(fields, parseField(sf, fieldConfig))
-			}
-		}
-	}
-
-	for _, field := range fields {
-		field.setReflectValueOf()
-		field.setValueOf()
-	}
-
-	return fields, nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// parseEmbeddedFields will validate an embedded field implements the Modeler interface and then
-// parses the fields of the embedded struct
-func parseEmbeddedFields(sf reflect.StructField) ([]*field, error) {
-	m, isDefiner := reflect.New(sf.Type).Interface().(Definer)
-	if isDefiner {
-		config := &ModelConfig{}
-		m.Define(config)
-
-		rt := reflect.Indirect(reflect.ValueOf(m)).Type()
-
-		fields, err := parseFields(rt, config)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, field := range fields {
-			field.Position = append(sf.Index, field.Position...)
-		}
-
-		return fields, nil
-	} else {
-		return nil, utils.ErrEmbedded
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // parseField will parse a field from the struct and return a field struct
-func parseField(sf reflect.StructField, fieldConfig *modelFieldConfig) *field {
+func parseField(sf reflect.StructField, config *modelFieldConfig) *field {
 	f := &field{
 		Name:         sf.Name,
 		Position:     sf.Index,
-		Column:       fieldConfig.column,
-		Alias:        fieldConfig.alias,
-		NotNull:      fieldConfig.notNull,
-		Mutable:      fieldConfig.mutable,
-		IgnoreIfNull: fieldConfig.ignoreIfNull,
-		JoinTable:    fieldConfig.joinTable,
+		Column:       config.column,
+		Alias:        config.alias,
+		NotNull:      config.notNull,
+		Mutable:      config.mutable,
+		IgnoreIfNull: config.ignoreIfNull,
+		JoinTable:    config.joinTable,
 		concreteType: sf.Type,
 	}
 
@@ -132,7 +70,56 @@ func parseField(sf reflect.StructField, fieldConfig *modelFieldConfig) *field {
 		f.concreteType = f.concreteType.Elem()
 	}
 
+	f.setReflectValueOf()
+	f.setValueOf()
+
 	return f
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// parseEmbeddedField will validate an embedded field implements the Modeler interface and then
+// parses the fields of the embedded struct
+func parseEmbeddedField(sf reflect.StructField) ([]*field, error) {
+	if sf.Type.Kind() != reflect.Struct {
+		return nil, utils.ErrEmbedded
+	}
+
+	m, isDefiner := reflect.New(sf.Type).Interface().(Definer)
+	if isDefiner {
+		config := &ModelConfig{}
+		m.Define(config)
+
+		rt := reflect.Indirect(reflect.ValueOf(m)).Type()
+
+		fields := []*field{}
+		for i := range rt.NumField() {
+			sf := rt.Field(i)
+
+			for sf.Type.Kind() == reflect.Ptr {
+				sf.Type = sf.Type.Elem()
+			}
+
+			if fieldConfig, ok := config.fields[sf.Name]; ok {
+				fields = append(fields, parseField(sf, fieldConfig))
+			} else if _, ok := config.embedded[sf.Name]; ok {
+				fs, err := parseEmbeddedField(sf)
+				if err != nil {
+					return nil, err
+				}
+
+				fields = append(fields, fs...)
+			}
+		}
+
+		for _, field := range fields {
+			field.Position = append(sf.Index, field.Position...)
+		}
+
+		return fields, nil
+	} else {
+		return nil, utils.ErrEmbedded
+	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

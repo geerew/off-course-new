@@ -13,72 +13,19 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type Base struct {
-	ID int
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func (b *Base) Define(c *ModelConfig) {
-	c.Field("ID").Column("id")
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-type User struct {
-	Base
-	Name   string
-	Age    int
-	Number sql.NullInt16
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func (u *User) Table() string {
-	return "users"
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func (u *User) Define(c *ModelConfig) {
-	c.Field("Base").Embedded()
-	c.Field("Name").Column("name").NotNull()
-	c.Field("Age").NotNull()
-	c.Field("Number").Column("number")
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func setup(t *testing.T) *sql.DB {
-	t.Helper()
-
-	db, err := sql.Open("sqlite3", ":memory:")
-	require.NoError(t, err)
-
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY, 
-			name TEXT NOT NULL,
-			age TEXT NOT NULL,
-			number INTEGER
-		);
-	`)
-	require.NoError(t, err)
-
-	return db
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 func Test_Parse(t *testing.T) {
 	t.Run("struct", func(t *testing.T) {
-		sch, err := Parse(&User{})
+		sch, err := Parse(&TestUser{})
 		require.NoError(t, err)
 		require.NotNil(t, sch)
+
+		require.Equal(t, "users", sch.Table)
+		require.Len(t, sch.Fields, 1)
+		require.Len(t, sch.Relations, 3)
 	})
 
 	t.Run("slice", func(t *testing.T) {
-		var users []*User
+		var users []*TestUser
 		schema, err := Parse(users)
 		require.NotNil(t, schema)
 		require.NoError(t, err)
@@ -91,7 +38,7 @@ func Test_Parse(t *testing.T) {
 	})
 
 	t.Run("nil struct", func(t *testing.T) {
-		var user *User
+		var user *TestUser
 		schema, err := Parse(user)
 		require.Nil(t, schema)
 		require.ErrorIs(t, err, utils.ErrInvalidValue)
@@ -106,129 +53,216 @@ func Test_Parse(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func Test_Scan(t *testing.T) {
+func Test_Select(t *testing.T) {
 	t.Run("struct success", func(t *testing.T) {
 		db := setup(t)
 
-		_, err := db.Exec(`INSERT INTO users (id, name, age) VALUES (?, ?, ?)`, 1, "John", 30)
-		require.NoError(t, err)
-
-		sch, err := Parse(&User{})
+		sch, err := Parse(&TestUser{})
 		require.NoError(t, err)
 		require.NotNil(t, sch)
 
-		rows, err := db.Query(`SELECT * FROM users WHERE id = ?`, 1)
-		require.NoError(t, err)
-		defer rows.Close()
-
-		u := &User{}
-		err = sch.Scan(rows, u)
+		u := &TestUser{}
+		err = sch.Select(u, &database.Options{Where: squirrel.Eq{"id": 1}}, db)
 		require.NoError(t, err)
 
 		require.Equal(t, 1, u.ID)
-		require.Equal(t, "John", u.Name)
-		require.Equal(t, 30, u.Age)
-		require.False(t, u.Number.Valid)
+		require.Equal(t, 1, u.Profile.ID)
+		require.Len(t, u.Posts, 2)
+		require.Equal(t, "Post 1 by John", u.Posts[0].Title)
+		require.Equal(t, "Post 2 by John", u.Posts[1].Title)
+		require.Len(t, *u.PtrPosts, 2)
 	})
 
 	t.Run("slice success", func(t *testing.T) {
 		db := setup(t)
 
-		_, err := db.Exec(`INSERT INTO users (id, name, age) VALUES (?, ?, ?)`, 1, "John", 30)
-		require.NoError(t, err)
-
-		_, err = db.Exec(`INSERT INTO users (id, name, age) VALUES (?, ?, ?)`, 2, "Jane", 25)
-		require.NoError(t, err)
-
-		sch, err := Parse(&User{})
+		sch, err := Parse(&TestUser{})
 		require.NoError(t, err)
 		require.NotNil(t, sch)
 
-		rows, err := db.Query(`SELECT * FROM users`)
-		require.NoError(t, err)
-		defer rows.Close()
-
-		u := []User{}
-		err = sch.Scan(rows, &u)
+		u := []TestUser{}
+		err = sch.Select(&u, nil, db)
 		require.NoError(t, err)
 		require.Len(t, u, 2)
+
+		require.Equal(t, 1, u[0].ID)
+		require.Equal(t, 1, u[0].Profile.ID)
+		require.Len(t, u[0].Posts, 2)
+		require.Equal(t, "Post 1 by John", u[0].Posts[0].Title)
+		require.Equal(t, "Post 2 by John", u[0].Posts[1].Title)
+		require.Len(t, *u[0].PtrPosts, 2)
+
+		require.Equal(t, 2, u[1].ID)
+		require.Equal(t, 2, u[1].Profile.ID)
+		require.Len(t, u[1].Posts, 1)
+		require.Equal(t, "Post by Jane", u[1].Posts[0].Title)
+		require.Len(t, *u[1].PtrPosts, 1)
+	})
+
+	t.Run("no relation found", func(t *testing.T) {
+		db := setup(t)
+
+		userSchema, err := Parse(&TestUser{})
+		require.NoError(t, err)
+		require.NotNil(t, userSchema)
+
+		profileSchema, err := Parse(&TestProfile{})
+		require.NoError(t, err)
+		require.NotNil(t, profileSchema)
+
+		postSchema, err := Parse(&TestPost{})
+		require.NoError(t, err)
+		require.NotNil(t, postSchema)
+
+		// Delete all profiles
+		_, err = profileSchema.Delete(nil, db)
+		require.NoError(t, err)
+
+		// Delete all posts
+		_, err = postSchema.Delete(nil, db)
+		require.NoError(t, err)
+
+		u := &TestUser{}
+		err = userSchema.Select(u, &database.Options{Where: squirrel.Eq{"id": 1}}, db)
+		require.NoError(t, err)
+
+		require.Equal(t, 1, u.ID)
+		require.Equal(t, TestProfile{}, u.Profile)
+		require.Len(t, u.Posts, 0)
+	})
+
+	t.Run("some relations found", func(t *testing.T) {
+		db := setup(t)
+
+		userSchema, err := Parse(&TestUser{})
+		require.NoError(t, err)
+		require.NotNil(t, userSchema)
+
+		profileSchema, err := Parse(&TestProfile{})
+		require.NoError(t, err)
+		require.NotNil(t, profileSchema)
+
+		postSchema, err := Parse(&TestPost{})
+		require.NoError(t, err)
+		require.NotNil(t, postSchema)
+
+		// Delete Johns profile
+		_, err = profileSchema.Delete(&database.Options{Where: squirrel.Eq{"id": 1}}, db)
+		require.NoError(t, err)
+
+		// Delete Johns posts
+		_, err = postSchema.Delete(&database.Options{Where: squirrel.Eq{"user_id": 1}}, db)
+		require.NoError(t, err)
+
+		u := []*TestUser{}
+		err = userSchema.Select(&u, nil, db)
+		require.NoError(t, err)
+
+		require.Len(t, u, 2)
+		require.Equal(t, 1, u[0].ID)
+		require.Equal(t, TestProfile{}, u[0].Profile)
+		require.Len(t, u[0].Posts, 0)
+
+		require.Equal(t, 2, u[1].ID)
+		require.Equal(t, 2, u[1].Profile.ID)
+		require.Len(t, u[1].Posts, 1)
 	})
 
 	t.Run("no rows", func(t *testing.T) {
 		db := setup(t)
 
-		sch, err := Parse(&User{})
+		sch, err := Parse(&TestUser{})
 		require.NoError(t, err)
 		require.NotNil(t, sch)
 
-		rows, err := db.Query(`SELECT * FROM users WHERE id = ?`, 1)
+		// Delete everything from the users table
+		_, err = sch.Delete(nil, db)
 		require.NoError(t, err)
-		defer rows.Close()
 
-		u := &User{}
-		err = sch.Scan(rows, u)
+		u := &TestUser{}
+		err = sch.Select(u, &database.Options{Where: squirrel.Eq{"id": 1}}, db)
 		require.ErrorIs(t, err, sql.ErrNoRows)
 	})
 
 	t.Run("not a pointer", func(t *testing.T) {
 		db := setup(t)
 
-		sch, err := Parse(&User{})
+		sch, err := Parse(&TestUser{})
 		require.NoError(t, err)
 		require.NotNil(t, sch)
 
-		rows, err := db.Query(`SELECT * FROM users WHERE id = ?`, 1)
-		require.NoError(t, err)
-		defer rows.Close()
-
-		err = sch.Scan(rows, User{})
+		err = sch.Select(TestUser{}, nil, db)
 		require.ErrorIs(t, err, utils.ErrNotPtr)
 	})
 
 	t.Run("nil pointer", func(t *testing.T) {
 		db := setup(t)
 
-		sch, err := Parse(&User{})
+		sch, err := Parse(&TestUser{})
 		require.NoError(t, err)
 		require.NotNil(t, sch)
 
-		rows, err := db.Query(`SELECT * FROM users WHERE id = ?`, 1)
-		require.NoError(t, err)
-		defer rows.Close()
-
-		var u *User
-		err = sch.Scan(rows, u)
+		var u *TestUser
+		err = sch.Select(u, nil, db)
 		require.ErrorIs(t, err, utils.ErrNilPtr)
 	})
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func Benchmark_Create(b *testing.B) {
-	db, err := sql.Open("sqlite3", ":memory:")
-	require.NoError(b, err)
+func Test_Count(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		db := setup(t)
 
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY, 
-			name TEXT NOT NULL,
-			age TEXT NOT NULL,
-			number INTEGER
-		);
-	`)
+		sch, err := Parse(&TestUser{})
+		require.NoError(t, err)
+		require.NotNil(t, sch)
+
+		count, err := sch.Count(&database.Options{Where: squirrel.Eq{"id": 1}}, db)
+		require.NoError(t, err)
+		require.Equal(t, 1, count)
+	})
+
+	t.Run("no rows", func(t *testing.T) {
+		db := setup(t)
+
+		sch, err := Parse(&TestUser{})
+		require.NoError(t, err)
+		require.NotNil(t, sch)
+
+		// Delete everything from the users table
+		_, err = sch.Delete(nil, db)
+		require.NoError(t, err)
+
+		count, err := sch.Count(nil, db)
+		require.NoError(t, err)
+		require.Zero(t, count)
+
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Benchmark_Create(b *testing.B) {
+	db := setup(b)
+
+	userSchema, err := Parse(&TestUser{})
+	require.NoError(b, err)
+	require.NotNil(b, userSchema)
+
+	_, err = userSchema.Delete(nil, db)
 	require.NoError(b, err)
 
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		sch, err := Parse(&User{})
+		sch, err := Parse(&TestUser{})
 		require.NoError(b, err)
 
-		u := &User{
-			Base: Base{
+		u := &TestUser{
+			TestBase: TestBase{
 				ID: i,
 			},
-			Name: "John",
-			Age:  30,
 		}
 
 		builder := sch.InsertBuilder(u)
@@ -242,39 +276,38 @@ func Benchmark_Create(b *testing.B) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func Benchmark_Scan(b *testing.B) {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db := setup(b)
+
+	userSchema, err := Parse(&TestUser{})
+	require.NoError(b, err)
+	require.NotNil(b, userSchema)
+
+	// Empty users
+	_, err = userSchema.Delete(nil, db)
 	require.NoError(b, err)
 
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY, 
-			name TEXT NOT NULL,
-			age TEXT NOT NULL,
-			number INTEGER
-		);
-	`)
+	profileSchema, err := Parse(&TestProfile{})
+	require.NoError(b, err)
+	require.NotNil(b, profileSchema)
+
+	// Empty profiles
+	_, err = profileSchema.Delete(nil, db)
 	require.NoError(b, err)
 
+	// Insert 1000 users and profiles
 	for i := 0; i < 1000; i++ {
-		_, err = db.Exec(`INSERT INTO users (id, name, age) VALUES (?, ?, ?)`, i, "John", 30)
+		_, err = db.Exec(`INSERT INTO users (id) VALUES (?)`, i)
+		require.NoError(b, err)
+
+		_, err = db.Exec(`INSERT INTO profiles (user_id, name, username, email) VALUES (?, ?, ?, ?)`, i, "John Doe", "johndoe", "john@test.com")
 		require.NoError(b, err)
 	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		sch, err := Parse(&User{})
-		require.NoError(b, err)
-
-		options := &database.Options{Where: squirrel.Eq{"id": (i % 1000)}}
-		builder := sch.SelectBuilder(options).Limit(1)
-		query, args, _ := builder.ToSql()
-
-		rows, err := db.Query(query, args...)
-		require.NoError(b, err)
-
-		u := &User{}
-		err = sch.Scan(rows, u)
+		u := &TestUser{}
+		err = userSchema.Select(u, &database.Options{Where: squirrel.Eq{"id": (i % 1000)}}, db)
 		require.NoError(b, err)
 	}
 }

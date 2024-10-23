@@ -26,6 +26,9 @@ type Schema struct {
 	// FieldsByColumn is a map of fields by their DB column name
 	FieldsByColumn map[string]*field
 
+	// A slice of relations
+	Relations []*relation
+
 	// A slice of left joins
 	LeftJoins []string
 }
@@ -39,19 +42,9 @@ func Parse(model any) (*Schema, error) {
 	}
 
 	// Get the reflect value and unwrap pointers
-	rv := reflect.ValueOf(model)
-	for rv.Kind() == reflect.Ptr {
-		if rv.IsNil() && rv.CanAddr() {
-			rv.Set(reflect.New(rv.Type().Elem()))
-		}
-
-		rv = rv.Elem()
-	}
-
-	// Error if the reflect value is invalid. This can happen if the model is nil, or an
-	// uninitialized pointer like `var test *Test`
-	if !rv.IsValid() {
-		return nil, utils.ErrInvalidValue
+	rv, err := concreteReflectValue(reflect.ValueOf(model))
+	if err != nil {
+		return nil, err
 	}
 
 	rt := rv.Type()
@@ -80,10 +73,21 @@ func Parse(model any) (*Schema, error) {
 	config := &ModelConfig{}
 	modeler.Define(config)
 
-	if fields, err := parseFields(rt, config); err != nil {
-		return nil, err
-	} else {
-		s.Fields = fields
+	for i := range rt.NumField() {
+		sf := rt.Field(i)
+
+		if fieldConfig, ok := config.fields[sf.Name]; ok {
+			s.Fields = append(s.Fields, parseField(sf, fieldConfig))
+		} else if _, ok := config.embedded[sf.Name]; ok {
+			fields, err := parseEmbeddedField(sf)
+			if err != nil {
+				return nil, err
+			}
+
+			s.Fields = append(s.Fields, fields...)
+		} else if relationConfig, ok := config.relations[sf.Name]; ok {
+			s.Relations = append(s.Relations, parseRelation(sf, relationConfig))
+		}
 	}
 
 	// Build the FieldsByColumn map
@@ -108,6 +112,124 @@ func Parse(model any) (*Schema, error) {
 	}
 
 	return s, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// CALLERS
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Count calls the CountBuilder and executes the query, returning the count
+func (s *Schema) Count(options *database.Options, db database.Querier) (int, error) {
+	query, args, _ := s.CountBuilder(options).ToSql()
+
+	var count int
+	err := db.QueryRow(query, args...).Scan(&count)
+	return count, err
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Insert calls the InsertBuilder and executes the query, inserting a row
+func (s *Schema) Insert(model any, db database.Querier) (sql.Result, error) {
+	query, args, _ := s.InsertBuilder(model).ToSql()
+	return db.Exec(query, args...)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Select calls the SelectBuilder and executes the query, scanning the result into the model,
+// which may be a struct or a slice of structs
+func (s *Schema) Select(model any, options *database.Options, db database.Querier) error {
+	rv := reflect.ValueOf(model)
+
+	if rv.Kind() != reflect.Ptr {
+		return utils.ErrNotPtr
+	}
+
+	if rv.IsNil() {
+		return utils.ErrNilPtr
+	}
+
+	var err error
+	var rows Rows
+
+	concreteRv, err := concreteReflectValue(reflect.ValueOf(model))
+	if err != nil {
+		return err
+	}
+
+	if concreteRv.Kind() == reflect.Slice {
+		query, args, _ := s.SelectBuilder(options).ToSql()
+
+		rows, err = db.Query(query, args...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		err = s.ScanMany(rows, rv)
+		if err != nil {
+			return err
+		}
+
+		err = s.loadRelationsMany(concreteRv, db)
+	} else {
+		query, args, _ := s.SelectBuilder(options).Limit(1).ToSql()
+		rows, err = db.Query(query, args...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		err = s.ScanOne(rows, rv)
+		if err != nil {
+			return err
+		}
+
+		err = s.loadRelationsOne(concreteRv, db)
+	}
+
+	return err
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Insert calls the InsertBuilder and executes the query, inserting a row
+func (s *Schema) Update(model any, options *database.Options, db database.Querier) (sql.Result, error) {
+	builder, err := s.UpdateBuilder(model, options)
+	if err != nil {
+		return nil, err
+	}
+
+	query, args, _ := builder.ToSql()
+	return db.Exec(query, args...)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Delete calls the DeleteBuilder and executes the query, deleting rows
+func (s *Schema) Delete(options *database.Options, db database.Querier) (sql.Result, error) {
+	query, args, _ := s.DeleteBuilder(options).ToSql()
+	return db.Exec(query, args...)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// BUILDERS
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// CountBuilder creates a squirrel SelectBuilder for the model
+func (s *Schema) CountBuilder(options *database.Options) squirrel.SelectBuilder {
+	builder := squirrel.
+		StatementBuilder.
+		PlaceholderFormat(squirrel.Question).
+		Select("COUNT(DISTINCT " + s.Table + ".id)").
+		From(s.Table)
+
+	if options != nil && options.Where != nil {
+		builder = builder.Where(options.Where)
+	}
+
+	return builder
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -190,10 +312,15 @@ func (s *Schema) SelectBuilder(options *database.Options) squirrel.SelectBuilder
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // UpdateBuilder creates a squirrel UpdateBuilder for the model
-func (s *Schema) UpdateBuilder(model any) squirrel.UpdateBuilder {
+func (s *Schema) UpdateBuilder(model any, options *database.Options) (squirrel.UpdateBuilder, error) {
+	if options == nil || options.Where == nil || options.Where == "" {
+		return squirrel.UpdateBuilder{}, utils.ErrInvalidWhere
+	}
+
 	builder := squirrel.
 		StatementBuilder.
-		Update(s.Table)
+		Update(s.Table).
+		Where(options.Where)
 
 	for _, f := range s.Fields {
 		if f.JoinTable != "" || !f.Mutable {
@@ -213,24 +340,7 @@ func (s *Schema) UpdateBuilder(model any) squirrel.UpdateBuilder {
 		builder = builder.Set(f.Column, val)
 	}
 
-	return builder
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// CountBuilder creates a squirrel SelectBuilder for the model
-func (s *Schema) CountBuilder(options *database.Options) squirrel.SelectBuilder {
-	builder := squirrel.
-		StatementBuilder.
-		PlaceholderFormat(squirrel.Question).
-		Select("COUNT(DISTINCT " + s.Table + ".id)").
-		From(s.Table)
-
-	if options != nil && options.Where != nil {
-		builder = builder.Where(options.Where)
-	}
-
-	return builder
+	return builder, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -240,12 +350,17 @@ func (s *Schema) DeleteBuilder(options *database.Options) squirrel.DeleteBuilder
 	builder := squirrel.
 		StatementBuilder.
 		PlaceholderFormat(squirrel.Question).
-		Delete(s.Table).
-		Where(options.Where)
+		Delete(s.Table)
+
+	if options != nil && options.Where != nil {
+		builder = builder.Where(options.Where)
+	}
 
 	return builder
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// SCANS
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Rows defines the interface for rows
@@ -322,7 +437,6 @@ func (s *Schema) Scan(rows Rows, model any) error {
 				concreteValue.Set(reflect.Append(concreteValue, concreteInstance))
 			}
 		}
-
 	} else {
 		columns, err := rows.Columns()
 		if err != nil {
@@ -354,6 +468,336 @@ func (s *Schema) Scan(rows Rows, model any) error {
 		err = rows.Scan(values...)
 		if err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (s *Schema) ScanMany(rows Rows, rv reflect.Value) error {
+	defer rows.Close()
+
+	if rv.Kind() != reflect.Ptr {
+		return utils.ErrNotPtr
+	}
+
+	if rv.IsNil() {
+		return utils.ErrNilPtr
+	}
+
+	concreteRv, err := concreteReflectValue(rv)
+	if err != nil {
+		return err
+	}
+
+	if concreteRv.Kind() != reflect.Slice {
+		return utils.ErrNotSlice
+	}
+
+	concreteRv.SetLen(0)
+
+	isPtr := concreteRv.Type().Elem().Kind() == reflect.Ptr
+
+	base := concreteRv.Type().Elem()
+	if isPtr {
+		base = base.Elem()
+	}
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+
+	// Create a pointer of values for each field
+	values := make([]interface{}, len(columns))
+
+	for rows.Next() {
+		instance := reflect.New(base)
+		concreteInstance := reflect.Indirect(instance)
+
+		for idx, column := range columns {
+			if field := s.FieldsByColumn[column]; field != nil {
+				v := concreteInstance
+				for _, pos := range field.Position {
+					// TODO - If value is a pointer and nil, initialize it
+					// TODO - If value is a map and nil, initialize it
+					v = reflect.Indirect(v).Field(pos)
+				}
+
+				values[idx] = v.Addr().Interface()
+			} else {
+				return fmt.Errorf("column %s not found in model", column)
+			}
+		}
+
+		err = rows.Scan(values...)
+		if err != nil {
+			return err
+		}
+
+		if isPtr {
+			concreteRv.Set(reflect.Append(concreteRv, instance))
+		} else {
+			concreteRv.Set(reflect.Append(concreteRv, concreteInstance))
+		}
+	}
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ScanOne scans a single row into the model
+func (s *Schema) ScanOne(rows Rows, rv reflect.Value) error {
+	defer rows.Close()
+
+	if rv.Kind() != reflect.Ptr {
+		return utils.ErrNotPtr
+	}
+
+	if rv.IsNil() {
+		return utils.ErrNilPtr
+	}
+
+	concreteRv, err := concreteReflectValue(rv)
+	if err != nil {
+		return err
+	}
+
+	if concreteRv.Kind() != reflect.Struct {
+		return utils.ErrNotStruct
+	}
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+
+	// Create a pointer of values for each field
+	values := make([]interface{}, len(columns))
+
+	for idx, column := range columns {
+		if field := s.FieldsByColumn[column]; field != nil {
+			v := rv
+
+			for _, pos := range field.Position {
+				// TODO - If value is a pointer and nil, initialize it
+				// TODO - If value is a map and nil, initialize it
+				v = reflect.Indirect(v).Field(pos)
+			}
+
+			values[idx] = v.Addr().Interface()
+		} else {
+			return fmt.Errorf("column %s not found in model", column)
+		}
+	}
+
+	if !rows.Next() {
+		return sql.ErrNoRows
+	}
+
+	err = rows.Scan(values...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// RELATIONS
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// loadRelationsOne loads the relations for a single model, handling both one-to-one and
+// one-to-many relationships
+func (s *Schema) loadRelationsOne(concreteRv reflect.Value, db database.Querier) error {
+	if concreteRv.Kind() != reflect.Struct {
+		return utils.ErrNotStruct
+	}
+
+	// Get the value of the ID field
+	id, zero := s.FieldsByColumn["id"].ValueOf(concreteRv)
+	if zero {
+		return nil
+	}
+
+	for _, rel := range s.Relations {
+		relatedSchema, relatedModelPtr, err := parseRelatedSchema(rel)
+		if err != nil {
+			return err
+		}
+
+		// Get the field in the struct to set the related model on
+		structField := getStructField(concreteRv, rel.Position)
+
+		// Create the options to select related rows
+		options := &database.Options{Where: squirrel.Eq{rel.MatchOn: id}}
+
+		if rel.HasMany {
+			structFieldType := structField.Type()
+			var structFieldPtr reflect.Value
+
+			if rel.IsPtr {
+				// Create a new pointer slice
+				elemType := structFieldType.Elem()
+				structField.Set(reflect.New(elemType))
+				structField.Elem().Set(reflect.MakeSlice(elemType, 0, 0))
+				structFieldPtr = structField.Elem().Addr()
+			} else {
+				// Create a new slice
+				structField.Set(reflect.MakeSlice(structFieldType, 0, 0))
+				structFieldPtr = structField.Addr()
+			}
+
+			err = relatedSchema.Select(structFieldPtr.Interface(), options, db)
+			if err != nil && err != sql.ErrNoRows {
+				return err
+			}
+		} else {
+			err = relatedSchema.Select(relatedModelPtr.Interface(), options, db)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					continue
+				}
+
+				return err
+			}
+
+			setRelatedField(structField, relatedModelPtr)
+		}
+	}
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// loadRelationsMany loads the relations for a slice of models, handling both many-to-one and
+// many-to-many relationships
+func (s *Schema) loadRelationsMany(concreteRv reflect.Value, db database.Querier) error {
+	if concreteRv.Kind() != reflect.Slice {
+		return utils.ErrNotSlice
+	}
+
+	// If the slice is empty, return
+	if concreteRv.Len() == 0 {
+		return nil
+	}
+
+	// Get the IDs of all the models so we only do 1 query per relation
+	ids := []any{}
+	for i := 0; i < concreteRv.Len(); i++ {
+		v, zero := s.FieldsByColumn["id"].ValueOf(concreteRv.Index(i))
+		if zero {
+			continue
+		}
+		ids = append(ids, v)
+	}
+
+	for _, rel := range s.Relations {
+		relatedSchema, _, err := parseRelatedSchema(rel)
+		if err != nil {
+			return err
+		}
+
+		// Create a slice to hold the related models
+		relatedSlicePtr := reflect.New(reflect.SliceOf(rel.RelatedType))
+		relatedSlice := relatedSlicePtr.Interface()
+
+		// Create the options to select related rows
+		options := &database.Options{Where: squirrel.Eq{rel.MatchOn: ids}}
+		err = relatedSchema.Select(relatedSlice, options, db)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil
+			}
+
+			return err
+		}
+
+		relatedSliceValue := reflect.Indirect(reflect.ValueOf(relatedSlice))
+
+		if rel.HasMany {
+			// --- MANY TO MANY ---
+
+			// Create a map of where the key is the MatchOn value and the value is a slice of
+			// related items
+			resultMap := make(map[any][]reflect.Value)
+			for i := 0; i < relatedSliceValue.Len(); i++ {
+				item := relatedSliceValue.Index(i)
+				id, _ := relatedSchema.FieldsByColumn[rel.MatchOn].ValueOf(reflect.Indirect(item))
+				resultMap[id] = append(resultMap[id], item)
+			}
+
+			for i := 0; i < concreteRv.Len(); i++ {
+				sliceItem := concreteRv.Index(i)
+
+				v, zero := s.FieldsByColumn["id"].ValueOf(sliceItem)
+				if zero {
+					continue
+				}
+
+				relatedItems, found := resultMap[v]
+				if !found {
+					continue
+				}
+
+				// Get the field in the struct to set result
+				structField := getStructField(sliceItem, rel.Position)
+				structFieldType := structField.Type()
+
+				// Create a new slice that will hold the related items, based upon whether it is a
+				// slice of a pointer slice
+				var newRelatedSlice reflect.Value
+				if structFieldType.Kind() == reflect.Ptr {
+					newRelatedSlice = reflect.MakeSlice(structFieldType.Elem(), 0, len(relatedItems))
+				} else {
+					newRelatedSlice = reflect.MakeSlice(structFieldType, 0, len(relatedItems))
+				}
+
+				// Append the related items to the new slice
+				for _, item := range relatedItems {
+					newRelatedSlice = reflect.Append(newRelatedSlice, item)
+				}
+
+				if structField.Kind() == reflect.Ptr {
+					structField.Set(reflect.New(structFieldType.Elem()))
+					structField.Elem().Set(newRelatedSlice)
+				} else {
+					structField.Set(newRelatedSlice)
+				}
+			}
+		} else {
+			// --- MANY TO ONE ---
+
+			// Create a map of related items where the key is the MatchOn value
+			relatedMap := make(map[any]reflect.Value)
+			for i := 0; i < relatedSliceValue.Len(); i++ {
+				item := relatedSliceValue.Index(i)
+				id, _ := relatedSchema.FieldsByColumn[rel.MatchOn].ValueOf(reflect.Indirect(item))
+				relatedMap[id] = item
+			}
+
+			// Set the related items on the model
+			for i := 0; i < concreteRv.Len(); i++ {
+				sliceItem := concreteRv.Index(i)
+
+				v, zero := s.FieldsByColumn["id"].ValueOf(sliceItem)
+				if zero {
+					continue
+				}
+
+				relatedItem, found := relatedMap[v]
+				if !found {
+					continue
+				}
+
+				// Get the field in the struct and set the value
+				relatedField := getStructField(sliceItem, rel.Position)
+				setRelatedField(relatedField, relatedItem)
+			}
 		}
 	}
 

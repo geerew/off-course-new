@@ -19,11 +19,29 @@ type Definer interface {
 
 // ModelConfig defines the configuration for the model
 type ModelConfig struct {
-	// The fields of the model
+	// Common fields
 	fields map[string]*modelFieldConfig
+
+	// Embedded fields
+	embedded map[string]struct{}
+
+	// Relations
+	relations map[string]*modelRelationConfig
 
 	// A slice of left joins
 	leftJoins []*modelLeftJoinConfig
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Embedded adds an embedded field
+func (m *ModelConfig) Embedded(name string) {
+
+	if m.embedded == nil {
+		m.embedded = make(map[string]struct{})
+	}
+
+	m.embedded[name] = struct{}{}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -32,8 +50,6 @@ type ModelConfig struct {
 type modelFieldConfig struct {
 	// The name of the struct field
 	name string
-	// True when, the field is an embedded struct
-	embedded bool
 	// Override for the db column name
 	column string
 	// When true, the field cannot be null in the database
@@ -50,7 +66,7 @@ type modelFieldConfig struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Field adds a field to the model
+// Field adds a common field to the fields map
 func (m *ModelConfig) Field(name string) *modelFieldConfig {
 	field := &modelFieldConfig{name: name}
 
@@ -64,9 +80,16 @@ func (m *ModelConfig) Field(name string) *modelFieldConfig {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Embedded sets the field to be an embedded struct
-func (f *modelFieldConfig) Embedded() {
-	f.embedded = true
+// JoinField adds a join field to the fields map
+func (m *ModelConfig) JoinField(name string, table string) *modelFieldConfig {
+	field := &modelFieldConfig{name: name, joinTable: table}
+
+	if m.fields == nil {
+		m.fields = make(map[string]*modelFieldConfig)
+	}
+
+	m.fields[name] = field
+	return field
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -111,10 +134,34 @@ func (f *modelFieldConfig) IgnoreIfNull() *modelFieldConfig {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// JoinTable sets the name of the join table
-func (f *modelFieldConfig) JoinTable(name string) *modelFieldConfig {
-	f.joinTable = name
-	return f
+// modelFieldConfig defines the configuration for a field in the model
+type modelRelationConfig struct {
+	// The name of the struct field
+	name string
+	// The column on the relation table to match with
+	match string
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Field adds a field to the model
+func (m *ModelConfig) Relation(name string) *modelRelationConfig {
+	relation := &modelRelationConfig{name: name}
+
+	if m.relations == nil {
+		m.relations = make(map[string]*modelRelationConfig)
+	}
+
+	m.relations[name] = relation
+	return relation
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Alias sets the alias for the column
+func (r *modelRelationConfig) MatchOn(name string) *modelRelationConfig {
+	r.match = name
+	return r
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
