@@ -313,7 +313,7 @@ func (s *Schema) SelectBuilder(options *database.Options) squirrel.SelectBuilder
 
 // UpdateBuilder creates a squirrel UpdateBuilder for the model
 func (s *Schema) UpdateBuilder(model any, options *database.Options) (squirrel.UpdateBuilder, error) {
-	if options == nil || options.Where == nil || options.Where == "" {
+	if options == nil || options.Where == nil {
 		return squirrel.UpdateBuilder{}, utils.ErrInvalidWhere
 	}
 

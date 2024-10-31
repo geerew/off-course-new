@@ -30,7 +30,7 @@ type field struct {
 	// When true, the field will be skipped during create if it is null
 	IgnoreIfNull bool
 
-	// The name of the join table that this field is associated with
+	// The table the field belongs to. When empty it belongs to the main table
 	JoinTable string
 
 	// ReflectValueOf is a callback that takes a struct, as a reflect.Value, and returns the
