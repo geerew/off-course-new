@@ -103,7 +103,7 @@ func TestAsset_MarshalJSON(t *testing.T) {
 		require.NotNil(t, a)
 
 		res, err := a.MarshalJSON()
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, tt.expected, string(res))
 	}
 }
@@ -145,11 +145,11 @@ func TestAsset_UnmarshalJSON(t *testing.T) {
 func TestAsset_Value(t *testing.T) {
 	tests := []struct {
 		input    string
-		expected AssetType
+		expected string
 	}{
-		{"mp4", AssetVideo},
-		{"html", AssetHTML},
-		{"pdf", AssetPDF},
+		{"mp4", "video"},
+		{"html", "html"},
+		{"pdf", "pdf"},
 	}
 
 	for _, tt := range tests {
@@ -157,15 +157,15 @@ func TestAsset_Value(t *testing.T) {
 		require.NotNil(t, a)
 
 		res, err := a.Value()
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, tt.expected, res)
 	}
 
 	// Nil
 	a := Asset{}
 	res, err := a.Value()
-	require.Nil(t, err)
-	require.Nil(t, res)
+	require.NoError(t, err)
+	require.Empty(t, res)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -185,7 +185,7 @@ func TestAsset_Scan(t *testing.T) {
 			a := Asset{}
 
 			err := a.Scan(tt.value)
-			require.Nil(t, err)
+			require.NoError(t, err)
 			require.Contains(t, a.s, tt.expected)
 		}
 	})
