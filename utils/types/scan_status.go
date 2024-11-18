@@ -73,12 +73,7 @@ func (ss ScanStatus) String() string {
 
 // MarshalJSON implements the `json.Marshaler` interface
 func (ss ScanStatus) MarshalJSON() ([]byte, error) {
-	s := ss.String()
-	if s == "" {
-		s = fmt.Sprint(ScanStatusWaiting)
-	}
-
-	return []byte(`"` + s + `"`), nil
+	return []byte(`"` + ss.s + `"`), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -97,10 +92,6 @@ func (ss *ScanStatus) UnmarshalJSON(b []byte) error {
 
 // Value implements the `driver.Valuer` interface
 func (ss ScanStatus) Value() (driver.Value, error) {
-	if ss == (ScanStatus{}) || ss.s == "" {
-		return fmt.Sprint(ScanStatusWaiting), nil
-	}
-
 	return ss.String(), nil
 }
 
@@ -116,8 +107,7 @@ func (ss *ScanStatus) Scan(value any) error {
 	case string(ScanStatusProcessing):
 		ss.s = ScanStatusProcessing
 	default:
-		// Default to waiting
-		ss.s = ScanStatusWaiting
+		ss.s = ""
 	}
 
 	return nil

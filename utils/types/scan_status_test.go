@@ -57,7 +57,7 @@ func TestScanStatus_MarshalJSON(t *testing.T) {
 	empty := ScanStatus{}
 	res, err = empty.MarshalJSON()
 	require.Nil(t, err)
-	require.Equal(t, `"waiting"`, string(res))
+	require.Equal(t, `""`, string(res))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -72,8 +72,8 @@ func TestScanStatus_UnmarshalJSON(t *testing.T) {
 		{"", "", "unexpected end of JSON input"},
 		{"xxx", "", "invalid character 'x' looking for beginning of value"},
 		// Defaults
-		{`""`, ScanStatusWaiting, ""},
-		{`"bob"`, ScanStatusWaiting, ""},
+		{`""`, "", ""},
+		{`"bob"`, "", ""},
 		// Success
 		{`"waiting"`, ScanStatusWaiting, ""},
 		{`"processing"`, ScanStatusProcessing, ""},
@@ -107,7 +107,7 @@ func TestScanStatus_Value(t *testing.T) {
 	empty := ScanStatus{}
 	res, err = empty.Value()
 	require.Nil(t, err)
-	require.Equal(t, "waiting", res)
+	require.Equal(t, "", res)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -117,9 +117,11 @@ func TestScanStatus_Scan(t *testing.T) {
 		value    any
 		expected string
 	}{
-		{nil, "waiting"},
-		{"", "waiting"},
-		{"invalid", "waiting"},
+		// defaults
+		{nil, ""},
+		{"", ""},
+		{"invalid", ""},
+		// Values
 		{"waiting", "waiting"},
 		{"processing", "processing"},
 	}
