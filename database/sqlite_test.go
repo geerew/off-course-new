@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -171,33 +172,15 @@ func TestSqliteDb_Exec(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestSqliteDb_Begin(t *testing.T) {
-	dbManager := setupSqliteDB(t)
-
-	tx, err := dbManager.DataDb.Begin(nil)
-	require.Nil(t, err)
-
-	_, err = tx.Exec("INSERT INTO test (name) VALUES ('test')")
-	require.Nil(t, err)
-
-	err = tx.Commit()
-	require.Nil(t, err)
-
-	var count int
-	err = dbManager.DataDb.QueryRow("SELECT COUNT(*) FROM test").Scan(&count)
-	require.Nil(t, err)
-	require.Equal(t, 1, count)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 func TestSqliteDb_RunInTransaction(t *testing.T) {
 
 	t.Run(("error"), func(t *testing.T) {
 		dbManager := setupSqliteDB(t)
 
-		err := dbManager.DataDb.RunInTransaction(func(tx *Tx) error {
-			_, err := tx.Exec("INSERT INTO test (name) VALUES ('test')")
+		ctx := context.Background()
+		err := dbManager.DataDb.RunInTransaction(ctx, func(txCtx context.Context) error {
+			q := QuerierFromContext(txCtx, dbManager.DataDb)
+			_, err := q.Exec("INSERT INTO test (name) VALUES ('test')")
 			if err != nil {
 				return err
 			}
@@ -221,8 +204,10 @@ func TestSqliteDb_RunInTransaction(t *testing.T) {
 	t.Run(("success"), func(t *testing.T) {
 		dbManager := setupSqliteDB(t)
 
-		err := dbManager.DataDb.RunInTransaction(func(tx *Tx) error {
-			_, err := tx.Exec("INSERT INTO test (name) VALUES ('test')")
+		ctx := context.Background()
+		err := dbManager.DataDb.RunInTransaction(ctx, func(txCtx context.Context) error {
+			q := QuerierFromContext(txCtx, dbManager.DataDb)
+			_, err := q.Exec("INSERT INTO test (name) VALUES ('test')")
 			if err != nil {
 				return err
 			}
