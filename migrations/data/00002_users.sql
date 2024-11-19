@@ -25,3 +25,27 @@ CREATE TABLE users (
     created_at    TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
     updated_at    TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'))
 );
+
+----------------------------------------------------
+-- ALTER SCANS TABLE TO ADD STATUS COLUMN DEFAULT --
+----------------------------------------------------
+
+-- Create a new temporary table with the default for status
+CREATE TABLE scans_temp (
+    id          TEXT PRIMARY KEY NOT NULL,
+    course_id   TEXT UNIQUE NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'waiting',
+    created_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
+    updated_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
+    FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE
+);
+
+-- Copy data from the original table to the temporary table
+INSERT INTO scans_temp (id, course_id, status, created_at, updated_at)
+SELECT id, course_id, status, created_at, updated_at FROM scans;
+
+-- Drop the original table
+DROP TABLE scans;
+
+-- Rename the temporary table to the original name
+ALTER TABLE scans_temp RENAME TO scans;
