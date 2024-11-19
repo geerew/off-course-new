@@ -7,13 +7,13 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Course defines the model for a course
+// User defines the model for a user
 type User struct {
-	Base `db:":nested"`
+	Base
 
-	Username     string         `db:"col:username;not null"`
-	PasswordHash string         `db:"col:password_hash;not null"`
-	Role         types.UserRole `db:"col:role;not null"`
+	Username     string
+	PasswordHash string
+	Role         types.UserRole
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
