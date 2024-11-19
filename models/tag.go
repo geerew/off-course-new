@@ -1,21 +1,48 @@
 package models
 
+import "github.com/geerew/off-course/utils/schema"
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Tag defines the model for a tag (table: tags)
+// Tag defines the model for a tag
 type Tag struct {
-	BaseModel `db:":nested"`
+	Base
+	Tag string
 
-	Tag string `db:"tag:required"`
+	// Joins
+	// CourseCount int
 
-	// --------------------------------
-	// Added via a join
-	// --------------------------------
-
-	CourseCount int `db_join:"courses_tags:id:course_count:COALESCE(COUNT(courses_tags.id), 0)"`
-
-	// --------------------------------
-	// Manually added
-	// --------------------------------
+	// Relations
 	CourseTags []*CourseTag
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+var (
+	TAG_TABLE = "tags"
+	TAG_TAG   = "tag"
+)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Table implements the `schema.Modeler` interface by returning the table name
+func (t *Tag) Table() string {
+	return TAG_TABLE
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Define implements the `schema.Modeler` interface by defining the model
+func (t *Tag) Define(s *schema.ModelConfig) {
+	s.Embedded("Base")
+
+	// Common fields
+	s.Field("Tag").Column(TAG_TAG).NotNull().Mutable()
+
+	// Relation fields
+	s.Relation("CourseTags").MatchOn(COURSE_TAG_TAG_ID)
+
+	// c.Field("CourseCount").AggregateColumn("COALESCE(COUNT(courses_tags.id), 0)")
+	// c.LeftJoin(COURSE_TABLE).On(fmt.Sprintf("%s.%s = %s.%s", SCAN_TABLE, SCAN_COURSE_ID, COURSE_TABLE, BASE_ID))
+
 }

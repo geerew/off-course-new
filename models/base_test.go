@@ -9,8 +9,8 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestRefreshId(t *testing.T) {
-	model := BaseModel{}
+func Test_RefreshId(t *testing.T) {
+	model := Base{}
 	model.RefreshId()
 
 	require.NotEmpty(t, model.ID)
@@ -25,16 +25,16 @@ func TestRefreshId(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestSetId(t *testing.T) {
-	model := BaseModel{}
+func Test_SetId(t *testing.T) {
+	model := Base{}
 	model.SetId("testId")
 	require.Equal(t, "testId", model.ID)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestRefreshCreatedAt(t *testing.T) {
-	model := BaseModel{}
+func Test_RefreshCreatedAt(t *testing.T) {
+	model := Base{}
 	model.RefreshCreatedAt()
 
 	require.False(t, model.CreatedAt.IsZero())
@@ -50,8 +50,8 @@ func TestRefreshCreatedAt(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestRefreshUpdatedAt(t *testing.T) {
-	model := BaseModel{}
+func Test_RefreshUpdatedAt(t *testing.T) {
+	model := Base{}
 	model.RefreshUpdatedAt()
 
 	require.False(t, model.UpdatedAt.IsZero())
