@@ -19,7 +19,6 @@ var (
 	ErrInvalidWhere = errors.New("where clause cannot be empty")
 
 	// Model
-	ErrInvalidId       = errors.New("id cannot be empty")
-	ErrInvalidTag      = errors.New("tag cannot be empty")
-	ErrInvalidCourseId = errors.New("course id cannot be empty")
+	ErrInvalidId  = errors.New("id cannot be empty")
+	ErrInvalidKey = errors.New("key cannot be empty")
 )
