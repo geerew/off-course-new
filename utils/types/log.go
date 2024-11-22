@@ -11,7 +11,7 @@ type LogType int
 const (
 	LogTypeRequest LogType = iota
 	LogTypeCron
-	LogTypeCourseScanner
+	LogTypeScanner
 	LogTypeFileSystem
 	LogTypeDB
 )
@@ -23,7 +23,7 @@ func AllLogTypes() []string {
 	return []string{
 		LogTypeRequest.String(),
 		LogTypeCron.String(),
-		LogTypeCourseScanner.String(),
+		LogTypeScanner.String(),
 		LogTypeFileSystem.String(),
 		LogTypeDB.String(),
 	}
@@ -33,7 +33,7 @@ func AllLogTypes() []string {
 
 // String returns the string representation of the LogType
 func (lt LogType) String() string {
-	names := [...]string{"request", "cron", "course scanner", "file system", "db"}
+	names := [...]string{"request", "cron", "scanner", "file system", "db"}
 
 	if int(lt) < 0 || int(lt) >= len(names) {
 		return "unknown"
