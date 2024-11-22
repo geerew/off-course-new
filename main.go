@@ -13,12 +13,12 @@ import (
 
 	"github.com/geerew/off-course/api"
 	"github.com/geerew/off-course/cron"
-	"github.com/geerew/off-course/daos"
+	"github.com/geerew/off-course/dao"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
-	"github.com/geerew/off-course/utils/jobs"
 	"github.com/geerew/off-course/utils/logger"
+	"github.com/geerew/off-course/utils/scanner"
 	"github.com/geerew/off-course/utils/security"
 	"github.com/spf13/afero"
 )
@@ -34,6 +34,8 @@ func main() {
 	port := flag.String("port", ":9081", "server port")
 	isDebug := flag.Bool("debug", false, "verbose")
 	flag.Parse()
+
+	ctx := context.Background()
 
 	// Create app filesystem
 	appFs := appFs.NewAppFs(afero.NewOsFs(), nil)
@@ -53,7 +55,7 @@ func main() {
 	logger, loggerDone, err := logger.InitLogger(&logger.BatchOptions{
 		BatchSize:   200,
 		BeforeAddFn: loggerBeforeAddFn(dbManager.LogsDb),
-		WriteFn:     loggerWriteFn(dbManager.LogsDb),
+		WriteFn:     loggerWriteFn(ctx, dbManager.LogsDb),
 	})
 
 	if err != nil {
@@ -65,14 +67,14 @@ func main() {
 	appFs.SetLogger(logger)
 
 	// Course scanner
-	courseScanner := jobs.NewCourseScanner(&jobs.CourseScannerConfig{
+	courseScanner := scanner.NewScanner(&scanner.ScannerConfig{
 		Db:     dbManager.DataDb,
 		AppFs:  appFs,
 		Logger: logger,
 	})
 
 	// Start the worker (pass in the func that will process the job)
-	go courseScanner.Worker(jobs.CourseProcessor, nil)
+	go courseScanner.Worker(ctx, scanner.Processor, nil)
 
 	// Initialize cron jobs
 	cron.InitCron(&cron.CronConfig{
@@ -83,12 +85,12 @@ func main() {
 
 	// Create router
 	router := api.New(&api.RouterConfig{
-		DbManager:     dbManager,
-		Logger:        logger,
-		AppFs:         appFs,
-		CourseScanner: courseScanner,
-		Port:          *port,
-		IsProduction:  isProduction,
+		DbManager:    dbManager,
+		Logger:       logger,
+		AppFs:        appFs,
+		Scanner:      courseScanner,
+		Port:         *port,
+		IsProduction: isProduction,
 	})
 
 	var wg sync.WaitGroup
@@ -115,7 +117,7 @@ func main() {
 	fmt.Println("\nShutting down...")
 
 	// Delete all scans
-	_, err = dbManager.DataDb.Exec("DELETE FROM " + daos.NewScanDao(dbManager.DataDb).Table())
+	_, err = dbManager.DataDb.Exec("DELETE FROM " + models.SCAN_TABLE)
 	if err != nil {
 		log.Fatal("Failed to delete scans", err)
 	}
@@ -128,8 +130,6 @@ func main() {
 
 // loggerBeforeAddFunc is a logger.BeforeAddFn
 func loggerBeforeAddFn(db database.Database) logger.BeforeAddFn {
-	logsDao := daos.NewLogDao(db)
-
 	return func(ctx context.Context, log *logger.Log) bool {
 		// Skip calls to the logs API
 		if strings.HasPrefix(log.Message, "GET /api/logs") {
@@ -138,10 +138,10 @@ func loggerBeforeAddFn(db database.Database) logger.BeforeAddFn {
 
 		// This should never happen as the logsDb should be nil, but in the event it is not, skip
 		// logging log writes as it will cause an infinite loop
-		if strings.HasPrefix(log.Message, "INSERT INTO "+logsDao.Table()) ||
-			strings.HasPrefix(log.Message, "SELECT "+logsDao.Table()) ||
-			strings.HasPrefix(log.Message, "UPDATE "+logsDao.Table()) ||
-			strings.HasPrefix(log.Message, "DELETE FROM "+logsDao.Table()) {
+		if strings.HasPrefix(log.Message, "INSERT INTO "+models.LOG_TABLE) ||
+			strings.HasPrefix(log.Message, "SELECT "+models.LOG_TABLE) ||
+			strings.HasPrefix(log.Message, "UPDATE "+models.LOG_TABLE) ||
+			strings.HasPrefix(log.Message, "DELETE FROM "+models.LOG_TABLE) {
 			return false
 		}
 
@@ -152,10 +152,12 @@ func loggerBeforeAddFn(db database.Database) logger.BeforeAddFn {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // loggerWriteFn returns a logger.WriteFn that writes logs to the database
-func loggerWriteFn(db database.Database) logger.WriteFn {
+func loggerWriteFn(ctx context.Context, db database.Database) logger.WriteFn {
 	return func(ctx context.Context, logs []*logger.Log) error {
+		logDao := dao.NewDAO(db)
+
 		// Write accumulated logs
-		db.RunInTransaction(func(tx *database.Tx) error {
+		db.RunInTransaction(ctx, func(txCtx context.Context) error {
 			model := &models.Log{}
 
 			for _, l := range logs {
@@ -166,7 +168,9 @@ func loggerWriteFn(db database.Database) logger.WriteFn {
 				model.CreatedAt = l.Time
 				model.UpdatedAt = model.CreatedAt
 
-				if err := daos.NewLogDao(db).Write(model, tx); err != nil {
+				// Write the log
+				err := logDao.WriteLog(txCtx, model)
+				if err != nil {
 					log.Println("Failed to write log", model, err)
 				}
 			}
