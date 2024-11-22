@@ -125,7 +125,7 @@ func TestScanner_Worker(t *testing.T) {
 		}
 
 		var processingDone = make(chan bool, 1)
-		go scanner.Worker(func(*Scanner, *models.Scan) error {
+		go scanner.Worker(ctx, func(context.Context, *Scanner, *models.Scan) error {
 			time.Sleep(1 * time.Millisecond)
 			return nil
 		}, processingDone)
@@ -177,7 +177,7 @@ func TestScanner_Worker(t *testing.T) {
 		require.NoError(t, scanner.dao.CreateCourse(ctx, course))
 
 		var processingDone = make(chan bool, 1)
-		go scanner.Worker(func(*Scanner, *models.Scan) error {
+		go scanner.Worker(ctx, func(context.Context, *Scanner, *models.Scan) error {
 			time.Sleep(1 * time.Millisecond)
 			return errors.New("processing error")
 		}, processingDone)

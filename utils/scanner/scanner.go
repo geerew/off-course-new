@@ -27,7 +27,7 @@ var (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // ScannerProcessorFn is a function that processes a course scan job
-type ScannerProcessorFn func(*Scanner, *models.Scan) error
+type ScannerProcessorFn func(context.Context, *Scanner, *models.Scan) error
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -119,7 +119,7 @@ func (s *Scanner) Add(ctx context.Context, courseId string) (*models.Scan, error
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Worker processes jobs out of the DB sequentially
-func (s *Scanner) Worker(processor ScannerProcessorFn, processingDone chan bool) {
+func (s *Scanner) Worker(ctx context.Context, processorFn ScannerProcessorFn, processingDone chan bool) {
 	s.logger.Debug("Started course scanner worker", loggerType)
 
 	for {
@@ -128,7 +128,7 @@ func (s *Scanner) Worker(processor ScannerProcessorFn, processingDone chan bool)
 		// Keep process jobs from the scans table until there are no more jobs
 		for {
 			nextScan := &models.Scan{}
-			err := s.dao.NextWaitingScan(context.Background(), nextScan)
+			err := s.dao.NextWaitingScan(ctx, nextScan)
 			if err != nil {
 				// Nothing more to process
 				if err == sql.ErrNoRows {
@@ -153,7 +153,7 @@ func (s *Scanner) Worker(processor ScannerProcessorFn, processingDone chan bool)
 				slog.String("path", nextScan.CoursePath),
 			)
 
-			err = processor(s, nextScan)
+			err = processorFn(ctx, s, nextScan)
 			if err != nil {
 				s.logger.Error(
 					"Failed to process scan job",
@@ -164,7 +164,7 @@ func (s *Scanner) Worker(processor ScannerProcessorFn, processingDone chan bool)
 			}
 
 			// Cleanup
-			if err := s.dao.Delete(context.Background(), nextScan, nil); err != nil {
+			if err := s.dao.Delete(ctx, nextScan, nil); err != nil {
 				s.logger.Error(
 					"Failed to delete scan job",
 					loggerType,
