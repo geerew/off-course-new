@@ -39,6 +39,15 @@ func TestScanStatus_SetProcessing(t *testing.T) {
 func TestScanStatus_IsWaiting(t *testing.T) {
 	require.True(t, NewScanStatusWaiting().IsWaiting())
 	require.False(t, NewScanStatusProcessing().IsWaiting())
+	require.False(t, ScanStatus{}.IsWaiting())
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestScanStatus_IsProcess(t *testing.T) {
+	require.False(t, NewScanStatusWaiting().IsProcessing())
+	require.True(t, NewScanStatusProcessing().IsProcessing())
+	require.False(t, ScanStatus{}.IsProcessing())
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

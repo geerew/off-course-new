@@ -64,6 +64,13 @@ func (ss ScanStatus) IsWaiting() bool {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// IsProcessing returns true is the status is process
+func (ss ScanStatus) IsProcessing() bool {
+	return ss.s == ScanStatusProcessing
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // String implements the `Stringer` interface
 func (ss ScanStatus) String() string {
 	return fmt.Sprint(ss.s)
