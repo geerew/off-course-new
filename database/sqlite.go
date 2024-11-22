@@ -107,6 +107,12 @@ func (db *SqliteDb) Exec(query string, args ...any) (sql.Result, error) {
 //
 // It implements the Database interface
 func (db *SqliteDb) RunInTransaction(ctx context.Context, txFunc func(context.Context) error) (err error) {
+	// Check if there's an existing querier in the context
+	existingQuerier := QuerierFromContext(ctx, nil)
+	if existingQuerier != nil {
+		return txFunc(ctx)
+	}
+
 	slqTx, err := db.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
