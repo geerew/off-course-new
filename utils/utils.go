@@ -43,6 +43,8 @@ func TrimQuotes(s string) string {
 // are correctly interpreted. If the path starts with a drive letter, it appends a
 // backslash (\) to paths like "C:" to make them "C:\", and inserts a backslash in paths
 // like "C:folder" to make them "C:\folder"
+//
+// Skipped on non-Windows platforms
 func NormalizeWindowsDrive(path string) string {
 	if runtime.GOOS == "windows" {
 		if len(path) >= 2 && path[1] == ':' {
