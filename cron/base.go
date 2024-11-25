@@ -3,6 +3,7 @@ package cron
 import (
 	"log/slog"
 
+	"github.com/geerew/off-course/dao"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/types"
@@ -31,6 +32,7 @@ func InitCron(config *CronConfig) {
 	// Course availability
 	ca := &courseAvailability{
 		db:        config.Db,
+		dao:       dao.NewDAO(config.Db),
 		appFs:     config.AppFs,
 		logger:    config.Logger,
 		batchSize: 200,

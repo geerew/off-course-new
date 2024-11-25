@@ -1,10 +1,11 @@
 package cron
 
 import (
+	"context"
 	"log/slog"
 	"os"
 
-	"github.com/geerew/off-course/daos"
+	"github.com/geerew/off-course/dao"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
@@ -13,6 +14,7 @@ import (
 
 type courseAvailability struct {
 	db        database.Database
+	dao       *dao.DAO
 	appFs     *appFs.AppFs
 	logger    *slog.Logger
 	batchSize int
@@ -28,14 +30,15 @@ func (ca *courseAvailability) run() error {
 
 	coursesBatch := make([]*models.Course, 0, ca.batchSize)
 
-	courseDao := daos.NewCourseDao(ca.db)
+	ctx := context.Background()
 
 	for page <= totalPages {
 		p := pagination.New(page, perPage)
-		paginationParams := &database.DatabaseParams{Pagination: p}
+		options := &database.Options{Pagination: p}
 
 		// Fetch a batch of courses
-		courses, err := courseDao.List(paginationParams, nil)
+		courses := []*models.Course{}
+		err := ca.dao.List(ctx, &courses, options)
 		if err != nil {
 			attrs := []any{
 				loggerType,
@@ -82,7 +85,7 @@ func (ca *courseAvailability) run() error {
 
 			// Update the courses if we hit the batch size
 			if len(coursesBatch) == ca.batchSize {
-				ca.writeAll(coursesBatch)
+				ca.writeAll(ctx, coursesBatch)
 				coursesBatch = coursesBatch[:0]
 			}
 		}
@@ -92,7 +95,7 @@ func (ca *courseAvailability) run() error {
 
 	// Update any remaining courses
 	if len(coursesBatch) > 0 {
-		ca.writeAll(coursesBatch)
+		ca.writeAll(ctx, coursesBatch)
 	}
 
 	return nil
@@ -100,13 +103,11 @@ func (ca *courseAvailability) run() error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (ca *courseAvailability) writeAll(courses []*models.Course) {
-	courseDao := daos.NewCourseDao(ca.db)
-
+func (ca *courseAvailability) writeAll(ctx context.Context, courses []*models.Course) {
 	// Update the courses in a transaction
-	err := ca.db.RunInTransaction(func(tx *database.Tx) error {
+	err := ca.db.RunInTransaction(ctx, func(txCtx context.Context) error {
 		for _, course := range courses {
-			err := courseDao.Update(course, tx)
+			err := ca.dao.UpdateCourse(txCtx, course)
 			if err != nil {
 				return err
 			}
