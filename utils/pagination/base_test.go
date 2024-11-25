@@ -241,7 +241,7 @@ func Test_BuildResult(t *testing.T) {
 		}
 
 		result, err := p.BuildResult(data)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Len(t, result.Items, 2)
 
 		for i, raw := range result.Items {
@@ -301,7 +301,7 @@ func Test_Apply(t *testing.T) {
 	builder = p.Apply(builder)
 
 	query, args, err := builder.ToSql()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, "SELECT * FROM dummy LIMIT 10 OFFSET 0", query)
 	require.Nil(t, args)
 }

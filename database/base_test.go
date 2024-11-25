@@ -17,7 +17,7 @@ func Test_NewSqliteDBManager(t *testing.T) {
 			BatchSize: 1,
 			WriteFn:   logger.NilWriteFn(),
 		})
-		require.Nil(t, err)
+		require.NoError(t, err)
 
 		appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
 
@@ -28,7 +28,7 @@ func Test_NewSqliteDBManager(t *testing.T) {
 			InMemory: true,
 		})
 
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.NotNil(t, dbManager)
 
 	})
@@ -38,7 +38,7 @@ func Test_NewSqliteDBManager(t *testing.T) {
 			BatchSize: 1,
 			WriteFn:   logger.NilWriteFn(),
 		})
-		require.Nil(t, err)
+		require.NoError(t, err)
 
 		appFs := appFs.NewAppFs(afero.NewReadOnlyFs(afero.NewMemMapFs()), logger)
 
