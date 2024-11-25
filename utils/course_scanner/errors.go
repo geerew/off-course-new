@@ -1,4 +1,4 @@
-package scanner
+package course_scanner
 
 import "errors"
 

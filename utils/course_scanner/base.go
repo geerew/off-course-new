@@ -1,4 +1,4 @@
-package scanner
+package course_scanner
 
 import (
 	"context"
@@ -26,24 +26,24 @@ var (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ScannerProcessorFn is a function that processes a course scan job
-type ScannerProcessorFn func(context.Context, *Scanner, *models.Scan) error
+// CourseScannerProcessorFn is a function that processes a course scan job
+type CourseScannerProcessorFn func(context.Context, *CourseScanner, *models.Scan) error
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Scanner scans a course and finds assets and attachments
-type Scanner struct {
+// CourseScanner scans a course and finds assets and attachments
+type CourseScanner struct {
 	appFs     *appFs.AppFs
 	db        database.Database
+	dao       *dao.DAO
 	logger    *slog.Logger
 	jobSignal chan bool
-	dao       *dao.DAO
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ScannerConfig is the config for a Scanner
-type ScannerConfig struct {
+// CourseScannerConfig is the config for a CourseScanner
+type CourseScannerConfig struct {
 	Db     database.Database
 	AppFs  *appFs.AppFs
 	Logger *slog.Logger
@@ -51,9 +51,9 @@ type ScannerConfig struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// NewScanner creates a new Scanner
-func NewScanner(config *ScannerConfig) *Scanner {
-	return &Scanner{
+// NewCourseScanner creates a new CourseScanner
+func NewCourseScanner(config *CourseScannerConfig) *CourseScanner {
+	return &CourseScanner{
 		appFs:     config.AppFs,
 		db:        config.Db,
 		dao:       dao.NewDAO(config.Db),
@@ -65,7 +65,7 @@ func NewScanner(config *ScannerConfig) *Scanner {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Add inserts a course scan job into the db
-func (s *Scanner) Add(ctx context.Context, courseId string) (*models.Scan, error) {
+func (s *CourseScanner) Add(ctx context.Context, courseId string) (*models.Scan, error) {
 	// Check if the course exists
 	course := &models.Course{Base: models.Base{ID: courseId}}
 	err := s.dao.GetById(ctx, course)
@@ -119,7 +119,7 @@ func (s *Scanner) Add(ctx context.Context, courseId string) (*models.Scan, error
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Worker processes jobs out of the DB sequentially
-func (s *Scanner) Worker(ctx context.Context, processorFn ScannerProcessorFn, processingDone chan bool) {
+func (s *CourseScanner) Worker(ctx context.Context, processorFn CourseScannerProcessorFn, processingDone chan bool) {
 	s.logger.Debug("Started course scanner worker", loggerType)
 
 	for {
@@ -197,7 +197,7 @@ type attachmentMap map[string]map[int][]*models.Attachment
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Processor scans a course to identify assets and attachments
-func Processor(ctx context.Context, s *Scanner, scan *models.Scan) error {
+func Processor(ctx context.Context, s *CourseScanner, scan *models.Scan) error {
 	if scan == nil {
 		return ErrNilScan
 	}

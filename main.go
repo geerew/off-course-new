@@ -17,6 +17,7 @@ import (
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
+	"github.com/geerew/off-course/utils/course_scanner"
 	"github.com/geerew/off-course/utils/logger"
 	"github.com/geerew/off-course/utils/scanner"
 	"github.com/geerew/off-course/utils/security"
@@ -67,7 +68,7 @@ func main() {
 	appFs.SetLogger(logger)
 
 	// Course scanner
-	courseScanner := scanner.NewScanner(&scanner.ScannerConfig{
+	courseScanner := course_scanner.NewCourseScanner(&scanner.ScannerConfig{
 		Db:     dbManager.DataDb,
 		AppFs:  appFs,
 		Logger: logger,
