@@ -37,7 +37,7 @@ func setup(t *testing.T) (database.Database, *appFs.AppFs, *slog.Logger, *[]*log
 		InMemory: true,
 	})
 
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, dbManager)
 
 	// teardown

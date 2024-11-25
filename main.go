@@ -17,9 +17,8 @@ import (
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
-	"github.com/geerew/off-course/utils/course_scanner"
+	"github.com/geerew/off-course/utils/coursescan"
 	"github.com/geerew/off-course/utils/logger"
-	"github.com/geerew/off-course/utils/scanner"
 	"github.com/geerew/off-course/utils/security"
 	"github.com/spf13/afero"
 )
@@ -68,14 +67,14 @@ func main() {
 	appFs.SetLogger(logger)
 
 	// Course scanner
-	courseScanner := course_scanner.NewCourseScanner(&scanner.ScannerConfig{
+	courseScan := coursescan.NewCourseScan(&coursescan.CourseScanConfig{
 		Db:     dbManager.DataDb,
 		AppFs:  appFs,
 		Logger: logger,
 	})
 
 	// Start the worker (pass in the func that will process the job)
-	go courseScanner.Worker(ctx, scanner.Processor, nil)
+	go courseScan.Worker(ctx, coursescan.Processor, nil)
 
 	// Initialize cron jobs
 	cron.InitCron(&cron.CronConfig{
@@ -85,11 +84,11 @@ func main() {
 	})
 
 	// Create router
-	router := api.New(&api.RouterConfig{
+	router := api.NewRouter(&api.RouterConfig{
 		DbManager:    dbManager,
 		Logger:       logger,
 		AppFs:        appFs,
-		Scanner:      courseScanner,
+		CourseScan:   courseScan,
 		Port:         *port,
 		IsProduction: isProduction,
 	})
