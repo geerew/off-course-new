@@ -2,7 +2,6 @@ package dao
 
 import (
 	"fmt"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -104,10 +103,10 @@ func Test_ClassifyCoursePaths(t *testing.T) {
 			courses = append(courses, c)
 		}
 
-		path1 := string(filepath.Separator)              // ancestor
-		path2 := string(filepath.Separator) + "test"     // none
-		path3 := courses[2].Path                         // course
-		path4 := filepath.Join(courses[2].Path + "test") // descendant
+		path1 := "/"                       // ancestor
+		path2 := "/test"                   // none
+		path3 := courses[2].Path           // course
+		path4 := courses[2].Path + "/test" // descendant
 
 		result, err := dao.ClassifyCoursePaths(ctx, []string{path1, path2, path3, path4})
 		require.Nil(t, err)
