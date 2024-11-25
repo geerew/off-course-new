@@ -55,17 +55,17 @@ func TestScanStatus_IsProcess(t *testing.T) {
 func TestScanStatus_MarshalJSON(t *testing.T) {
 	waiting := NewScanStatusWaiting()
 	res, err := waiting.MarshalJSON()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, `"waiting"`, string(res))
 
 	processing := NewScanStatusProcessing()
 	res, err = processing.MarshalJSON()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, `"processing"`, string(res))
 
 	empty := ScanStatus{}
 	res, err = empty.MarshalJSON()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, `""`, string(res))
 }
 
@@ -105,17 +105,17 @@ func TestScanStatus_UnmarshalJSON(t *testing.T) {
 func TestScanStatus_Value(t *testing.T) {
 	waiting := NewScanStatusWaiting()
 	res, err := waiting.Value()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, "waiting", res)
 
 	processing := NewScanStatusProcessing()
 	res, err = processing.Value()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, "processing", res)
 
 	empty := ScanStatus{}
 	res, err = empty.Value()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, "", res)
 }
 
@@ -139,7 +139,7 @@ func TestScanStatus_Scan(t *testing.T) {
 		ss := ScanStatus{}
 
 		err := ss.Scan(tt.value)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Contains(t, ss.s, tt.expected)
 	}
 }

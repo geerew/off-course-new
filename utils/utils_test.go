@@ -33,7 +33,7 @@ func Test_TrimQuotes(t *testing.T) {
 func Test_DecodeString(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		res, err := DecodeString("")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, "", res)
 	})
 
@@ -51,7 +51,7 @@ func Test_DecodeString(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		res, err := DecodeString("JTJGdGVzdCUyRmRhdGE=")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, "/test/data", res)
 	})
 }
@@ -125,7 +125,7 @@ func Test_DiffSliceOfStructsByKey(t *testing.T) {
 
 	t.Run("both empty", func(t *testing.T) {
 		leftDiff, rightDiff, err := DiffSliceOfStructsByKey[testStruct](nil, nil, "")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Nil(t, leftDiff)
 		require.Nil(t, rightDiff)
 	})
@@ -138,7 +138,7 @@ func Test_DiffSliceOfStructsByKey(t *testing.T) {
 		}
 
 		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(nil, right, "ID")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Empty(t, leftDiff)
 		require.Len(t, rightDiff, 5)
 	})
@@ -151,7 +151,7 @@ func Test_DiffSliceOfStructsByKey(t *testing.T) {
 		}
 
 		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, nil, "ID")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Len(t, leftDiff, 5)
 		require.Empty(t, rightDiff)
 	})
@@ -166,7 +166,7 @@ func Test_DiffSliceOfStructsByKey(t *testing.T) {
 		}
 
 		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, right, "ID")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Empty(t, leftDiff)
 		require.Empty(t, rightDiff)
 	})
@@ -181,7 +181,7 @@ func Test_DiffSliceOfStructsByKey(t *testing.T) {
 		}
 
 		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, right, "ID")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Len(t, leftDiff, 5)
 		require.Len(t, rightDiff, 5)
 	})
@@ -202,7 +202,7 @@ func Test_DiffSliceOfStructsByKey(t *testing.T) {
 		right = append(right, left[0])
 
 		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, right, "ID")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Len(t, leftDiff, 4)
 		require.Len(t, rightDiff, 3)
 	})
@@ -220,14 +220,14 @@ func Test_DiffSliceOfStructsByKey(t *testing.T) {
 		left = append(left, &testStruct{ID: 5, Title: "Test"})
 
 		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, right, "ID")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Len(t, leftDiff, 1)
 		require.Zero(t, len(rightDiff))
 
 		// Give right 1 extra (plus the new left one)
 		right = append(right, left[len(left)-1], &testStruct{ID: 6, Title: "Test"})
 		leftDiff, rightDiff, err = DiffSliceOfStructsByKey(left, right, "ID")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Zero(t, len(leftDiff))
 		require.Len(t, rightDiff, 1)
 	})

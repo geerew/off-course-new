@@ -53,7 +53,7 @@ func Test_Open(t *testing.T) {
 		appFs.Fs.Create("/a")
 
 		res, err := appFs.Open("/a")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.NotNil(t, res)
 	})
 }
@@ -94,7 +94,7 @@ func Test_ReadDir(t *testing.T) {
 		appFs.Fs.Mkdir("/c", 0755)
 
 		res, err := appFs.ReadDir("/", true)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.NotNil(t, res)
 		require.Equal(t, 2, len(res.Files))
 		require.Equal(t, 1, len(res.Directories))
@@ -151,25 +151,25 @@ func Test_ReadDirFlat(t *testing.T) {
 
 		// Depth 0 (same as 1)
 		res, err := appFs.ReadDirFlat("/", 0)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.NotNil(t, res)
 		require.Equal(t, 1, len(res))
 
 		// Depth 1
 		res, err = appFs.ReadDirFlat("/", 1)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.NotNil(t, res)
 		require.Equal(t, 1, len(res))
 
 		// Depth 10
 		res, err = appFs.ReadDirFlat("/", 2)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.NotNil(t, res)
 		require.Equal(t, 5, len(res))
 
 		// Depth 10
 		res, err = appFs.ReadDirFlat("/", 10)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.NotNil(t, res)
 		require.Equal(t, 11, len(res))
 	})
@@ -185,7 +185,7 @@ func Test_NonWslDrives(t *testing.T) {
 		paths := []string{}
 		for _, p := range paths {
 			err := appFs.Fs.MkdirAll(p, os.ModePerm)
-			require.Nil(t, err)
+			require.NoError(t, err)
 		}
 
 		drives, err := appFs.nonWslDrives()
@@ -194,7 +194,7 @@ func Test_NonWslDrives(t *testing.T) {
 			t.Skip("not implemented")
 		}
 
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.NotEmpty(t, drives)
 	})
 }
@@ -208,7 +208,7 @@ func Test_WslDrives(t *testing.T) {
 		paths := []string{}
 		for _, p := range paths {
 			err := appFs.Fs.MkdirAll(p, os.ModePerm)
-			require.Nil(t, err)
+			require.NoError(t, err)
 		}
 
 		drives, err := appFs.wslDrives()
@@ -227,11 +227,11 @@ func Test_WslDrives(t *testing.T) {
 		paths := []string{"/mnt/c", "/mnt/d", "/mnt/wsl", "/mnt/wslg"}
 		for _, p := range paths {
 			err := appFs.Fs.MkdirAll(p, os.ModePerm)
-			require.Nil(t, err)
+			require.NoError(t, err)
 		}
 
 		drives, err := appFs.wslDrives()
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Len(t, drives, 3)
 		require.ElementsMatch(t, []string{"/", filepath.Join("/mnt", "c"), filepath.Join("/mnt", "d")}, drives)
 	})
@@ -263,7 +263,7 @@ func Test_PartialHash(t *testing.T) {
 				require.Nil(t, afero.WriteFile(appFs.Fs, "/test/"+tt.name, tt.content, 0644))
 
 				hash, err := appFs.PartialHash("/test/"+tt.name, 1024*1024)
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tt.expected, hash)
 			})
 		}
@@ -275,14 +275,14 @@ func Test_PartialHash(t *testing.T) {
 		require.Nil(t, afero.WriteFile(appFs.Fs, "/test/data", []byte("Some test data"), 0644))
 
 		hash, err := appFs.PartialHash("/test/data", 1024*1024)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, "0843f7816915fae7fc9c31dbbb3e8745015b53a297930e522d544c13287cb062", hash)
 
 		// Rename the file
 		require.Nil(t, appFs.Fs.Rename("/test/data", "/test/newdata"))
 
 		hash, err = appFs.PartialHash("/test/newdata", 1024*1024)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, "0843f7816915fae7fc9c31dbbb3e8745015b53a297930e522d544c13287cb062", hash)
 	})
 }

@@ -55,10 +55,10 @@ func Test_DateTimeTime(t *testing.T) {
 	str := "2022-01-01 11:23:45.678Z"
 
 	expected, err := time.Parse(DefaultDateLayout, str)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	dt, err := ParseDateTime(str)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	result := dt.Time()
 	require.Equal(t, expected, result)
