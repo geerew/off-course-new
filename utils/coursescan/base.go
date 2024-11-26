@@ -3,7 +3,6 @@ package coursescan
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -416,8 +415,6 @@ func Processor(ctx context.Context, s *CourseScan, scan *models.Scan) error {
 				assets = append(assets, asset)
 			}
 		}
-
-		fmt.Println("assets", assets)
 
 		// Update the assets in DB
 		if len(assets) > 0 {
