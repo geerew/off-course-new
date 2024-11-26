@@ -127,6 +127,25 @@ func CheckTruth(vals ...string) bool {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// SliceIntersection returns the intersection of two slices
+func SliceIntersection[T comparable](slice1, slice2 []T) []T {
+	m := make(map[T]struct{})
+	for _, item := range slice1 {
+		m[item] = struct{}{}
+	}
+
+	var result []T
+	for _, item := range slice2 {
+		if _, exists := m[item]; exists {
+			result = append(result, item)
+			delete(m, item)
+		}
+	}
+	return result
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // DiffSliceOfStructsByKey takes in two slices of type T (left and right) and a key (string) as
 // arguments. The key defines the which key to use when comparing.
 //

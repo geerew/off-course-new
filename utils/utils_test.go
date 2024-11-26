@@ -95,6 +95,25 @@ func Test_CheckTruth(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func Test_SliceIntersection(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
+		res := SliceIntersection([]string{}, []string{})
+		require.Empty(t, res)
+	})
+
+	t.Run("no intersection", func(t *testing.T) {
+		res := SliceIntersection([]string{"1", "2", "3"}, []string{"4", "5", "6"})
+		require.Empty(t, res)
+	})
+
+	t.Run("intersection", func(t *testing.T) {
+		res := SliceIntersection([]string{"1", "2", "3"}, []string{"2", "3", "4"})
+		require.ElementsMatch(t, []string{"2", "3"}, res)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func Test_DiffSliceOfStructsByKey(t *testing.T) {
 	// Struct for testing
 	type testStruct struct {
