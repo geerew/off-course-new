@@ -403,6 +403,10 @@ func (s *Schema) PluckBuilder(column string, options *database.Options) squirrel
 			OrderBy(options.OrderBy...).
 			GroupBy(options.GroupBy...)
 
+		if options.Having != nil {
+			builder = builder.Having(options.Having)
+		}
+
 		if options.Pagination != nil {
 			builder = builder.
 				Offset(uint64(options.Pagination.Offset())).
