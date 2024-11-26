@@ -167,7 +167,7 @@ func (s *Schema) Select(model any, options *database.Options, db database.Querie
 		}
 		defer rows.Close()
 
-		err = s.ScanMany(rows, rv)
+		err = s.ScanMany(rows, rv, false)
 		if err != nil {
 			return err
 		}
@@ -181,12 +181,69 @@ func (s *Schema) Select(model any, options *database.Options, db database.Querie
 		}
 		defer rows.Close()
 
-		err = s.ScanOne(rows, rv)
+		err = s.ScanOne(rows, rv, false)
 		if err != nil {
 			return err
 		}
 
 		err = s.loadRelationsOne(concreteRv, db)
+	}
+
+	return err
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Pluck calls the SelectBuilder and executes the query, scanning the result into the model,
+// which may be a
+func (s *Schema) Pluck(column string, result any, options *database.Options, db database.Querier) error {
+	rv := reflect.ValueOf(result)
+
+	if rv.Kind() != reflect.Ptr {
+		return utils.ErrNotPtr
+	}
+
+	if rv.IsNil() {
+		return utils.ErrNilPtr
+	}
+
+	var err error
+	var rows Rows
+
+	if column == "" || s.FieldsByColumn[column] == nil {
+		return utils.ErrInvalidColumn
+	}
+
+	concreteRv, err := concreteReflectValue(reflect.ValueOf(result))
+	if err != nil {
+		return err
+	}
+
+	if concreteRv.Kind() == reflect.Slice {
+		query, args, _ := s.PluckBuilder(column, options).ToSql()
+
+		rows, err = db.Query(query, args...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		err = s.ScanMany(rows, rv, true)
+		if err != nil {
+			return err
+		}
+	} else {
+		query, args, _ := s.PluckBuilder(column, options).Limit(1).ToSql()
+		rows, err = db.Query(query, args...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		err = s.ScanOne(rows, rv, true)
+		if err != nil {
+			return err
+		}
 	}
 
 	return err
@@ -278,6 +335,53 @@ func (s *Schema) SelectBuilder(options *database.Options) squirrel.SelectBuilder
 		RemoveColumns()
 
 	for _, f := range s.Fields {
+		table := s.Table
+		if f.JoinTable != "" {
+			table = f.JoinTable
+		}
+
+		if f.Alias != "" {
+			builder = builder.Column(fmt.Sprintf("%s.%s AS %s", table, f.Column, f.Alias))
+		} else {
+			builder = builder.Column(fmt.Sprintf("%s.%s", table, f.Column))
+		}
+	}
+
+	for _, join := range s.LeftJoins {
+		builder = builder.LeftJoin(join)
+	}
+
+	if options != nil {
+		builder = builder.Where(options.Where).
+			OrderBy(options.OrderBy...).
+			GroupBy(options.GroupBy...)
+
+		if options.Pagination != nil {
+			builder = builder.
+				Offset(uint64(options.Pagination.Offset())).
+				Limit(uint64(options.Pagination.Limit()))
+		}
+	}
+
+	return builder
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// PluckBuilder creates a squirrel SelectBuilder for the model
+func (s *Schema) PluckBuilder(column string, options *database.Options) squirrel.SelectBuilder {
+	builder := squirrel.
+		StatementBuilder.
+		PlaceholderFormat(squirrel.Question).
+		Select("").
+		From(s.Table).
+		RemoveColumns()
+
+	for _, f := range s.Fields {
+		if f.Column != column {
+			continue
+		}
+
 		table := s.Table
 		if f.JoinTable != "" {
 			table = f.JoinTable
@@ -476,7 +580,7 @@ func (s *Schema) Scan(rows Rows, model any) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (s *Schema) ScanMany(rows Rows, rv reflect.Value) error {
+func (s *Schema) ScanMany(rows Rows, rv reflect.Value, pluck bool) error {
 	defer rows.Close()
 
 	if rv.Kind() != reflect.Ptr {
@@ -510,6 +614,10 @@ func (s *Schema) ScanMany(rows Rows, rv reflect.Value) error {
 		return err
 	}
 
+	if pluck && len(columns) != 1 {
+		return utils.ErrInvalidPluck
+	}
+
 	// Create a pointer of values for each field
 	values := make([]interface{}, len(columns))
 
@@ -517,18 +625,22 @@ func (s *Schema) ScanMany(rows Rows, rv reflect.Value) error {
 		instance := reflect.New(base)
 		concreteInstance := reflect.Indirect(instance)
 
-		for idx, column := range columns {
-			if field := s.FieldsByColumn[column]; field != nil {
-				v := concreteInstance
-				for _, pos := range field.Position {
-					// TODO - If value is a pointer and nil, initialize it
-					// TODO - If value is a map and nil, initialize it
-					v = reflect.Indirect(v).Field(pos)
-				}
+		if pluck {
+			values[0] = concreteInstance.Addr().Interface()
+		} else {
+			for idx, column := range columns {
+				if field := s.FieldsByColumn[column]; field != nil {
+					v := concreteInstance
+					for _, pos := range field.Position {
+						// TODO - If value is a pointer and nil, initialize it
+						// TODO - If value is a map and nil, initialize it
+						v = reflect.Indirect(v).Field(pos)
+					}
 
-				values[idx] = v.Addr().Interface()
-			} else {
-				return fmt.Errorf("column %s not found in model", column)
+					values[idx] = v.Addr().Interface()
+				} else {
+					return fmt.Errorf("column %s not found in model", column)
+				}
 			}
 		}
 
@@ -550,7 +662,7 @@ func (s *Schema) ScanMany(rows Rows, rv reflect.Value) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // ScanOne scans a single row into the model
-func (s *Schema) ScanOne(rows Rows, rv reflect.Value) error {
+func (s *Schema) ScanOne(rows Rows, rv reflect.Value, pluck bool) error {
 	defer rows.Close()
 
 	if rv.Kind() != reflect.Ptr {
@@ -575,22 +687,30 @@ func (s *Schema) ScanOne(rows Rows, rv reflect.Value) error {
 		return err
 	}
 
+	if pluck && len(columns) != 1 {
+		return utils.ErrInvalidPluck
+	}
+
 	// Create a pointer of values for each field
 	values := make([]interface{}, len(columns))
 
-	for idx, column := range columns {
-		if field := s.FieldsByColumn[column]; field != nil {
-			v := rv
+	if pluck {
+		values[0] = concreteRv.Addr().Interface()
+	} else {
+		for idx, column := range columns {
+			if field := s.FieldsByColumn[column]; field != nil {
+				v := rv
 
-			for _, pos := range field.Position {
-				// TODO - If value is a pointer and nil, initialize it
-				// TODO - If value is a map and nil, initialize it
-				v = reflect.Indirect(v).Field(pos)
+				for _, pos := range field.Position {
+					// TODO - If value is a pointer and nil, initialize it
+					// TODO - If value is a map and nil, initialize it
+					v = reflect.Indirect(v).Field(pos)
+				}
+
+				values[idx] = v.Addr().Interface()
+			} else {
+				return fmt.Errorf("column %s not found in model", column)
 			}
-
-			values[idx] = v.Addr().Interface()
-		} else {
-			return fmt.Errorf("column %s not found in model", column)
 		}
 	}
 
