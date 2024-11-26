@@ -107,8 +107,6 @@ func TestCourseTag_PluckForTags(t *testing.T) {
 		require.NoError(t, dao.CreateCourseTag(ctx, &models.CourseTag{CourseID: courses[1].ID, Tag: "Go"}))
 		require.NoError(t, dao.CreateCourseTag(ctx, &models.CourseTag{CourseID: courses[1].ID, Tag: "JavaScript"}))
 
-		fmt.Println(courses[0].ID, courses[1].ID)
-
 		// Go
 		courseIDs, err := dao.PluckForTags(ctx, []string{"Go"})
 		require.NoError(t, err)
