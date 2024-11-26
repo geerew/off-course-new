@@ -9,6 +9,7 @@ import (
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils"
+	"github.com/geerew/off-course/utils/schema"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -53,44 +54,29 @@ func (dao *DAO) CreateCourseTag(ctx context.Context, courseTag *models.CourseTag
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// // ListCourseIdsByTags lists course IDs containing all tags in the slice
-// func (dao *DAO) ListCourseIdsByTags(tags []string, dbParams *database.DatabaseParams, tx *database.Tx) ([]string, error) {
-// 	if len(tags) == 0 {
-// 		return nil, nil
-// 	}
+// PluckForTags returns a list of course IDs where the course has all the tags in the slice
+func (dao *DAO) PluckForTags(ctx context.Context, tags []string) ([]string, error) {
+	if len(tags) == 0 {
+		return nil, nil
+	}
 
-// 	if dbParams == nil {
-// 		dbParams = &database.DatabaseParams{}
-// 	}
+	sch, err := schema.Parse(&models.CourseTag{})
+	if err != nil {
+		return nil, err
+	}
 
-// 	selectColumns, _ := tableColumnsOrPanic(models.CourseTag{}, dao.Table())
+	options := &database.Options{
+		Where:   squirrel.Eq{models.TAG_TABLE + ".tag": tags},
+		GroupBy: []string{models.COURSE_TAG_TABLE + ".course_id"},
+		Having:  squirrel.Expr("COUNT(DISTINCT "+models.TAG_TABLE+".tag) = ?", len(tags)),
+	}
 
-// 	dbParams.OrderBy = genericProcessOrderBy(dbParams.OrderBy, selectColumns, dao, false)
-// 	dbParams.Columns = []string{dao.Table() + ".course_id"}
-// 	dbParams.Where = squirrel.Eq{NewTagDao(dao.db).Table() + ".tag": tags}
-// 	dbParams.GroupBys = []string{dao.Table() + ".course_id"}
-// 	dbParams.Having = squirrel.Expr("COUNT(DISTINCT "+NewTagDao(dao.db).Table()+".tag) = ?", len(tags))
-// 	dbParams.Pagination = nil
+	ids := []string{}
+	q := database.QuerierFromContext(ctx, dao.db)
+	err = sch.Pluck(models.COURSE_TAG_COURSE_ID, &ids, options, q)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
 
-// 	rows, err := genericListWithoutScan(dao, dbParams, tx)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer rows.Close()
-
-// 	var courseIds []string
-// 	for rows.Next() {
-// 		var courseId string
-// 		if err := rows.Scan(&courseId); err != nil {
-// 			return nil, err
-// 		}
-
-// 		courseIds = append(courseIds, courseId)
-// 	}
-
-// 	if err := rows.Err(); err != nil {
-// 		return nil, err
-// 	}
-
-// 	return courseIds, nil
-// }
+	return ids, nil
+}
