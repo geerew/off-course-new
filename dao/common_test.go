@@ -552,6 +552,34 @@ func Test_List(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func Test_ListIDs(t *testing.T) {
+	t.Run("no entries", func(t *testing.T) {
+		dao, ctx := setup(t)
+
+		ids, err := dao.PluckIDs(ctx, &models.Course{}, nil)
+		require.NoError(t, err)
+		require.Empty(t, ids)
+	})
+
+	t.Run("entries", func(t *testing.T) {
+		dao, ctx := setup(t)
+
+		for i := range 5 {
+			course := &models.Course{
+				Title: fmt.Sprintf("Course %d", i),
+				Path:  fmt.Sprintf("/course-%d", i),
+			}
+			require.NoError(t, dao.Create(ctx, course))
+		}
+
+		ids, err := dao.PluckIDs(ctx, &models.Course{}, nil)
+		require.NoError(t, err)
+		require.Len(t, ids, 5)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func Test_Delete(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		dao, ctx := setup(t)

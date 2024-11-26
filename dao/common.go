@@ -120,6 +120,25 @@ func (dao *DAO) List(ctx context.Context, model any, options *database.Options) 
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// PluckIDs is a generic function to pluck the IDs of models (rows)
+func (dao *DAO) PluckIDs(ctx context.Context, model any, options *database.Options) ([]string, error) {
+	sch, err := schema.Parse(model)
+	if err != nil {
+		return nil, err
+	}
+
+	ids := []string{}
+	q := database.QuerierFromContext(ctx, dao.db)
+	err = sch.Pluck(models.BASE_ID, &ids, options, q)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	return ids, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Update is a generic function to update a model in the database
 func (dao *DAO) Update(ctx context.Context, model models.Modeler) (bool, error) {
 	sch, err := schema.Parse(model)
