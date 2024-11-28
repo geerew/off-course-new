@@ -2,7 +2,6 @@ package dao
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
@@ -24,20 +23,19 @@ func (dao *DAO) CreateOrUpdateAssetProgress(ctx context.Context, assetProgress *
 			assetProgress.VideoPos = 0
 		}
 
-		// Check for existing asset progress
-		existingAP := &models.AssetProgress{}
+		asset := &models.Asset{}
 		err := dao.Get(
 			txCtx,
-			existingAP,
-			&database.Options{Where: squirrel.Eq{models.ASSET_PROGRESS_TABLE + ".asset_id": assetProgress.AssetID}},
+			asset,
+			&database.Options{Where: squirrel.Eq{models.ASSET_TABLE + ".id": assetProgress.AssetID}},
 		)
 
-		if err != nil && err != sql.ErrNoRows {
+		if err != nil {
 			return err
 		}
 
-		// Create
-		if err == sql.ErrNoRows {
+		if asset.Progress == nil {
+			// Create
 			if assetProgress.Completed {
 				assetProgress.CompletedAt = types.NowDateTime()
 			}
@@ -47,11 +45,11 @@ func (dao *DAO) CreateOrUpdateAssetProgress(ctx context.Context, assetProgress *
 				return err
 			}
 		} else {
-			assetProgress.ID = existingAP.ID
 			// Update
+			assetProgress.ID = asset.Progress.ID
 			if assetProgress.Completed {
-				if existingAP.Completed {
-					assetProgress.CompletedAt = existingAP.CompletedAt
+				if asset.Progress.Completed {
+					assetProgress.CompletedAt = asset.Progress.CompletedAt
 				} else {
 					assetProgress.CompletedAt = types.NowDateTime()
 				}
@@ -66,6 +64,6 @@ func (dao *DAO) CreateOrUpdateAssetProgress(ctx context.Context, assetProgress *
 		}
 
 		// Refresh course progress
-		return dao.RefreshCourseProgress(txCtx, assetProgress.CourseID)
+		return dao.RefreshCourseProgress(txCtx, asset.CourseID)
 	})
 }

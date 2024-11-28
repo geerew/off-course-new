@@ -213,10 +213,9 @@ func Test_Get(t *testing.T) {
 
 		// Create attachment
 		attachment := &models.Attachment{
-			AssetID:  asset.ID,
-			CourseID: course.ID,
-			Title:    "Attachment 1",
-			Path:     "/course-1/01 Attachment 1.txt",
+			AssetID: asset.ID,
+			Title:   "Attachment 1",
+			Path:    "/course-1/01 Attachment 1.txt",
 		}
 		require.NoError(t, dao.CreateAttachment(ctx, attachment))
 
@@ -227,7 +226,6 @@ func Test_Get(t *testing.T) {
 		require.True(t, attachmentResult.CreatedAt.Equal(attachment.CreatedAt))
 		require.True(t, attachmentResult.UpdatedAt.Equal(attachment.UpdatedAt))
 		require.Equal(t, attachment.AssetID, attachmentResult.AssetID)
-		require.Equal(t, attachment.CourseID, attachmentResult.CourseID)
 		require.Equal(t, attachment.Title, attachmentResult.Title)
 		require.Equal(t, attachment.Path, attachmentResult.Path)
 

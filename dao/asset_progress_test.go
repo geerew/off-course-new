@@ -32,9 +32,34 @@ func Test_CreateOrUpdateAssetProgress(t *testing.T) {
 		require.NoError(t, dao.CreateAsset(ctx, asset))
 
 		assetProgress := &models.AssetProgress{
-			AssetID:  asset.ID,
-			CourseID: course.ID,
+			AssetID: asset.ID,
 		}
+		require.NoError(t, dao.CreateOrUpdateAssetProgress(ctx, assetProgress))
+	})
+
+	t.Run("update", func(t *testing.T) {
+		dao, ctx := setup(t)
+		course := &models.Course{Title: "Course 1", Path: "/course-1"}
+		require.NoError(t, dao.CreateCourse(ctx, course))
+
+		asset := &models.Asset{
+			CourseID: course.ID,
+			Title:    "Asset 1",
+			Prefix:   sql.NullInt16{Int16: 1, Valid: true},
+			Chapter:  "Chapter 1",
+			Type:     *types.NewAsset("mp4"),
+			Path:     "/course-1/01 asset.mp4",
+			Hash:     "1234",
+		}
+		require.NoError(t, dao.CreateAsset(ctx, asset))
+
+		assetProgress := &models.AssetProgress{
+			AssetID: asset.ID,
+		}
+		require.NoError(t, dao.CreateOrUpdateAssetProgress(ctx, assetProgress))
+
+		assetProgress.VideoPos = 20
+		assetProgress.Completed = true
 		require.NoError(t, dao.CreateOrUpdateAssetProgress(ctx, assetProgress))
 	})
 
@@ -64,8 +89,7 @@ func Test_AssetProgressDeleteCascade(t *testing.T) {
 	require.NoError(t, dao.CreateAsset(ctx, asset))
 
 	assetProgress := &models.AssetProgress{
-		AssetID:  asset.ID,
-		CourseID: course.ID,
+		AssetID: asset.ID,
 	}
 	require.NoError(t, dao.CreateOrUpdateAssetProgress(ctx, assetProgress))
 

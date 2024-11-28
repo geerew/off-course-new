@@ -23,7 +23,7 @@ type Asset struct {
 	Hash     string
 
 	// Relations
-	Progress    AssetProgress
+	Progress    *AssetProgress
 	Attachments []*Attachment
 }
 

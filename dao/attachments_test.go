@@ -33,10 +33,9 @@ func Test_CreateAttachment(t *testing.T) {
 		require.NoError(t, dao.CreateAsset(ctx, asset))
 
 		attachment := &models.Attachment{
-			AssetID:  asset.ID,
-			CourseID: course.ID,
-			Title:    "Attachment 1",
-			Path:     "/course-1/01 attachment.txt",
+			AssetID: asset.ID,
+			Title:   "Attachment 1",
+			Path:    "/course-1/01 attachment.txt",
 		}
 		require.NoError(t, dao.CreateAttachment(ctx, attachment))
 	})
@@ -69,21 +68,19 @@ func Test_UpdateAttachment(t *testing.T) {
 		require.NoError(t, dao.CreateAsset(ctx, asset))
 
 		originalAttachment := &models.Attachment{
-			AssetID:  asset.ID,
-			CourseID: course.ID,
-			Title:    "Attachment 1",
-			Path:     "/course-1/01 Attachment 1.txt",
+			AssetID: asset.ID,
+			Title:   "Attachment 1",
+			Path:    "/course-1/01 Attachment 1.txt",
 		}
 		require.NoError(t, dao.CreateAttachment(ctx, originalAttachment))
 
 		time.Sleep(1 * time.Millisecond)
 
 		newAttachment := &models.Attachment{
-			Base:     originalAttachment.Base,
-			AssetID:  asset.ID,                        // Immutable
-			CourseID: course.ID,                       // Immutable
-			Title:    "Attachment 2",                  // Mutable
-			Path:     "/course-1/01 Attachment 2.txt", // Mutable
+			Base:    originalAttachment.Base,
+			AssetID: asset.ID,                        // Immutable
+			Title:   "Attachment 2",                  // Mutable
+			Path:    "/course-1/01 Attachment 2.txt", // Mutable
 		}
 		require.NoError(t, dao.UpdateAttachment(ctx, newAttachment))
 
@@ -91,7 +88,6 @@ func Test_UpdateAttachment(t *testing.T) {
 		require.NoError(t, dao.GetById(ctx, attachmentResult))
 		require.Equal(t, newAttachment.ID, attachmentResult.ID)                          // No change
 		require.Equal(t, newAttachment.AssetID, attachmentResult.AssetID)                // No change
-		require.Equal(t, newAttachment.CourseID, attachmentResult.CourseID)              // No change
 		require.True(t, newAttachment.CreatedAt.Equal(originalAttachment.CreatedAt))     // No change
 		require.Equal(t, newAttachment.Title, attachmentResult.Title)                    // Changed
 		require.Equal(t, newAttachment.Path, attachmentResult.Path)                      // Changed
@@ -116,10 +112,9 @@ func Test_UpdateAttachment(t *testing.T) {
 		require.NoError(t, dao.CreateAsset(ctx, asset))
 
 		attachment := &models.Attachment{
-			AssetID:  asset.ID,
-			CourseID: course.ID,
-			Title:    "Attachment 1",
-			Path:     "/course-1/01 attachment.txt",
+			AssetID: asset.ID,
+			Title:   "Attachment 1",
+			Path:    "/course-1/01 attachment.txt",
 		}
 		require.NoError(t, dao.CreateAttachment(ctx, attachment))
 
@@ -279,10 +274,9 @@ func Test_AttachmentDeleteCascade(t *testing.T) {
 	require.NoError(t, dao.CreateAsset(ctx, asset))
 
 	attachment := &models.Attachment{
-		AssetID:  asset.ID,
-		CourseID: course.ID,
-		Title:    "Attachment 1",
-		Path:     "/course-1/01 attachment.txt",
+		AssetID: asset.ID,
+		Title:   "Attachment 1",
+		Path:    "/course-1/01 attachment.txt",
 	}
 	require.NoError(t, dao.CreateAttachment(ctx, attachment))
 

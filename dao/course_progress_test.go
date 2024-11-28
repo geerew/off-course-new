@@ -62,7 +62,7 @@ func Test_RefreshCourseProgress(t *testing.T) {
 		require.NoError(t, dao.CreateAsset(ctx, asset1))
 
 		// Set asset1 progress (video_pos > 0)
-		assetProgress := &models.AssetProgress{AssetID: asset1.ID, CourseID: course.ID, VideoPos: 1}
+		assetProgress := &models.AssetProgress{AssetID: asset1.ID, VideoPos: 1}
 		require.NoError(t, dao.CreateOrUpdateAssetProgress(ctx, assetProgress))
 
 		require.NoError(t, dao.GetById(ctx, course))
@@ -147,10 +147,10 @@ func Test_Pluck(t *testing.T) {
 		}
 
 		// Mark course 1 as started
-		require.NoError(t, dao.CreateOrUpdateAssetProgress(ctx, &models.AssetProgress{AssetID: assets[0].ID, CourseID: courses[0].ID, VideoPos: 10}))
+		require.NoError(t, dao.CreateOrUpdateAssetProgress(ctx, &models.AssetProgress{AssetID: assets[0].ID, VideoPos: 10}))
 
 		// Mark course 2 as completed
-		require.NoError(t, dao.CreateOrUpdateAssetProgress(ctx, &models.AssetProgress{AssetID: assets[1].ID, CourseID: courses[1].ID, VideoPos: 10, Completed: true}))
+		require.NoError(t, dao.CreateOrUpdateAssetProgress(ctx, &models.AssetProgress{AssetID: assets[1].ID, VideoPos: 10, Completed: true}))
 
 		// Find started courses
 		ids, err := dao.PluckStartedCourses(ctx)
@@ -202,7 +202,7 @@ func Test_PluckCompletedCourses(t *testing.T) {
 		}
 
 		// Mark course 1 as started
-		assetProgress := &models.AssetProgress{AssetID: assets[0].ID, CourseID: courses[0].ID, VideoPos: 10, Completed: true}
+		assetProgress := &models.AssetProgress{AssetID: assets[0].ID, VideoPos: 10, Completed: true}
 		require.NoError(t, dao.CreateOrUpdateAssetProgress(ctx, assetProgress))
 
 		ids, err := dao.PluckCompletedCourses(ctx)
