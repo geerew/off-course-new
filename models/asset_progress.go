@@ -11,7 +11,6 @@ import (
 type AssetProgress struct {
 	Base
 	AssetID     string
-	CourseID    string
 	VideoPos    int
 	Completed   bool
 	CompletedAt types.DateTime
@@ -22,7 +21,6 @@ type AssetProgress struct {
 var (
 	ASSET_PROGRESS_TABLE        = "assets_progress"
 	ASSET_PROGRESS_ASSET_ID     = "asset_id"
-	ASSET_PROGRESS_COURSE_ID    = "course_id"
 	ASSET_PROGRESS_VIDEO_POS    = "video_pos"
 	ASSET_PROGRESS_COMPLETED    = "completed"
 	ASSET_PROGRESS_COMPLETED_AT = "completed_at"
@@ -43,7 +41,6 @@ func (a *AssetProgress) Define(s *schema.ModelConfig) {
 
 	// Common fields
 	s.Field("AssetID").Column(ASSET_PROGRESS_ASSET_ID).NotNull()
-	s.Field("CourseID").Column(ASSET_PROGRESS_COURSE_ID).NotNull()
 	s.Field("VideoPos").Column(ASSET_PROGRESS_VIDEO_POS).Mutable()
 	s.Field("Completed").Column(ASSET_PROGRESS_COMPLETED).Mutable()
 	s.Field("CompletedAt").Column(ASSET_PROGRESS_COMPLETED_AT).Mutable()
