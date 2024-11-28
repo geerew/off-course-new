@@ -9,7 +9,6 @@ import (
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils"
-	"github.com/geerew/off-course/utils/schema"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -54,29 +53,20 @@ func (dao *DAO) CreateCourseTag(ctx context.Context, courseTag *models.CourseTag
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// PluckForTags returns a list of course IDs where the course has all the tags in the slice
-func (dao *DAO) PluckForTags(ctx context.Context, tags []string) ([]string, error) {
+// PluckCourseIDsWithTags returns a list of course IDs where the course has all the tags in the
+// slice
+func (dao *DAO) PluckCourseIDsWithTags(ctx context.Context, tags []string, options *database.Options) ([]string, error) {
 	if len(tags) == 0 {
 		return nil, nil
 	}
 
-	sch, err := schema.Parse(&models.CourseTag{})
-	if err != nil {
-		return nil, err
+	if options == nil {
+		options = &database.Options{}
 	}
 
-	options := &database.Options{
-		Where:   squirrel.Eq{models.TAG_TABLE + ".tag": tags},
-		GroupBy: []string{models.COURSE_TAG_TABLE + ".course_id"},
-		Having:  squirrel.Expr("COUNT(DISTINCT "+models.TAG_TABLE+".tag) = ?", len(tags)),
-	}
+	options.Where = squirrel.Eq{models.TAG_TABLE + ".tag": tags}
+	options.GroupBy = []string{models.COURSE_TAG_TABLE + ".course_id"}
+	options.Having = squirrel.Expr("COUNT(DISTINCT "+models.TAG_TABLE+".tag) = ?", len(tags))
 
-	ids := []string{}
-	q := database.QuerierFromContext(ctx, dao.db)
-	err = sch.Pluck(models.COURSE_TAG_COURSE_ID, &ids, options, q)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-
-	return ids, nil
+	return dao.ListPluck(ctx, &models.CourseTag{}, options, models.COURSE_TAG_COURSE_ID)
 }
