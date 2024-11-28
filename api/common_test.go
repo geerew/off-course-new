@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -9,7 +10,7 @@ import (
 
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/utils/appFs"
-	"github.com/geerew/off-course/utils/jobs"
+	"github.com/geerew/off-course/utils/coursescan"
 	"github.com/geerew/off-course/utils/logger"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/spf13/afero"
@@ -18,7 +19,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func setup(t *testing.T) *Router {
+func setup(t *testing.T) (*Router, context.Context) {
 	t.Helper()
 
 	// Logger
@@ -30,10 +31,8 @@ func setup(t *testing.T) *Router {
 	})
 	require.NoError(t, err, "Failed to initialize logger")
 
-	// Filesystem
 	appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
 
-	// DB
 	dbManager, err := database.NewSqliteDBManager(&database.DatabaseConfig{
 		IsDebug:  false,
 		DataDir:  "./oc_data",
@@ -41,11 +40,10 @@ func setup(t *testing.T) *Router {
 		InMemory: true,
 	})
 
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, dbManager)
 
-	// Course scanner
-	courseScanner := jobs.NewCourseScanner(&jobs.CourseScannerConfig{
+	courseScan := coursescan.NewCourseScan(&coursescan.CourseScanConfig{
 		Db:     dbManager.DataDb,
 		AppFs:  appFs,
 		Logger: logger,
@@ -53,16 +51,15 @@ func setup(t *testing.T) *Router {
 
 	// Router
 	config := &RouterConfig{
-		DbManager:     dbManager,
-		AppFs:         appFs,
-		CourseScanner: courseScanner,
-		Logger:        logger,
+		DbManager:  dbManager,
+		AppFs:      appFs,
+		CourseScan: courseScan,
+		Logger:     logger,
 	}
 
-	router := New(config)
+	router := NewRouter(config)
 
-	// teardown
-	return router
+	return router, context.Background()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -86,7 +83,7 @@ func unmarshalHelper[T any](t *testing.T, body []byte) (pagination.PaginationRes
 
 	var respData pagination.PaginationResult
 	err := json.Unmarshal(body, &respData)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	var resp []T
 	for _, item := range respData.Items {
