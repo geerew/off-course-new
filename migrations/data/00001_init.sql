@@ -54,7 +54,6 @@ CREATE TABLE assets_progress (
 	---
 	FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
 	FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE
-
 );
 
 --- Attachments information
