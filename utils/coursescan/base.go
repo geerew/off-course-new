@@ -331,9 +331,8 @@ func Processor(ctx context.Context, s *CourseScan, scan *models.Scan) error {
 			attachmentsMap[chapter][pfn.prefix] = append(
 				attachmentsMap[chapter][pfn.prefix],
 				&models.Attachment{
-					Title:    pfn.title,
-					Path:     normalizedPath,
-					CourseID: course.ID,
+					Title: pfn.title,
+					Path:  normalizedPath,
 				},
 			)
 
@@ -360,7 +359,6 @@ func Processor(ctx context.Context, s *CourseScan, scan *models.Scan) error {
 			newAsset.Hash = hash
 
 			assetsMap[chapter][pfn.prefix] = newAsset
-
 		} else {
 			// Check if this new asset has a higher priority than the existing asset. The priority
 			// is video > html > pdf
@@ -386,9 +384,8 @@ func Processor(ctx context.Context, s *CourseScan, scan *models.Scan) error {
 				attachmentsMap[chapter][pfn.prefix] = append(
 					attachmentsMap[chapter][pfn.prefix],
 					&models.Attachment{
-						Title:    existing.Title + filepath.Ext(existing.Path),
-						Path:     existing.Path,
-						CourseID: course.ID,
+						Title: existing.Title + filepath.Ext(existing.Path),
+						Path:  existing.Path,
 					},
 				)
 			} else {
@@ -396,9 +393,8 @@ func Processor(ctx context.Context, s *CourseScan, scan *models.Scan) error {
 				attachmentsMap[chapter][pfn.prefix] = append(
 					attachmentsMap[chapter][pfn.prefix],
 					&models.Attachment{
-						Title:    pfn.title,
-						Path:     normalizedPath,
-						CourseID: course.ID,
+						Title: pfn.title,
+						Path:  normalizedPath,
 					},
 				)
 			}
@@ -424,6 +420,11 @@ func Processor(ctx context.Context, s *CourseScan, scan *models.Scan) error {
 			}
 		}
 
+		ids, err := s.dao.ListPluck(txCtx, &models.Asset{}, &database.Options{Where: squirrel.Eq{models.ASSET_TABLE + ".course_id": course.ID}}, models.BASE_ID)
+		if err != nil {
+			return err
+		}
+
 		// Convert the attachments map to a slice
 		attachments := []*models.Attachment{}
 		for chapter, attachmentMap := range attachmentsMap {
@@ -440,7 +441,7 @@ func Processor(ctx context.Context, s *CourseScan, scan *models.Scan) error {
 
 		// Update the attachments in DB
 		if len(attachments) > 0 {
-			err = updateAttachments(txCtx, s.dao, course.ID, attachments)
+			err = updateAttachments(txCtx, s.dao, ids, attachments)
 			if err != nil {
 				return err
 			}
@@ -646,9 +647,9 @@ func updateAssets(ctx context.Context, dao *dao.DAO, courseId string, assets []*
 // updateAttachments updates the attachments in the database based on the attachments found on disk.
 // It compares the existing attachments in the database with the attachments found on disk, and performs
 // the necessary additions and deletions
-func updateAttachments(ctx context.Context, dao *dao.DAO, courseId string, attachments []*models.Attachment) error {
+func updateAttachments(ctx context.Context, dao *dao.DAO, assetIDs []string, attachments []*models.Attachment) error {
 	existingAttachments := []*models.Attachment{}
-	err := dao.List(ctx, &existingAttachments, &database.Options{Where: squirrel.Eq{models.ATTACHMENT_TABLE + ".course_id": courseId}})
+	err := dao.List(ctx, &existingAttachments, &database.Options{Where: squirrel.Eq{models.ATTACHMENT_TABLE + ".asset_id": assetIDs}})
 	if err != nil {
 		return err
 	}

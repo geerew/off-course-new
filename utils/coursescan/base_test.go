@@ -458,7 +458,7 @@ func TestScanner_Processor(t *testing.T) {
 
 		attachmentOptions := &database.Options{
 			OrderBy: []string{models.ATTACHMENT_TABLE + ".created_at asc"},
-			Where:   squirrel.Eq{models.ATTACHMENT_TABLE + ".course_id": course.ID},
+			Where:   squirrel.Eq{models.ATTACHMENT_TABLE + ".asset_ID": assets[0].ID},
 		}
 
 		attachments := []*models.Attachment{}
@@ -467,7 +467,7 @@ func TestScanner_Processor(t *testing.T) {
 		require.Len(t, attachments, 1)
 
 		require.Equal(t, "file 1.txt", attachments[0].Title)
-		require.Equal(t, course.ID, attachments[0].CourseID)
+		require.Equal(t, assets[0].ID, attachments[0].AssetID)
 		require.Equal(t, filepath.Join(course.Path, "01 file 1.txt"), attachments[0].Path)
 
 		// Add another attachment
@@ -481,11 +481,11 @@ func TestScanner_Processor(t *testing.T) {
 		require.Len(t, attachments, 2)
 
 		require.Equal(t, "file 1.txt", attachments[0].Title)
-		require.Equal(t, course.ID, attachments[0].CourseID)
+		require.Equal(t, assets[0].ID, attachments[0].AssetID)
 		require.Equal(t, filepath.Join(course.Path, "01 file 1.txt"), attachments[0].Path)
 
 		require.Equal(t, "file 2.txt", attachments[1].Title)
-		require.Equal(t, course.ID, attachments[1].CourseID)
+		require.Equal(t, assets[0].ID, attachments[0].AssetID)
 		require.Equal(t, filepath.Join(course.Path, "01 file 2.txt"), attachments[1].Path)
 
 		// Delete attachment
@@ -499,7 +499,7 @@ func TestScanner_Processor(t *testing.T) {
 		require.Len(t, attachments, 1)
 
 		require.Equal(t, "file 2.txt", attachments[0].Title)
-		require.Equal(t, course.ID, attachments[0].CourseID)
+		require.Equal(t, assets[0].ID, attachments[0].AssetID)
 		require.Equal(t, filepath.Join(course.Path, "01 file 2.txt"), attachments[0].Path)
 	})
 
@@ -561,7 +561,6 @@ func TestScanner_Processor(t *testing.T) {
 
 		attachmentOptions := &database.Options{
 			OrderBy: []string{models.ATTACHMENT_TABLE + ".created_at asc"},
-			Where:   squirrel.Eq{models.ATTACHMENT_TABLE + ".course_id": course.ID},
 		}
 
 		attachments := []*models.Attachment{}
@@ -992,16 +991,15 @@ func TestScanner_UpdateAttachments(t *testing.T) {
 		attachments := []*models.Attachment{}
 		for i := range numAttachments {
 			attachment := &models.Attachment{
-				CourseID: course.ID,
-				AssetID:  asset.ID,
-				Title:    fmt.Sprintf("Attachment %d", i+1),
-				Path:     fmt.Sprintf("/course-1/Chapter 1/1 Attachment %d.pdf", i+1),
+				AssetID: asset.ID,
+				Title:   fmt.Sprintf("Attachment %d", i+1),
+				Path:    fmt.Sprintf("/course-1/Chapter 1/1 Attachment %d.pdf", i+1),
 			}
 			require.NoError(t, scanner.dao.CreateAttachment(ctx, attachment))
 			attachments = append(attachments, attachment)
 		}
 
-		err := updateAttachments(ctx, scanner.dao, course.ID, attachments)
+		err := updateAttachments(ctx, scanner.dao, []string{asset.ID}, attachments)
 		require.NoError(t, err)
 
 		count, err := scanner.dao.Count(ctx, &models.Attachment{}, nil)
@@ -1031,16 +1029,15 @@ func TestScanner_UpdateAttachments(t *testing.T) {
 		attachments := []*models.Attachment{}
 		for i := range numAttachments {
 			attachment := &models.Attachment{
-				CourseID: course.ID,
-				AssetID:  asset.ID,
-				Title:    fmt.Sprintf("Attachment %d", i+1),
-				Path:     fmt.Sprintf("/course-1/Chapter 1/1 Attachment %d.pdf", i+1),
+				AssetID: asset.ID,
+				Title:   fmt.Sprintf("Attachment %d", i+1),
+				Path:    fmt.Sprintf("/course-1/Chapter 1/1 Attachment %d.pdf", i+1),
 			}
 			attachments = append(attachments, attachment)
 		}
 
 		// Add first 7 attachments
-		err := updateAttachments(ctx, scanner.dao, course.ID, attachments[:7])
+		err := updateAttachments(ctx, scanner.dao, []string{asset.ID}, attachments[:7])
 		require.NoError(t, err)
 
 		count, err := scanner.dao.Count(ctx, &models.Attachment{}, nil)
@@ -1048,7 +1045,7 @@ func TestScanner_UpdateAttachments(t *testing.T) {
 		require.Equal(t, 7, count)
 
 		// Add remaining attachments
-		err = updateAttachments(ctx, scanner.dao, course.ID, attachments)
+		err = updateAttachments(ctx, scanner.dao, []string{asset.ID}, attachments)
 		require.NoError(t, err)
 
 		count, err = scanner.dao.Count(ctx, &models.Attachment{}, nil)
@@ -1078,17 +1075,16 @@ func TestScanner_UpdateAttachments(t *testing.T) {
 		attachments := []*models.Attachment{}
 		for i := range numAttachments {
 			attachment := &models.Attachment{
-				CourseID: course.ID,
-				AssetID:  asset.ID,
-				Title:    fmt.Sprintf("Attachment %d", i+1),
-				Path:     fmt.Sprintf("/course-1/Chapter 1/1 Attachment %d.pdf", i+1),
+				AssetID: asset.ID,
+				Title:   fmt.Sprintf("Attachment %d", i+1),
+				Path:    fmt.Sprintf("/course-1/Chapter 1/1 Attachment %d.pdf", i+1),
 			}
 			require.NoError(t, scanner.dao.CreateAttachment(ctx, attachment))
 			attachments = append(attachments, attachment)
 		}
 
 		// Delete 2 attachments
-		err := updateAttachments(ctx, scanner.dao, course.ID, attachments[2:])
+		err := updateAttachments(ctx, scanner.dao, []string{asset.ID}, attachments[2:])
 		require.NoError(t, err)
 
 		count, err := scanner.dao.Count(ctx, &models.Attachment{}, nil)
@@ -1096,7 +1092,7 @@ func TestScanner_UpdateAttachments(t *testing.T) {
 		require.Equal(t, 8, count)
 
 		// Delete another 2 attachments
-		err = updateAttachments(ctx, scanner.dao, course.ID, attachments[4:])
+		err = updateAttachments(ctx, scanner.dao, []string{asset.ID}, attachments[4:])
 		require.NoError(t, err)
 
 		count, err = scanner.dao.Count(ctx, &models.Attachment{}, nil)
