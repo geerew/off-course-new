@@ -9,7 +9,6 @@ import (
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils"
-	"github.com/geerew/off-course/utils/schema"
 	"github.com/geerew/off-course/utils/types"
 )
 
@@ -107,73 +106,41 @@ func (dao *DAO) RefreshCourseProgress(ctx context.Context, courseID string) erro
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// PluckStartedCourses returns a list of course IDs for courses that have been started but not
+// PluckIDsForStartedCourses returns a list of course IDs for courses that have been started but not
 // completed
-func (dao *DAO) PluckStartedCourses(ctx context.Context) ([]string, error) {
-	sch, err := schema.Parse(&models.CourseProgress{})
-	if err != nil {
-		return nil, err
+func (dao *DAO) PluckIDsForStartedCourses(ctx context.Context, options *database.Options) ([]string, error) {
+	if options == nil {
+		options = &database.Options{}
 	}
 
-	options := &database.Options{
-		Where: squirrel.And{
-			squirrel.Eq{models.COURSE_PROGRESS_TABLE + ".started": true},
-			squirrel.NotEq{models.COURSE_PROGRESS_TABLE + ".percent": 100},
-		},
+	options.Where = squirrel.And{
+		squirrel.Eq{models.COURSE_PROGRESS_TABLE + ".started": true},
+		squirrel.NotEq{models.COURSE_PROGRESS_TABLE + ".percent": 100},
 	}
 
-	ids := []string{}
-	q := database.QuerierFromContext(ctx, dao.db)
-	err = sch.Pluck(models.COURSE_PROGRESS_COURSE_ID, &ids, options, q)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-
-	return ids, nil
+	return dao.ListPluck(ctx, &models.CourseProgress{}, options, models.COURSE_PROGRESS_COURSE_ID)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// PluckCompletedCourses returns a list of course IDs for courses that have been completed
-func (dao *DAO) PluckCompletedCourses(ctx context.Context) ([]string, error) {
-	sch, err := schema.Parse(&models.CourseProgress{})
-	if err != nil {
-		return nil, err
+// PluckIDsForCompletedCourses returns a list of course IDs for courses that have been completed
+func (dao *DAO) PluckIDsForCompletedCourses(ctx context.Context, options *database.Options) ([]string, error) {
+	if options == nil {
+		options = &database.Options{}
 	}
 
-	options := &database.Options{
-		Where: squirrel.Eq{models.COURSE_PROGRESS_TABLE + ".percent": 100},
-	}
-
-	ids := []string{}
-	q := database.QuerierFromContext(ctx, dao.db)
-	err = sch.Pluck(models.COURSE_PROGRESS_COURSE_ID, &ids, options, q)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-
-	return ids, nil
+	options.Where = squirrel.Eq{models.COURSE_PROGRESS_TABLE + ".percent": 100}
+	return dao.ListPluck(ctx, &models.CourseProgress{}, options, models.COURSE_PROGRESS_COURSE_ID)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // PluckNotStartedCourses returns a list of course IDs for courses that have not been started
-func (dao *DAO) PluckNotStartedCourses(ctx context.Context) ([]string, error) {
-	sch, err := schema.Parse(&models.CourseProgress{})
-	if err != nil {
-		return nil, err
+func (dao *DAO) PluckIDsForNotStartedCourses(ctx context.Context, options *database.Options) ([]string, error) {
+	if options == nil {
+		options = &database.Options{}
 	}
 
-	options := &database.Options{
-		Where: squirrel.Eq{models.COURSE_PROGRESS_TABLE + ".started": false},
-	}
-
-	ids := []string{}
-	q := database.QuerierFromContext(ctx, dao.db)
-	err = sch.Pluck(models.COURSE_PROGRESS_COURSE_ID, &ids, options, q)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-
-	return ids, nil
+	options.Where = squirrel.Eq{models.COURSE_PROGRESS_TABLE + ".started": false}
+	return dao.ListPluck(ctx, &models.CourseProgress{}, options, models.COURSE_PROGRESS_COURSE_ID)
 }

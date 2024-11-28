@@ -82,7 +82,7 @@ func Test_CourseTagDeleteCascade(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestCourseTag_PluckForTags(t *testing.T) {
+func TestCourseTag_PluckCourseIDsWithTags(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
 		dao, ctx := setup(t)
 

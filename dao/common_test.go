@@ -550,11 +550,11 @@ func Test_List(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func Test_ListIDs(t *testing.T) {
+func Test_ListPluck(t *testing.T) {
 	t.Run("no entries", func(t *testing.T) {
 		dao, ctx := setup(t)
 
-		ids, err := dao.PluckIDs(ctx, &models.Course{}, nil)
+		ids, err := dao.ListPluck(ctx, &models.Course{}, nil, models.BASE_ID)
 		require.NoError(t, err)
 		require.Empty(t, ids)
 	})
@@ -562,17 +562,34 @@ func Test_ListIDs(t *testing.T) {
 	t.Run("entries", func(t *testing.T) {
 		dao, ctx := setup(t)
 
+		courses := []*models.Course{}
 		for i := range 5 {
 			course := &models.Course{
 				Title: fmt.Sprintf("Course %d", i),
 				Path:  fmt.Sprintf("/course-%d", i),
 			}
 			require.NoError(t, dao.Create(ctx, course))
+			courses = append(courses, course)
+			time.Sleep(1 * time.Millisecond)
 		}
 
-		ids, err := dao.PluckIDs(ctx, &models.Course{}, nil)
+		options := &database.Options{OrderBy: []string{models.COURSE_TABLE + ".created_at ASC"}}
+
+		// Course IDs
+		ids, err := dao.ListPluck(ctx, &models.Course{}, options, models.BASE_ID)
 		require.NoError(t, err)
 		require.Len(t, ids, 5)
+		for i := range 5 {
+			require.Equal(t, courses[i].ID, ids[i])
+		}
+
+		// Course paths
+		paths, err := dao.ListPluck(ctx, &models.Course{}, options, models.COURSE_PATH)
+		require.NoError(t, err)
+		require.Len(t, paths, 5)
+		for i := range 5 {
+			require.Equal(t, courses[i].Path, paths[i])
+		}
 	})
 }
 
