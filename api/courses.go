@@ -64,6 +64,7 @@ func (r *Router) initCoursesRoutes() {
 	coursesGroup.Get("/:id/assets/:asset/attachments/:attachment", coursesAPI.getAttachment)
 	coursesGroup.Get("/:id/assets/:asset/attachments/:attachment/serve", coursesAPI.serveAttachment)
 
+	// Course tags
 	coursesGroup.Get("/:id/tags", coursesAPI.getTags)
 	coursesGroup.Post("/:id/tags", coursesAPI.createTag)
 	coursesGroup.Delete("/:id/tags/:tagId", coursesAPI.deleteTag)

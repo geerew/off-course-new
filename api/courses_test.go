@@ -957,7 +957,7 @@ func TestCourses_ServeAsset(t *testing.T) {
 	t.Run("200 (full video)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{
@@ -984,7 +984,7 @@ func TestCourses_ServeAsset(t *testing.T) {
 	t.Run("200 (stream video)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{
@@ -1013,7 +1013,7 @@ func TestCourses_ServeAsset(t *testing.T) {
 	t.Run("200 (html)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{
@@ -1040,7 +1040,7 @@ func TestCourses_ServeAsset(t *testing.T) {
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course1 := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course1 := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course1))
 
 		course2 := &models.Course{Title: "Course 2", Path: "/course/2"}
@@ -1067,7 +1067,7 @@ func TestCourses_ServeAsset(t *testing.T) {
 	t.Run("400 (invalid path)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{
@@ -1091,7 +1091,7 @@ func TestCourses_ServeAsset(t *testing.T) {
 	t.Run("400 (invalid video range)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{
@@ -1149,7 +1149,7 @@ func TestCourses_updateAssetProgress(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{
@@ -1249,7 +1249,7 @@ func TestCourses_updateAssetProgress(t *testing.T) {
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course1 := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course1 := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course1))
 
 		course2 := &models.Course{Title: "Course 2", Path: "/course/2"}
@@ -1282,7 +1282,7 @@ func TestCourses_GetAttachments(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{
@@ -1309,7 +1309,7 @@ func TestCourses_GetAttachments(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{
@@ -1349,7 +1349,7 @@ func TestCourses_GetAttachments(t *testing.T) {
 	t.Run("200 (orderBy)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{
@@ -1404,7 +1404,7 @@ func TestCourses_GetAttachments(t *testing.T) {
 	t.Run("200 (pagination)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{
@@ -1470,7 +1470,7 @@ func TestCourses_GetAttachments(t *testing.T) {
 	t.Run("404 (asset not found)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+course.ID+"/assets/invalid/attachments", nil)
@@ -1483,7 +1483,7 @@ func TestCourses_GetAttachments(t *testing.T) {
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course1 := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course1 := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course1))
 
 		course2 := &models.Course{Title: "Course 2", Path: "/course/2"}
@@ -1514,7 +1514,7 @@ func TestCourses_GetAttachment(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{
@@ -1549,7 +1549,7 @@ func TestCourses_GetAttachment(t *testing.T) {
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course1 := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course1 := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course1))
 
 		course2 := &models.Course{Title: "Course 2", Path: "/course/2"}
@@ -1576,7 +1576,7 @@ func TestCourses_GetAttachment(t *testing.T) {
 	t.Run("400 (invalid attachment for asset)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset1 := &models.Asset{
@@ -1628,7 +1628,7 @@ func TestCourses_GetAttachment(t *testing.T) {
 	t.Run("404 (asset not found)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+course.ID+"/assets/invalid/attachments/invalid", nil)
@@ -1640,7 +1640,7 @@ func TestCourses_GetAttachment(t *testing.T) {
 	t.Run("404 (attachment not found)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{
@@ -1668,7 +1668,7 @@ func TestCourses_ServeAttachment(t *testing.T) {
 	t.Run("200 (ok)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{
@@ -1702,7 +1702,7 @@ func TestCourses_ServeAttachment(t *testing.T) {
 	t.Run("400 (invalid path)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{
@@ -1733,7 +1733,7 @@ func TestCourses_ServeAttachment(t *testing.T) {
 	t.Run("400 (invalid asset for course)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course1 := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course1 := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course1))
 
 		course2 := &models.Course{Title: "Course 2", Path: "/course/2"}
@@ -1760,7 +1760,7 @@ func TestCourses_ServeAttachment(t *testing.T) {
 	t.Run("400 (invalid attachment for asset)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		assets := []*models.Asset{}
@@ -1795,7 +1795,7 @@ func TestCourses_ServeAttachment(t *testing.T) {
 	t.Run("404 (asset not found)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		req := httptest.NewRequest(http.MethodGet, "/api/courses/"+course.ID+"/assets/invalid/attachments/invalid/serve", nil)
@@ -1808,7 +1808,7 @@ func TestCourses_ServeAttachment(t *testing.T) {
 	t.Run("404 (attachment not found)", func(t *testing.T) {
 		router, ctx := setup(t)
 
-		course := &models.Course{Title: "Course 1", Path: "/course/1"}
+		course := &models.Course{Title: "Course 1", Path: "/Course 1"}
 		require.NoError(t, router.dao.CreateCourse(ctx, course))
 
 		asset := &models.Asset{

@@ -76,6 +76,7 @@ func (r *Router) initRouter() {
 	r.api = r.router.Group("/api")
 	r.initFsRoutes()
 	r.initCoursesRoutes()
+	r.initScansRoutes()
 }
 
 // // ----------------------
@@ -93,20 +94,6 @@ func (r *Router) initRouter() {
 // tags.Post("", tagsApi.createTag)
 // tags.Put("/:id", tagsApi.updateTag)
 // tags.Delete("/:id", tagsApi.deleteTag)
-
-// // ----------------------
-// // Scans
-// // ----------------------
-// scansApi := scans{
-// 	logger:        config.Logger,
-// 	appFs:         config.AppFs,
-// 	courseScan: config.Scanner,
-// 	scanDao:       scanDao,
-// }
-
-// scans := router.Group("/scans")
-// scans.Get("/:courseId", scansApi.getScan)
-// scans.Post("", scansApi.createScan)
 
 // // ----------------------
 // // Logs

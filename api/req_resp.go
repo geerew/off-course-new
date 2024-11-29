@@ -88,3 +88,13 @@ type assetResponse struct {
 	Progress    *assetProgressResponse `json:"progress"`
 	Attachments []*attachmentResponse  `json:"attachments,omitempty"`
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+type scanResponse struct {
+	ID        string           `json:"id"`
+	CourseID  string           `json:"courseId"`
+	Status    types.ScanStatus `json:"status"`
+	CreatedAt types.DateTime   `json:"createdAt"`
+	UpdatedAt types.DateTime   `json:"updatedAt"`
+}

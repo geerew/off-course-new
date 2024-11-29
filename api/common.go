@@ -114,6 +114,23 @@ func attachmentResponseHelper(attachments []*models.Attachment) []*attachmentRes
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func scanResponseHelper(scans []*models.Scan) []*scanResponse {
+	responses := []*scanResponse{}
+	for _, scan := range scans {
+		responses = append(responses, &scanResponse{
+			ID:        scan.ID,
+			CourseID:  scan.CourseID,
+			Status:    scan.Status,
+			CreatedAt: scan.CreatedAt,
+			UpdatedAt: scan.UpdatedAt,
+		})
+	}
+
+	return responses
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // handleVideo handles the video streaming logic
 func handleVideo(c *fiber.Ctx, appFs *appFs.AppFs, asset *models.Asset) error {
 	// Open the video
