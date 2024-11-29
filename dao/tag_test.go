@@ -36,6 +36,10 @@ func Test_CreateTag(t *testing.T) {
 		// Duplicate tag
 		tag = &models.Tag{Base: models.Base{ID: "2"}, Tag: "Tag 1"}
 		require.ErrorContains(t, dao.CreateTag(ctx, tag), "UNIQUE constraint failed: tags.tag")
+
+		// Duplicate tag (case-insensitive)
+		tag = &models.Tag{Base: models.Base{ID: "3"}, Tag: "tag 1"}
+		require.ErrorContains(t, dao.CreateTag(ctx, tag), "UNIQUE constraint failed: tags.tag")
 	})
 }
 

@@ -26,17 +26,30 @@ func Test_CreateCourseTag(t *testing.T) {
 		tag := &models.Tag{Tag: "Go"}
 		require.NoError(t, dao.CreateTag(ctx, tag))
 
-		// Using ID
+		// Using ID (tag exists)
 		courseTagByID := &models.CourseTag{TagID: tag.ID, CourseID: courses[0].ID}
 		require.Nil(t, dao.CreateCourseTag(ctx, courseTagByID))
 
-		// Using Tag
+		// Using Tag (tag exists)
 		courseTagByTag := &models.CourseTag{CourseID: courses[1].ID, Tag: "Go"}
 		require.Nil(t, dao.CreateCourseTag(ctx, courseTagByTag))
 
 		// Create (tag does not exist)
-		courseTagCreated := &models.CourseTag{CourseID: courses[1].ID, Tag: "TypeScript"}
+		courseTagCreated := &models.CourseTag{CourseID: courses[0].ID, Tag: "TypeScript"}
 		require.Nil(t, dao.CreateCourseTag(ctx, courseTagCreated))
+
+		// Case insensitive
+		courseTagCaseInsensitive := &models.CourseTag{CourseID: courses[1].ID, Tag: "typescript"}
+		require.Nil(t, dao.CreateCourseTag(ctx, courseTagCaseInsensitive))
+
+		// Asset 4 course tags and 2 tags
+		courseTags := []*models.CourseTag{}
+		require.NoError(t, dao.List(ctx, &courseTags, nil))
+		require.Len(t, courseTags, 4)
+
+		tags := []*models.Tag{}
+		require.NoError(t, dao.List(ctx, &tags, nil))
+		require.Len(t, tags, 2)
 	})
 
 	t.Run("nil pointer", func(t *testing.T) {
@@ -132,5 +145,11 @@ func TestCourseTag_PluckCourseIDsWithTags(t *testing.T) {
 		courseIDs, err = dao.PluckCourseIDsWithTags(ctx, []string{"Go", "JavaScript", "C"}, options)
 		require.NoError(t, err)
 		require.Len(t, courseIDs, 0)
+
+		// Case insensitive
+		courseIDs, err = dao.PluckCourseIDsWithTags(ctx, []string{"go", "javascript"}, options)
+		require.NoError(t, err)
+		require.Len(t, courseIDs, 1)
+		require.Equal(t, courses[1].ID, courseIDs[0])
 	})
 }

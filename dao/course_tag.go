@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/database"
@@ -28,9 +29,16 @@ func (dao *DAO) CreateCourseTag(ctx context.Context, courseTag *models.CourseTag
 			return dao.Create(txCtx, courseTag)
 		}
 
-		// Get the tag by tag name
+		// Get the tag by tag name (case-insensitive)
 		tag := models.Tag{}
-		err := dao.Get(txCtx, &tag, &database.Options{Where: squirrel.Eq{models.TAG_TABLE + ".tag": courseTag.Tag}})
+		options := &database.Options{
+			Where: squirrel.Expr(
+				fmt.Sprintf("LOWER(%s.%s) = LOWER(?)", models.TAG_TABLE, models.TAG_TAG),
+				courseTag.Tag,
+			),
+		}
+
+		err := dao.Get(txCtx, &tag, options)
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}
@@ -64,8 +72,14 @@ func (dao *DAO) PluckCourseIDsWithTags(ctx context.Context, tags []string, optio
 		options = &database.Options{}
 	}
 
-	options.Where = squirrel.Eq{models.TAG_TABLE + ".tag": tags}
-	options.GroupBy = []string{models.COURSE_TAG_TABLE + ".course_id"}
+	// Lowercase the tags for case-insensitive comparison
+	loweredTags := make([]string, len(tags))
+	for i, tag := range tags {
+		loweredTags[i] = strings.ToLower(tag)
+	}
+
+	options.Where = squirrel.Eq{fmt.Sprintf("LOWER(%s.%s)", models.TAG_TABLE, models.TAG_TAG): loweredTags}
+	options.GroupBy = []string{fmt.Sprintf("%s.%s", models.COURSE_TAG_TABLE, models.COURSE_TAG_COURSE_ID)}
 	options.Having = squirrel.Expr("COUNT(DISTINCT "+models.TAG_TABLE+".tag) = ?", len(tags))
 
 	return dao.ListPluck(ctx, &models.CourseTag{}, options, models.COURSE_TAG_COURSE_ID)
