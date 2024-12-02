@@ -11,7 +11,7 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func Test_RouterLogger(t *testing.T) {
-	router := setup(t)
+	router, _ := setup(t)
 
 	_, err := router.router.Test(httptest.NewRequest(http.MethodGet, "/", nil))
 	require.NoError(t, err)

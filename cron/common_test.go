@@ -14,7 +14,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func setup(t *testing.T) (*database.DatabaseManager, *appFs.AppFs, *slog.Logger, *[]*logger.Log) {
+func setup(t *testing.T) (database.Database, *appFs.AppFs, *slog.Logger, *[]*logger.Log) {
 	t.Helper()
 
 	// Logger
@@ -37,9 +37,9 @@ func setup(t *testing.T) (*database.DatabaseManager, *appFs.AppFs, *slog.Logger,
 		InMemory: true,
 	})
 
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, dbManager)
 
 	// teardown
-	return dbManager, appFs, logger, &logs
+	return dbManager.DataDb, appFs, logger, &logs
 }

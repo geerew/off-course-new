@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
@@ -102,20 +103,17 @@ func (db *SqliteDb) Exec(query string, args ...any) (sql.Result, error) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Begin starts a new transaction
-//
-// It implements the Database interface
-func (db *SqliteDb) Begin(opts *sql.TxOptions) (*sql.Tx, error) {
-	return db.DB.Begin()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // RunInTransaction runs a function in a transaction
 //
 // It implements the Database interface
-func (db *SqliteDb) RunInTransaction(txFunc func(*Tx) error) error {
-	slqTx, err := db.DB.Begin()
+func (db *SqliteDb) RunInTransaction(ctx context.Context, txFunc func(context.Context) error) (err error) {
+	// Check if there's an existing querier in the context
+	existingQuerier := QuerierFromContext(ctx, nil)
+	if existingQuerier != nil {
+		return txFunc(ctx)
+	}
+
+	slqTx, err := db.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -124,6 +122,8 @@ func (db *SqliteDb) RunInTransaction(txFunc func(*Tx) error) error {
 		Tx: slqTx,
 		db: db,
 	}
+
+	txCtx := WithQuerier(ctx, tx)
 
 	defer func() {
 		if p := recover(); p != nil {
@@ -136,7 +136,7 @@ func (db *SqliteDb) RunInTransaction(txFunc func(*Tx) error) error {
 		}
 	}()
 
-	err = txFunc(tx)
+	err = txFunc(txCtx)
 	return err
 }
 

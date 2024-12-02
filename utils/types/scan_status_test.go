@@ -8,29 +8,20 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestScanStatus_NewScanStatus(t *testing.T) {
+func TestScanStatus_NewScanStatusWaiting(t *testing.T) {
+	require.Equal(t, ScanStatusWaiting, NewScanStatusWaiting().s)
+}
 
-	tests := []struct {
-		input    ScanStatusType
-		expected ScanStatusType
-	}{
-		{ScanStatusWaiting, ScanStatusWaiting},
-		{ScanStatusProcessing, ScanStatusProcessing},
-		{"sdf", ScanStatusWaiting},
-	}
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	for _, tt := range tests {
-		s := NewScanStatus(tt.input)
-		require.Equal(t, tt.expected, s.s)
-	}
+func TestScanStatus_NewScanStatusProcessing(t *testing.T) {
+	require.Equal(t, ScanStatusProcessing, NewScanStatusProcessing().s)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestScanStatus_SetWaiting(t *testing.T) {
-	s := NewScanStatus(ScanStatusProcessing)
-	require.Equal(t, ScanStatusProcessing, s.s)
-
+	s := NewScanStatusProcessing()
 	s.SetWaiting()
 	require.Equal(t, ScanStatusWaiting, s.s)
 }
@@ -38,9 +29,7 @@ func TestScanStatus_SetWaiting(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestScanStatus_SetProcessing(t *testing.T) {
-	s := NewScanStatus(ScanStatusWaiting)
-	require.Equal(t, ScanStatusWaiting, s.s)
-
+	s := NewScanStatusWaiting()
 	s.SetProcessing()
 	require.Equal(t, ScanStatusProcessing, s.s)
 }
@@ -48,38 +37,36 @@ func TestScanStatus_SetProcessing(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestScanStatus_IsWaiting(t *testing.T) {
-	tests := []struct {
-		input    ScanStatusType
-		expected bool
-	}{
-		{ScanStatusWaiting, true},
-		{ScanStatusProcessing, false},
-	}
+	require.True(t, NewScanStatusWaiting().IsWaiting())
+	require.False(t, NewScanStatusProcessing().IsWaiting())
+	require.False(t, ScanStatus{}.IsWaiting())
+}
 
-	for _, tt := range tests {
-		s := NewScanStatus(tt.input)
-		require.Equal(t, tt.expected, s.IsWaiting())
-	}
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func TestScanStatus_IsProcess(t *testing.T) {
+	require.False(t, NewScanStatusWaiting().IsProcessing())
+	require.True(t, NewScanStatusProcessing().IsProcessing())
+	require.False(t, ScanStatus{}.IsProcessing())
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestScanStatus_MarshalJSON(t *testing.T) {
-	tests := []struct {
-		input    ScanStatusType
-		expected string
-	}{
-		{ScanStatusWaiting, `"waiting"`},
-		{ScanStatusProcessing, `"processing"`},
-	}
+	waiting := NewScanStatusWaiting()
+	res, err := waiting.MarshalJSON()
+	require.NoError(t, err)
+	require.Equal(t, `"waiting"`, string(res))
 
-	for _, tt := range tests {
-		s := NewScanStatus(tt.input)
+	processing := NewScanStatusProcessing()
+	res, err = processing.MarshalJSON()
+	require.NoError(t, err)
+	require.Equal(t, `"processing"`, string(res))
 
-		res, err := s.MarshalJSON()
-		require.Nil(t, err)
-		require.Equal(t, tt.expected, string(res))
-	}
+	empty := ScanStatus{}
+	res, err = empty.MarshalJSON()
+	require.NoError(t, err)
+	require.Equal(t, `""`, string(res))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -94,8 +81,8 @@ func TestScanStatus_UnmarshalJSON(t *testing.T) {
 		{"", "", "unexpected end of JSON input"},
 		{"xxx", "", "invalid character 'x' looking for beginning of value"},
 		// Defaults
-		{`""`, ScanStatusWaiting, ""},
-		{`"bob"`, ScanStatusWaiting, ""},
+		{`""`, "", ""},
+		{`"bob"`, "", ""},
 		// Success
 		{`"waiting"`, ScanStatusWaiting, ""},
 		{`"processing"`, ScanStatusProcessing, ""},
@@ -116,21 +103,20 @@ func TestScanStatus_UnmarshalJSON(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestScanStatus_Value(t *testing.T) {
-	tests := []struct {
-		input    ScanStatusType
-		expected string
-	}{
-		{ScanStatusWaiting, "waiting"},
-		{ScanStatusProcessing, "processing"},
-	}
+	waiting := NewScanStatusWaiting()
+	res, err := waiting.Value()
+	require.NoError(t, err)
+	require.Equal(t, "waiting", res)
 
-	for _, tt := range tests {
-		s := NewScanStatus(tt.input)
+	processing := NewScanStatusProcessing()
+	res, err = processing.Value()
+	require.NoError(t, err)
+	require.Equal(t, "processing", res)
 
-		res, err := s.Value()
-		require.Nil(t, err)
-		require.Equal(t, tt.expected, res)
-	}
+	empty := ScanStatus{}
+	res, err = empty.Value()
+	require.NoError(t, err)
+	require.Equal(t, "", res)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -140,9 +126,11 @@ func TestScanStatus_Scan(t *testing.T) {
 		value    any
 		expected string
 	}{
-		{nil, "waiting"},
-		{"", "waiting"},
-		{"invalid", "waiting"},
+		// defaults
+		{nil, ""},
+		{"", ""},
+		{"invalid", ""},
+		// Values
 		{"waiting", "waiting"},
 		{"processing", "processing"},
 	}
@@ -151,7 +139,7 @@ func TestScanStatus_Scan(t *testing.T) {
 		ss := ScanStatus{}
 
 		err := ss.Scan(tt.value)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Contains(t, ss.s, tt.expected)
 	}
 }

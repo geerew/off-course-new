@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,7 +33,7 @@ func Test_TrimQuotes(t *testing.T) {
 func Test_DecodeString(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		res, err := DecodeString("")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, "", res)
 	})
 
@@ -50,7 +51,7 @@ func Test_DecodeString(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		res, err := DecodeString("JTJGdGVzdCUyRmRhdGE=")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, "/test/data", res)
 	})
 }
@@ -66,6 +67,48 @@ func Test_EncodeString(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		res := EncodeString("/test/data")
 		require.Equal(t, "JTJGdGVzdCUyRmRhdGE=", res)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_CheckTruth(t *testing.T) {
+	checkTruthTests := []struct {
+		v   string
+		out bool
+	}{
+		{"123", true},
+		{"true", true},
+		{"", false},
+		{"false", false},
+		{"False", false},
+		{"FALSE", false},
+		{"\u0046alse", false},
+	}
+
+	for _, test := range checkTruthTests {
+		t.Run(test.v, func(t *testing.T) {
+			assert.Equal(t, test.out, CheckTruth(test.v))
+		})
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func Test_SliceIntersection(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
+		res := SliceIntersection([]string{}, []string{})
+		require.Empty(t, res)
+	})
+
+	t.Run("no intersection", func(t *testing.T) {
+		res := SliceIntersection([]string{"1", "2", "3"}, []string{"4", "5", "6"})
+		require.Empty(t, res)
+	})
+
+	t.Run("intersection", func(t *testing.T) {
+		res := SliceIntersection([]string{"1", "2", "3"}, []string{"2", "3", "4"})
+		require.ElementsMatch(t, []string{"2", "3"}, res)
 	})
 }
 
@@ -101,7 +144,7 @@ func Test_DiffSliceOfStructsByKey(t *testing.T) {
 
 	t.Run("both empty", func(t *testing.T) {
 		leftDiff, rightDiff, err := DiffSliceOfStructsByKey[testStruct](nil, nil, "")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Nil(t, leftDiff)
 		require.Nil(t, rightDiff)
 	})
@@ -114,7 +157,7 @@ func Test_DiffSliceOfStructsByKey(t *testing.T) {
 		}
 
 		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(nil, right, "ID")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Empty(t, leftDiff)
 		require.Len(t, rightDiff, 5)
 	})
@@ -127,7 +170,7 @@ func Test_DiffSliceOfStructsByKey(t *testing.T) {
 		}
 
 		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, nil, "ID")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Len(t, leftDiff, 5)
 		require.Empty(t, rightDiff)
 	})
@@ -142,7 +185,7 @@ func Test_DiffSliceOfStructsByKey(t *testing.T) {
 		}
 
 		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, right, "ID")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Empty(t, leftDiff)
 		require.Empty(t, rightDiff)
 	})
@@ -157,7 +200,7 @@ func Test_DiffSliceOfStructsByKey(t *testing.T) {
 		}
 
 		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, right, "ID")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Len(t, leftDiff, 5)
 		require.Len(t, rightDiff, 5)
 	})
@@ -178,7 +221,7 @@ func Test_DiffSliceOfStructsByKey(t *testing.T) {
 		right = append(right, left[0])
 
 		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, right, "ID")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Len(t, leftDiff, 4)
 		require.Len(t, rightDiff, 3)
 	})
@@ -196,14 +239,14 @@ func Test_DiffSliceOfStructsByKey(t *testing.T) {
 		left = append(left, &testStruct{ID: 5, Title: "Test"})
 
 		leftDiff, rightDiff, err := DiffSliceOfStructsByKey(left, right, "ID")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Len(t, leftDiff, 1)
 		require.Zero(t, len(rightDiff))
 
 		// Give right 1 extra (plus the new left one)
 		right = append(right, left[len(left)-1], &testStruct{ID: 6, Title: "Test"})
 		leftDiff, rightDiff, err = DiffSliceOfStructsByKey(left, right, "ID")
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Zero(t, len(leftDiff))
 		require.Len(t, rightDiff, 1)
 	})
@@ -377,5 +420,33 @@ func Test_EscapeBackslashes(t *testing.T) {
 	for _, test := range tests {
 		result := EscapeBackslashes(test.input)
 		require.Equal(t, test.expected, result)
+	}
+}
+
+// -------------------------------------------------------
+
+func Test_SnakeCase(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"camelCase", "camel_case"},
+		{"PascalCase", "pascal_case"},
+		{"snake_case", "snake_case"},
+		{"Already_Snake_Case", "already_snake_case"},
+		{"UpperCase", "upper_case"},
+		{"lowercase", "lowercase"},
+		{"SimpleTest", "simple_test"},
+		{"TestID", "test_id"},
+		{"AnotherTestCase", "another_test_case"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			actual := SnakeCase(tt.input)
+			if actual != tt.expected {
+				t.Errorf("snakeCase(%q) = %q; want %q", tt.input, actual, tt.expected)
+			}
+		})
 	}
 }

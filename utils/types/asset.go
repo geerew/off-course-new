@@ -53,7 +53,6 @@ func NewAsset(ext string) *Asset {
 		return &Asset{s: AssetHTML}
 	case "pdf":
 		return &Asset{s: AssetPDF}
-
 	}
 
 	return nil
@@ -131,11 +130,7 @@ func (a *Asset) UnmarshalJSON(b []byte) error {
 
 // Value implements the `driver.Valuer` interface
 func (a Asset) Value() (driver.Value, error) {
-	if a.s == "" {
-		return nil, nil
-	}
-
-	return a.s, nil
+	return a.String(), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

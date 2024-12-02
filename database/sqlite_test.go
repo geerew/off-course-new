@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -33,12 +34,12 @@ func setupSqliteDB(t *testing.T) *DatabaseManager {
 		InMemory: true,
 	})
 
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, dbManager)
 
 	// Test table
 	_, err = dbManager.DataDb.Exec("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	return dbManager
 }
@@ -51,7 +52,7 @@ func TestSqliteDb_Bootstrap(t *testing.T) {
 			BatchSize: 1,
 			WriteFn:   logger.NilWriteFn(),
 		})
-		require.Nil(t, err)
+		require.NoError(t, err)
 
 		appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
 
@@ -64,7 +65,7 @@ func TestSqliteDb_Bootstrap(t *testing.T) {
 			InMemory:   true,
 		})
 
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.NotNil(t, db)
 
 	})
@@ -74,7 +75,7 @@ func TestSqliteDb_Bootstrap(t *testing.T) {
 			BatchSize: 1,
 			WriteFn:   logger.NilWriteFn(),
 		})
-		require.Nil(t, err)
+		require.NoError(t, err)
 
 		appFs := appFs.NewAppFs(afero.NewReadOnlyFs(afero.NewMemMapFs()), logger)
 
@@ -97,7 +98,7 @@ func TestSqliteDb_Bootstrap(t *testing.T) {
 			BatchSize: 1,
 			WriteFn:   logger.NilWriteFn(),
 		})
-		require.Nil(t, err)
+		require.NoError(t, err)
 
 		appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
 
@@ -122,17 +123,17 @@ func TestSqliteDb_Query(t *testing.T) {
 	dbManager := setupSqliteDB(t)
 
 	_, err := dbManager.DataDb.Exec("INSERT INTO test (name) VALUES ('test')")
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	rows, err := dbManager.DataDb.Query("SELECT * FROM test")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	defer rows.Close()
 
 	for rows.Next() {
 		var id int
 		var name string
 		err = rows.Scan(&id, &name)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, 1, id)
 		require.Equal(t, "test", name)
 	}
@@ -146,13 +147,13 @@ func TestSqliteDb_QueryRow(t *testing.T) {
 	dbManager := setupSqliteDB(t)
 
 	_, err := dbManager.DataDb.Exec("INSERT INTO test (name) VALUES ('test')")
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	var id int
 	var name string
 	err = dbManager.DataDb.QueryRow("SELECT * FROM test").Scan(&id, &name)
 
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, "test", name)
 }
 
@@ -162,31 +163,11 @@ func TestSqliteDb_Exec(t *testing.T) {
 	dbManager := setupSqliteDB(t)
 
 	result, err := dbManager.DataDb.Exec("INSERT INTO test (name) VALUES ('test')")
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	rowAffected, err := result.RowsAffected()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, int64(1), rowAffected)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func TestSqliteDb_Begin(t *testing.T) {
-	dbManager := setupSqliteDB(t)
-
-	tx, err := dbManager.DataDb.Begin(nil)
-	require.Nil(t, err)
-
-	_, err = tx.Exec("INSERT INTO test (name) VALUES ('test')")
-	require.Nil(t, err)
-
-	err = tx.Commit()
-	require.Nil(t, err)
-
-	var count int
-	err = dbManager.DataDb.QueryRow("SELECT COUNT(*) FROM test").Scan(&count)
-	require.Nil(t, err)
-	require.Equal(t, 1, count)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -196,8 +177,10 @@ func TestSqliteDb_RunInTransaction(t *testing.T) {
 	t.Run(("error"), func(t *testing.T) {
 		dbManager := setupSqliteDB(t)
 
-		err := dbManager.DataDb.RunInTransaction(func(tx *Tx) error {
-			_, err := tx.Exec("INSERT INTO test (name) VALUES ('test')")
+		ctx := context.Background()
+		err := dbManager.DataDb.RunInTransaction(ctx, func(txCtx context.Context) error {
+			q := QuerierFromContext(txCtx, dbManager.DataDb)
+			_, err := q.Exec("INSERT INTO test (name) VALUES ('test')")
 			if err != nil {
 				return err
 			}
@@ -214,15 +197,17 @@ func TestSqliteDb_RunInTransaction(t *testing.T) {
 
 		var count int
 		err = dbManager.DataDb.QueryRow("SELECT COUNT(*) FROM test").Scan(&count)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, 0, count)
 	})
 
 	t.Run(("success"), func(t *testing.T) {
 		dbManager := setupSqliteDB(t)
 
-		err := dbManager.DataDb.RunInTransaction(func(tx *Tx) error {
-			_, err := tx.Exec("INSERT INTO test (name) VALUES ('test')")
+		ctx := context.Background()
+		err := dbManager.DataDb.RunInTransaction(ctx, func(txCtx context.Context) error {
+			q := QuerierFromContext(txCtx, dbManager.DataDb)
+			_, err := q.Exec("INSERT INTO test (name) VALUES ('test')")
 			if err != nil {
 				return err
 			}
@@ -230,11 +215,11 @@ func TestSqliteDb_RunInTransaction(t *testing.T) {
 			return nil
 		})
 
-		require.Nil(t, err)
+		require.NoError(t, err)
 
 		var count int
 		err = dbManager.DataDb.QueryRow("SELECT COUNT(*) FROM test").Scan(&count)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, 1, count)
 	})
 }

@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/geerew/off-course/daos"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/types"
@@ -20,7 +19,7 @@ import (
 
 func TestLogs_GetLogs(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
-		router := setup(t)
+		router, _ := setup(t)
 
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/", nil))
 		require.NoError(t, err)
@@ -32,11 +31,16 @@ func TestLogs_GetLogs(t *testing.T) {
 	})
 
 	t.Run("200 (found)", func(t *testing.T) {
-		router := setup(t)
+		router, ctx := setup(t)
 
-		logDao := daos.NewLogDao(router.config.DbManager.LogsDb)
 		for i := range 5 {
-			require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{}, Level: 0, Message: fmt.Sprintf("log %d", i+1)}, nil))
+			log := &models.Log{
+				Data:    map[string]any{},
+				Level:   0,
+				Message: fmt.Sprintf("log %d", i+1),
+			}
+
+			require.Nil(t, router.logDao.WriteLog(ctx, log))
 		}
 
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/", nil))
@@ -49,21 +53,20 @@ func TestLogs_GetLogs(t *testing.T) {
 	})
 
 	t.Run("200 (min level)", func(t *testing.T) {
-		router := setup(t)
+		router, ctx := setup(t)
 
-		logDao := daos.NewLogDao(router.config.DbManager.LogsDb)
+		require.NoError(t, router.logDao.WriteLog(ctx, &models.Log{Data: map[string]any{}, Level: -4, Message: "debug log"}))
+		time.Sleep(1 * time.Millisecond)
 
-		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{}, Level: -4, Message: "debug log"}, nil))
+		require.NoError(t, router.logDao.WriteLog(ctx, &models.Log{Data: map[string]any{}, Level: 0, Message: "info log"}))
 		time.Sleep(1 * time.Millisecond)
-		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{}, Level: 0, Message: "info log"}, nil))
-		time.Sleep(1 * time.Millisecond)
-		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{}, Level: 4, Message: "warn log"}, nil))
-		time.Sleep(1 * time.Millisecond)
-		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{}, Level: 8, Message: "error log"}, nil))
 
-		// ----------------------------
+		require.NoError(t, router.logDao.WriteLog(ctx, &models.Log{Data: map[string]any{}, Level: 4, Message: "warn log"}))
+		time.Sleep(1 * time.Millisecond)
+
+		require.NoError(t, router.logDao.WriteLog(ctx, &models.Log{Data: map[string]any{}, Level: 8, Message: "error log"}))
+
 		// All
-		// ----------------------------
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -72,9 +75,7 @@ func TestLogs_GetLogs(t *testing.T) {
 		require.Equal(t, 4, int(paginationResp.TotalItems))
 		require.Len(t, logResponses, 4)
 
-		// ----------------------------
 		// Debug
-		// ----------------------------
 		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?levels=-4", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -84,9 +85,7 @@ func TestLogs_GetLogs(t *testing.T) {
 		require.Len(t, logResponses, 1)
 		require.Equal(t, "debug log", logResponses[0].Message)
 
-		// ----------------------------
 		// Debug and info
-		// ----------------------------
 		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?levels=-4,0", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -94,12 +93,10 @@ func TestLogs_GetLogs(t *testing.T) {
 		paginationResp, logResponses = unmarshalHelper[logResponse](t, body)
 		require.Equal(t, 2, int(paginationResp.TotalItems))
 		require.Len(t, logResponses, 2)
-		require.Equal(t, "info log", logResponses[0].Message)
 		require.Equal(t, "debug log", logResponses[1].Message)
+		require.Equal(t, "info log", logResponses[0].Message)
 
-		// ----------------------------
 		// Warn and error only (with spaces)
-		// ----------------------------
 		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?levels=4,%20%208", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -112,21 +109,20 @@ func TestLogs_GetLogs(t *testing.T) {
 	})
 
 	t.Run("200 (types)", func(t *testing.T) {
-		router := setup(t)
+		router, ctx := setup(t)
 
-		logDao := daos.NewLogDao(router.config.DbManager.LogsDb)
+		require.NoError(t, router.logDao.WriteLog(ctx, &models.Log{Data: map[string]any{"type": types.LogTypeRequest.String()}, Level: -4, Message: "log 1"}))
+		time.Sleep(1 * time.Millisecond)
 
-		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{"type": types.LogTypeRequest.String()}, Level: -4, Message: "log 1"}, nil))
+		require.NoError(t, router.logDao.WriteLog(ctx, &models.Log{Data: map[string]any{"type": types.LogTypeRequest.String()}, Level: 0, Message: "log 2"}))
 		time.Sleep(1 * time.Millisecond)
-		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{"type": types.LogTypeRequest.String()}, Level: 0, Message: "log 2"}, nil))
-		time.Sleep(1 * time.Millisecond)
-		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{"type": types.LogTypeDB.String()}, Level: 4, Message: "log 3"}, nil))
-		time.Sleep(1 * time.Millisecond)
-		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{"type": types.LogTypeCourseScanner.String()}, Level: 8, Message: "log 4"}, nil))
 
-		// ----------------------------
+		require.NoError(t, router.logDao.WriteLog(ctx, &models.Log{Data: map[string]any{"type": types.LogTypeDB.String()}, Level: 4, Message: "log 3"}))
+		time.Sleep(1 * time.Millisecond)
+
+		require.NoError(t, router.logDao.WriteLog(ctx, &models.Log{Data: map[string]any{"type": types.LogTypeCourseScan.String()}, Level: 8, Message: "log 4"}))
+
 		// Request
-		// ----------------------------
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?types="+types.LogTypeRequest.String(), nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -137,10 +133,8 @@ func TestLogs_GetLogs(t *testing.T) {
 		require.Equal(t, "log 2", logResponses[0].Message)
 		require.Equal(t, "log 1", logResponses[1].Message)
 
-		// ----------------------------
-		// Database and course scanner
-		// ----------------------------
-		typesQuery := url.QueryEscape(types.LogTypeDB.String() + ",   " + types.LogTypeCourseScanner.String())
+		// Database and course scan
+		typesQuery := url.QueryEscape(types.LogTypeDB.String() + ",   " + types.LogTypeCourseScan.String())
 		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?types="+typesQuery, nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -151,9 +145,7 @@ func TestLogs_GetLogs(t *testing.T) {
 		require.Equal(t, "log 4", logResponses[0].Message)
 		require.Equal(t, "log 3", logResponses[1].Message)
 
-		// ----------------------------
 		// Database
-		// ----------------------------
 		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?types="+types.LogTypeDB.String(), nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -165,21 +157,20 @@ func TestLogs_GetLogs(t *testing.T) {
 	})
 
 	t.Run("200 (messages)", func(t *testing.T) {
-		router := setup(t)
+		router, ctx := setup(t)
 
-		logDao := daos.NewLogDao(router.config.DbManager.LogsDb)
+		require.NoError(t, router.logDao.WriteLog(ctx, &models.Log{Data: map[string]any{"type": types.LogTypeRequest.String()}, Level: -4, Message: "log 1"}))
+		time.Sleep(1 * time.Millisecond)
 
-		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{"type": types.LogTypeRequest.String()}, Level: -4, Message: "log 1"}, nil))
+		require.NoError(t, router.logDao.WriteLog(ctx, &models.Log{Data: map[string]any{"type": types.LogTypeRequest.String()}, Level: 0, Message: "log 2"}))
 		time.Sleep(1 * time.Millisecond)
-		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{"type": types.LogTypeRequest.String()}, Level: 0, Message: "log 2"}, nil))
-		time.Sleep(1 * time.Millisecond)
-		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{"type": types.LogTypeDB.String()}, Level: 4, Message: "log 3"}, nil))
-		time.Sleep(1 * time.Millisecond)
-		require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{"type": types.LogTypeCourseScanner.String()}, Level: 8, Message: "log 4"}, nil))
 
-		// ----------------------------
+		require.NoError(t, router.logDao.WriteLog(ctx, &models.Log{Data: map[string]any{"type": types.LogTypeDB.String()}, Level: 4, Message: "log 3"}))
+		time.Sleep(1 * time.Millisecond)
+
+		require.NoError(t, router.logDao.WriteLog(ctx, &models.Log{Data: map[string]any{"type": types.LogTypeCourseScan.String()}, Level: 8, Message: "log 4"}))
+
 		// log 1
-		// ----------------------------
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?messages=log%201", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -189,9 +180,7 @@ func TestLogs_GetLogs(t *testing.T) {
 		require.Len(t, logResponses, 1)
 		require.Equal(t, "log 1", logResponses[0].Message)
 
-		// ----------------------------
 		// log 2 and log 4
-		// ----------------------------
 		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/?messages=log%202,log%204", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
@@ -204,17 +193,14 @@ func TestLogs_GetLogs(t *testing.T) {
 	})
 
 	t.Run("200 (pagination)", func(t *testing.T) {
-		router := setup(t)
+		router, ctx := setup(t)
 
-		logDao := daos.NewLogDao(router.config.DbManager.LogsDb)
 		for i := range 17 {
-			require.Nil(t, logDao.Write(&models.Log{Data: map[string]any{}, Level: 0, Message: fmt.Sprintf("log %d", i+1)}, nil))
+			require.Nil(t, router.logDao.WriteLog(ctx, &models.Log{Data: map[string]any{}, Level: 0, Message: fmt.Sprintf("log %d", i+1)}))
 			time.Sleep(1 * time.Millisecond)
 		}
 
-		// ----------------------------
 		// Get the first page (10 logs)
-		// ----------------------------
 		params := url.Values{
 			pagination.PageQueryParam:    {"1"},
 			pagination.PerPageQueryParam: {"10"},
@@ -227,15 +213,11 @@ func TestLogs_GetLogs(t *testing.T) {
 		paginationResp, logResponses := unmarshalHelper[logResponse](t, body)
 		require.Equal(t, 17, int(paginationResp.TotalItems))
 		require.Len(t, paginationResp.Items, 10)
-
 		require.Equal(t, "log 17", logResponses[0].Message)
 		require.Equal(t, "log 8", logResponses[9].Message)
 
-		// ----------------------------
 		// Get the second page (7 logs)
-		// ----------------------------
 		params = url.Values{
-			"orderBy":                    {"created_at asc"},
 			pagination.PageQueryParam:    {"2"},
 			pagination.PerPageQueryParam: {"10"},
 		}
@@ -246,17 +228,16 @@ func TestLogs_GetLogs(t *testing.T) {
 		paginationResp, logResponses = unmarshalHelper[logResponse](t, body)
 		require.Equal(t, 17, int(paginationResp.TotalItems))
 		require.Len(t, paginationResp.Items, 7)
-
 		require.Equal(t, "log 7", logResponses[0].Message)
 		require.Equal(t, "log 1", logResponses[6].Message)
 	})
 
 	t.Run("500 (internal error)", func(t *testing.T) {
-		router := setup(t)
+		router, _ := setup(t)
 
 		// Drop the courses table
-		_, err := router.config.DbManager.LogsDb.Exec("DROP TABLE IF EXISTS " + daos.NewLogDao(router.config.DbManager.LogsDb).Table())
-		require.Nil(t, err)
+		_, err := router.config.DbManager.LogsDb.Exec("DROP TABLE IF EXISTS " + models.LOG_TABLE)
+		require.NoError(t, err)
 
 		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/", nil))
 		require.NoError(t, err)
@@ -267,7 +248,7 @@ func TestLogs_GetLogs(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestLogs_GetLogTypes(t *testing.T) {
-	router := setup(t)
+	router, _ := setup(t)
 
 	status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/logs/types", nil))
 	require.NoError(t, err)
@@ -275,7 +256,7 @@ func TestLogs_GetLogTypes(t *testing.T) {
 
 	var typesResp []string
 	err = json.Unmarshal(body, &typesResp)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	require.Equal(t, typesResp, types.AllLogTypes())
 }

@@ -2,14 +2,14 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"net/url"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/geerew/off-course/daos"
+	"github.com/geerew/off-course/dao"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/pagination"
@@ -18,51 +18,45 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type tags struct {
-	logger       *slog.Logger
-	tagDao       *daos.TagDao
-	courseTagDao *daos.CourseTagDao
+type tagsAPI struct {
+	logger *slog.Logger
+	dao    *dao.DAO
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type tagResponse struct {
-	ID          string       `json:"id"`
-	Tag         string       `json:"tag"`
-	CourseCount int          `json:"courseCount"`
-	Courses     []*courseTag `json:"courses,omitempty"`
-	CreatedAt   time.Time    `json:"createdAt"`
-	UpdatedAt   time.Time    `json:"updatedAt"`
+// initTagRoutes initializes the tag routes
+func (r *Router) initTagRoutes() {
+	tagsAPI := tagsAPI{
+		logger: r.config.Logger,
+		dao:    r.dao,
+	}
+
+	tagGroup := r.api.Group("/tags")
+	tagGroup.Get("", tagsAPI.getTags)
+	tagGroup.Get("/:name", tagsAPI.getTag)
+	tagGroup.Post("", tagsAPI.createTag)
+	tagGroup.Put("/:id", tagsAPI.updateTag)
+	tagGroup.Delete("/:id", tagsAPI.deleteTag)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type courseTag struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func (api *tags) getTags(c *fiber.Ctx) error {
-	expand := c.QueryBool("expand", false)
+func (api *tagsAPI) getTags(c *fiber.Ctx) error {
 	filter := c.Query("filter", "")
-	orderBy := c.Query("orderBy", api.tagDao.Table()+".tag asc")
+	orderBy := c.Query("orderBy", models.TAG_TABLE+".tag asc")
 
-	dbParams := &database.DatabaseParams{
+	options := &database.Options{
 		OrderBy:    strings.Split(orderBy, ","),
 		Pagination: pagination.NewFromApi(c),
 	}
 
-	if expand {
-		dbParams.IncludeRelations = []string{api.courseTagDao.Table()}
-	}
-
 	if filter != "" {
-		dbParams.Where = squirrel.Like{api.tagDao.Table() + ".tag": "%" + filter + "%"}
+		options.Where = squirrel.Like{fmt.Sprintf("%s.%s", models.TAG_TABLE, models.TAG_TAG): "%" + filter + "%"}
 	}
 
-	tags, err := api.tagDao.List(dbParams, nil)
+	tags := []*models.Tag{}
+	err := api.dao.List(c.Context(), &tags, options)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up tags", err)
 	}
@@ -94,13 +88,13 @@ func (api *tags) getTags(c *fiber.Ctx) error {
 
 			// Lastly, sort by those that contain the substring, alphabetically
 			if iContains && jContains {
-				return iTag < jTag // Use case insensitive comparison for alphabetical order
+				return iTag < jTag
 			}
 			return iContains && !jContains
 		})
 	}
 
-	pResult, err := dbParams.Pagination.BuildResult(tagResponseHelper(tags))
+	pResult, err := options.Pagination.BuildResult(tagResponseHelper(tags))
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 	}
@@ -110,32 +104,22 @@ func (api *tags) getTags(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *tags) getTag(c *fiber.Ctx) error {
-	id := c.Params("id")
-	expand := c.QueryBool("expand", false)
-	byName := c.QueryBool("byName", false)
-	insensitive := c.QueryBool("insensitive", false)
+func (api *tagsAPI) getTag(c *fiber.Ctx) error {
+	name := c.Params("name")
 
-	dbParams := &database.DatabaseParams{
-		CaseInsensitive: insensitive,
+	var err error
+	name, err = url.QueryUnescape(name)
+
+	if err != nil {
+		return errorResponse(c, fiber.StatusBadRequest, "Error decoding name parameter", err)
 	}
 
-	if expand {
-		dbParams.IncludeRelations = []string{api.courseTagDao.Table()}
+	options := &database.Options{
+		Where: squirrel.Eq{fmt.Sprintf("%s.%s", models.TAG_TABLE, models.TAG_TAG): name},
 	}
 
-	if byName {
-		// Decode the URL-encoded parameter
-		var err error
-		id, err = url.QueryUnescape(id)
-
-		if err != nil {
-			return errorResponse(c, fiber.StatusBadRequest, "Error decoding name parameter", err)
-		}
-	}
-
-	tag, err := api.tagDao.Get(id, byName, dbParams, nil)
-
+	tag := &models.Tag{}
+	err = api.dao.Get(c.Context(), tag, options)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Tag not found", nil)
@@ -149,22 +133,19 @@ func (api *tags) getTag(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *tags) createTag(c *fiber.Ctx) error {
+func (api *tagsAPI) createTag(c *fiber.Ctx) error {
 	tag := new(models.Tag)
-
 	if err := c.BodyParser(tag); err != nil {
 		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
-	// Ensure there is a title and path
 	if tag.Tag == "" {
 		return errorResponse(c, fiber.StatusBadRequest, "A tag is required", nil)
 	}
 
-	// Empty stuff that should not be set
 	tag.ID = ""
-
-	if err := api.tagDao.Create(tag, nil); err != nil {
+	err := api.dao.CreateTag(c.Context(), tag)
+	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return errorResponse(c, fiber.StatusBadRequest, "Tag already exists", err)
 		}
@@ -177,23 +158,28 @@ func (api *tags) createTag(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *tags) updateTag(c *fiber.Ctx) error {
+func (api *tagsAPI) updateTag(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	// Parse the request body to get the updated fields
-	reqTag := &tagResponse{}
+	reqTag := &tagRequest{}
 	if err := c.BodyParser(reqTag); err != nil {
 		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
-	// Create an asset progress
-	tag := &models.Tag{
-		BaseModel: models.BaseModel{ID: id},
-		Tag:       reqTag.Tag,
+	tag := &models.Tag{Base: models.Base{ID: id}}
+	err := api.dao.GetById(c.Context(), tag)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errorResponse(c, fiber.StatusNotFound, "Tag not found", nil)
+		}
+
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up tag", err)
 	}
 
-	// Update the asset progress
-	if err := api.tagDao.Update(tag, nil); err != nil {
+	tag.Tag = reqTag.Tag
+
+	err = api.dao.UpdateTag(c.Context(), tag)
+	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusBadRequest, "Invalid tag", err)
 		}
@@ -205,64 +191,19 @@ func (api *tags) updateTag(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error updating tag", err)
 	}
 
-	// Get the updated asset
-	updatedTag, err := api.tagDao.Get(id, false, nil, nil)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errorResponse(c, fiber.StatusNotFound, "Tag not found", nil)
-		}
-
-		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up tag", err)
-	}
-
-	return c.Status(fiber.StatusOK).JSON(tagResponseHelper([]*models.Tag{updatedTag})[0])
+	return c.Status(fiber.StatusOK).JSON(tagResponseHelper([]*models.Tag{tag})[0])
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *tags) deleteTag(c *fiber.Ctx) error {
+func (api *tagsAPI) deleteTag(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	err := api.tagDao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": id}}, nil)
+	tag := &models.Tag{Base: models.Base{ID: id}}
+	err := api.dao.Delete(c.Context(), tag, nil)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting tag", err)
 	}
 
 	return c.Status(fiber.StatusNoContent).Send(nil)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Internal
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func tagResponseHelper(tags []*models.Tag) []*tagResponse {
-	responses := []*tagResponse{}
-
-	for _, tag := range tags {
-		t := &tagResponse{
-			ID:          tag.ID,
-			Tag:         tag.Tag,
-			CreatedAt:   tag.CreatedAt,
-			UpdatedAt:   tag.UpdatedAt,
-			CourseCount: tag.CourseCount,
-		}
-
-		// Add the course tags
-		if len(tag.CourseTags) > 0 {
-			courses := []*courseTag{}
-
-			for _, ct := range tag.CourseTags {
-				courses = append(courses, &courseTag{
-					ID:    ct.ID,
-					Title: ct.Course,
-				})
-			}
-
-			t.Courses = courses
-		}
-
-		responses = append(responses, t)
-	}
-
-	return responses
 }

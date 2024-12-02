@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -230,25 +230,25 @@ func Test_BuildResult(t *testing.T) {
 		p.SetCount(24)
 
 		type Data struct {
-			ID        string    `json:"id"`
-			CreatedAt time.Time `json:"createdAt"`
+			ID        string         `json:"id"`
+			CreatedAt types.DateTime `json:"createdAt"`
 		}
 
 		// The data to marshal
 		data := []Data{
-			{ID: "1", CreatedAt: time.Now()},
-			{ID: "2", CreatedAt: time.Now()},
+			{ID: "1", CreatedAt: types.NowDateTime()},
+			{ID: "2", CreatedAt: types.NowDateTime()},
 		}
 
 		result, err := p.BuildResult(data)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Len(t, result.Items, 2)
 
 		for i, raw := range result.Items {
 			var d Data
 			require.Nil(t, json.Unmarshal(raw, &d))
 			require.Equal(t, data[i].ID, d.ID)
-			require.True(t, d.CreatedAt.Equal(data[i].CreatedAt))
+			require.Equal(t, data[i].CreatedAt.String(), d.CreatedAt.String())
 		}
 	})
 
@@ -301,7 +301,7 @@ func Test_Apply(t *testing.T) {
 	builder = p.Apply(builder)
 
 	query, args, err := builder.ToSql()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, "SELECT * FROM dummy LIMIT 10 OFFSET 0", query)
 	require.Nil(t, args)
 }

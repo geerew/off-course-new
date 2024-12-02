@@ -27,17 +27,18 @@ const (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// NewScanStatus creates a ScanStatus type with the status of
+// NewScanStatusWaiting creates a ScanStatus type with the status of
 // waiting
-func NewScanStatus(s ScanStatusType) ScanStatus {
-	switch s {
-	case ScanStatusWaiting:
-		return ScanStatus{s: ScanStatusWaiting}
-	case ScanStatusProcessing:
-		return ScanStatus{s: ScanStatusProcessing}
-	}
-
+func NewScanStatusWaiting() ScanStatus {
 	return ScanStatus{s: ScanStatusWaiting}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// NewScanStatusProcessing creates a ScanStatus type with the status of
+// processing
+func NewScanStatusProcessing() ScanStatus {
+	return ScanStatus{s: ScanStatusProcessing}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -59,6 +60,13 @@ func (ss *ScanStatus) SetProcessing() {
 // IsWaiting returns true is the status is waiting
 func (ss ScanStatus) IsWaiting() bool {
 	return ss.s == ScanStatusWaiting
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// IsProcessing returns true is the status is process
+func (ss ScanStatus) IsProcessing() bool {
+	return ss.s == ScanStatusProcessing
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -98,7 +106,6 @@ func (ss ScanStatus) Value() (driver.Value, error) {
 
 // Scan implements `sql.Scanner` interface
 func (ss *ScanStatus) Scan(value any) error {
-
 	vv := cast.ToString(value)
 
 	switch vv {
@@ -107,8 +114,7 @@ func (ss *ScanStatus) Scan(value any) error {
 	case string(ScanStatusProcessing):
 		ss.s = ScanStatusProcessing
 	default:
-		// Default to waiting
-		ss.s = ScanStatusWaiting
+		ss.s = ""
 	}
 
 	return nil

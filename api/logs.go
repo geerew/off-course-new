@@ -2,10 +2,10 @@ package api
 
 import (
 	"log/slog"
-	"time"
+	"strings"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/geerew/off-course/daos"
+	"github.com/geerew/off-course/dao"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/pagination"
@@ -15,36 +15,35 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type logs struct {
+type logsAPI struct {
 	logger *slog.Logger
-	logDao *daos.LogDao
+	dao    *dao.DAO
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type logResponse struct {
-	ID        string        `json:"id"`
-	Level     int           `json:"level"`
-	Message   string        `json:"message"`
-	Data      types.JsonMap `json:"data"`
-	CreatedAt time.Time     `json:"createdAt"`
+// initLogRoutes initializes the log routes
+func (r *Router) initLogRoutes() {
+	logsAPI := logsAPI{
+		logger: r.config.Logger,
+		dao:    r.logDao,
+	}
+
+	logGroup := r.api.Group("/logs")
+	logGroup.Get("/", logsAPI.getLogs)
+	logGroup.Get("/types", logsAPI.getLogTypes)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *logs) getLogTypes(c *fiber.Ctx) error {
-	types := types.AllLogTypes()
-	return c.Status(fiber.StatusOK).JSON(types)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func (api *logs) getLogs(c *fiber.Ctx) error {
+func (api *logsAPI) getLogs(c *fiber.Ctx) error {
+	orderBy := c.Query("orderBy", models.LOG_TABLE+".created_at desc")
 	levels := c.Query("levels", "")
 	types := c.Query("types", "")
 	messages := c.Query("messages", "")
 
-	dbParams := &database.DatabaseParams{
+	options := &database.Options{
+		OrderBy:    strings.Split(orderBy, ","),
 		Pagination: pagination.NewFromApi(c),
 	}
 
@@ -57,7 +56,7 @@ func (api *logs) getLogs(c *fiber.Ctx) error {
 			return errorResponse(c, fiber.StatusBadRequest, "Invalid levels parameter", err)
 		}
 
-		whereClause = append(whereClause, squirrel.Eq{api.logDao.Table() + ".level": filtered})
+		whereClause = append(whereClause, squirrel.Eq{models.LOG_TABLE + ".level": filtered})
 	}
 
 	// Log types
@@ -79,21 +78,21 @@ func (api *logs) getLogs(c *fiber.Ctx) error {
 
 		orClause := squirrel.Or{}
 		for _, message := range filtered {
-			orClause = append(orClause, squirrel.Like{api.logDao.Table() + ".message": "%" + message + "%"})
+			orClause = append(orClause, squirrel.Like{models.LOG_TABLE + ".message": "%" + message + "%"})
 		}
 
 		whereClause = append(whereClause, orClause)
 	}
 
-	dbParams.Where = whereClause
+	options.Where = whereClause
 
-	logs, err := api.logDao.List(dbParams, nil)
-
+	logs := []*models.Log{}
+	err := api.dao.List(c.Context(), &logs, options)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up logs", err)
 	}
 
-	pResult, err := dbParams.Pagination.BuildResult(logsResponseHelper(logs))
+	pResult, err := options.Pagination.BuildResult(logsResponseHelper(logs))
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 	}
@@ -103,18 +102,7 @@ func (api *logs) getLogs(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func logsResponseHelper(logs []*models.Log) []*logResponse {
-	responses := []*logResponse{}
-
-	for _, log := range logs {
-		responses = append(responses, &logResponse{
-			ID:        log.ID,
-			Level:     log.Level,
-			Message:   log.Message,
-			Data:      log.Data,
-			CreatedAt: log.CreatedAt,
-		})
-	}
-
-	return responses
+func (api *logsAPI) getLogTypes(c *fiber.Ctx) error {
+	types := types.AllLogTypes()
+	return c.Status(fiber.StatusOK).JSON(types)
 }

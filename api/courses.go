@@ -7,15 +7,14 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/geerew/off-course/daos"
+	"github.com/geerew/off-course/dao"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/appFs"
-	"github.com/geerew/off-course/utils/jobs"
+	"github.com/geerew/off-course/utils/coursescan"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
@@ -24,114 +23,73 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type courses struct {
-	logger *slog.Logger
-	appFs  *appFs.AppFs
-
-	// Dao
-	courseScanner     *jobs.CourseScanner
-	courseDao         *daos.CourseDao
-	courseProgressDao *daos.CourseProgressDao
-	assetDao          *daos.AssetDao
-	attachmentDao     *daos.AttachmentDao
-	tagDao            *daos.TagDao
-	courseTagDao      *daos.CourseTagDao
+type coursesAPI struct {
+	logger     *slog.Logger
+	appFs      *appFs.AppFs
+	courseScan *coursescan.CourseScan
+	dao        *dao.DAO
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type courseResponse struct {
-	ID        string    `json:"id"`
-	Title     string    `json:"title"`
-	Path      string    `json:"path"`
-	HasCard   bool      `json:"hasCard"`
-	Available bool      `json:"available"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+// initCourseRoutes initializes the course routes
+func (r *Router) initCourseRoutes() {
+	coursesAPI := coursesAPI{
+		logger:     r.config.Logger,
+		appFs:      r.config.AppFs,
+		courseScan: r.config.CourseScan,
+		dao:        r.dao,
+	}
 
-	// Scan status
-	ScanStatus string `json:"scanStatus"`
+	courseGroup := r.api.Group("/courses")
 
-	// Progress
-	Started           bool      `json:"started"`
-	StartedAt         time.Time `json:"startedAt"`
-	Percent           int       `json:"percent"`
-	CompletedAt       time.Time `json:"completedAt"`
-	ProgressUpdatedAt time.Time `json:"progressUpdatedAt"`
+	// Course
+	courseGroup.Get("", coursesAPI.getCourses)
+	courseGroup.Get("/:id", coursesAPI.getCourse)
+	courseGroup.Post("", coursesAPI.createCourse)
+	courseGroup.Delete("/:id", coursesAPI.deleteCourse)
+
+	// Course card
+	courseGroup.Head("/:id/card", coursesAPI.getCard)
+	courseGroup.Get("/:id/card", coursesAPI.getCard)
+
+	// Course asset
+	courseGroup.Get("/:id/assets", coursesAPI.getAssets)
+	courseGroup.Get("/:id/assets/:asset", coursesAPI.getAsset)
+	courseGroup.Get("/:id/assets/:asset/serve", coursesAPI.serveAsset)
+	courseGroup.Put("/:id/assets/:asset/progress", coursesAPI.updateAssetProgress)
+
+	// Course asset attachments
+	courseGroup.Get("/:id/assets/:asset/attachments", coursesAPI.getAttachments)
+	courseGroup.Get("/:id/assets/:asset/attachments/:attachment", coursesAPI.getAttachment)
+	courseGroup.Get("/:id/assets/:asset/attachments/:attachment/serve", coursesAPI.serveAttachment)
+
+	// Course tags
+	courseGroup.Get("/:id/tags", coursesAPI.getTags)
+	courseGroup.Post("/:id/tags", coursesAPI.createTag)
+	courseGroup.Delete("/:id/tags/:tagId", coursesAPI.deleteTag)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type courseTagResponse struct {
-	ID  string `json:"id"`
-	Tag string `json:"tag"`
-}
+const bufferSize = 1024 * 8                 // 8KB per chunk, adjust as needed
+const maxInitialChunkSize = 1024 * 1024 * 5 // 5MB, adjust as needed
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *courses) getCourses(c *fiber.Ctx) error {
-	orderBy := c.Query("orderBy", "created_at desc")
+func (api coursesAPI) getCourses(c *fiber.Ctx) error {
+	orderBy := c.Query("orderBy", models.COURSE_TABLE+".created_at desc")
+	titles := c.Query("titles", "")
 	progress := c.Query("progress", "")
 	tags := c.Query("tags", "")
-	titles := c.Query("titles", "")
 
-	dbParams := &database.DatabaseParams{
+	options := &database.Options{
 		OrderBy:    strings.Split(orderBy, ","),
 		Pagination: pagination.NewFromApi(c),
 	}
 
 	whereClause := squirrel.And{}
-
-	// Filter on progress (one of "not started", "started", "completed")
-	if progress != "" {
-		unescapedProgress, err := url.QueryUnescape(progress)
-		if err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, "invalid progress parameter")
-		}
-
-		unescapedProgress = strings.ToLower(unescapedProgress)
-
-		if unescapedProgress == "started" {
-			// Started but not completed
-			whereClause = append(whereClause, squirrel.And{
-				squirrel.Eq{api.courseProgressDao.Table() + ".started": true},
-				squirrel.NotEq{api.courseProgressDao.Table() + ".percent": 100},
-			})
-		} else if unescapedProgress == "not started" {
-			// Default to not started
-			whereClause = append(whereClause, squirrel.NotEq{api.courseProgressDao.Table() + ".started": true})
-		} else if unescapedProgress == "completed" {
-			// Completed
-			whereClause = append(whereClause, squirrel.Eq{api.courseProgressDao.Table() + ".percent": 100})
-		} else if unescapedProgress == "not completed" {
-			// Not completed
-			whereClause = append(whereClause, squirrel.NotEq{api.courseProgressDao.Table() + ".percent": 100})
-		}
-	}
-
-	// Filter based on tags
-	if tags != "" {
-		filtered, err := filter(tags)
-		if err != nil {
-			return errorResponse(c, fiber.StatusBadRequest, "Invalid tags parameter", err)
-		}
-
-		courseIds, err := api.courseTagDao.ListCourseIdsByTags(filtered, nil)
-		if err != nil {
-			return errorResponse(c, fiber.StatusInternalServerError, "Error looking up courses by tags", err)
-		}
-
-		if len(courseIds) == 0 {
-			pResult, err := dbParams.Pagination.BuildResult(courseResponseHelper(nil))
-			if err != nil {
-				return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
-			}
-
-			return c.Status(fiber.StatusOK).JSON(pResult)
-		} else {
-			whereClause = append(whereClause, squirrel.Eq{api.courseDao.Table() + ".id": courseIds})
-		}
-	}
+	courseIDs := []string{}
 
 	// Filter based on titles
 	if titles != "" {
@@ -142,21 +100,86 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 
 		orClause := squirrel.Or{}
 		for _, title := range filtered {
-			orClause = append(orClause, squirrel.Like{api.courseDao.Table() + ".title": "%" + title + "%"})
+			orClause = append(orClause, squirrel.Like{models.COURSE_TABLE + ".title": "%" + title + "%"})
 		}
 
 		whereClause = append(whereClause, orClause)
 	}
 
-	dbParams.Where = whereClause
+	// Filter on progress ("not started", "started", "completed") by identifying the course IDs that
+	// match the progress filter
+	if progress != "" {
+		unescapedProgress, err := url.QueryUnescape(progress)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid progress parameter")
+		}
 
-	courses, err := api.courseDao.List(dbParams, nil)
+		unescapedProgress = strings.ToLower(unescapedProgress)
 
+		switch unescapedProgress {
+		case "not started":
+			courseIDs, err = api.dao.PluckIDsForNotStartedCourses(c.Context(), nil)
+		case "started":
+			courseIDs, err = api.dao.PluckIDsForStartedCourses(c.Context(), nil)
+		case "completed":
+			courseIDs, err = api.dao.PluckIDsForCompletedCourses(c.Context(), nil)
+		}
+
+		if err != nil {
+			return errorResponse(c, fiber.StatusInternalServerError, "Error looking up courses by progress", err)
+		}
+
+		if len(courseIDs) == 0 {
+			pResult, err := options.Pagination.BuildResult(courseResponseHelper(nil))
+			if err != nil {
+				return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
+			}
+
+			return c.Status(fiber.StatusOK).JSON(pResult)
+		}
+	}
+
+	// Filter based on tags by identifying the course IDs that match the tags filter
+	if tags != "" {
+		filtered, err := filter(tags)
+		if err != nil {
+			return errorResponse(c, fiber.StatusBadRequest, "Invalid tags parameter", err)
+		}
+
+		tmpCourseIDs, err := api.dao.PluckCourseIDsWithTags(c.Context(), filtered, nil)
+		if err != nil {
+			return errorResponse(c, fiber.StatusInternalServerError, "Error looking up courses by tags", err)
+		}
+
+		if len(tmpCourseIDs) == 0 {
+			pResult, err := options.Pagination.BuildResult(courseResponseHelper(nil))
+			if err != nil {
+				return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
+			}
+
+			return c.Status(fiber.StatusOK).JSON(pResult)
+		}
+
+		if len(courseIDs) != 0 {
+			courseIDs = utils.SliceIntersection(courseIDs, tmpCourseIDs)
+		} else {
+			courseIDs = tmpCourseIDs
+		}
+	}
+
+	if len(courseIDs) > 0 {
+		whereClause = append(whereClause, squirrel.Eq{models.COURSE_TABLE + ".id": courseIDs})
+	}
+
+	options.Where = whereClause
+
+	courses := []*models.Course{}
+	err := api.dao.List(c.Context(), &courses, options)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up courses", err)
 	}
 
-	pResult, err := dbParams.Pagination.BuildResult(courseResponseHelper(courses))
+	pResult, err := options.Pagination.BuildResult(courseResponseHelper(courses))
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 	}
@@ -166,10 +189,11 @@ func (api *courses) getCourses(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *courses) getCourse(c *fiber.Ctx) error {
+func (api coursesAPI) getCourse(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	course, err := api.courseDao.Get(id, nil, nil)
+	course := &models.Course{Base: models.Base{ID: id}}
+	err := api.dao.GetById(c.Context(), course)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -184,7 +208,7 @@ func (api *courses) getCourse(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *courses) createCourse(c *fiber.Ctx) error {
+func (api coursesAPI) createCourse(c *fiber.Ctx) error {
 	course := new(models.Course)
 
 	if err := c.BodyParser(course); err != nil {
@@ -209,7 +233,7 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 	// Set the course to available
 	course.Available = true
 
-	if err := api.courseDao.Create(course); err != nil {
+	if err := api.dao.CreateCourse(c.Context(), course); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return errorResponse(c, fiber.StatusBadRequest, "A course with this path already exists", err)
 		}
@@ -218,10 +242,10 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 	}
 
 	// Start a scan job
-	if scan, err := api.courseScanner.Add(course.ID); err != nil {
+	if scan, err := api.courseScan.Add(c.Context(), course.ID); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error creating scan job", err)
 	} else {
-		course.ScanStatus = scan.Status.String()
+		course.ScanStatus = scan.Status
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(courseResponseHelper([]*models.Course{course})[0])
@@ -229,10 +253,11 @@ func (api *courses) createCourse(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *courses) deleteCourse(c *fiber.Ctx) error {
+func (api coursesAPI) deleteCourse(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	err := api.courseDao.Delete(&database.DatabaseParams{Where: squirrel.Eq{"id": id}}, nil)
+	course := &models.Course{Base: models.Base{ID: id}}
+	err := api.dao.Delete(c.Context(), course, nil)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting course", err)
 	}
@@ -242,10 +267,11 @@ func (api *courses) deleteCourse(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *courses) getCard(c *fiber.Ctx) error {
+func (api coursesAPI) getCard(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	course, err := api.courseDao.Get(id, nil, nil)
+	course := &models.Course{Base: models.Base{ID: id}}
+	err := api.dao.GetById(c.Context(), course)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -271,37 +297,23 @@ func (api *courses) getCard(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *courses) getAssets(c *fiber.Ctx) error {
+func (api coursesAPI) getAssets(c *fiber.Ctx) error {
 	id := c.Params("id")
 	orderBy := c.Query("orderBy", "chapter asc,prefix asc")
-	expand := c.QueryBool("expand", false)
 
-	// Get the course
-	_, err := api.courseDao.Get(id, nil, nil)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
-		}
-
-		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course", err)
-	}
-
-	dbParams := &database.DatabaseParams{
+	options := &database.Options{
 		OrderBy:    strings.Split(orderBy, ","),
-		Where:      squirrel.Eq{api.assetDao.Table() + ".course_id": id},
+		Where:      squirrel.Eq{models.ASSET_TABLE + ".course_id": id},
 		Pagination: pagination.NewFromApi(c),
 	}
 
-	if expand {
-		dbParams.IncludeRelations = []string{api.attachmentDao.Table()}
-	}
-
-	assets, err := api.assetDao.List(dbParams, nil)
+	assets := []*models.Asset{}
+	err := api.dao.List(c.Context(), &assets, options)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up assets", err)
 	}
 
-	pResult, err := dbParams.Pagination.BuildResult(assetResponseHelper(assets))
+	pResult, err := options.Pagination.BuildResult(assetResponseHelper(assets))
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 	}
@@ -311,28 +323,12 @@ func (api *courses) getAssets(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *courses) getAsset(c *fiber.Ctx) error {
+func (api coursesAPI) getAsset(c *fiber.Ctx) error {
 	id := c.Params("id")
 	assetId := c.Params("asset")
-	expand := c.QueryBool("expand", false)
 
-	_, err := api.courseDao.Get(id, nil, nil)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
-		}
-
-		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course", err)
-	}
-
-	// TODO: support attachments orderby
-	dbParams := &database.DatabaseParams{}
-	if expand {
-		dbParams.IncludeRelations = []string{api.attachmentDao.Table()}
-	}
-
-	asset, err := api.assetDao.Get(assetId, dbParams, nil)
-
+	asset := &models.Asset{Base: models.Base{ID: assetId}}
+	err := api.dao.GetById(c.Context(), asset)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
@@ -350,23 +346,12 @@ func (api *courses) getAsset(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
+func (api coursesAPI) serveAsset(c *fiber.Ctx) error {
 	id := c.Params("id")
 	assetId := c.Params("asset")
-	orderBy := c.Query("orderBy", "title asc")
 
-	// Get the course
-	_, err := api.courseDao.Get(id, nil, nil)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
-		}
-
-		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course", err)
-	}
-
-	// Get the asset
-	asset, err := api.assetDao.Get(assetId, nil, nil)
+	asset := &models.Asset{Base: models.Base{ID: assetId}}
+	err := api.dao.GetById(c.Context(), asset)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
@@ -379,18 +364,94 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Asset does not belong to course", nil)
 	}
 
-	dbParams := &database.DatabaseParams{
+	// Check for invalid path
+	if exists, err := afero.Exists(api.appFs.Fs, asset.Path); err != nil || !exists {
+		return errorResponse(c, fiber.StatusBadRequest, "Asset does not exist", nil)
+	}
+
+	if asset.Type.IsVideo() {
+		return handleVideo(c, api.appFs, asset)
+	} else if asset.Type.IsHTML() {
+		return handleHtml(c, api.appFs, asset)
+	}
+
+	// TODO: Handle PDF
+	return c.Status(fiber.StatusOK).SendString("done")
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (api coursesAPI) updateAssetProgress(c *fiber.Ctx) error {
+	id := c.Params("id")
+	assetId := c.Params("asset")
+
+	req := &assetProgressRequest{}
+	if err := c.BodyParser(req); err != nil {
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
+	}
+
+	asset := &models.Asset{Base: models.Base{ID: assetId}}
+	err := api.dao.GetById(c.Context(), asset)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
+		}
+
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up asset", err)
+	}
+
+	if asset.CourseID != id {
+		return errorResponse(c, fiber.StatusBadRequest, "Asset does not belong to course", nil)
+	}
+
+	assetProgress := &models.AssetProgress{
+		AssetID:   assetId,
+		VideoPos:  req.VideoPos,
+		Completed: req.Completed,
+	}
+
+	err = api.dao.CreateOrUpdateAssetProgress(c.Context(), assetProgress)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error updating asset", err)
+	}
+
+	return c.Status(fiber.StatusNoContent).Send(nil)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (api coursesAPI) getAttachments(c *fiber.Ctx) error {
+	id := c.Params("id")
+	assetId := c.Params("asset")
+	orderBy := c.Query("orderBy", "title asc")
+
+	asset := &models.Asset{Base: models.Base{ID: assetId}}
+	err := api.dao.GetById(c.Context(), asset)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
+		}
+
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up asset", err)
+	}
+
+	if asset.CourseID != id {
+		return errorResponse(c, fiber.StatusBadRequest, "Asset does not belong to course", nil)
+	}
+
+	options := &database.Options{
 		OrderBy:    strings.Split(orderBy, ","),
-		Where:      squirrel.Eq{api.attachmentDao.Table() + ".asset_id": assetId},
+		Where:      squirrel.Eq{models.ATTACHMENT_TABLE + ".asset_id": assetId},
 		Pagination: pagination.NewFromApi(c),
 	}
 
-	attachments, err := api.attachmentDao.List(dbParams, nil)
+	attachments := []*models.Attachment{}
+	err = api.dao.List(c.Context(), &attachments, options)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up attachments", err)
 	}
 
-	pResult, err := dbParams.Pagination.BuildResult(attachmentResponseHelper(attachments))
+	pResult, err := options.Pagination.BuildResult(attachmentResponseHelper(attachments))
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 	}
@@ -400,23 +461,13 @@ func (api *courses) getAssetAttachments(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
+func (api coursesAPI) getAttachment(c *fiber.Ctx) error {
 	id := c.Params("id")
 	assetId := c.Params("asset")
 	attachmentId := c.Params("attachment")
 
-	// Get the course
-	_, err := api.courseDao.Get(id, nil, nil)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
-		}
-
-		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course", err)
-	}
-
-	// Get the asset
-	asset, err := api.assetDao.Get(assetId, nil, nil)
+	asset := &models.Asset{Base: models.Base{ID: assetId}}
+	err := api.dao.GetById(c.Context(), asset)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
@@ -429,8 +480,8 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Asset does not belong to course", nil)
 	}
 
-	// Get the attachment
-	attachment, err := api.attachmentDao.Get(attachmentId, nil)
+	attachment := &models.Attachment{Base: models.Base{ID: attachmentId}}
+	err = api.dao.GetById(c.Context(), attachment)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Attachment not found", nil)
@@ -448,11 +499,54 @@ func (api *courses) getAssetAttachment(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *courses) getTags(c *fiber.Ctx) error {
+func (api coursesAPI) serveAttachment(c *fiber.Ctx) error {
+	id := c.Params("id")
+	assetId := c.Params("asset")
+	attachmentID := c.Params("attachment")
+
+	asset := &models.Asset{Base: models.Base{ID: assetId}}
+	err := api.dao.GetById(c.Context(), asset)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
+		}
+
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up asset", err)
+	}
+
+	if asset.CourseID != id {
+		return errorResponse(c, fiber.StatusBadRequest, "Asset does not belong to course", nil)
+	}
+
+	attachment := &models.Attachment{Base: models.Base{ID: attachmentID}}
+	err = api.dao.GetById(c.Context(), attachment)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errorResponse(c, fiber.StatusNotFound, "Attachment not found", nil)
+		}
+
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up attachment", err)
+	}
+
+	if attachment.AssetID != assetId {
+		return errorResponse(c, fiber.StatusBadRequest, "Attachment does not belong to asset", nil)
+	}
+
+	if exists, err := afero.Exists(api.appFs.Fs, attachment.Path); err != nil || !exists {
+		return errorResponse(c, fiber.StatusBadRequest, "Attachment does not exist", err)
+	}
+
+	c.Set(fiber.HeaderContentDisposition, `attachment; filename="`+attachment.Title+`"`)
+	return filesystem.SendFile(c, afero.NewHttpFs(api.appFs.Fs), attachment.Path)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (api coursesAPI) getTags(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	// Get the course
-	_, err := api.courseDao.Get(id, nil, nil)
+	course := &models.Course{Base: models.Base{ID: id}}
+	err := api.dao.GetById(c.Context(), course)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
@@ -461,12 +555,13 @@ func (api *courses) getTags(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course", err)
 	}
 
-	dbParams := &database.DatabaseParams{
-		OrderBy: []string{api.tagDao.Table() + ".tag asc"},
-		Where:   squirrel.Eq{api.courseTagDao.Table() + ".course_id": id},
+	options := &database.Options{
+		OrderBy: []string{models.TAG_TABLE + ".tag asc"},
+		Where:   squirrel.Eq{models.COURSE_TAG_TABLE + ".course_id": id},
 	}
 
-	tags, err := api.courseTagDao.List(dbParams, nil)
+	tags := []*models.CourseTag{}
+	err = api.dao.List(c.Context(), &tags, options)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course tags", err)
 	}
@@ -476,7 +571,7 @@ func (api *courses) getTags(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *courses) createTag(c *fiber.Ctx) error {
+func (api coursesAPI) createTag(c *fiber.Ctx) error {
 	courseId := c.Params("id")
 	courseTag := new(models.CourseTag)
 
@@ -484,19 +579,17 @@ func (api *courses) createTag(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
-	// Empty stuff that should not be set
 	courseTag.ID = ""
-	courseTag.TagId = ""
+	courseTag.TagID = ""
 
-	// Ensure there is a tag
 	if courseTag.Tag == "" {
 		return errorResponse(c, fiber.StatusBadRequest, "A tag is required", nil)
 	}
 
-	// Set the course ID
-	courseTag.CourseId = courseId
+	courseTag.CourseID = courseId
 
-	if err := api.courseTagDao.Create(courseTag, nil); err != nil {
+	err := api.dao.CreateCourseTag(c.Context(), courseTag)
+	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return errorResponse(c, fiber.StatusBadRequest, "A tag for this course already exists", err)
 		}
@@ -509,61 +602,19 @@ func (api *courses) createTag(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api *courses) deleteTag(c *fiber.Ctx) error {
+func (api coursesAPI) deleteTag(c *fiber.Ctx) error {
 	courseId := c.Params("id")
 	tagId := c.Params("tagId")
 
-	err := api.courseTagDao.Delete(&database.DatabaseParams{Where: squirrel.And{squirrel.Eq{"course_id": courseId}, squirrel.Eq{"id": tagId}}}, nil)
+	err := api.dao.Delete(
+		c.Context(),
+		&models.CourseTag{},
+		&database.Options{Where: squirrel.And{squirrel.Eq{"course_id": courseId}, squirrel.Eq{"id": tagId}}},
+	)
+
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting course tag", err)
 	}
 
 	return c.Status(fiber.StatusNoContent).Send(nil)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Internal
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func courseResponseHelper(courses []*models.Course) []*courseResponse {
-	responses := []*courseResponse{}
-	for _, course := range courses {
-		c := &courseResponse{
-			ID:        course.ID,
-			Title:     course.Title,
-			Path:      course.Path,
-			HasCard:   course.CardPath != "",
-			Available: course.Available,
-			CreatedAt: course.CreatedAt,
-			UpdatedAt: course.UpdatedAt,
-
-			// Scan status
-			ScanStatus: course.ScanStatus,
-
-			// Progress
-			Started:           course.Started,
-			StartedAt:         course.StartedAt,
-			Percent:           course.Percent,
-			CompletedAt:       course.CompletedAt,
-			ProgressUpdatedAt: course.ProgressUpdatedAt,
-		}
-
-		responses = append(responses, c)
-	}
-
-	return responses
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func courseTagResponseHelper(courseTags []*models.CourseTag) []*courseTagResponse {
-	responses := []*courseTagResponse{}
-	for _, tag := range courseTags {
-		responses = append(responses, &courseTagResponse{
-			ID:  tag.ID,
-			Tag: tag.Tag,
-		})
-	}
-
-	return responses
 }

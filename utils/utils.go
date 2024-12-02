@@ -43,6 +43,8 @@ func TrimQuotes(s string) string {
 // are correctly interpreted. If the path starts with a drive letter, it appends a
 // backslash (\) to paths like "C:" to make them "C:\", and inserts a backslash in paths
 // like "C:folder" to make them "C:\folder"
+//
+// Skipped on non-Windows platforms
 func NormalizeWindowsDrive(path string) string {
 	if runtime.GOOS == "windows" {
 		if len(path) >= 2 && path[1] == ':' {
@@ -109,6 +111,37 @@ func EscapeBackslashes(path string) string {
 	}
 
 	return builder.String()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// CheckTruth check string true or not
+func CheckTruth(vals ...string) bool {
+	for _, val := range vals {
+		if val != "" && !strings.EqualFold(val, "false") {
+			return true
+		}
+	}
+	return false
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// SliceIntersection returns the intersection of two slices
+func SliceIntersection[T comparable](slice1, slice2 []T) []T {
+	m := make(map[T]struct{})
+	for _, item := range slice1 {
+		m[item] = struct{}{}
+	}
+
+	var result []T
+	for _, item := range slice2 {
+		if _, exists := m[item]; exists {
+			result = append(result, item)
+			delete(m, item)
+		}
+	}
+	return result
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -302,4 +335,25 @@ func Map[T, V any](ts []T, fn func(T) V) []V {
 		result[i] = fn(t)
 	}
 	return result
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// snakeCase converts a string to snake_case
+func SnakeCase(s string) string {
+	var b strings.Builder
+	b.Grow(len(s) + 5)
+
+	for i, r := range s {
+		// Check if the current rune is uppercase
+		if i > 0 && 'A' <= r && r <= 'Z' {
+			// Add underscore if previous rune is lowercase (or non-uppercase letter)
+			if 'a' <= rune(s[i-1]) && rune(s[i-1]) <= 'z' {
+				b.WriteByte('_')
+			}
+		}
+		b.WriteRune(r)
+	}
+
+	return strings.ToLower(b.String())
 }
