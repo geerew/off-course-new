@@ -25,14 +25,6 @@ type tagsAPI struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type courseTag struct {
-	ID       string `json:"id"`
-	CourseID string `json:"courseId"`
-	Title    string `json:"title"`
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // initTagRoutes initializes the tag routes
 func (r *Router) initTagRoutes() {
 	tagsAPI := tagsAPI{
