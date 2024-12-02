@@ -131,6 +131,41 @@ func scanResponseHelper(scans []*models.Scan) []*scanResponse {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func tagResponseHelper(tags []*models.Tag) []*tagResponse {
+	responses := []*tagResponse{}
+
+	for _, tag := range tags {
+		t := &tagResponse{
+			ID:          tag.ID,
+			Tag:         tag.Tag,
+			CreatedAt:   tag.CreatedAt,
+			UpdatedAt:   tag.UpdatedAt,
+			CourseCount: len(tag.CourseTags),
+		}
+
+		// Add the course tags
+		if len(tag.CourseTags) > 0 {
+			courses := []*courseTag{}
+
+			for _, ct := range tag.CourseTags {
+				courses = append(courses, &courseTag{
+					ID:       ct.ID,
+					CourseID: ct.CourseID,
+					Title:    ct.Course,
+				})
+			}
+
+			t.Courses = courses
+		}
+
+		responses = append(responses, t)
+	}
+
+	return responses
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // handleVideo handles the video streaming logic
 func handleVideo(c *fiber.Ctx, appFs *appFs.AppFs, asset *models.Asset) error {
 	// Open the video

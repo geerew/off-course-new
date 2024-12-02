@@ -75,25 +75,10 @@ func (r *Router) initRouter() {
 	// API
 	r.api = r.router.Group("/api")
 	r.initFsRoutes()
-	r.initCoursesRoutes()
-	r.initScansRoutes()
+	r.initCourseRoutes()
+	r.initScanRoutes()
+	r.initTagRoutes()
 }
-
-// // ----------------------
-// // Tags
-// // ----------------------
-// tagsApi := tags{
-// 	logger:       config.Logger,
-// 	tagDao:       tagDao,
-// 	courseTagDao: courseTagDao,
-// }
-
-// tags := router.Group("/tags")
-// tags.Get("", tagsApi.getTags)
-// tags.Get("/:id", tagsApi.getTag)
-// tags.Post("", tagsApi.createTag)
-// tags.Put("/:id", tagsApi.updateTag)
-// tags.Delete("/:id", tagsApi.deleteTag)
 
 // // ----------------------
 // // Logs

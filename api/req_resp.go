@@ -98,3 +98,20 @@ type scanResponse struct {
 	CreatedAt types.DateTime   `json:"createdAt"`
 	UpdatedAt types.DateTime   `json:"updatedAt"`
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+type tagRequest struct {
+	Tag string `json:"tag"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+type tagResponse struct {
+	ID          string         `json:"id"`
+	Tag         string         `json:"tag"`
+	CourseCount int            `json:"courseCount"`
+	Courses     []*courseTag   `json:"courses,omitempty"`
+	CreatedAt   types.DateTime `json:"createdAt"`
+	UpdatedAt   types.DateTime `json:"updatedAt"`
+}
