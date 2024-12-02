@@ -26,8 +26,8 @@ type scansAPI struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// initCoursesRoutes initializes the course routes
-func (r *Router) initScansRoutes() {
+// initScanRoutes initializes the scan routes
+func (r *Router) initScanRoutes() {
 	scansAPI := scansAPI{
 		logger:     r.config.Logger,
 		appFs:      r.config.AppFs,
@@ -35,9 +35,9 @@ func (r *Router) initScansRoutes() {
 		dao:        r.dao,
 	}
 
-	scansGroup := r.api.Group("/scans")
-	scansGroup.Get("/:courseId", scansAPI.getScan)
-	scansGroup.Post("", scansAPI.createScan)
+	scanGroup := r.api.Group("/scans")
+	scanGroup.Get("/:courseId", scansAPI.getScan)
+	scanGroup.Post("", scansAPI.createScan)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

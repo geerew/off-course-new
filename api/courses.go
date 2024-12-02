@@ -32,8 +32,8 @@ type coursesAPI struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// initCoursesRoutes initializes the course routes
-func (r *Router) initCoursesRoutes() {
+// initCourseRoutes initializes the course routes
+func (r *Router) initCourseRoutes() {
 	coursesAPI := coursesAPI{
 		logger:     r.config.Logger,
 		appFs:      r.config.AppFs,
@@ -41,33 +41,33 @@ func (r *Router) initCoursesRoutes() {
 		dao:        r.dao,
 	}
 
-	coursesGroup := r.api.Group("/courses")
+	courseGroup := r.api.Group("/courses")
 
 	// Course
-	coursesGroup.Get("", coursesAPI.getCourses)
-	coursesGroup.Get("/:id", coursesAPI.getCourse)
-	coursesGroup.Post("", coursesAPI.createCourse)
-	coursesGroup.Delete("/:id", coursesAPI.deleteCourse)
+	courseGroup.Get("", coursesAPI.getCourses)
+	courseGroup.Get("/:id", coursesAPI.getCourse)
+	courseGroup.Post("", coursesAPI.createCourse)
+	courseGroup.Delete("/:id", coursesAPI.deleteCourse)
 
 	// Course card
-	coursesGroup.Head("/:id/card", coursesAPI.getCard)
-	coursesGroup.Get("/:id/card", coursesAPI.getCard)
+	courseGroup.Head("/:id/card", coursesAPI.getCard)
+	courseGroup.Get("/:id/card", coursesAPI.getCard)
 
 	// Course asset
-	coursesGroup.Get("/:id/assets", coursesAPI.getAssets)
-	coursesGroup.Get("/:id/assets/:asset", coursesAPI.getAsset)
-	coursesGroup.Get("/:id/assets/:asset/serve", coursesAPI.serveAsset)
-	coursesGroup.Put("/:id/assets/:asset/progress", coursesAPI.updateAssetProgress)
+	courseGroup.Get("/:id/assets", coursesAPI.getAssets)
+	courseGroup.Get("/:id/assets/:asset", coursesAPI.getAsset)
+	courseGroup.Get("/:id/assets/:asset/serve", coursesAPI.serveAsset)
+	courseGroup.Put("/:id/assets/:asset/progress", coursesAPI.updateAssetProgress)
 
 	// Course asset attachments
-	coursesGroup.Get("/:id/assets/:asset/attachments", coursesAPI.getAttachments)
-	coursesGroup.Get("/:id/assets/:asset/attachments/:attachment", coursesAPI.getAttachment)
-	coursesGroup.Get("/:id/assets/:asset/attachments/:attachment/serve", coursesAPI.serveAttachment)
+	courseGroup.Get("/:id/assets/:asset/attachments", coursesAPI.getAttachments)
+	courseGroup.Get("/:id/assets/:asset/attachments/:attachment", coursesAPI.getAttachment)
+	courseGroup.Get("/:id/assets/:asset/attachments/:attachment/serve", coursesAPI.serveAttachment)
 
 	// Course tags
-	coursesGroup.Get("/:id/tags", coursesAPI.getTags)
-	coursesGroup.Post("/:id/tags", coursesAPI.createTag)
-	coursesGroup.Delete("/:id/tags/:tagId", coursesAPI.deleteTag)
+	courseGroup.Get("/:id/tags", coursesAPI.getTags)
+	courseGroup.Post("/:id/tags", coursesAPI.createTag)
+	courseGroup.Delete("/:id/tags/:tagId", coursesAPI.deleteTag)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

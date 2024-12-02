@@ -9,9 +9,6 @@ type Tag struct {
 	Base
 	Tag string
 
-	// Joins
-	// CourseCount int
-
 	// Relations
 	CourseTags []*CourseTag
 }
@@ -41,8 +38,4 @@ func (t *Tag) Define(s *schema.ModelConfig) {
 
 	// Relation fields
 	s.Relation("CourseTags").MatchOn(COURSE_TAG_TAG_ID)
-
-	// c.Field("CourseCount").AggregateColumn("COALESCE(COUNT(courses_tags.id), 0)")
-	// c.LeftJoin(COURSE_TABLE).On(fmt.Sprintf("%s.%s = %s.%s", SCAN_TABLE, SCAN_COURSE_ID, COURSE_TABLE, BASE_ID))
-
 }

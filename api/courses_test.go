@@ -533,7 +533,6 @@ func TestCourses_DeleteCourse(t *testing.T) {
 	t.Run("500 (internal error)", func(t *testing.T) {
 		router, _ := setup(t)
 
-		// Drop the table
 		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + models.COURSE_TABLE)
 		require.NoError(t, err)
 
@@ -608,7 +607,6 @@ func TestCourses_GetCard(t *testing.T) {
 	t.Run("500 (internal error)", func(t *testing.T) {
 		router, _ := setup(t)
 
-		// Drop the table
 		_, err := router.config.DbManager.DataDb.Exec("DROP TABLE IF EXISTS " + models.COURSE_TABLE)
 		require.NoError(t, err)
 

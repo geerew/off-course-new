@@ -214,7 +214,6 @@ func TestScanner_Processor(t *testing.T) {
 		scan := &models.Scan{CourseID: course.ID, Status: types.NewScanStatusWaiting()}
 		require.NoError(t, scanner.dao.CreateScan(ctx, scan))
 
-		// Drop the table
 		_, err := scanner.db.Exec("DROP TABLE IF EXISTS " + course.Table())
 		require.NoError(t, err)
 
