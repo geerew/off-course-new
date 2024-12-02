@@ -100,12 +100,6 @@ type Options struct {
 
 	// Used to paginate the results
 	Pagination *pagination.Pagination
-
-	// Control which related entities to fetch
-	IncludeRelations []string
-
-	// Whether to use case-insensitive search
-	CaseInsensitive bool
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
