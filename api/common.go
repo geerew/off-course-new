@@ -210,14 +210,15 @@ func handleVideo(c *fiber.Ctx, appFs *appFs.AppFs, asset *models.Asset) error {
 	rangeStartEnd := strings.Split(bytesPos, "-")
 	start, _ := strconv.Atoi(rangeStartEnd[0])
 	var end int
-	if rangeStartEnd[1] == "" {
-		// Calculate the initial chunk end based on maxInitialChunkSize
+
+	if len(rangeStartEnd) == 2 && rangeStartEnd[0] == "0" && rangeStartEnd[1] == "1" {
+		start = 0
+		end = 1
+	} else {
 		end = start + maxInitialChunkSize - 1
 		if end >= int(fileInfo.Size()) {
 			end = int(fileInfo.Size()) - 1
 		}
-	} else {
-		end, _ = strconv.Atoi(rangeStartEnd[1])
 	}
 
 	if start > end {
