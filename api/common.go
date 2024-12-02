@@ -145,10 +145,10 @@ func tagResponseHelper(tags []*models.Tag) []*tagResponse {
 
 		// Add the course tags
 		if len(tag.CourseTags) > 0 {
-			courses := []*courseTag{}
+			courses := []*courseTagResponse{}
 
 			for _, ct := range tag.CourseTags {
-				courses = append(courses, &courseTag{
+				courses = append(courses, &courseTagResponse{
 					ID:       ct.ID,
 					CourseID: ct.CourseID,
 					Title:    ct.Course,
@@ -159,6 +159,24 @@ func tagResponseHelper(tags []*models.Tag) []*tagResponse {
 		}
 
 		responses = append(responses, t)
+	}
+
+	return responses
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func logsResponseHelper(logs []*models.Log) []*logResponse {
+	responses := []*logResponse{}
+
+	for _, log := range logs {
+		responses = append(responses, &logResponse{
+			ID:        log.ID,
+			Level:     log.Level,
+			Message:   log.Message,
+			Data:      log.Data,
+			CreatedAt: log.CreatedAt,
+		})
 	}
 
 	return responses

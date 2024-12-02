@@ -41,8 +41,10 @@ type courseResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type courseTagResponse struct {
-	ID  string `json:"id"`
-	Tag string `json:"tag"`
+	ID       string `json:"id"`
+	Tag      string `json:"tag,omitempty"`
+	CourseID string `json:"courseId,omitempty"`
+	Title    string `json:"title,omitempty"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -108,10 +110,20 @@ type tagRequest struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type tagResponse struct {
-	ID          string         `json:"id"`
-	Tag         string         `json:"tag"`
-	CourseCount int            `json:"courseCount"`
-	Courses     []*courseTag   `json:"courses,omitempty"`
-	CreatedAt   types.DateTime `json:"createdAt"`
-	UpdatedAt   types.DateTime `json:"updatedAt"`
+	ID          string               `json:"id"`
+	Tag         string               `json:"tag"`
+	CourseCount int                  `json:"courseCount"`
+	Courses     []*courseTagResponse `json:"courses,omitempty"`
+	CreatedAt   types.DateTime       `json:"createdAt"`
+	UpdatedAt   types.DateTime       `json:"updatedAt"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+type logResponse struct {
+	ID        string         `json:"id"`
+	Level     int            `json:"level"`
+	Message   string         `json:"message"`
+	Data      types.JsonMap  `json:"data"`
+	CreatedAt types.DateTime `json:"createdAt"`
 }
