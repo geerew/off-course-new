@@ -21,6 +21,7 @@ type Router struct {
 	api    fiber.Router
 	config *RouterConfig
 	dao    *dao.DAO
+	logDao *dao.DAO
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,6 +43,7 @@ func NewRouter(config *RouterConfig) *Router {
 	r := &Router{
 		config: config,
 		dao:    dao.NewDAO(config.DbManager.DataDb),
+		logDao: dao.NewDAO(config.DbManager.LogsDb),
 	}
 
 	r.initRouter()
@@ -78,19 +80,8 @@ func (r *Router) initRouter() {
 	r.initCourseRoutes()
 	r.initScanRoutes()
 	r.initTagRoutes()
+	r.initLogRoutes()
 }
-
-// // ----------------------
-// // Logs
-// // ----------------------
-// logsApi := logs{
-// 	logger: config.Logger,
-// 	logDao: logDao,
-// }
-
-// logs := router.Group("/logs")
-// logs.Get("/", logsApi.getLogs)
-// logs.Get("/types", logsApi.getLogTypes)
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

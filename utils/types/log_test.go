@@ -16,7 +16,7 @@ func TestLog_String(t *testing.T) {
 	}{
 		{LogTypeRequest, "request"},
 		{LogTypeCron, "cron"},
-		{LogTypeScanner, "scanner"},
+		{LogTypeCourseScan, "course scan"},
 		{LogTypeFileSystem, "file system"},
 		{LogTypeDB, "db"},
 		{LogType(999), "unknown"},
@@ -32,7 +32,7 @@ func TestLog_String(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestLog_AllLogTypes(t *testing.T) {
-	expected := []string{"request", "cron", "scanner", "file system", "db"}
+	expected := []string{"request", "cron", "course scan", "file system", "db"}
 	require.Equal(t, expected, AllLogTypes())
 }
 
@@ -45,7 +45,7 @@ func TestLog_LogValue(t *testing.T) {
 	}{
 		{LogTypeRequest, "request"},
 		{LogTypeCron, "cron"},
-		{LogTypeScanner, "scanner"},
+		{LogTypeCourseScan, "course scan"},
 		{LogTypeFileSystem, "file system"},
 		{LogTypeDB, "db"},
 	}
