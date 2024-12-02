@@ -80,7 +80,7 @@ CREATE TABLE scans (
 --- Tag information
 CREATE TABLE tags (
 	id          TEXT PRIMARY KEY NOT NULL,
-	tag         TEXT NOT NULL UNIQUE,
+	tag         TEXT NOT NULL UNIQUE COLLATE NOCASE,
 	created_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
 	updated_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'))
 );
