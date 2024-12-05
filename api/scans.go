@@ -50,7 +50,7 @@ func (api *scansAPI) getScan(c *fiber.Ctx) error {
 		Where: squirrel.Eq{fmt.Sprintf("%s.%s", models.SCAN_TABLE, models.SCAN_COURSE_ID): courseId},
 	}
 
-	err := api.dao.Get(c.Context(), scan, options)
+	err := api.dao.Get(c.UserContext(), scan, options)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Scan not found", nil)
@@ -74,7 +74,7 @@ func (api *scansAPI) createScan(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "A course ID is required", nil)
 	}
 
-	scan, err := api.courseScan.Add(c.Context(), scan.CourseID)
+	scan, err := api.courseScan.Add(c.UserContext(), scan.CourseID)
 	if err != nil {
 		if err == utils.ErrInvalidId {
 			return errorResponse(c, fiber.StatusBadRequest, "Invalid course ID", nil)

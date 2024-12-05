@@ -87,7 +87,7 @@ func (api *logsAPI) getLogs(c *fiber.Ctx) error {
 	options.Where = whereClause
 
 	logs := []*models.Log{}
-	err := api.dao.List(c.Context(), &logs, options)
+	err := api.dao.List(c.UserContext(), &logs, options)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up logs", err)
 	}

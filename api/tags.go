@@ -56,7 +56,7 @@ func (api *tagsAPI) getTags(c *fiber.Ctx) error {
 	}
 
 	tags := []*models.Tag{}
-	err := api.dao.List(c.Context(), &tags, options)
+	err := api.dao.List(c.UserContext(), &tags, options)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up tags", err)
 	}
@@ -119,7 +119,7 @@ func (api *tagsAPI) getTag(c *fiber.Ctx) error {
 	}
 
 	tag := &models.Tag{}
-	err = api.dao.Get(c.Context(), tag, options)
+	err = api.dao.Get(c.UserContext(), tag, options)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Tag not found", nil)
@@ -144,7 +144,7 @@ func (api *tagsAPI) createTag(c *fiber.Ctx) error {
 	}
 
 	tag.ID = ""
-	err := api.dao.CreateTag(c.Context(), tag)
+	err := api.dao.CreateTag(c.UserContext(), tag)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return errorResponse(c, fiber.StatusBadRequest, "Tag already exists", err)
@@ -167,7 +167,7 @@ func (api *tagsAPI) updateTag(c *fiber.Ctx) error {
 	}
 
 	tag := &models.Tag{Base: models.Base{ID: id}}
-	err := api.dao.GetById(c.Context(), tag)
+	err := api.dao.GetById(c.UserContext(), tag)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Tag not found", nil)
@@ -178,7 +178,7 @@ func (api *tagsAPI) updateTag(c *fiber.Ctx) error {
 
 	tag.Tag = reqTag.Tag
 
-	err = api.dao.UpdateTag(c.Context(), tag)
+	err = api.dao.UpdateTag(c.UserContext(), tag)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusBadRequest, "Invalid tag", err)
@@ -200,7 +200,7 @@ func (api *tagsAPI) deleteTag(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	tag := &models.Tag{Base: models.Base{ID: id}}
-	err := api.dao.Delete(c.Context(), tag, nil)
+	err := api.dao.Delete(c.UserContext(), tag, nil)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting tag", err)
 	}

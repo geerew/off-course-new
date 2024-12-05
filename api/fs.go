@@ -66,7 +66,7 @@ func (api fsAPI) fileSystem(c *fiber.Ctx) error {
 	}
 
 	// Include path classification; ancestor, course, descendant, none
-	if classificationResult, err := api.dao.ClassifyCoursePaths(c.Context(), normalizedPaths); err != nil {
+	if classificationResult, err := api.dao.ClassifyCoursePaths(c.UserContext(), normalizedPaths); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "error classifying paths - " + err.Error(),
 		})
@@ -114,7 +114,7 @@ func (api fsAPI) path(c *fiber.Ctx) error {
 	}
 
 	// Include path classification; ancestor, course, descendant, none
-	if classificationResult, err := api.dao.ClassifyCoursePaths(c.Context(), paths); err != nil {
+	if classificationResult, err := api.dao.ClassifyCoursePaths(c.UserContext(), paths); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "error classifying paths - " + err.Error(),
 		})
