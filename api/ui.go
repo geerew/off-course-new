@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -24,7 +23,6 @@ func (r *Router) bindUi() {
 				return c.Next()
 			}
 
-			fmt.Println("Proxying to UI", c.OriginalURL())
 			uri := "http://localhost:5173" + c.OriginalURL()
 			return proxy.Do(c, uri)
 		})
