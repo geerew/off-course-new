@@ -36,7 +36,6 @@ func setup(tb testing.TB) (*DAO, context.Context) {
 
 	// DB
 	dbManager, err := database.NewSqliteDBManager(&database.DatabaseConfig{
-		IsDebug:  false,
 		DataDir:  "./oc_data",
 		AppFs:    appFs.NewAppFs(afero.NewMemMapFs(), logger),
 		InMemory: true,
