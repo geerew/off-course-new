@@ -14,3 +14,4 @@ test_data/*
 # Build
 dist/
 off-course
+tmp/
