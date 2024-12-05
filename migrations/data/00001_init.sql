@@ -108,17 +108,10 @@ CREATE TABLE params (
     updated_at   TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'))
 );
 
--- Insert initial parameter to track admin creation
-INSERT INTO params (id, key, value) VALUES (
-    'wV0418r0Rr',
-    'hasAdmin',
-    'false'
-);
-
 --- User information
 CREATE TABLE users (
     id            TEXT PRIMARY KEY NOT NULL,
-    username      TEXT UNIQUE NOT NULL,
+    username      TEXT UNIQUE NOT NULL COLLATE NOCASE,
     password_hash TEXT NOT NULL,
     role          TEXT NOT NULL CHECK(role IN ('admin', 'user')),
     created_at    TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
