@@ -123,6 +123,7 @@ func (db *SqliteDb) RunInTransaction(ctx context.Context, txFunc func(context.Co
 		db: db,
 	}
 
+	// Set the querier in the context to use the transaction
 	txCtx := WithQuerier(ctx, tx)
 
 	defer func() {
@@ -136,8 +137,7 @@ func (db *SqliteDb) RunInTransaction(ctx context.Context, txFunc func(context.Co
 		}
 	}()
 
-	err = txFunc(txCtx)
-	return err
+	return txFunc(txCtx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -197,6 +197,7 @@ func (db *SqliteDb) migrate() error {
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func (db *SqliteDb) log(query string, args ...any) {
 	if db.config.Logger != nil {
 		attrs := make([]any, 0, len(args))

@@ -114,7 +114,6 @@ type DatabaseManager struct {
 
 // DatabaseConfig defines the configuration for a database
 type DatabaseConfig struct {
-	IsDebug    bool
 	DataDir    string
 	DSN        string
 	MigrateDir string
@@ -130,7 +129,6 @@ func NewSqliteDBManager(config *DatabaseConfig) (*DatabaseManager, error) {
 	manager := &DatabaseManager{}
 
 	dataConfig := &DatabaseConfig{
-		IsDebug:    config.IsDebug,
 		DataDir:    config.DataDir,
 		DSN:        "data.db",
 		MigrateDir: "data",
@@ -146,7 +144,6 @@ func NewSqliteDBManager(config *DatabaseConfig) (*DatabaseManager, error) {
 	}
 
 	logsConfig := &DatabaseConfig{
-		IsDebug:    config.IsDebug,
 		DataDir:    config.DataDir,
 		DSN:        "logs.db",
 		MigrateDir: "logs",
