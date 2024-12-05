@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -16,6 +15,7 @@ import (
 	"github.com/geerew/off-course/dao"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
+	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/coursescan"
 	"github.com/geerew/off-course/utils/logger"
@@ -25,33 +25,26 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-var isProduction = !strings.HasPrefix(os.Args[0], os.TempDir())
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 func main() {
 	// Flags
-	port := flag.String("port", ":9081", "server port")
-	isDebug := flag.Bool("debug", false, "verbose")
+	http := flag.String("http", "127.0.0.1:9081", "TCP address to listen for the HTTP server")
+	devMode := flag.Bool("dev", false, "development mode")
 	flag.Parse()
 
 	ctx := context.Background()
 
-	// Create app filesystem
 	appFs := appFs.NewAppFs(afero.NewOsFs(), nil)
 
-	// Create the database manager, which will create the data/logs databases
 	dbManager, err := database.NewSqliteDBManager(&database.DatabaseConfig{
-		IsDebug:  *isDebug,
 		DataDir:  "./oc_data",
 		AppFs:    appFs,
 		InMemory: false,
 	})
+
 	if err != nil {
-		log.Fatal("Failed to create database manager", err)
+		log.Fatal("Failed to create database manager:", err)
 	}
 
-	// Logger
 	logger, loggerDone, err := logger.InitLogger(&logger.BatchOptions{
 		BatchSize:   200,
 		BeforeAddFn: loggerBeforeAddFn(dbManager.LogsDb),
@@ -59,44 +52,42 @@ func main() {
 	})
 
 	if err != nil {
-		log.Fatal("Failed to initialize logger", err)
+		log.Fatal("Failed to initialize logger:", err)
 	}
+	defer close(loggerDone)
 
-	// Set loggers
+	// Set DB loggers
 	dbManager.DataDb.SetLogger(logger)
 	appFs.SetLogger(logger)
 
-	// Course scanner
 	courseScan := coursescan.NewCourseScan(&coursescan.CourseScanConfig{
 		Db:     dbManager.DataDb,
 		AppFs:  appFs,
 		Logger: logger,
 	})
 
-	// Start the worker (pass in the func that will process the job)
+	// Start the course scan worker
 	go courseScan.Worker(ctx, coursescan.Processor, nil)
 
-	// Initialize cron jobs
 	cron.InitCron(&cron.CronConfig{
 		Db:     dbManager.DataDb,
 		AppFs:  appFs,
 		Logger: logger,
 	})
 
-	// Create router
 	router := api.NewRouter(&api.RouterConfig{
 		DbManager:    dbManager,
 		Logger:       logger,
 		AppFs:        appFs,
 		CourseScan:   courseScan,
-		Port:         *port,
-		IsProduction: isProduction,
+		HttpAddr:     *http,
+		IsProduction: !*devMode,
 	})
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	// Wait for interrupt signal, to gracefully shutdown
+	// Listen for shutdown signals
 	go func() {
 		defer wg.Done()
 		quit := make(chan os.Signal, 1)
@@ -108,22 +99,19 @@ func main() {
 	go func() {
 		defer wg.Done()
 		if err := router.Serve(); err != nil {
-			log.Fatal("Failed to start router", err)
+			log.Fatal("Failed to start router:", err)
 		}
 	}()
 
 	wg.Wait()
 
-	fmt.Println("\nShutting down...")
+	utils.Infof("Shutting down...")
 
 	// Delete all scans
 	_, err = dbManager.DataDb.Exec("DELETE FROM " + models.SCAN_TABLE)
 	if err != nil {
-		log.Fatal("Failed to delete scans", err)
+		utils.Errf("Failed to delete scans: %s", err)
 	}
-
-	// Close the logger, which will write any remaining logs
-	close(loggerDone)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
