@@ -34,7 +34,6 @@ func setup(t *testing.T) (*Router, context.Context) {
 	appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
 
 	dbManager, err := database.NewSqliteDBManager(&database.DatabaseConfig{
-		IsDebug:  false,
 		DataDir:  "./oc_data",
 		AppFs:    appFs,
 		InMemory: true,
@@ -55,6 +54,7 @@ func setup(t *testing.T) (*Router, context.Context) {
 		AppFs:      appFs,
 		CourseScan: courseScan,
 		Logger:     logger,
+		SkipAuth:   true,
 	}
 
 	router := NewRouter(config)
@@ -67,7 +67,7 @@ func setup(t *testing.T) (*Router, context.Context) {
 func requestHelper(t *testing.T, router *Router, req *http.Request) (int, []byte, error) {
 	t.Helper()
 
-	resp, err := router.router.Test(req)
+	resp, err := router.Router.Test(req)
 	if err != nil {
 		return -1, nil, err
 	}
