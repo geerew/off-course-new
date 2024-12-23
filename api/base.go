@@ -1,15 +1,21 @@
 package api
 
 import (
+	"context"
 	"log/slog"
-	"net/url"
-	"strings"
+	"net"
 
+	"sync/atomic"
+
+	"github.com/Masterminds/squirrel"
+	"github.com/fatih/color"
 	"github.com/geerew/off-course/dao"
 	"github.com/geerew/off-course/database"
+	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/coursescan"
+	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -17,11 +23,12 @@ import (
 
 // Router defines a router
 type Router struct {
-	router *fiber.App
-	api    fiber.Router
-	config *RouterConfig
-	dao    *dao.DAO
-	logDao *dao.DAO
+	Router       *fiber.App
+	api          fiber.Router
+	config       *RouterConfig
+	dao          *dao.DAO
+	logDao       *dao.DAO
+	bootstrapped int32
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -32,8 +39,10 @@ type RouterConfig struct {
 	Logger       *slog.Logger
 	AppFs        *appFs.AppFs
 	CourseScan   *coursescan.CourseScan
-	Port         string
+	HttpAddr     string
 	IsProduction bool
+	SkipAuth     bool
+	JwtSecret    string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -49,14 +58,25 @@ func NewRouter(config *RouterConfig) *Router {
 	r.initRouter()
 
 	return r
-
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Serve serves the API and UI
-func (router *Router) Serve() error {
-	return router.router.Listen(router.config.Port)
+func (r *Router) Serve() error {
+	r.initBootstrap()
+
+	ln, err := net.Listen("tcp", r.config.HttpAddr)
+	if err != nil {
+		return err
+	}
+
+	utils.Infof(
+		"%s %s",
+		"Server started at", color.CyanString("http://%s\n", r.config.HttpAddr),
+	)
+
+	return r.Router.Listener(ln)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -65,17 +85,24 @@ func (router *Router) Serve() error {
 
 // initRouter initializes the router (API and UI)
 func (r *Router) initRouter() {
-	r.router = fiber.New()
+	r.Router = fiber.New(fiber.Config{
+		DisableStartupMessage: true,
+	})
 
 	// Middleware
-	r.router.Use(loggerMiddleware(r.config))
-	r.router.Use(corsMiddleWare())
+	r.Router.Use(loggerMiddleware(r.config))
+	r.Router.Use(corsMiddleWare())
+	if !r.config.SkipAuth {
+		r.Router.Use(bootstrapMiddleware(r))
+		r.Router.Use(authMiddleware(r))
+	}
 
 	// UI
 	r.bindUi()
 
 	// API
-	r.api = r.router.Group("/api")
+	r.api = r.Router.Group("/api")
+	r.initAuthRoutes()
 	r.initFsRoutes()
 	r.initCourseRoutes()
 	r.initScanRoutes()
@@ -85,26 +112,34 @@ func (r *Router) initRouter() {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// errorResponse is a helper method to return an error response
-func errorResponse(c *fiber.Ctx, status int, message string, err error) error {
-	resp := fiber.Map{
-		"message": message,
+// initBootstrap determines if the application is bootstrapped by checking if there is
+// an admin user
+func (r *Router) initBootstrap() {
+	options := &database.Options{
+		Where: squirrel.Eq{models.USER_TABLE + "." + models.USER_ROLE: types.UserRoleAdmin},
 	}
-
+	count, err := r.dao.Count(context.Background(), &models.User{}, options)
 	if err != nil {
-		resp["error"] = err.Error()
+		utils.Errf("Failed to count users: %s\n", err.Error())
 	}
 
-	return c.Status(status).JSON(resp)
+	if count != 0 {
+		atomic.StoreInt32(&r.bootstrapped, 1)
+	} else {
+		atomic.StoreInt32(&r.bootstrapped, 0)
+	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func filter(s string) ([]string, error) {
-	unescaped, err := url.QueryUnescape(s)
-	if err != nil {
-		return nil, err
-	}
+// setBootstrapped sets the application as bootstrapped
+func (r *Router) setBootstrapped() {
+	atomic.StoreInt32(&r.bootstrapped, 1)
+}
 
-	return utils.Map(strings.Split(unescaped, ","), strings.TrimSpace), nil
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// isBootstrapped checks if the application is bootstrapped
+func (r *Router) isBootstrapped() bool {
+	return atomic.LoadInt32(&r.bootstrapped) == 1
 }
