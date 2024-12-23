@@ -17,6 +17,7 @@ import (
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/appFs"
+	"github.com/geerew/off-course/utils/auth"
 	"github.com/geerew/off-course/utils/coursescan"
 	"github.com/geerew/off-course/utils/logger"
 	"github.com/geerew/off-course/utils/security"
@@ -75,6 +76,12 @@ func main() {
 		Logger: logger,
 	})
 
+	jwtSecret, err := auth.GetJwtSecret(dbManager.DataDb)
+	if err != nil {
+		utils.Errf("Failed to get JWT secret: %s", err)
+		os.Exit(1)
+	}
+
 	router := api.NewRouter(&api.RouterConfig{
 		DbManager:    dbManager,
 		Logger:       logger,
@@ -82,6 +89,7 @@ func main() {
 		CourseScan:   courseScan,
 		HttpAddr:     *http,
 		IsProduction: !*devMode,
+		JwtSecret:    jwtSecret,
 	})
 
 	var wg sync.WaitGroup
@@ -99,7 +107,8 @@ func main() {
 	go func() {
 		defer wg.Done()
 		if err := router.Serve(); err != nil {
-			log.Fatal("Failed to start router:", err)
+			utils.Errf("Failed to start router:: %s", err)
+			os.Exit(1)
 		}
 	}()
 
