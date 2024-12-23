@@ -24,7 +24,15 @@ func (r *Router) bindUi() {
 			}
 
 			uri := "http://localhost:5173" + c.OriginalURL()
-			return proxy.Do(c, uri)
+
+			var err error
+			err = proxy.Do(c, uri)
+			if err != nil {
+				// Sometimes svelte closes the  connection before returning the first response
+				// byte. This just attempts the proxy again
+				err = proxy.Do(c, uri)
+			}
+			return err
 		})
 	}
 }

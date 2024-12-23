@@ -7,7 +7,6 @@ import (
 	"github.com/geerew/off-course/dao"
 	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/appFs"
-	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -17,14 +16,6 @@ type fsAPI struct {
 	logger *slog.Logger
 	appFs  *appFs.AppFs
 	dao    *dao.DAO
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-type fileInfo struct {
-	Title          string                   `json:"title"`
-	Path           string                   `json:"path"`
-	Classification types.PathClassification `json:"classification"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -56,12 +47,12 @@ func (api fsAPI) fileSystem(c *fiber.Ctx) error {
 		})
 	}
 
-	directories := make([]*fileInfo, 0)
+	directories := make([]*fileInfoResponse, 0)
 
 	normalizedPaths := make([]string, len(drives))
 	for _, d := range drives {
 		normalizedPath := utils.NormalizeWindowsDrive(d)
-		directories = append(directories, &fileInfo{Title: d, Path: normalizedPath})
+		directories = append(directories, &fileInfoResponse{Title: d, Path: normalizedPath})
 		normalizedPaths = append(normalizedPaths, normalizedPath)
 	}
 
@@ -79,7 +70,7 @@ func (api fsAPI) fileSystem(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(&fileSystemResponse{
 		Count:       len(drives),
 		Directories: directories,
-		Files:       []*fileInfo{},
+		Files:       []*fileInfoResponse{},
 	})
 }
 
@@ -94,8 +85,8 @@ func (api fsAPI) path(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	directories := make([]*fileInfo, 0)
-	files := make([]*fileInfo, 0)
+	directories := make([]*fileInfoResponse, 0)
+	files := make([]*fileInfoResponse, 0)
 
 	// Get a string slice of items in a directory
 	items, err := api.appFs.ReadDir(path, true)
@@ -110,7 +101,7 @@ func (api fsAPI) path(c *fiber.Ctx) error {
 		path := utils.NormalizeWindowsDrive(filepath.Join(path, directory.Name()))
 		paths = append(paths, path)
 
-		directories = append(directories, &fileInfo{Title: directory.Name(), Path: path})
+		directories = append(directories, &fileInfoResponse{Title: directory.Name(), Path: path})
 	}
 
 	// Include path classification; ancestor, course, descendant, none
@@ -125,7 +116,7 @@ func (api fsAPI) path(c *fiber.Ctx) error {
 	}
 
 	for _, file := range items.Files {
-		files = append(files, &fileInfo{Title: file.Name(), Path: filepath.Join(path, file.Name())})
+		files = append(files, &fileInfoResponse{Title: file.Name(), Path: filepath.Join(path, file.Name())})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(&fileSystemResponse{
