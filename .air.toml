@@ -3,7 +3,7 @@ tmp_dir = "tmp"
 
 [build]
 cmd = "go build -o ./tmp/main ."
-bin = "./tmp/main -dev"
+bin = "./tmp/main serve -d"
 delay = 1000
 exclude_dir = ["assets", "ui"]
 include_ext = ["go"]

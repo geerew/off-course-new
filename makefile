@@ -24,8 +24,6 @@ audit:
 	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 	go test -race -buildvcs -vet=off ./...
 
-
-
 # ==================================================================================== #
 # DEVELOPMENT
 # ==================================================================================== #
@@ -35,7 +33,7 @@ audit:
 test:
 	go test -v ./...
 
-## test: run all tests with race detector
+## race_test: run all tests with race detector
 .PHONY: race_test
 race_test:
 	go test -v -race -buildvcs ./...
@@ -45,11 +43,6 @@ race_test:
 test/cover:
 	go test -v -race -buildvcs -coverprofile=/tmp/coverage.out ./...
 	go tool cover -html=/tmp/coverage.out
-
-## dev: run in dev
-.PHONY: dev
-dev:
-	go run main.go
 
 # ==================================================================================== #
 # BUILD & RELEASE
