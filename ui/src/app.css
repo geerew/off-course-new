@@ -1,19 +1,45 @@
 @import 'tailwindcss';
+@plugin "tailwindcss-animate";
 
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
+@theme {
+	--font-logo: 'Source Sans Pro', 'sans-serif';
 
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
-@layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
-  }
+	--color-background: hsl(255, 17%, 14%);
+	--color-background-alt: hsl(255, 17%, 17%);
+
+	--color-foreground: hsl(360, 0%, 90%);
+	--color-foreground-alt: hsl(360, 0%, 80%);
+
+	--color-primary-background: hsl(270, 73%, 35%);
+	--color-primary-foreground: hsl(360, 0%, 90%);
+
+	--color-secondary-background: hsl(23, 100%, 33%);
+	--color-secondary-foreground: hsl(360, 0%, 90%);
+
+	--color-muted-background: hsl(254, 17%, 25%);
+	--color-muted-foreground: hsl(249, 6%, 52%);
+
+	--color-error-background: hsl(5, 100%, 21%);
+	--color-error-foreground: hsl(355.7, 100%, 97.3%);
+
+	--color-border: var(--color-gray-400);
+
+	--color-ring: var(--color-blue-400);
+}
+
+@base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentColor);
+	}
+}
+
+@layer components {
+	:is(a, button, input, textarea, summary) {
+		@apply outline-none;
+		@apply focus-visible:ring-ring focus-visible:ring-1;
+	}
 }
