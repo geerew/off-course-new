@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -8,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/dao"
@@ -37,6 +35,7 @@ var addCmd = &cobra.Command{
 
 		// Ensure the password is not empty
 		password, _ := cmd.Flags().GetString("password")
+		password = strings.TrimSpace(password)
 		if password == "" {
 			fmt.Println("ERR - Password cannot be empty")
 			os.Exit(1)
@@ -44,6 +43,7 @@ var addCmd = &cobra.Command{
 
 		// Ensure the username is not empty
 		username, _ := cmd.Flags().GetString("user")
+		username = strings.TrimSpace(username)
 		if username == "" {
 			fmt.Println("ERR - Username cannot be empty")
 			os.Exit(1)

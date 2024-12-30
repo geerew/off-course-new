@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -8,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/dao"
@@ -43,6 +41,7 @@ var deleteCmd = &cobra.Command{
 		dao := dao.NewDAO(dbManager.DataDb)
 
 		username, _ := cmd.Flags().GetString("user")
+		username = strings.TrimSpace(username)
 		if username == "" {
 			fmt.Println("ERR - Username cannot be empty")
 			os.Exit(1)
