@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { auth } from '$lib/auth.svelte';
-	import { Error, Spinner } from '$lib/components/';
+	import { Error, Header, Spinner } from '$lib/components/';
 
 	let { children } = $props();
 
@@ -17,6 +17,7 @@
 	</div>
 {:else}
 	<div class="px-4 lg:px-8">
+		<Header />
 		{@render children()}
 	</div>
 {/if}

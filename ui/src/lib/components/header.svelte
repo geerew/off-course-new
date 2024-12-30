@@ -2,32 +2,36 @@
 	import { auth } from '$lib/auth.svelte';
 	import { Button, DropdownMenu, Separator } from 'bits-ui';
 	import { Logo } from '.';
+
+	function logout() {
+		auth.logout();
+	}
 </script>
 
-{#if auth.user !== null}
-	<header>
-		<div class="flex items-center justify-between py-6" aria-label="Global">
-			<!-- Logo -->
-			<div class="flex flex-1">
-				<a href="/" class="-m-1.5 p-1.5">
-					<Logo size="small" />
-				</a>
-			</div>
+<header>
+	<div class="flex items-center justify-between py-6" aria-label="Global">
+		<!-- Logo -->
+		<div class="flex flex-1">
+			<a href="/" class="-m-1.5 p-1.5">
+				<Logo size="small" />
+			</a>
+		</div>
 
-			<!-- Menu -->
-			<nav class="flex gap-x-12">
-				<a href="/courses" class="text-foreground-alt hover:text-foreground leading-6 duration-200">
-					Courses
-				</a>
-			</nav>
+		<!-- Menu -->
+		<nav class="flex gap-x-12">
+			<a href="/courses" class="text-foreground-alt hover:text-foreground leading-6 duration-200">
+				Courses
+			</a>
+		</nav>
 
+		{#if auth.user !== null}
 			<!-- Profile -->
 			<div class="flex flex-1 justify-end">
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger
 						class="bg-primary-background text-foreground relative flex size-10 cursor-pointer items-center justify-center rounded-full font-semibold"
 					>
-						{auth.user.username.charAt(0).toUpperCase()}
+						{auth.userLetter}
 					</DropdownMenu.Trigger>
 
 					<DropdownMenu.Portal>
@@ -42,7 +46,7 @@
 									<span
 										class="bg-primary-background text-foreground-alt relative flex size-10 items-center justify-center rounded-full font-semibold"
 									>
-										{auth.user.username.charAt(0).toUpperCase()}
+										{auth.userLetter}
 									</span>
 									<span class="text-base font-semibold tracking-wide">
 										{auth.user.username}
@@ -138,7 +142,7 @@
 
 									<!-- Logout -->
 									<Button.Root
-										onclick={auth.logout}
+										onclick={logout}
 										class="hover:bg-error-background hover:text-error-foreground flex cursor-pointer flex-row items-center justify-between rounded-lg p-1.5 duration-200"
 									>
 										<div class="flex flex-row items-center gap-3">
@@ -181,6 +185,6 @@
 					</DropdownMenu.Portal>
 				</DropdownMenu.Root>
 			</div>
-		</div>
-	</header>
-{/if}
+		{/if}
+	</div>
+</header>

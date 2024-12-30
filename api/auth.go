@@ -47,7 +47,7 @@ func (r *Router) initAuthRoutes() {
 	authGroup.Post("/register", authAPI.register)
 	authGroup.Post("/bootstrap", authAPI.bootstrap)
 	authGroup.Post("/login", authAPI.login)
-	authGroup.Get("/logout", authAPI.logout)
+	authGroup.Post("/logout", authAPI.logout)
 	authGroup.Get("/me", authAPI.me)
 }
 
