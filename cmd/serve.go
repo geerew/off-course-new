@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -30,7 +31,6 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Serve the application",
 	Run: func(cmd *cobra.Command, args []string) {
-
 		ctx := context.Background()
 
 		appFs := appFs.NewAppFs(afero.NewOsFs(), nil)
@@ -42,17 +42,19 @@ var serveCmd = &cobra.Command{
 		})
 
 		if err != nil {
-			log.Fatal("Failed to create database manager:", err)
+			fmt.Printf("ERR - Failed to create database manager: %s", err)
+			os.Exit(1)
 		}
 
 		logger, loggerDone, err := logger.InitLogger(&logger.BatchOptions{
 			BatchSize:   200,
-			BeforeAddFn: loggerBeforeAddFn(dbManager.LogsDb),
-			WriteFn:     loggerWriteFn(ctx, dbManager.LogsDb),
+			BeforeAddFn: loggerBeforeAddFn(),
+			WriteFn:     loggerWriteFn(dbManager.LogsDb),
 		})
 
 		if err != nil {
-			log.Fatal("Failed to initialize logger:", err)
+			utils.Errf("Failed to initialize logger: %s", err)
+			os.Exit(1)
 		}
 		defer close(loggerDone)
 
@@ -137,7 +139,7 @@ func init() {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // loggerBeforeAddFunc is a logger.BeforeAddFn
-func loggerBeforeAddFn(db database.Database) logger.BeforeAddFn {
+func loggerBeforeAddFn() logger.BeforeAddFn {
 	return func(ctx context.Context, log *logger.Log) bool {
 		// Skip calls to the logs API
 		if strings.HasPrefix(log.Message, "GET /api/logs") {
@@ -160,7 +162,7 @@ func loggerBeforeAddFn(db database.Database) logger.BeforeAddFn {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // loggerWriteFn returns a logger.WriteFn that writes logs to the database
-func loggerWriteFn(ctx context.Context, db database.Database) logger.WriteFn {
+func loggerWriteFn(db database.Database) logger.WriteFn {
 	return func(ctx context.Context, logs []*logger.Log) error {
 		logDao := dao.NewDAO(db)
 

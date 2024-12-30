@@ -8,6 +8,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/mattn/go-sqlite3 v1.14.22
+	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pressly/goose/v3 v3.19.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shirou/gopsutil/v3 v3.24.3
