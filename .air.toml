@@ -5,6 +5,6 @@ tmp_dir = "tmp"
 cmd = "go build -o ./tmp/main ."
 bin = "./tmp/main serve -d"
 delay = 1000
-exclude_dir = ["assets", "ui"]
+exclude_dir = ["assets", "ui", "ui_old", "cmd"]
 include_ext = ["go"]
 exclude_regex = ["_test\\.go"]
