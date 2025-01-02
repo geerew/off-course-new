@@ -2,6 +2,7 @@
 	import { auth } from '$lib/auth.svelte';
 	import { Button, DropdownMenu, Separator } from 'bits-ui';
 	import { Logo } from '.';
+	import { RightChevron } from './icons';
 
 	function logout() {
 		auth.logout();
@@ -55,7 +56,7 @@
 
 								<Separator.Root class="bg-muted-background my-2 h-px w-full shrink-0" />
 
-								<div class="flex flex-col gap-2.5">
+								<div class="flex flex-col gap-2">
 									<!-- Profile -->
 									<DropdownMenu.Item>
 										<Button.Root
@@ -69,7 +70,7 @@
 													viewBox="0 0 24 24"
 													stroke-width="1.5"
 													stroke="currentColor"
-													class="size-5"
+													class="size-4"
 												>
 													<path
 														stroke-linecap="round"
@@ -81,63 +82,39 @@
 												<span>Profile</span>
 											</div>
 
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="size-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="m8.25 4.5 7.5 7.5-7.5 7.5"
-												/>
-											</svg>
+											<RightChevron class="size-4" />
 										</Button.Root>
 									</DropdownMenu.Item>
 
 									<!-- Admin -->
-									{#if auth?.user?.role === 'admin'}
-										<Button.Root
-											href="/admin"
-											class="hover:bg-muted-background hover:text-foreground flex cursor-pointer flex-row items-center justify-between rounded-lg p-1.5 duration-200"
-										>
-											<div class="flex flex-row items-center gap-3">
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="1.5"
-													stroke="currentColor"
-													class="size-5"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
-													/>
-												</svg>
-
-												<span>Admin</span>
-											</div>
-
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="size-4"
+									{#if auth.user.role === 'admin'}
+										<DropdownMenu.Item>
+											<Button.Root
+												href="/admin"
+												class="hover:bg-muted-background hover:text-foreground flex cursor-pointer flex-row items-center justify-between rounded-lg p-1.5 duration-200"
 											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="m8.25 4.5 7.5 7.5-7.5 7.5"
-												/>
-											</svg>
-										</Button.Root>
+												<div class="flex flex-row items-center gap-3">
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke-width="1.5"
+														stroke="currentColor"
+														class="size-5"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+														/>
+													</svg>
+
+													<span>Admin</span>
+												</div>
+
+												<RightChevron class="size-4" />
+											</Button.Root>
+										</DropdownMenu.Item>
 									{/if}
 
 									<!-- Logout -->
@@ -164,20 +141,7 @@
 											<span>Logout</span>
 										</div>
 
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="1.5"
-											stroke="currentColor"
-											class="size-4"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="m8.25 4.5 7.5 7.5-7.5 7.5"
-											/>
-										</svg>
+										<RightChevron class="size-4" />
 									</Button.Root>
 								</div>
 							</div>
