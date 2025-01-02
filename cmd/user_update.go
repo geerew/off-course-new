@@ -11,15 +11,16 @@ import (
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
+	"github.com/geerew/off-course/utils/auth"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-var deleteCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "Delete a user",
+var updateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Update a user password",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println()
 
@@ -37,6 +38,7 @@ var deleteCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		// Get username
 		var username string
 		for {
 			username = questionPlain("Username")
@@ -55,11 +57,10 @@ var deleteCmd = &cobra.Command{
 		}
 
 		user := &models.User{}
-
 		err = dao.Get(ctx, user, options)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				errorMessage("User '%s' not found\n", username)
+				errorMessage("User '%s' not found", username)
 				return
 			}
 
@@ -67,22 +68,41 @@ var deleteCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		err = dao.Delete(ctx, user, nil)
+		// Get password
+		var password string
+		for {
+			password = questionPassword("Password")
+			if password != "" {
+				break
+			}
+
+			errorMessage("Password cannot be empty")
+		}
+
+		// Confirm password
+		for {
+			pwd := questionPassword("Confirm Password")
+			if pwd == password {
+				break
+			}
+
+			errorMessage("Passwords do not match")
+		}
+
+		user.PasswordHash = auth.GeneratePassword(password)
+
+		err = dao.UpdateUser(ctx, user)
 		if err != nil {
-			errorMessage("Failed to delete user: %s", err)
+			errorMessage("Failed to update password: %s", err)
 			os.Exit(1)
 		}
 
-		successMessage("User '%s' deleted", username)
+		successMessage("Password updated for '%s'", username)
 	},
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func init() {
-	userCmd.AddCommand(deleteCmd)
-
-	// May add flags in the future to allow headless
-	// deleteCmd.Flags().StringP("user", "u", "", "Username")
-	// deleteCmd.MarkFlagRequired("username")
+	userCmd.AddCommand(updateCmd)
 }

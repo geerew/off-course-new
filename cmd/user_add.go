@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/off-course/dao"
@@ -26,40 +25,6 @@ var addCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println()
 
-		// Get the role and verify it is admin or user
-		role, _ := cmd.Flags().GetString("role")
-		if role != "admin" && role != "user" {
-			fmt.Println("ERR - Role must be 'admin' or 'user'")
-			os.Exit(1)
-		}
-
-		// Ensure the password is not empty
-		password, _ := cmd.Flags().GetString("password")
-		password = strings.TrimSpace(password)
-		if password == "" {
-			fmt.Println("ERR - Password cannot be empty")
-			os.Exit(1)
-		}
-
-		// Ensure the username is not empty
-		username, _ := cmd.Flags().GetString("user")
-		username = strings.TrimSpace(username)
-		if username == "" {
-			fmt.Println("ERR - Username cannot be empty")
-			os.Exit(1)
-		}
-
-		user := &models.User{
-			Username:     username,
-			PasswordHash: auth.GeneratePassword(password),
-		}
-
-		if role == "admin" {
-			user.Role = types.UserRoleAdmin
-		} else {
-			user.Role = types.UserRoleUser
-		}
-
 		ctx := context.Background()
 		appFs := appFs.NewAppFs(afero.NewOsFs(), nil)
 
@@ -74,30 +39,83 @@ var addCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		dao := dao.NewDAO(dbManager.DataDb)
+		var username string
+		for {
+			username = questionPlain("Username")
+			if username != "" {
+				break
+			}
 
+			errorMessage("Username cannot be empty")
+		}
+
+		var role string
+		for {
+			role = questionPlain("Role (admin/user)")
+			if role == "admin" || role == "user" {
+				break
+			}
+
+			errorMessage("Invalid role. Must be 'admin' or 'user'")
+		}
+
+		// Get password
+		var password string
+		for {
+			password = questionPassword("Password")
+			if password != "" {
+				break
+			}
+
+			errorMessage("Password cannot be empty")
+		}
+
+		// Confirm password
+		for {
+			pwd := questionPassword("Confirm Password")
+			if pwd == password {
+				break
+			}
+
+			errorMessage("Passwords do not match")
+		}
+
+		fmt.Println()
+
+		user := &models.User{
+			Username:     username,
+			PasswordHash: auth.GeneratePassword(password),
+		}
+
+		if role == "admin" {
+			user.Role = types.UserRoleAdmin
+		} else {
+			user.Role = types.UserRoleUser
+		}
+
+		dao := dao.NewDAO(dbManager.DataDb)
 		options := &database.Options{
 			Where: squirrel.Eq{models.USER_TABLE + "." + models.USER_USERNAME: username},
 		}
 
 		err = dao.Get(ctx, user, options)
 		if err != nil && err != sql.ErrNoRows {
-			fmt.Printf("ERR - Failed to look up users: %s", err)
+			errorMessage("Failed to lookup user: %s", err)
 			os.Exit(1)
 		}
 
 		if err == nil {
-			fmt.Println("ERR - Username already exists")
+			errorMessage("Username '%s' already exists", username)
 			os.Exit(1)
 		}
 
 		err = dao.CreateUser(ctx, user)
 		if err != nil {
-			fmt.Printf("ERR - Failed to create user: %s", err)
+			errorMessage("Failed to create user: %s", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("User '%s' created\n", username)
+		successMessage("User '%s' created\n", username)
 	},
 }
 
@@ -106,10 +124,11 @@ var addCmd = &cobra.Command{
 func init() {
 	userCmd.AddCommand(addCmd)
 
-	addCmd.Flags().StringP("user", "u", "", "Username")
-	addCmd.Flags().StringP("role", "r", "", "Role (must be 'admin' or 'user')")
-	addCmd.Flags().StringP("password", "p", "", "Password")
-	addCmd.MarkFlagRequired("user")
-	addCmd.MarkFlagRequired("role")
-	addCmd.MarkFlagRequired("password")
+	// May add flags in the future to allow headless
+	// 	addCmd.Flags().StringP("user", "u", "", "Username")
+	// 	addCmd.Flags().StringP("role", "r", "", "Role (must be 'admin' or 'user')")
+	// 	addCmd.Flags().StringP("password", "p", "", "Password")
+	// 	addCmd.MarkFlagRequired("user")
+	// 	addCmd.MarkFlagRequired("role")
+	// 	addCmd.MarkFlagRequired("password")
 }

@@ -40,6 +40,6 @@ func (u *User) Define(s *schema.ModelConfig) {
 
 	// Common fields
 	s.Field("Username").Column(USER_USERNAME).NotNull()
-	s.Field("PasswordHash").Column(USER_PASSWORD_HASH).NotNull()
-	s.Field("Role").Column(USER_ROLE).NotNull()
+	s.Field("PasswordHash").Column(USER_PASSWORD_HASH).NotNull().Mutable()
+	s.Field("Role").Column(USER_ROLE).NotNull().Mutable()
 }
