@@ -32,10 +32,9 @@ jobs:
         with:
           version: 9.4.0
           run_install: true
-      - uses: pnpm/action-setup@v4.0.0
+      - uses: actions/setup-node@v4.0.3
         with:
-          version: 9.4.0
-          run_install: true
+          node-version: 20.15.0
       - name: Build UI
         working-directory: ./ui
         run: pnpm run build
