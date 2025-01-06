@@ -9,7 +9,6 @@ import (
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/types"
-	_ "modernc.org/sqlite"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -120,45 +119,4 @@ type DatabaseConfig struct {
 	AppFs      *appFs.AppFs
 	InMemory   bool
 	Logger     *slog.Logger
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// NewSqliteDBManager returns a new DatabaseManager
-func NewSqliteDBManager(config *DatabaseConfig) (*DatabaseManager, error) {
-	manager := &DatabaseManager{}
-
-	dataConfig := &DatabaseConfig{
-		DataDir:    config.DataDir,
-		DSN:        "data.db",
-		MigrateDir: "data",
-		AppFs:      config.AppFs,
-		InMemory:   config.InMemory,
-		Logger:     config.Logger,
-	}
-
-	if dataDb, err := NewSqliteDB(dataConfig); err != nil {
-		return nil, err
-	} else {
-		manager.DataDb = dataDb
-	}
-
-	logsConfig := &DatabaseConfig{
-		DataDir:    config.DataDir,
-		DSN:        "logs.db",
-		MigrateDir: "logs",
-		AppFs:      config.AppFs,
-		InMemory:   config.InMemory,
-
-		// Never provider a logger for the logs DB as it will cause an infinite loop
-		Logger: nil,
-	}
-
-	if logsDB, err := NewSqliteDB(logsConfig); err != nil {
-		return nil, err
-	} else {
-		manager.LogsDb = logsDB
-	}
-
-	return manager, nil
 }

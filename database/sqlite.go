@@ -9,8 +9,50 @@ import (
 	"path/filepath"
 
 	"github.com/geerew/off-course/migrations"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/pressly/goose/v3"
 )
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// NewSqliteDBManager returns a new DatabaseManager
+func NewSqliteDBManager(config *DatabaseConfig) (*DatabaseManager, error) {
+	manager := &DatabaseManager{}
+
+	dataConfig := &DatabaseConfig{
+		DataDir:    config.DataDir,
+		DSN:        "data.db",
+		MigrateDir: "data",
+		AppFs:      config.AppFs,
+		InMemory:   config.InMemory,
+		Logger:     config.Logger,
+	}
+
+	if dataDb, err := NewSqliteDB(dataConfig); err != nil {
+		return nil, err
+	} else {
+		manager.DataDb = dataDb
+	}
+
+	logsConfig := &DatabaseConfig{
+		DataDir:    config.DataDir,
+		DSN:        "logs.db",
+		MigrateDir: "logs",
+		AppFs:      config.AppFs,
+		InMemory:   config.InMemory,
+
+		// Never provider a logger for the logs DB as it will cause an infinite loop
+		Logger: nil,
+	}
+
+	if logsDB, err := NewSqliteDB(logsConfig); err != nil {
+		return nil, err
+	} else {
+		manager.LogsDb = logsDB
+	}
+
+	return manager, nil
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -159,7 +201,7 @@ func (db *SqliteDb) bootstrap() error {
 		dsn = "file::memory:"
 	}
 
-	conn, err := sql.Open("sqlite", dsn)
+	conn, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return err
 	}
