@@ -49,8 +49,6 @@ var updateCmd = &cobra.Command{
 			errorMessage("Username cannot be empty")
 		}
 
-		fmt.Println()
-
 		dao := dao.NewDAO(dbManager.DataDb)
 		options := &database.Options{
 			Where: squirrel.Eq{models.USER_TABLE + "." + models.USER_USERNAME: username},
@@ -59,9 +57,11 @@ var updateCmd = &cobra.Command{
 		user := &models.User{}
 		err = dao.Get(ctx, user, options)
 		if err != nil {
+			fmt.Println()
+
 			if err == sql.ErrNoRows {
 				errorMessage("User '%s' not found", username)
-				return
+				os.Exit(1)
 			}
 
 			errorMessage("Failed to lookup user: %s", err)
@@ -88,6 +88,8 @@ var updateCmd = &cobra.Command{
 
 			errorMessage("Passwords do not match")
 		}
+
+		fmt.Println()
 
 		user.PasswordHash = auth.GeneratePassword(password)
 

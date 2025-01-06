@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net"
+	"time"
 
 	"sync/atomic"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/geerew/off-course/utils/coursescan"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/session"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -29,6 +31,7 @@ type Router struct {
 	dao          *dao.DAO
 	logDao       *dao.DAO
 	bootstrapped int32
+	sessionStore *session.Store
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,7 +45,6 @@ type RouterConfig struct {
 	HttpAddr     string
 	IsProduction bool
 	SkipAuth     bool
-	JwtSecret    string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -54,6 +56,12 @@ func NewRouter(config *RouterConfig) *Router {
 		dao:    dao.NewDAO(config.DbManager.DataDb),
 		logDao: dao.NewDAO(config.DbManager.LogsDb),
 	}
+
+	r.sessionStore = session.New(session.Config{
+		KeyLookup:      "cookie:session",
+		Expiration:     7 * (24 * time.Hour),
+		CookieHTTPOnly: true,
+	})
 
 	r.initRouter()
 

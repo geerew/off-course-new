@@ -17,7 +17,6 @@ import (
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/appFs"
-	"github.com/geerew/off-course/utils/auth"
 	"github.com/geerew/off-course/utils/coursescan"
 	"github.com/geerew/off-course/utils/logger"
 	"github.com/geerew/off-course/utils/security"
@@ -77,12 +76,6 @@ var serveCmd = &cobra.Command{
 			Logger: logger,
 		})
 
-		jwtSecret, err := auth.GetJwtSecret(dbManager.DataDb)
-		if err != nil {
-			utils.Errf("Failed to get JWT secret: %s", err)
-			os.Exit(1)
-		}
-
 		httpAddr, _ := cmd.Flags().GetString("http")
 		isDev, _ := cmd.Flags().GetBool("dev")
 
@@ -93,7 +86,6 @@ var serveCmd = &cobra.Command{
 			CourseScan:   courseScan,
 			HttpAddr:     httpAddr,
 			IsProduction: !isDev,
-			JwtSecret:    jwtSecret,
 		})
 
 		var wg sync.WaitGroup

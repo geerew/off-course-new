@@ -6,12 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/geerew/off-course/utils"
-	"github.com/geerew/off-course/utils/auth"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -132,24 +129,29 @@ func bootstrapMiddleware(r *Router) fiber.Handler {
 // authMiddleware authenticates the request
 func authMiddleware(r *Router) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		if r.isDevUIPath(c) || r.isFavicon(c) {
-			return c.Next()
-		}
-
 		// When bootstrapping, ignore auth entirely. All invalid requests will be
 		// handled by the bootstrap middleware
 		if bootstrapping, ok := c.Locals("bootstrapping").(bool); ok && bootstrapping {
 			return c.Next()
 		}
 
-		// Always allow logout
+		if r.isDevUIPath(c) || r.isFavicon(c) {
+			return c.Next()
+		}
+
+		// API - Always allow logout
 		if strings.HasPrefix(c.OriginalURL(), "/api/auth/logout") {
 			return c.Next()
 		}
 
-		access_token := c.Cookies(cookie_access_token)
-		if access_token == "" {
-			// API check
+		// Get the session
+		session, err := r.sessionStore.Get(c)
+		if err != nil {
+			return c.SendStatus(fiber.StatusInternalServerError)
+		}
+
+		if session.Fresh() {
+			// API - Only allow login and register
 			if strings.HasPrefix(c.OriginalURL(), "/api") {
 				if strings.HasPrefix(c.OriginalURL(), "/api/auth/login") ||
 					strings.HasPrefix(c.OriginalURL(), "/api/auth/register") {
@@ -159,53 +161,33 @@ func authMiddleware(r *Router) fiber.Handler {
 				}
 			}
 
-			// UI check
+			// UI - Only allow login and register
 			if strings.HasPrefix(c.OriginalURL(), "/auth/login") || strings.HasPrefix(c.OriginalURL(), "/auth/register") {
 				return c.Next()
-			} else {
-				return c.Redirect("/auth/login/")
 			}
+
+			return c.Redirect("/auth/login/")
 		}
 
-		// Validate the token
-		token, err := auth.ParseToken(r.config.JwtSecret, access_token)
-		if err != nil {
-			utils.Errf("Failed to validate claim: %s\n", err.Error())
-			return c.SendStatus(fiber.StatusUnauthorized)
-		}
-
-		// If the claim is not valid, redirect to login
-		if !token.Valid {
-			return c.SendStatus(fiber.StatusUnauthorized)
-		}
-
-		// UI - If they are authenticated but trying to hit /auth/login or /auth/register,
-		// redirect to /
-		if c.OriginalURL() == "/auth/login/" || c.OriginalURL() == "/auth/register/" {
+		// UI - Redirect auth requests to /
+		if strings.HasPrefix(c.OriginalURL(), "/auth/") {
 			return c.Redirect("/")
 		}
 
-		// If they are authenticated but trying to hit /api/auth/..., return 200
+		// API - Return 200 for all auth requests except /me
 		if strings.HasPrefix(c.OriginalURL(), "/api/auth/") && !strings.HasPrefix(c.OriginalURL(), "/api/auth/me") {
 			return c.SendStatus(fiber.StatusOK)
 		}
 
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
+		// Get the user ID and role from the session and set for downstream handlers
+		userId := session.Get("id").(string)
+		role := session.Get("role").(string)
+		if userId == "" || role == "" {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
 
-		if role, ok := claims["role"].(string); !ok {
-			return c.SendStatus(fiber.StatusUnauthorized)
-		} else {
-			c.Locals("user.role", role)
-		}
-
-		if id, ok := claims["sub"].(string); !ok {
-			return c.SendStatus(fiber.StatusUnauthorized)
-		} else {
-			c.Locals("user.id", id)
-		}
+		c.Locals("user.id", userId)
+		c.Locals("user.role", role)
 
 		return c.Next()
 	}

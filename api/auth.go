@@ -1,16 +1,12 @@
 package api
 
 import (
-	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/geerew/off-course/dao"
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/auth"
-	"github.com/geerew/off-course/utils/security"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 )
@@ -18,29 +14,14 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type authAPI struct {
-	logger    *slog.Logger
-	dao       *dao.DAO
-	jwtSecret string
-	r         *Router
+	r *Router
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-var (
-	cookie_access_token  = "access_token"
-	cookie_refresh_token = "refresh_token"
-)
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // initFsRoutes initializes the filesystem routes
 func (r *Router) initAuthRoutes() {
-	authAPI := authAPI{
-		logger:    r.config.Logger,
-		dao:       r.dao,
-		jwtSecret: r.config.JwtSecret,
-		r:         r,
-	}
+	authAPI := authAPI{r: r}
 
 	authGroup := r.api.Group("/auth")
 
@@ -77,7 +58,7 @@ func (api authAPI) register(c *fiber.Ctx) error {
 		user.Role = types.UserRoleUser
 	}
 
-	err := api.dao.CreateUser(c.UserContext(), user)
+	err := api.r.dao.CreateUser(c.UserContext(), user)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "constraint failed: UNIQUE constraint failed") {
 			return errorResponse(c, fiber.StatusBadRequest, "Username already exists", nil)
@@ -86,26 +67,16 @@ func (api authAPI) register(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error creating user", err)
 	}
 
-	token, err := auth.GenerateToken(api.jwtSecret, user)
+	session, err := api.r.sessionStore.Get(c)
 	if err != nil {
-		return errorResponse(c, fiber.StatusInternalServerError, "Error generating token", err)
+		return errorResponse(c, fiber.StatusInternalServerError, "Error getting session", err)
 	}
 
-	c.Cookie(&fiber.Cookie{
-		Name:     cookie_access_token,
-		Value:    token,
-		Expires:  time.Now().Add(15 * time.Minute),
-		HTTPOnly: true,
-		SameSite: "Strict",
-	})
-
-	c.Cookie(&fiber.Cookie{
-		Name:     cookie_refresh_token,
-		Value:    security.PseudorandomString(64),
-		Expires:  time.Now().Add(24 * 7 * time.Hour),
-		HTTPOnly: true,
-		SameSite: "Strict",
-	})
+	session.Set("id", user.ID)
+	session.Set("role", user.Role.String())
+	if err := session.Save(); err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error saving session", err)
+	}
 
 	return c.SendStatus(fiber.StatusCreated)
 }
@@ -143,7 +114,7 @@ func (api authAPI) login(c *fiber.Ctx) error {
 		},
 	}
 
-	err := api.dao.Get(c.UserContext(), user, options)
+	err := api.r.dao.Get(c.UserContext(), user, options)
 	if err != nil {
 		return errorResponse(c, fiber.StatusUnauthorized, "Invalid username and/or password", nil)
 	}
@@ -152,47 +123,29 @@ func (api authAPI) login(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusUnauthorized, "Invalid username and/or password", nil)
 	}
 
-	token, err := auth.GenerateToken(api.jwtSecret, user)
+	session, err := api.r.sessionStore.Get(c)
 	if err != nil {
-		return errorResponse(c, fiber.StatusInternalServerError, "Error generating token", err)
+		return errorResponse(c, fiber.StatusInternalServerError, "Error getting session", err)
 	}
 
-	c.Cookie(&fiber.Cookie{
-		Name:     cookie_access_token,
-		Value:    token,
-		Expires:  time.Now().Add(15 * time.Minute),
-		HTTPOnly: true,
-		SameSite: "Strict",
-	})
+	session.Set("id", user.ID)
+	session.Set("role", user.Role.String())
+	if err := session.Save(); err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error saving session", err)
+	}
 
-	c.Cookie(&fiber.Cookie{
-		Name:     cookie_refresh_token,
-		Value:    security.PseudorandomString(64),
-		Expires:  time.Now().Add(24 * 7 * time.Hour),
-		HTTPOnly: true,
-		SameSite: "Strict",
-	})
-
-	return c.Status(fiber.StatusOK).JSON(&TokenResponse{Token: token})
+	return c.SendStatus(fiber.StatusOK)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func (api authAPI) logout(c *fiber.Ctx) error {
-	c.Cookie(&fiber.Cookie{
-		Name:     cookie_access_token,
-		Expires:  time.Now().Add(time.Hour * -1),
-		HTTPOnly: true,
-		SameSite: "Strict",
-	})
+	session, err := api.r.sessionStore.Get(c)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error getting session", err)
+	}
 
-	c.Cookie(&fiber.Cookie{
-		Name:     cookie_refresh_token,
-		Expires:  time.Now().Add(time.Hour * -1),
-		HTTPOnly: true,
-		SameSite: "Strict",
-	})
-
+	session.Destroy()
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
@@ -205,7 +158,7 @@ func (api authAPI) me(c *fiber.Ctx) error {
 	}
 
 	user := &models.User{Base: models.Base{ID: userId}}
-	err := api.dao.GetById(c.UserContext(), user)
+	err := api.r.dao.GetById(c.UserContext(), user)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error getting user information", err)
 	}
