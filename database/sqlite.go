@@ -90,7 +90,7 @@ func (tx *Tx) QueryRow(query string, args ...any) *sql.Row {
 
 // SqliteDb defines an sqlite database
 type SqliteDb struct {
-	DB     *sql.DB
+	conn   *sql.DB
 	config *DatabaseConfig
 }
 
@@ -115,12 +115,19 @@ func NewSqliteDB(config *DatabaseConfig) (*SqliteDb, error) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// DB returns the underlying sql.DB
+func (db *SqliteDb) DB() *sql.DB {
+	return db.conn
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Query executes a query that returns rows, typically a SELECT statement
 //
 // It implements the Database interface
 func (db *SqliteDb) Query(query string, args ...any) (*sql.Rows, error) {
 	db.log(query, args...)
-	return db.DB.Query(query, args...)
+	return db.conn.Query(query, args...)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -130,7 +137,7 @@ func (db *SqliteDb) Query(query string, args ...any) (*sql.Rows, error) {
 // It implements the Database interface
 func (db *SqliteDb) QueryRow(query string, args ...any) *sql.Row {
 	db.log(query, args...)
-	return db.DB.QueryRow(query, args...)
+	return db.conn.QueryRow(query, args...)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -140,7 +147,7 @@ func (db *SqliteDb) QueryRow(query string, args ...any) *sql.Row {
 // It implements the Database interface
 func (db *SqliteDb) Exec(query string, args ...any) (sql.Result, error) {
 	db.log(query, args...)
-	return db.DB.Exec(query, args...)
+	return db.conn.Exec(query, args...)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -155,7 +162,7 @@ func (db *SqliteDb) RunInTransaction(ctx context.Context, txFunc func(context.Co
 		return txFunc(ctx)
 	}
 
-	slqTx, err := db.DB.BeginTx(ctx, nil)
+	slqTx, err := db.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -190,7 +197,7 @@ func (db *SqliteDb) SetLogger(l *slog.Logger) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// bootstrap initializes the sqlite database connect and sets db.DB
+// bootstrap initializes the sqlite database connect and sets db.conn
 func (db *SqliteDb) bootstrap() error {
 	if err := db.config.AppFs.Fs.MkdirAll(db.config.DataDir, os.ModePerm); err != nil {
 		return err
@@ -210,7 +217,7 @@ func (db *SqliteDb) bootstrap() error {
 	conn.SetMaxIdleConns(1)
 	conn.SetMaxOpenConns(1)
 
-	db.DB = conn
+	db.conn = conn
 
 	if err := db.setPragma(); err != nil {
 		return err
@@ -231,7 +238,7 @@ func (db *SqliteDb) migrate() error {
 		return err
 	}
 
-	if err := goose.Up(db.DB, db.config.MigrateDir); err != nil {
+	if err := goose.Up(db.conn, db.config.MigrateDir); err != nil {
 		return err
 	}
 

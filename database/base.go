@@ -56,6 +56,7 @@ type (
 // Database defines the interface for a database
 type Database interface {
 	Querier
+	DB() *sql.DB
 	RunInTransaction(context.Context, func(context.Context) error) error
 	SetLogger(*slog.Logger)
 }

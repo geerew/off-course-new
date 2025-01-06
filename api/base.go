@@ -57,7 +57,10 @@ func NewRouter(config *RouterConfig) *Router {
 		logDao: dao.NewDAO(config.DbManager.LogsDb),
 	}
 
+	sessionStorage := NewSqliteStorage(config.DbManager.DataDb.DB(), "sessions")
+
 	r.sessionStore = session.New(session.Config{
+		Storage:        sessionStorage,
 		KeyLookup:      "cookie:session",
 		Expiration:     7 * (24 * time.Hour),
 		CookieHTTPOnly: true,

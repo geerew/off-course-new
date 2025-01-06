@@ -73,7 +73,6 @@ func (api authAPI) register(c *fiber.Ctx) error {
 	}
 
 	session.Set("id", user.ID)
-	session.Set("role", user.Role.String())
 	if err := session.Save(); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error saving session", err)
 	}
