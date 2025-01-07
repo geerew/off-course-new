@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { auth } from '$lib/auth.svelte';
+	import { cn } from '$lib/utils';
 	import { Button, DropdownMenu, Separator } from 'bits-ui';
 	import { Logo } from '.';
 	import { RightChevron } from './icons';
@@ -20,7 +22,14 @@
 
 		<!-- Menu -->
 		<nav class="flex gap-x-12">
-			<a href="/courses" class="text-foreground-alt hover:text-foreground leading-6 duration-200">
+			<a
+				href="/courses"
+				class={cn(
+					'text-foreground-alt hover:text-foreground rounded-lg px-2.5 py-1.5 leading-6 duration-200',
+					page.url.pathname === '/courses/' && 'text-foreground'
+				)}
+				aria-current={page.url.pathname === '/courses/'}
+			>
 				Courses
 			</a>
 		</nav>
@@ -57,7 +66,7 @@
 								<Separator.Root class="bg-muted-background my-2 h-px w-full shrink-0" />
 
 								<div class="flex flex-col gap-2">
-									<!-- Profile -->
+									<!-- Profile link -->
 									<DropdownMenu.Item>
 										<Button.Root
 											href="/profile"
@@ -70,7 +79,7 @@
 													viewBox="0 0 24 24"
 													stroke-width="1.5"
 													stroke="currentColor"
-													class="size-4"
+													class="size-5"
 												>
 													<path
 														stroke-linecap="round"
@@ -86,7 +95,7 @@
 										</Button.Root>
 									</DropdownMenu.Item>
 
-									<!-- Admin -->
+									<!-- Admin link -->
 									{#if auth.user.role === 'admin'}
 										<DropdownMenu.Item>
 											<Button.Root
@@ -117,7 +126,7 @@
 										</DropdownMenu.Item>
 									{/if}
 
-									<!-- Logout -->
+									<!-- Logout link-->
 									<Button.Root
 										onclick={logout}
 										class="hover:bg-error-background hover:text-error-foreground flex cursor-pointer flex-row items-center justify-between rounded-lg p-1.5 duration-200"
