@@ -146,6 +146,7 @@ func (api *tagsAPI) createTag(c *fiber.Ctx) error {
 	tag.ID = ""
 	err := api.dao.CreateTag(c.UserContext(), tag)
 	if err != nil {
+		fmt.Println(err)
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return errorResponse(c, fiber.StatusBadRequest, "Tag already exists", err)
 		}
@@ -180,11 +181,7 @@ func (api *tagsAPI) updateTag(c *fiber.Ctx) error {
 
 	err = api.dao.UpdateTag(c.UserContext(), tag)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return errorResponse(c, fiber.StatusBadRequest, "Invalid tag", err)
-		}
-
-		if strings.HasPrefix(err.Error(), "constraint failed") {
+		if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
 			return errorResponse(c, fiber.StatusBadRequest, "Duplicate tag", err)
 		}
 

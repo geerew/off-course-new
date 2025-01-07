@@ -339,7 +339,7 @@ func Test_Get(t *testing.T) {
 	t.Run("invalid where", func(t *testing.T) {
 		dao, ctx := setup(t)
 		err := dao.Get(ctx, &models.Course{}, &database.Options{Where: squirrel.Eq{"`": "`"}})
-		require.ErrorContains(t, err, "SQL logic error: unrecognized token")
+		require.ErrorContains(t, err, "unrecognized token")
 	})
 
 	t.Run("db error", func(t *testing.T) {

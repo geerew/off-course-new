@@ -234,7 +234,7 @@ func (api coursesAPI) createCourse(c *fiber.Ctx) error {
 	course.Available = true
 
 	if err := api.dao.CreateCourse(c.UserContext(), course); err != nil {
-		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+		if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
 			return errorResponse(c, fiber.StatusBadRequest, "A course with this path already exists", err)
 		}
 
@@ -590,7 +590,7 @@ func (api coursesAPI) createTag(c *fiber.Ctx) error {
 
 	err := api.dao.CreateCourseTag(c.UserContext(), courseTag)
 	if err != nil {
-		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+		if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
 			return errorResponse(c, fiber.StatusBadRequest, "A tag for this course already exists", err)
 		}
 

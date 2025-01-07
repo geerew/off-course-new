@@ -60,7 +60,7 @@ func (api authAPI) register(c *fiber.Ctx) error {
 
 	err := api.r.dao.CreateUser(c.UserContext(), user)
 	if err != nil {
-		if strings.HasPrefix(err.Error(), "constraint failed: UNIQUE constraint failed") {
+		if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
 			return errorResponse(c, fiber.StatusBadRequest, "Username already exists", nil)
 		}
 
