@@ -167,7 +167,9 @@
 				disabled={!usernameValid || !password || posting}
 			>
 				<span>Create account</span>
-				<RightArrow class="size-5" />
+				<RightArrow
+					class="relative left-0 size-5 transition-all duration-200 ease-in-out group-enabled:group-hover:left-1.5"
+				/>
 			</button>
 		</form>
 	</div>

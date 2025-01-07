@@ -10,8 +10,9 @@
 	--color-foreground: hsl(360, 0%, 90%);
 	--color-foreground-alt: hsl(360, 0%, 80%);
 
-	--color-primary-background: hsl(270, 73%, 35%);
-	--color-primary-foreground: hsl(360, 0%, 90%);
+	--color-primary-background: hsl(67, 60%, 50%);
+	--color-primary-background-alt: hsl(67, 45%, 45%);
+	--color-primary-foreground: hsl(240, 2%, 21%);
 
 	--color-secondary-background: hsl(23, 100%, 33%);
 	--color-secondary-foreground: hsl(360, 0%, 90%);

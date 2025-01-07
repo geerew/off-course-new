@@ -164,17 +164,21 @@
 
 			<button
 				type="submit"
-				class="bg-primary-background disabled:text-muted-foreground mt-2 flex w-full cursor-pointer flex-row place-content-center items-center gap-2 rounded-md p-2.5 hover:brightness-110 disabled:cursor-not-allowed disabled:brightness-100"
+				class="bg-primary-background text-primary-foreground disabled:bg-primary-background-alt group mt-2 flex w-full cursor-pointer flex-row place-content-center items-center gap-2 rounded-md p-2.5 disabled:cursor-not-allowed"
 				disabled={!usernameValid || !password || posting}
 			>
 				<span>Create account</span>
-				<RightArrow class="size-5" />
+				<RightArrow
+					class="relative left-0 size-5 transition-all duration-200 ease-in-out group-enabled:group-hover:left-1.5"
+				/>
 			</button>
 		</form>
 
 		<div class="text-muted-foreground text-center">
 			Already have an account?
-			<a href="/auth/login/" class="hover:text-foreground font-semibold duration-200">Login</a>
+			<a href="/auth/login/" class="hover:text-primary-background font-semibold duration-200">
+				Login
+			</a>
 		</div>
 	</div>
 </div>
