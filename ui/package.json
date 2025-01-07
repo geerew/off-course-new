@@ -24,12 +24,12 @@
 		"tailwindcss": "4.0.0-beta.8",
 		"tailwindcss-animate": "^1.0.7",
 		"typescript": "^5.0.0",
-		"valibot": "1.0.0-beta.9",
+		"valibot": "1.0.0-beta.11",
 		"vite": "^6.0.6"
 	},
 	"dependencies": {
 		"@fontsource/source-sans-pro": "^5.1.0",
-		"bits-ui": "1.0.0-next.76",
+		"bits-ui": "1.0.0-next.77",
 		"clsx": "^2.1.1",
 		"svelte-sonner": "^0.3.28",
 		"tailwind-merge": "^2.6.0"
