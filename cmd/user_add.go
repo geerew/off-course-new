@@ -49,6 +49,11 @@ var addCmd = &cobra.Command{
 			errorMessage("Username cannot be empty")
 		}
 
+		displayName := questionPlain("Display Name [" + username + "]")
+		if displayName == "" {
+			displayName = username
+		}
+
 		var role string
 		for {
 			role = questionPlain("Role (admin/user)")
@@ -84,6 +89,7 @@ var addCmd = &cobra.Command{
 
 		user := &models.User{
 			Username:     username,
+			DisplayName:  displayName,
 			PasswordHash: auth.GeneratePassword(password),
 		}
 
