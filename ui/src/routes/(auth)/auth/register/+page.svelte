@@ -121,7 +121,6 @@
 					aria-label="Toggle password visibility"
 					use:togglePasswordVisibility
 				>
-					<!--  Eye open -->
 					<svg
 						id="eye-closed"
 						xmlns="http://www.w3.org/2000/svg"
@@ -138,7 +137,6 @@
 						/>
 					</svg>
 
-					<!-- Eye closed -->
 					<svg
 						id="eye-open"
 						xmlns="http://www.w3.org/2000/svg"

@@ -59,7 +59,6 @@
 		if (response.ok) {
 			window.location.href = '/';
 		} else {
-			// TODO handle error with toast
 			const data = await response.json();
 			toast.error(data.message);
 			posting = false;
