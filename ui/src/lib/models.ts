@@ -12,11 +12,8 @@ export type UserRole = InferOutput<typeof UserRoleSchema>;
 export const UserSchema = object({
 	id: string(),
 	username: string(),
+	displayName: string(),
 	role: UserRoleSchema
 });
 
 export type User = InferOutput<typeof UserSchema>;
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
