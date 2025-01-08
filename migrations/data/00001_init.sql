@@ -123,5 +123,6 @@ CREATE TABLE users (
 CREATE TABLE sessions (
     id      TEXT PRIMARY KEY NOT NULL,
 	data    BLOB NOT NULL,
-	expires BIGINT NOT NULL
+	expires BIGINT NOT NULL,
+	user_id TEXT NOT NULL DEFAULT ''
 );

@@ -11,11 +11,10 @@ import (
 	"github.com/geerew/off-course/database"
 	"github.com/geerew/off-course/models"
 	"github.com/geerew/off-course/utils/appFs"
+	"github.com/geerew/off-course/utils/types"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
-
-// TODO: Delete all sessions when deleting a user
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -69,9 +68,40 @@ var deleteCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		if user.Role == types.UserRoleAdmin {
+			// count the number of admin users and fail if there is only one
+			adminCount, err := dao.Count(ctx, &models.User{}, &database.Options{
+				Where: squirrel.Eq{models.USER_TABLE + "." + models.USER_ROLE: types.UserRoleAdmin},
+			})
+
+			if err != nil {
+				errorMessage("Failed to count admin users: %s", err)
+				os.Exit(1)
+			}
+
+			if adminCount == 1 {
+				errorMessage("Cannot delete the last admin user\n\nIf you really want to delete this user, create another admin user first")
+				os.Exit(1)
+			}
+
+		}
+
 		err = dao.Delete(ctx, user, nil)
 		if err != nil {
 			errorMessage("Failed to delete user: %s", err)
+			os.Exit(1)
+		}
+
+		// Delete all sessions for the user
+		stmt, err := dbManager.DataDb.DB().Prepare("DELETE FROM sessions WHERE user_id = ?")
+		if err != nil {
+			errorMessage("Failed to prepare statement: %s", err)
+			os.Exit(1)
+		}
+
+		_, err = stmt.Exec(user.ID)
+		if err != nil {
+			errorMessage("Failed to delete sessions: %s", err)
 			os.Exit(1)
 		}
 

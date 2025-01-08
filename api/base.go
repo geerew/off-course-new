@@ -16,6 +16,7 @@ import (
 	"github.com/geerew/off-course/utils"
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/coursescan"
+	storage "github.com/geerew/off-course/utils/session_storage"
 	"github.com/geerew/off-course/utils/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
@@ -57,7 +58,7 @@ func NewRouter(config *RouterConfig) *Router {
 		logDao: dao.NewDAO(config.DbManager.LogsDb),
 	}
 
-	sessionStorage := NewSqliteStorage(config.DbManager.DataDb.DB(), "sessions")
+	sessionStorage := storage.NewSqlite(config.DbManager.DataDb.DB(), "sessions")
 
 	r.sessionStore = session.New(session.Config{
 		Storage:        sessionStorage,

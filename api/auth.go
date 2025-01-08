@@ -25,13 +25,12 @@ func (r *Router) initAuthRoutes() {
 
 	authGroup := r.api.Group("/auth")
 
-	authGroup.Post("/register", authAPI.register)
 	authGroup.Post("/bootstrap", authAPI.bootstrap)
+	authGroup.Post("/register", authAPI.register)
 	authGroup.Post("/login", authAPI.login)
 	authGroup.Post("/logout", authAPI.logout)
 
-	authMeGroup := authGroup.Group("/me")
-	authMeGroup.Get("/me", authAPI.me)
+	authGroup.Get("/me", authAPI.me)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -75,10 +74,24 @@ func (api authAPI) register(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error getting session", err)
 	}
 
+	// Save the session ID as it is cleared when the session is saved
+	sessionId := session.ID()
+
 	session.Set("id", user.ID)
 	session.Set("role", user.Role.String())
 	if err := session.Save(); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error saving session", err)
+	}
+
+	// Set the user_id in the session
+	stmt, err := api.r.config.DbManager.DataDb.DB().Prepare("UPDATE sessions SET user_id = ? WHERE id = ?")
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error preparing statement", err)
+	}
+
+	_, err = stmt.Exec(user.ID, sessionId)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error updating session with user ID", err)
 	}
 
 	return c.SendStatus(fiber.StatusCreated)
@@ -131,10 +144,24 @@ func (api authAPI) login(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error getting session", err)
 	}
 
+	// Save the session ID as it is cleared when the session is saved
+	sessionId := session.ID()
+
 	session.Set("id", user.ID)
 	session.Set("role", user.Role.String())
 	if err := session.Save(); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error saving session", err)
+	}
+
+	// Set the user_id in the session
+	stmt, err := api.r.config.DbManager.DataDb.DB().Prepare("UPDATE sessions SET user_id = ? WHERE id = ?")
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error preparing statement", err)
+	}
+
+	_, err = stmt.Exec(user.ID, sessionId)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error updating session with user ID", err)
 	}
 
 	return c.SendStatus(fiber.StatusOK)
