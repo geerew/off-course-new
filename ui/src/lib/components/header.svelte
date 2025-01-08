@@ -55,7 +55,7 @@
 								<!-- Name -->
 								<div class="flex flex-row items-center gap-3 p-1.5">
 									<span
-										class="bg-primary-background text-primary-foreground relative flex size-10 cursor-pointer items-center justify-center rounded-full font-semibold"
+										class="bg-primary-background text-primary-foreground relative flex size-10 items-center justify-center rounded-full font-semibold"
 									>
 										{auth.userLetter}
 									</span>
