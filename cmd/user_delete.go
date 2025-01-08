@@ -15,6 +15,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// TODO: Delete all sessions when deleting a user
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 var deleteCmd = &cobra.Command{

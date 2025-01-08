@@ -12,6 +12,7 @@ type User struct {
 	Base
 
 	Username     string
+	DisplayName  string
 	PasswordHash string
 	Role         types.UserRole
 }
@@ -21,6 +22,7 @@ type User struct {
 var (
 	USER_TABLE         = "users"
 	USER_USERNAME      = "username"
+	USER_DISPLAY_NAME  = "display_name"
 	USER_PASSWORD_HASH = "password_hash"
 	USER_ROLE          = "role"
 )
@@ -40,6 +42,7 @@ func (u *User) Define(s *schema.ModelConfig) {
 
 	// Common fields
 	s.Field("Username").Column(USER_USERNAME).NotNull()
+	s.Field("DisplayName").Column(USER_DISPLAY_NAME).NotNull().Mutable()
 	s.Field("PasswordHash").Column(USER_PASSWORD_HASH).NotNull().Mutable()
-	s.Field("Role").Column(USER_ROLE).NotNull().Mutable()
+	s.Field("Role").Column(USER_ROLE).NotNull()
 }

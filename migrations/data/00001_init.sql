@@ -112,6 +112,7 @@ CREATE TABLE params (
 CREATE TABLE users (
     id            TEXT PRIMARY KEY NOT NULL,
     username      TEXT UNIQUE NOT NULL COLLATE NOCASE,
+	display_name  TEXT NOT NULL,
     password_hash TEXT NOT NULL,
     role          TEXT NOT NULL CHECK(role IN ('admin', 'user')),
     created_at    TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),

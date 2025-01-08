@@ -181,11 +181,13 @@ func authMiddleware(r *Router) fiber.Handler {
 
 		// Get the user ID and role from the session and set for downstream handlers
 		userId := session.Get("id").(string)
-		if userId == "" {
+		userRole := session.Get("role").(string)
+		if userId == "" || userRole == "" {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
 
 		c.Locals("user.id", userId)
+		c.Locals("user.role", userRole)
 
 		return c.Next()
 	}

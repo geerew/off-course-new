@@ -29,7 +29,9 @@ func (r *Router) initAuthRoutes() {
 	authGroup.Post("/bootstrap", authAPI.bootstrap)
 	authGroup.Post("/login", authAPI.login)
 	authGroup.Post("/logout", authAPI.logout)
-	authGroup.Get("/me", authAPI.me)
+
+	authMeGroup := authGroup.Group("/me")
+	authMeGroup.Get("/me", authAPI.me)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -47,6 +49,7 @@ func (api authAPI) register(c *fiber.Ctx) error {
 
 	user := &models.User{
 		Username:     userReq.Username,
+		DisplayName:  userReq.Username, // Set the display name to the username by default
 		PasswordHash: auth.GeneratePassword(userReq.Password),
 	}
 
@@ -73,6 +76,7 @@ func (api authAPI) register(c *fiber.Ctx) error {
 	}
 
 	session.Set("id", user.ID)
+	session.Set("role", user.Role.String())
 	if err := session.Save(); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error saving session", err)
 	}
@@ -163,8 +167,9 @@ func (api authAPI) me(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(&UserResponse{
-		ID:       user.ID,
-		Username: user.Username,
-		Role:     user.Role,
+		ID:          user.ID,
+		Username:    user.Username,
+		DisplayName: user.DisplayName,
+		Role:        user.Role,
 	})
 }

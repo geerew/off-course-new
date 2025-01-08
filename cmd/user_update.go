@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// TODO: Support updating the role and display name
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 var updateCmd = &cobra.Command{

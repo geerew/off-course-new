@@ -32,7 +32,7 @@ var listCmd = &cobra.Command{
 		})
 
 		if err != nil {
-			fmt.Printf("ERR - Failed to create database manager: %s", err)
+			errorMessage("Failed to create database manager: %s", err)
 			os.Exit(1)
 		}
 
@@ -41,16 +41,16 @@ var listCmd = &cobra.Command{
 		users := []*models.User{}
 		err = dao.List(ctx, &users, nil)
 		if err != nil {
-			fmt.Printf("ERR - Failed to list users: %s", err)
+			errorMessage("Failed to list users: %s", err)
 			os.Exit(1)
 		}
 
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Username", "Role"})
+		table.SetHeader([]string{"Username", "Role", "Display Name"})
 		table.SetBorder(false)
 
 		for _, user := range users {
-			table.Append([]string{user.Username, user.Role.String()})
+			table.Append([]string{user.Username, user.Role.String(), user.DisplayName})
 		}
 		table.Render()
 	},
