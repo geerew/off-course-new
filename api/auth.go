@@ -11,6 +11,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// TODO - Add unit tests for the auth routes
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type authAPI struct {
@@ -30,7 +32,8 @@ func (r *Router) initAuthRoutes() {
 	authGroup.Post("/login", authAPI.login)
 	authGroup.Post("/logout", authAPI.logout)
 
-	authGroup.Get("/me", authAPI.me)
+	authGroup.Get("/me", authAPI.getMe)
+	authGroup.Delete("/me", authAPI.deleteMe)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -84,12 +87,7 @@ func (api authAPI) register(c *fiber.Ctx) error {
 	}
 
 	// Set the user_id in the session
-	stmt, err := api.r.config.DbManager.DataDb.DB().Prepare("UPDATE sessions SET user_id = ? WHERE id = ?")
-	if err != nil {
-		return errorResponse(c, fiber.StatusInternalServerError, "Error preparing statement", err)
-	}
-
-	_, err = stmt.Exec(user.ID, sessionId)
+	_, err = api.r.config.DbManager.DataDb.DB().Exec("UPDATE sessions SET user_id = ? WHERE id = ?", user.ID, sessionId)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error updating session with user ID", err)
 	}
@@ -154,12 +152,7 @@ func (api authAPI) login(c *fiber.Ctx) error {
 	}
 
 	// Set the user_id in the session
-	stmt, err := api.r.config.DbManager.DataDb.DB().Prepare("UPDATE sessions SET user_id = ? WHERE id = ?")
-	if err != nil {
-		return errorResponse(c, fiber.StatusInternalServerError, "Error preparing statement", err)
-	}
-
-	_, err = stmt.Exec(user.ID, sessionId)
+	_, err = api.r.config.DbManager.DataDb.DB().Exec("UPDATE sessions SET user_id = ? WHERE id = ?", user.ID, sessionId)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error updating session with user ID", err)
 	}
@@ -181,7 +174,7 @@ func (api authAPI) logout(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api authAPI) me(c *fiber.Ctx) error {
+func (api authAPI) getMe(c *fiber.Ctx) error {
 	userId, ok := c.Locals("user.id").(string)
 	if !ok {
 		return errorResponse(c, fiber.StatusUnauthorized, "Invalid user", nil)
@@ -199,4 +192,48 @@ func (api authAPI) me(c *fiber.Ctx) error {
 		DisplayName: user.DisplayName,
 		Role:        user.Role,
 	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (api authAPI) deleteMe(c *fiber.Ctx) error {
+	userId, ok := c.Locals("user.id").(string)
+	if !ok {
+		return errorResponse(c, fiber.StatusUnauthorized, "Invalid user", nil)
+	}
+
+	user := &models.User{Base: models.Base{ID: userId}}
+	err := api.r.dao.GetById(c.UserContext(), user)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error getting user information", err)
+	}
+
+	if user.Role == types.UserRoleAdmin {
+		// count the number of admin users and fail if there is only one
+		adminCount, err := api.r.dao.Count(c.UserContext(), &models.User{}, &database.Options{
+			Where: squirrel.Eq{models.USER_TABLE + "." + models.USER_ROLE: types.UserRoleAdmin},
+		})
+
+		if err != nil {
+			return errorResponse(c, fiber.StatusInternalServerError, "Error counting admin users", err)
+		}
+
+		if adminCount == 1 {
+			return errorResponse(c, fiber.StatusBadRequest, "Unable to delete the last admin user", nil)
+		}
+	}
+
+	// Delete session information
+	_, err = api.r.config.DbManager.DataDb.DB().Exec("DELETE FROM sessions WHERE user_id = ?", user.ID)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting session information", err)
+	}
+
+	// Delete the user
+	err = api.r.dao.Delete(c.UserContext(), user, nil)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting user", err)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
 }

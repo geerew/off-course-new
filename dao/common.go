@@ -11,6 +11,8 @@ import (
 	"github.com/geerew/off-course/utils/schema"
 )
 
+// TODO Update dao to support raw INSERT, SELECT, UPDATE, DELETE queries
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // DAO is a data access object
