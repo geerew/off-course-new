@@ -97,7 +97,7 @@
 				type="text"
 				bind:value={username}
 				class={cn(
-					'bg-background-alt-2 placeholder:text-foreground-alt-2 w-full rounded-md border border-transparent p-2.5 ring-0 duration-250 ease-in-out placeholder:text-sm placeholder:tracking-wide focus:brightness-110 focus:outline-none',
+					'bg-background-alt-3 placeholder:text-foreground-alt-2 w-full rounded-md border border-transparent p-2.5 ring-0 duration-250 ease-in-out placeholder:text-sm placeholder:tracking-wide focus:brightness-110 focus:outline-none',
 					!usernameValid && 'border-red-500'
 				)}
 				placeholder="Username"
@@ -109,7 +109,7 @@
 					type="password"
 					bind:value={password}
 					class={cn(
-						'bg-background-alt-2 placeholder:text-foreground-alt-2 w-full rounded-md border border-transparent p-2.5 pe-10 ring-0 duration-250 ease-in-out placeholder:text-sm placeholder:tracking-wide focus:brightness-110 focus:outline-none',
+						'bg-background-alt-3 placeholder:text-foreground-alt-2 w-full rounded-md border border-transparent p-2.5 pe-10 ring-0 duration-250 ease-in-out placeholder:text-sm placeholder:tracking-wide focus:brightness-110 focus:outline-none',
 						!passwordValid && 'border-red-500'
 					)}
 					placeholder="Password"

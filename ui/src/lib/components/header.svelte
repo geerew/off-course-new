@@ -49,7 +49,7 @@
 						<DropdownMenu.Content
 							sideOffset={8}
 							align={'end'}
-							class="bg-background-alt-1 text-foreground-alt-1 border-background-alt-2 data-[state=open]:animate-in [state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 z-30 w-54 rounded-lg border p-2.5"
+							class="bg-background-alt-1 text-foreground-alt-1 border-background-alt-3 data-[state=open]:animate-in [state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 z-30 w-54 rounded-lg border p-2.5"
 						>
 							<div class="flex flex-col select-none">
 								<!-- Name -->
@@ -64,14 +64,14 @@
 									</span>
 								</div>
 
-								<Separator.Root class="bg-background-alt-2 my-2 h-px w-full shrink-0" />
+								<Separator.Root class="bg-background-alt-3 my-2 h-px w-full shrink-0" />
 
 								<div class="flex flex-col gap-2">
 									<!-- Profile link -->
 									<DropdownMenu.Item>
 										<Button.Root
 											href="/profile"
-											class="hover:bg-background-alt-2 hover:text-foreground flex cursor-pointer flex-row items-center justify-between rounded-lg p-1.5 duration-200"
+											class="hover:bg-background-alt-3 hover:text-foreground flex cursor-pointer flex-row items-center justify-between rounded-lg p-1.5 duration-200"
 										>
 											<div class="flex flex-row items-center gap-3">
 												<svg
@@ -101,7 +101,7 @@
 										<DropdownMenu.Item>
 											<Button.Root
 												href="/admin"
-												class="hover:bg-background-alt-2 hover:text-foreground flex cursor-pointer flex-row items-center justify-between rounded-lg p-1.5 duration-200"
+												class="hover:bg-background-alt-3 hover:text-foreground flex cursor-pointer flex-row items-center justify-between rounded-lg p-1.5 duration-200"
 											>
 												<div class="flex flex-row items-center gap-3">
 													<svg
