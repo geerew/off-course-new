@@ -5,27 +5,18 @@
 	--font-logo: 'Source Sans Pro', 'sans-serif';
 
 	--color-background: hsl(255, 17%, 14%);
-	--color-background-alt: hsl(255, 17%, 17%);
+	--color-background-alt-1: hsl(255, 17%, 17%);
+	--color-background-alt-2: hsl(254, 17%, 25%);
+	--color-background-primary: hsl(67, 60%, 50%);
+	--color-background-primary-alt-1: hsl(67, 45%, 45%);
+	--color-background-error: hsl(5, 100%, 21%);
+	--color-background-error-alt-1: hsl(5, 100%, 25%);
 
 	--color-foreground: hsl(360, 0%, 90%);
-	--color-foreground-alt: hsl(360, 0%, 80%);
-
-	--color-primary-background: hsl(67, 60%, 50%);
-	--color-primary-background-alt: hsl(67, 45%, 45%);
-	--color-primary-foreground: hsl(240, 2%, 21%);
-
-	--color-secondary-background: hsl(23, 100%, 33%);
-	--color-secondary-foreground: hsl(360, 0%, 90%);
-
-	--color-muted-background: hsl(254, 17%, 25%);
-	--color-muted-foreground: hsl(249, 6%, 52%);
-
-	--color-error-background: hsl(5, 100%, 21%);
-	--color-error-foreground: hsl(355.7, 100%, 97.3%);
-
-	--color-border: var(--color-gray-400);
-
-	--color-ring: var(--color-blue-400);
+	--color-foreground-alt-1: hsl(360, 0%, 80%);
+	--color-foreground-alt-2: hsl(249, 6%, 52%);
+	--color-foreground-alt-3: hsl(240, 2%, 21%);
+	--color-foreground-error: hsl(5, 100%, 30%);
 }
 
 @base {
@@ -41,6 +32,6 @@
 @layer components {
 	:is(a, button, input, textarea, summary) {
 		@apply outline-none;
-		@apply focus-visible:ring-ring focus-visible:ring-1;
+		@apply focus-visible:ring-1 focus-visible:ring-blue-400;
 	}
 }

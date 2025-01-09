@@ -1,3 +1,4 @@
+import { toast } from 'svelte-sonner';
 import { safeParse } from 'valibot';
 import { UserSchema, type User } from './models';
 
@@ -32,7 +33,7 @@ class Auth {
 			}
 
 			const data = await response.json();
-			this.#error = `Failed to fetch user: ${data.message}`;
+			this.#error = data.message;
 		}
 	}
 
@@ -47,7 +48,22 @@ class Auth {
 			window.location.href = '/auth/login';
 		} else {
 			const data = await response.json();
-			this.#error = `Failed to logout: ${data.message}`;
+			this.#error = data.message;
+		}
+	}
+
+	async delete(): Promise<void> {
+		const response = await fetch('/api/auth/me', { method: 'DELETE' });
+
+		if (response.ok) {
+			this.#error = null;
+			this.#user = null;
+			this.#userLetter = null;
+			this.#isAdmin = false;
+			window.location.href = '/auth/login';
+		} else {
+			const data = await response.json();
+			toast.error(`${data.message}`);
 		}
 	}
 

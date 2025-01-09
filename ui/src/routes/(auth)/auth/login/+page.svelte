@@ -88,7 +88,7 @@
 
 	<div class="flex min-w-sm flex-col gap-5">
 		<div class="mb-2.5 flex flex-col gap-2">
-			<div class="text-foreground-alt text-center text-lg">Login to your account</div>
+			<div class="text-foreground-alt-1 text-center text-lg">Login to your account</div>
 		</div>
 
 		<form onsubmit={handleSubmit} class="flex flex-col gap-5">
@@ -97,7 +97,7 @@
 				type="text"
 				bind:value={username}
 				class={cn(
-					'bg-muted-background placeholder:text-muted-foreground w-full rounded-md border border-transparent p-2.5 ring-0 duration-250 ease-in-out placeholder:text-sm placeholder:tracking-wide focus:brightness-110 focus:outline-none',
+					'bg-background-alt-2 placeholder:text-foreground-alt-2 w-full rounded-md border border-transparent p-2.5 ring-0 duration-250 ease-in-out placeholder:text-sm placeholder:tracking-wide focus:brightness-110 focus:outline-none',
 					!usernameValid && 'border-red-500'
 				)}
 				placeholder="Username"
@@ -109,7 +109,7 @@
 					type="password"
 					bind:value={password}
 					class={cn(
-						'bg-muted-background placeholder:text-muted-foreground w-full rounded-md border border-transparent p-2.5 pe-10 ring-0 duration-250 ease-in-out placeholder:text-sm placeholder:tracking-wide focus:brightness-110 focus:outline-none',
+						'bg-background-alt-2 placeholder:text-foreground-alt-2 w-full rounded-md border border-transparent p-2.5 pe-10 ring-0 duration-250 ease-in-out placeholder:text-sm placeholder:tracking-wide focus:brightness-110 focus:outline-none',
 						!passwordValid && 'border-red-500'
 					)}
 					placeholder="Password"
@@ -128,7 +128,7 @@
 						viewBox="0 0 24 24"
 						stroke-width="1.5"
 						stroke="currentColor"
-						class="text-muted-foreground visible size-5"
+						class="text-foreground-alt-2 visible size-5"
 					>
 						<path
 							stroke-linecap="round"
@@ -144,7 +144,7 @@
 						viewBox="0 0 24 24"
 						stroke-width="1.5"
 						stroke="currentColor"
-						class="text-muted-foreground hidden size-5"
+						class="text-foreground-alt-2 hidden size-5"
 					>
 						<path
 							stroke-linecap="round"
@@ -162,7 +162,7 @@
 
 			<button
 				type="submit"
-				class="bg-primary-background text-primary-foreground disabled:bg-primary-background-alt group mt-2 flex w-full cursor-pointer flex-row place-content-center items-center gap-2 rounded-md p-2.5 disabled:cursor-not-allowed"
+				class="bg-background-primary text-foreground-alt-3 disabled:bg-background-primary-alt-1 group mt-2 flex w-full cursor-pointer flex-row place-content-center items-center gap-2 rounded-md p-2.5 disabled:cursor-not-allowed"
 				disabled={!usernameValid || !password || posting}
 			>
 				<span>Login</span>
@@ -172,9 +172,9 @@
 			</button>
 		</form>
 
-		<div class="text-muted-foreground text-center">
+		<div class="text-foreground-alt-2 text-center">
 			Don't have an account?
-			<a href="/auth/register/" class="hover:text-primary-background font-semibold duration-200">
+			<a href="/auth/register/" class="hover:text-background-primary font-semibold duration-200">
 				Sign up
 			</a>
 		</div>

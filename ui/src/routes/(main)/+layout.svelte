@@ -10,13 +10,13 @@
 </script>
 
 {#if auth.error !== null}
-	<Error message={auth.error} />
+	<Error message={'Failed to fetch user: ' + auth.error} />
 {:else if auth.user === null}
 	<div class="flex w-full justify-center pt-14 sm:pt-20">
 		<Spinner />
 	</div>
 {:else}
-	<div class="px-4 lg:px-8">
+	<div class="px-4 pb-8 lg:px-8">
 		<Header />
 		{@render children()}
 	</div>

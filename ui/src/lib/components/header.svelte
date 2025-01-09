@@ -25,9 +25,9 @@
 			<a
 				href="/courses"
 				class={cn(
-					'text-foreground-alt hover:text-foreground relative rounded-lg px-2.5 py-1.5 leading-6 duration-200',
+					'text-foreground-alt-1 hover:text-foreground relative rounded-lg px-2.5 py-1.5 leading-6 duration-200',
 					page.url.pathname === '/courses/' &&
-						'after:bg-primary-background after:absolute after:-bottom-0.5 after:left-0 after:h-0.5 after:w-full'
+						'after:bg-background-primary after:absolute after:-bottom-0.5 after:left-0 after:h-0.5 after:w-full'
 				)}
 				aria-current={page.url.pathname === '/courses/'}
 			>
@@ -40,7 +40,7 @@
 			<div class="flex flex-1 justify-end">
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger
-						class="bg-primary-background-alt hover:bg-primary-background text-primary-foreground relative flex size-10 cursor-pointer items-center justify-center rounded-full font-semibold"
+						class="bg-background-primary-alt-1 hover:bg-background-primary text-foreground-alt-3 relative flex size-10 cursor-pointer items-center justify-center rounded-full font-semibold"
 					>
 						{auth.userLetter}
 					</DropdownMenu.Trigger>
@@ -49,13 +49,13 @@
 						<DropdownMenu.Content
 							sideOffset={8}
 							align={'end'}
-							class="bg-background-alt text-foreground-alt border-muted-background data-[state=open]:animate-in [state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 z-30 w-54 rounded-lg border p-2.5"
+							class="bg-background-alt-1 text-foreground-alt-1 border-background-alt-2 data-[state=open]:animate-in [state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 z-30 w-54 rounded-lg border p-2.5"
 						>
 							<div class="flex flex-col select-none">
 								<!-- Name -->
 								<div class="flex flex-row items-center gap-3 p-1.5">
 									<span
-										class="bg-primary-background text-primary-foreground relative flex size-10 items-center justify-center rounded-full font-semibold"
+										class="bg-background-primary text-foreground-alt-3 relative flex size-10 items-center justify-center rounded-full font-semibold"
 									>
 										{auth.userLetter}
 									</span>
@@ -64,14 +64,14 @@
 									</span>
 								</div>
 
-								<Separator.Root class="bg-muted-background my-2 h-px w-full shrink-0" />
+								<Separator.Root class="bg-background-alt-2 my-2 h-px w-full shrink-0" />
 
 								<div class="flex flex-col gap-2">
 									<!-- Profile link -->
 									<DropdownMenu.Item>
 										<Button.Root
 											href="/profile"
-											class="hover:bg-muted-background hover:text-foreground flex cursor-pointer flex-row items-center justify-between rounded-lg p-1.5 duration-200"
+											class="hover:bg-background-alt-2 hover:text-foreground flex cursor-pointer flex-row items-center justify-between rounded-lg p-1.5 duration-200"
 										>
 											<div class="flex flex-row items-center gap-3">
 												<svg
@@ -101,7 +101,7 @@
 										<DropdownMenu.Item>
 											<Button.Root
 												href="/admin"
-												class="hover:bg-muted-background hover:text-foreground flex cursor-pointer flex-row items-center justify-between rounded-lg p-1.5 duration-200"
+												class="hover:bg-background-alt-2 hover:text-foreground flex cursor-pointer flex-row items-center justify-between rounded-lg p-1.5 duration-200"
 											>
 												<div class="flex flex-row items-center gap-3">
 													<svg
@@ -131,7 +131,7 @@
 									<DropdownMenu.Item>
 										<Button.Root
 											onclick={logout}
-											class="hover:bg-error-background hover:text-error-foreground flex w-full cursor-pointer flex-row items-center justify-between rounded-lg p-1.5 duration-200"
+											class="hover:bg-background-error hover:text-foreground flex w-full cursor-pointer flex-row items-center justify-between rounded-lg p-1.5 duration-200"
 										>
 											<div class="flex flex-row items-center gap-3">
 												<svg
