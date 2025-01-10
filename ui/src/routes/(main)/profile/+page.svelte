@@ -3,10 +3,12 @@
 	import { Input, SubmitButton } from '$lib/components/form';
 	import { Edit } from '$lib/components/icons';
 	import { AlertDialog, Dialog, Separator } from 'bits-ui';
+	import { toast } from 'svelte-sonner';
 
 	let displayNameDialogOpen = $state(false);
 	let displayNameInputEl = $state<HTMLInputElement>();
 	let displayNameValue = $state<string>('');
+	let displayNamePosting = $state(false);
 
 	let deleteDialogOpen = $state(false);
 
@@ -18,27 +20,26 @@
 
 	async function submitDisplayNameForm(event: Event) {
 		event.preventDefault();
-		console.log('submitted');
-		// posting = true;
+		displayNamePosting = true;
 
-		// const response = await fetch(endpoint, {
-		// 	method: 'POST',
-		// 	headers: {
-		// 		'Content-Type': 'application/json'
-		// 	},
-		// 	body: JSON.stringify({
-		// 		username,
-		// 		password
-		// 	})
-		// });
+		const response = await fetch('/api/auth/me', {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				display_name: displayNameValue
+			})
+		});
 
-		// if (response.ok) {
-		// 	window.location.href = '/';
-		// } else {
-		// 	const data = await response.json();
-		// 	toast.error(data.message);
-		// 	posting = false;
-		// }
+		if (response.ok) {
+			await auth.me();
+			displayNameDialogOpen = false;
+		} else {
+			const data = await response.json();
+			toast.error(data.message);
+			displayNamePosting = false;
+		}
 	}
 </script>
 
@@ -57,7 +58,10 @@
 			<div class="flex flex-row items-center gap-3">
 				<div class="text-foreground-alt-2 text-[15px] uppercase">Display Name</div>
 
-				<Dialog.Root bind:open={displayNameDialogOpen}>
+				<Dialog.Root
+					bind:open={displayNameDialogOpen}
+					onOpenChange={(e) => (displayNameValue = '')}
+				>
 					<Dialog.Trigger
 						class="text-foreground-alt-2 hover:text-foreground-alt-1 mb-0.5 cursor-pointer duration-200"
 					>
@@ -94,6 +98,7 @@
 									class="bg-background-alt-2 border-background-alt-3 flex w-full items-center justify-end gap-2 border-t px-5 py-2.5"
 								>
 									<Dialog.Close
+										type="button"
 										class="border-background-alt-4 text-foreground-alt-1 hover:bg-background-alt-4 hover:text-foreground w-24 cursor-pointer rounded-md border py-2 duration-200 select-none"
 									>
 										Cancel

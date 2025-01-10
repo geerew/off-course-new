@@ -33,6 +33,7 @@ func (r *Router) initAuthRoutes() {
 	authGroup.Post("/logout", authAPI.logout)
 
 	authGroup.Get("/me", authAPI.getMe)
+	authGroup.Put("/me", authAPI.updateMe)
 	authGroup.Delete("/me", authAPI.deleteMe)
 }
 
@@ -184,6 +185,46 @@ func (api authAPI) getMe(c *fiber.Ctx) error {
 	err := api.r.dao.GetById(c.UserContext(), user)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error getting user information", err)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(&UserResponse{
+		ID:          user.ID,
+		Username:    user.Username,
+		DisplayName: user.DisplayName,
+		Role:        user.Role,
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (api authAPI) updateMe(c *fiber.Ctx) error {
+	userId, ok := c.Locals("user.id").(string)
+	if !ok {
+		return errorResponse(c, fiber.StatusUnauthorized, "Invalid user", nil)
+	}
+
+	user := &models.User{Base: models.Base{ID: userId}}
+	err := api.r.dao.GetById(c.UserContext(), user)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error getting user information", err)
+	}
+
+	userReq := &UserRequest{}
+	if err := c.BodyParser(userReq); err != nil {
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
+	}
+
+	if userReq.DisplayName != "" {
+		user.DisplayName = userReq.DisplayName
+	}
+
+	if userReq.Password != "" {
+		user.PasswordHash = auth.GeneratePassword(userReq.Password)
+	}
+
+	err = api.r.dao.UpdateUser(c.UserContext(), user)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error updating user", err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(&UserResponse{
