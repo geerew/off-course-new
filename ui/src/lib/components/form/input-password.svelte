@@ -3,24 +3,23 @@
 	import type { HTMLInputAttributes } from 'svelte/elements';
 	import { Input } from '.';
 
-	type HTMLInputAttributesWithRef = HTMLInputAttributes & { ref?: HTMLInputElement | null };
+	type Props = HTMLInputAttributes & { ref?: HTMLInputElement | null };
 
 	let {
 		value = $bindable(''),
 		ref = $bindable(null),
 		class: containerClass = '',
 		...restProps
-	}: HTMLInputAttributesWithRef = $props();
+	}: Props = $props();
 
-	let passwordEl = $state<HTMLInputElement | null>(null);
-	let passwordEyeOpenEl = $state<SVGElement | null>(null);
-	let passwordEyeClosedEl = $state<SVGElement | null>(null);
+	let passwordEl = $state<HTMLInputElement>();
+	let passwordEyeOpenEl = $state<SVGElement>();
+	let passwordEyeClosedEl = $state<SVGElement>();
 
-	// Toggles the visibility of the password field
 	function togglePasswordVisibility(
-		passwordEl: HTMLInputElement | null,
-		passwordEyeOpenEl: SVGElement | null,
-		passwordEyeClosedEl: SVGElement | null
+		passwordEl: HTMLInputElement | undefined,
+		passwordEyeOpenEl: SVGElement | undefined,
+		passwordEyeClosedEl: SVGElement | undefined
 	) {
 		if (!passwordEl) return;
 		passwordEl.type = passwordEl.type === 'password' ? 'text' : 'password';

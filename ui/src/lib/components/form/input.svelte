@@ -2,14 +2,14 @@
 	import { cn } from '$lib/utils';
 	import type { HTMLInputAttributes } from 'svelte/elements';
 
-	type HTMLInputAttributesWithRef = HTMLInputAttributes & { ref?: HTMLInputElement | null };
+	type Props = HTMLInputAttributes & { ref?: HTMLInputElement };
 
 	let {
 		value = $bindable(''),
-		ref = $bindable(null),
+		ref = $bindable(),
 		class: containerClass = '',
 		...restProps
-	}: HTMLInputAttributesWithRef = $props();
+	}: Props = $props();
 </script>
 
 <input
