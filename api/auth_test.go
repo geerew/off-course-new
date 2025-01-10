@@ -143,6 +143,7 @@ func TestAuth_Login(t *testing.T) {
 
 		user := &models.User{
 			Username:     "test",
+			DisplayName:  "Test",
 			PasswordHash: auth.GeneratePassword("abcd1234"),
 			Role:         types.UserRoleAdmin,
 		}
@@ -216,6 +217,7 @@ func TestAuth_Login(t *testing.T) {
 
 		user := &models.User{
 			Username:     "test",
+			DisplayName:  "Test",
 			PasswordHash: auth.GeneratePassword("abcd1234"),
 			Role:         types.UserRoleAdmin,
 		}
@@ -235,6 +237,7 @@ func TestAuth_Login(t *testing.T) {
 
 		user := &models.User{
 			Username:     "test",
+			DisplayName:  "Test",
 			PasswordHash: auth.GeneratePassword("abcd1234"),
 			Role:         types.UserRoleAdmin,
 		}

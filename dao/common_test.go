@@ -270,7 +270,7 @@ func Test_Get(t *testing.T) {
 		require.Len(t, tagResult.CourseTags, 1)
 
 		// Create user
-		user := &models.User{Username: "user1", PasswordHash: "1234", Role: types.UserRoleAdmin}
+		user := &models.User{Username: "user1", DisplayName: "User 1", PasswordHash: "1234", Role: types.UserRoleAdmin}
 		require.NoError(t, dao.CreateUser(ctx, user))
 
 		// Get user
