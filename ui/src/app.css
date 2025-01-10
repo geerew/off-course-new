@@ -19,6 +19,20 @@
 	--color-foreground-alt-2: hsl(249, 6%, 52%);
 	--color-foreground-alt-3: hsl(240, 2%, 21%);
 	--color-foreground-error: hsl(5, 100%, 30%);
+
+	--animate-flash: flash 1.5s infinite ease-in-out;
+
+	@keyframes flash {
+		0% {
+			transform: scale(0);
+		}
+		50% {
+			transform: scale(1);
+		}
+		100% {
+			transform: scale(0);
+		}
+	}
 }
 
 @base {
