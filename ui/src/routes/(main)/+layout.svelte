@@ -18,6 +18,8 @@
 {:else}
 	<div class="px-4 pb-8 lg:px-8">
 		<Header />
-		{@render children()}
+		<div class="py-4">
+			{@render children()}
+		</div>
 	</div>
 {/if}
