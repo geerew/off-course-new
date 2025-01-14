@@ -1,4 +1,3 @@
-import { toast } from 'svelte-sonner';
 import { safeParse } from 'valibot';
 import { UserSchema, type User } from './models';
 
@@ -10,6 +9,7 @@ class Auth {
 
 	constructor() {}
 
+	// Get information about the current user
 	async me(): Promise<void> {
 		const response = await fetch('/api/auth/me');
 		if (response.ok) {
@@ -37,14 +37,12 @@ class Auth {
 		}
 	}
 
+	// Logout the current user. This will remove the session cookie and redirect to the login page
 	async logout(): Promise<void> {
 		const response = await fetch('/api/auth/logout', { method: 'POST' });
 
 		if (response.ok) {
-			this.#error = null;
-			this.#user = null;
-			this.#userLetter = null;
-			this.#isAdmin = false;
+			this.empty();
 			window.location.href = '/auth/login';
 		} else {
 			const data = await response.json();
@@ -52,19 +50,12 @@ class Auth {
 		}
 	}
 
-	async delete(): Promise<void> {
-		const response = await fetch('/api/auth/me', { method: 'DELETE' });
-
-		if (response.ok) {
-			this.#error = null;
-			this.#user = null;
-			this.#userLetter = null;
-			this.#isAdmin = false;
-			window.location.href = '/auth/login';
-		} else {
-			const data = await response.json();
-			toast.error(`${data.message}`);
-		}
+	// Clear the user information and redirect to the login page
+	empty(): void {
+		this.#error = null;
+		this.#user = null;
+		this.#userLetter = null;
+		this.#isAdmin = false;
 	}
 
 	get user() {
