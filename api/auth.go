@@ -263,7 +263,7 @@ func (api authAPI) deleteMe(c *fiber.Ctx) error {
 	}
 
 	if !auth.ComparePassword(user.PasswordHash, userReq.CurrentPassword) {
-		return errorResponse(c, fiber.StatusBadRequest, "Invalid current password", nil)
+		return errorResponse(c, fiber.StatusBadRequest, "Invalid password", nil)
 	}
 
 	if user.Role == types.UserRoleAdmin {
