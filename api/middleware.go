@@ -186,6 +186,10 @@ func authMiddleware(r *Router) fiber.Handler {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
 
+		if userRole != "admin" && r.isAdminSection(c) {
+			return c.Redirect("/")
+		}
+
 		c.Locals("user.id", userId)
 		c.Locals("user.role", userRole)
 
@@ -203,6 +207,17 @@ func (r *Router) isDevUIPath(c *fiber.Ctx) bool {
 			strings.HasPrefix(c.OriginalURL(), "/.svelte-kit/") ||
 			strings.HasPrefix(c.OriginalURL(), "/src/") ||
 			strings.HasPrefix(c.OriginalURL(), "/@")) {
+		return true
+	}
+
+	return false
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// isAdminSection checks if the request is intended for an admin section
+func (r *Router) isAdminSection(c *fiber.Ctx) bool {
+	if strings.HasPrefix(c.OriginalURL(), "/admin") {
 		return true
 	}
 
