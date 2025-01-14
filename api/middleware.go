@@ -217,11 +217,7 @@ func (r *Router) isDevUIPath(c *fiber.Ctx) bool {
 
 // isAdminSection checks if the request is intended for an admin section
 func (r *Router) isAdminSection(c *fiber.Ctx) bool {
-	if strings.HasPrefix(c.OriginalURL(), "/admin") {
-		return true
-	}
-
-	return false
+	return strings.HasPrefix(c.OriginalURL(), "/admin")
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
