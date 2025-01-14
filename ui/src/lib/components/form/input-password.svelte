@@ -3,11 +3,11 @@
 	import type { HTMLInputAttributes } from 'svelte/elements';
 	import { Input } from '.';
 
-	type Props = HTMLInputAttributes & { ref?: HTMLInputElement | null };
+	type Props = HTMLInputAttributes & { ref?: HTMLInputElement };
 
 	let {
 		value = $bindable(''),
-		ref = $bindable(null),
+		ref = $bindable(),
 		class: containerClass = '',
 		...restProps
 	}: Props = $props();
@@ -86,13 +86,3 @@
 		</svg>
 	</Button.Root>
 </div>
-
-<!-- <input
-	bind:value
-	bind:this={ref}
-	class={cn(
-		'bg-background-alt-3 placeholder:text-foreground-alt-2 w-full rounded-md border border-transparent p-2.5 ring-0 duration-250 ease-in-out placeholder:text-sm placeholder:tracking-wide focus:brightness-110 focus:outline-none',
-		containerClass
-	)}
-	{...restProps}
-/> -->
