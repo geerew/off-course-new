@@ -214,11 +214,19 @@ func (api authAPI) updateMe(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
+	if userReq.DisplayName == "" && userReq.Password == "" {
+		return errorResponse(c, fiber.StatusBadRequest, "No data to update", nil)
+	}
+
 	if userReq.DisplayName != "" {
 		user.DisplayName = userReq.DisplayName
 	}
 
 	if userReq.Password != "" {
+		if !auth.ComparePassword(user.PasswordHash, userReq.CurrentPassword) {
+			return errorResponse(c, fiber.StatusBadRequest, "Invalid current password", nil)
+		}
+
 		user.PasswordHash = auth.GeneratePassword(userReq.Password)
 	}
 
@@ -249,8 +257,17 @@ func (api authAPI) deleteMe(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error getting user information", err)
 	}
 
+	userReq := &UserRequest{}
+	if err := c.BodyParser(userReq); err != nil {
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
+	}
+
+	if !auth.ComparePassword(user.PasswordHash, userReq.CurrentPassword) {
+		return errorResponse(c, fiber.StatusBadRequest, "Invalid current password", nil)
+	}
+
 	if user.Role == types.UserRoleAdmin {
-		// count the number of admin users and fail if there is only one
+		// Count the number of admin users and fail if there is only one
 		adminCount, err := api.r.dao.Count(c.UserContext(), &models.User{}, &database.Options{
 			Where: squirrel.Eq{models.USER_TABLE + "." + models.USER_ROLE: types.UserRoleAdmin},
 		})

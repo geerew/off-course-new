@@ -129,9 +129,10 @@ type tagResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type UserRequest struct {
-	Username    string `json:"username"`
-	DisplayName string `json:"display_name"`
-	Password    string `json:"password"`
+	Username        string `json:"username"`
+	DisplayName     string `json:"display_name"`
+	CurrentPassword string `json:"current_password"`
+	Password        string `json:"password"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
