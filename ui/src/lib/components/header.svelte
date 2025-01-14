@@ -6,6 +6,14 @@
 	import { Logo } from '.';
 	import { RightChevron } from './icons';
 
+	const menu = [
+		{
+			label: 'Courses',
+			href: '/courses',
+			matcher: '/courses/'
+		}
+	];
+
 	function logout() {
 		auth.logout();
 	}
@@ -22,17 +30,19 @@
 
 		<!-- Menu -->
 		<nav class="flex gap-x-12">
-			<a
-				href="/courses"
-				class={cn(
-					'text-foreground-alt-1 hover:text-foreground relative rounded-lg px-2.5 py-1.5 leading-6 duration-200',
-					page.url.pathname === '/courses/' &&
-						'after:bg-background-primary after:absolute after:-bottom-0.5 after:left-0 after:h-0.5 after:w-full'
-				)}
-				aria-current={page.url.pathname === '/courses/'}
-			>
-				Courses
-			</a>
+			{#each menu as item}
+				<a
+					href={item.href}
+					class={cn(
+						'text-foreground-alt-1 hover:text-foreground relative rounded-lg px-2.5 py-1.5 leading-6 font-semibold duration-200',
+						page.url.pathname === item.matcher &&
+							'after:bg-background-primary after:absolute after:-bottom-0.5 after:left-0 after:h-0.5 after:w-full'
+					)}
+					aria-current={page.url.pathname === item.matcher}
+				>
+					{item.label}
+				</a>
+			{/each}
 		</nav>
 
 		{#if auth.user !== null}
