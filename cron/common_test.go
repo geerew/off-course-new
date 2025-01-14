@@ -26,12 +26,9 @@ func setup(t *testing.T) (database.Database, *appFs.AppFs, *slog.Logger, *[]*log
 	})
 	require.NoError(t, err, "Failed to initialize logger")
 
-	// Filesystem
 	appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
 
-	// DB
 	dbManager, err := database.NewSqliteDBManager(&database.DatabaseConfig{
-		IsDebug:  false,
 		DataDir:  "./oc_data",
 		AppFs:    appFs,
 		InMemory: true,

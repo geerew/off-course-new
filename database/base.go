@@ -9,7 +9,6 @@ import (
 	"github.com/geerew/off-course/utils/appFs"
 	"github.com/geerew/off-course/utils/pagination"
 	"github.com/geerew/off-course/utils/types"
-	_ "modernc.org/sqlite"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -57,6 +56,7 @@ type (
 // Database defines the interface for a database
 type Database interface {
 	Querier
+	DB() *sql.DB
 	RunInTransaction(context.Context, func(context.Context) error) error
 	SetLogger(*slog.Logger)
 }
@@ -114,54 +114,10 @@ type DatabaseManager struct {
 
 // DatabaseConfig defines the configuration for a database
 type DatabaseConfig struct {
-	IsDebug    bool
 	DataDir    string
 	DSN        string
 	MigrateDir string
 	AppFs      *appFs.AppFs
 	InMemory   bool
 	Logger     *slog.Logger
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// NewSqliteDBManager returns a new DatabaseManager
-func NewSqliteDBManager(config *DatabaseConfig) (*DatabaseManager, error) {
-	manager := &DatabaseManager{}
-
-	dataConfig := &DatabaseConfig{
-		IsDebug:    config.IsDebug,
-		DataDir:    config.DataDir,
-		DSN:        "data.db",
-		MigrateDir: "data",
-		AppFs:      config.AppFs,
-		InMemory:   config.InMemory,
-		Logger:     config.Logger,
-	}
-
-	if dataDb, err := NewSqliteDB(dataConfig); err != nil {
-		return nil, err
-	} else {
-		manager.DataDb = dataDb
-	}
-
-	logsConfig := &DatabaseConfig{
-		IsDebug:    config.IsDebug,
-		DataDir:    config.DataDir,
-		DSN:        "logs.db",
-		MigrateDir: "logs",
-		AppFs:      config.AppFs,
-		InMemory:   config.InMemory,
-
-		// Never provider a logger for the logs DB as it will cause an infinite loop
-		Logger: nil,
-	}
-
-	if logsDB, err := NewSqliteDB(logsConfig); err != nil {
-		return nil, err
-	} else {
-		manager.LogsDb = logsDB
-	}
-
-	return manager, nil
 }

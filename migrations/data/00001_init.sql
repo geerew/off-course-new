@@ -1,6 +1,6 @@
 -- +goose Up
 
---- Course information
+--- Course
 CREATE TABLE courses (
 	id           TEXT PRIMARY KEY NOT NULL,
 	title        TEXT NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE courses_progress (
 	FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE
 );
 
---- Assets information
+--- Assets
 CREATE TABLE assets (
 	id           TEXT PRIMARY KEY NOT NULL,
 	course_id    TEXT NOT NULL,
@@ -54,7 +54,7 @@ CREATE TABLE assets_progress (
 	FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE
 );
 
---- Attachments information
+--- Attachments
 CREATE TABLE attachments (
 	id          TEXT PRIMARY KEY NOT NULL,
 	asset_id    TEXT NOT NULL,
@@ -66,7 +66,7 @@ CREATE TABLE attachments (
 	FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE
 );
 
---- Scans information
+--- Scan jobs
 CREATE TABLE scans (
 	id          TEXT PRIMARY KEY NOT NULL,
 	course_id   TEXT UNIQUE NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE scans (
 	FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE
 );
 
---- Tag information
+--- Tags
 CREATE TABLE tags (
 	id          TEXT PRIMARY KEY NOT NULL,
 	tag         TEXT NOT NULL UNIQUE COLLATE NOCASE,
@@ -85,7 +85,7 @@ CREATE TABLE tags (
 	updated_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'))
 );
 
---- Course tags information
+--- Course tags (join table)
 CREATE TABLE courses_tags (
 	id          TEXT PRIMARY KEY NOT NULL,
 	tag_id      TEXT NOT NULL,
@@ -99,7 +99,7 @@ CREATE TABLE courses_tags (
 	CONSTRAINT unique_course_tag UNIQUE (tag_id, course_id)
 );
 
---- Parameters table for application settings
+--- Parameters (for application settings)
 CREATE TABLE params (
     id           TEXT PRIMARY KEY NOT NULL,
     key          TEXT UNIQUE NOT NULL,
@@ -108,19 +108,21 @@ CREATE TABLE params (
     updated_at   TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'))
 );
 
--- Insert initial parameter to track admin creation
-INSERT INTO params (id, key, value) VALUES (
-    'wV0418r0Rr',
-    'hasAdmin',
-    'false'
-);
-
---- User information
+--- Users
 CREATE TABLE users (
     id            TEXT PRIMARY KEY NOT NULL,
-    username      TEXT UNIQUE NOT NULL,
+    username      TEXT UNIQUE NOT NULL COLLATE NOCASE,
+	display_name  TEXT NOT NULL,
     password_hash TEXT NOT NULL,
     role          TEXT NOT NULL CHECK(role IN ('admin', 'user')),
     created_at    TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
     updated_at    TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'))
+);
+
+--- Sessions
+CREATE TABLE sessions (
+    id      TEXT PRIMARY KEY NOT NULL,
+	data    BLOB NOT NULL,
+	expires BIGINT NOT NULL,
+	user_id TEXT NOT NULL DEFAULT ''
 );

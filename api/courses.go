@@ -118,11 +118,11 @@ func (api coursesAPI) getCourses(c *fiber.Ctx) error {
 
 		switch unescapedProgress {
 		case "not started":
-			courseIDs, err = api.dao.PluckIDsForNotStartedCourses(c.Context(), nil)
+			courseIDs, err = api.dao.PluckIDsForNotStartedCourses(c.UserContext(), nil)
 		case "started":
-			courseIDs, err = api.dao.PluckIDsForStartedCourses(c.Context(), nil)
+			courseIDs, err = api.dao.PluckIDsForStartedCourses(c.UserContext(), nil)
 		case "completed":
-			courseIDs, err = api.dao.PluckIDsForCompletedCourses(c.Context(), nil)
+			courseIDs, err = api.dao.PluckIDsForCompletedCourses(c.UserContext(), nil)
 		}
 
 		if err != nil {
@@ -146,7 +146,7 @@ func (api coursesAPI) getCourses(c *fiber.Ctx) error {
 			return errorResponse(c, fiber.StatusBadRequest, "Invalid tags parameter", err)
 		}
 
-		tmpCourseIDs, err := api.dao.PluckCourseIDsWithTags(c.Context(), filtered, nil)
+		tmpCourseIDs, err := api.dao.PluckCourseIDsWithTags(c.UserContext(), filtered, nil)
 		if err != nil {
 			return errorResponse(c, fiber.StatusInternalServerError, "Error looking up courses by tags", err)
 		}
@@ -174,7 +174,7 @@ func (api coursesAPI) getCourses(c *fiber.Ctx) error {
 	options.Where = whereClause
 
 	courses := []*models.Course{}
-	err := api.dao.List(c.Context(), &courses, options)
+	err := api.dao.List(c.UserContext(), &courses, options)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up courses", err)
 	}
@@ -193,7 +193,7 @@ func (api coursesAPI) getCourse(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	course := &models.Course{Base: models.Base{ID: id}}
-	err := api.dao.GetById(c.Context(), course)
+	err := api.dao.GetById(c.UserContext(), course)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -233,8 +233,8 @@ func (api coursesAPI) createCourse(c *fiber.Ctx) error {
 	// Set the course to available
 	course.Available = true
 
-	if err := api.dao.CreateCourse(c.Context(), course); err != nil {
-		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+	if err := api.dao.CreateCourse(c.UserContext(), course); err != nil {
+		if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
 			return errorResponse(c, fiber.StatusBadRequest, "A course with this path already exists", err)
 		}
 
@@ -242,7 +242,7 @@ func (api coursesAPI) createCourse(c *fiber.Ctx) error {
 	}
 
 	// Start a scan job
-	if scan, err := api.courseScan.Add(c.Context(), course.ID); err != nil {
+	if scan, err := api.courseScan.Add(c.UserContext(), course.ID); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error creating scan job", err)
 	} else {
 		course.ScanStatus = scan.Status
@@ -257,7 +257,7 @@ func (api coursesAPI) deleteCourse(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	course := &models.Course{Base: models.Base{ID: id}}
-	err := api.dao.Delete(c.Context(), course, nil)
+	err := api.dao.Delete(c.UserContext(), course, nil)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting course", err)
 	}
@@ -271,7 +271,7 @@ func (api coursesAPI) getCard(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	course := &models.Course{Base: models.Base{ID: id}}
-	err := api.dao.GetById(c.Context(), course)
+	err := api.dao.GetById(c.UserContext(), course)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -308,7 +308,7 @@ func (api coursesAPI) getAssets(c *fiber.Ctx) error {
 	}
 
 	assets := []*models.Asset{}
-	err := api.dao.List(c.Context(), &assets, options)
+	err := api.dao.List(c.UserContext(), &assets, options)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up assets", err)
 	}
@@ -328,7 +328,7 @@ func (api coursesAPI) getAsset(c *fiber.Ctx) error {
 	assetId := c.Params("asset")
 
 	asset := &models.Asset{Base: models.Base{ID: assetId}}
-	err := api.dao.GetById(c.Context(), asset)
+	err := api.dao.GetById(c.UserContext(), asset)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
@@ -351,7 +351,7 @@ func (api coursesAPI) serveAsset(c *fiber.Ctx) error {
 	assetId := c.Params("asset")
 
 	asset := &models.Asset{Base: models.Base{ID: assetId}}
-	err := api.dao.GetById(c.Context(), asset)
+	err := api.dao.GetById(c.UserContext(), asset)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
@@ -391,7 +391,7 @@ func (api coursesAPI) updateAssetProgress(c *fiber.Ctx) error {
 	}
 
 	asset := &models.Asset{Base: models.Base{ID: assetId}}
-	err := api.dao.GetById(c.Context(), asset)
+	err := api.dao.GetById(c.UserContext(), asset)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
@@ -410,7 +410,7 @@ func (api coursesAPI) updateAssetProgress(c *fiber.Ctx) error {
 		Completed: req.Completed,
 	}
 
-	err = api.dao.CreateOrUpdateAssetProgress(c.Context(), assetProgress)
+	err = api.dao.CreateOrUpdateAssetProgress(c.UserContext(), assetProgress)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error updating asset", err)
 	}
@@ -426,7 +426,7 @@ func (api coursesAPI) getAttachments(c *fiber.Ctx) error {
 	orderBy := c.Query("orderBy", "title asc")
 
 	asset := &models.Asset{Base: models.Base{ID: assetId}}
-	err := api.dao.GetById(c.Context(), asset)
+	err := api.dao.GetById(c.UserContext(), asset)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
@@ -446,7 +446,7 @@ func (api coursesAPI) getAttachments(c *fiber.Ctx) error {
 	}
 
 	attachments := []*models.Attachment{}
-	err = api.dao.List(c.Context(), &attachments, options)
+	err = api.dao.List(c.UserContext(), &attachments, options)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up attachments", err)
 	}
@@ -467,7 +467,7 @@ func (api coursesAPI) getAttachment(c *fiber.Ctx) error {
 	attachmentId := c.Params("attachment")
 
 	asset := &models.Asset{Base: models.Base{ID: assetId}}
-	err := api.dao.GetById(c.Context(), asset)
+	err := api.dao.GetById(c.UserContext(), asset)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
@@ -481,7 +481,7 @@ func (api coursesAPI) getAttachment(c *fiber.Ctx) error {
 	}
 
 	attachment := &models.Attachment{Base: models.Base{ID: attachmentId}}
-	err = api.dao.GetById(c.Context(), attachment)
+	err = api.dao.GetById(c.UserContext(), attachment)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Attachment not found", nil)
@@ -505,7 +505,7 @@ func (api coursesAPI) serveAttachment(c *fiber.Ctx) error {
 	attachmentID := c.Params("attachment")
 
 	asset := &models.Asset{Base: models.Base{ID: assetId}}
-	err := api.dao.GetById(c.Context(), asset)
+	err := api.dao.GetById(c.UserContext(), asset)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Asset not found", nil)
@@ -519,7 +519,7 @@ func (api coursesAPI) serveAttachment(c *fiber.Ctx) error {
 	}
 
 	attachment := &models.Attachment{Base: models.Base{ID: attachmentID}}
-	err = api.dao.GetById(c.Context(), attachment)
+	err = api.dao.GetById(c.UserContext(), attachment)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Attachment not found", nil)
@@ -546,7 +546,7 @@ func (api coursesAPI) getTags(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	course := &models.Course{Base: models.Base{ID: id}}
-	err := api.dao.GetById(c.Context(), course)
+	err := api.dao.GetById(c.UserContext(), course)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, fiber.StatusNotFound, "Course not found", nil)
@@ -561,7 +561,7 @@ func (api coursesAPI) getTags(c *fiber.Ctx) error {
 	}
 
 	tags := []*models.CourseTag{}
-	err = api.dao.List(c.Context(), &tags, options)
+	err = api.dao.List(c.UserContext(), &tags, options)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up course tags", err)
 	}
@@ -588,9 +588,9 @@ func (api coursesAPI) createTag(c *fiber.Ctx) error {
 
 	courseTag.CourseID = courseId
 
-	err := api.dao.CreateCourseTag(c.Context(), courseTag)
+	err := api.dao.CreateCourseTag(c.UserContext(), courseTag)
 	if err != nil {
-		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+		if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
 			return errorResponse(c, fiber.StatusBadRequest, "A tag for this course already exists", err)
 		}
 
@@ -607,7 +607,7 @@ func (api coursesAPI) deleteTag(c *fiber.Ctx) error {
 	tagId := c.Params("tagId")
 
 	err := api.dao.Delete(
-		c.Context(),
+		c.UserContext(),
 		&models.CourseTag{},
 		&database.Options{Where: squirrel.And{squirrel.Eq{"course_id": courseId}, squirrel.Eq{"id": tagId}}},
 	)

@@ -1,30 +1,17 @@
 <script lang="ts">
-	import { dev } from '$app/environment';
+	import '@fontsource/source-sans-pro/400.css';
+	import '@fontsource/source-sans-pro/700.css';
+	import '../app.css';
 
-	// Theme
-	import { ModeWatcher } from 'mode-watcher';
+	import { Toaster } from 'svelte-sonner';
 
-	// Fonts
-	import '@fontsource-variable/inter';
-	import '@fontsource/ubuntu-mono';
-	// Css
-	import '../app.pcss';
-
-	import { TailwindIndicator } from '$components/generic';
-	import { Header } from '$components/header';
-	import { Toaster } from '$lib/components/ui/sonner';
+	let { children } = $props();
 </script>
 
-<ModeWatcher />
+<Toaster theme="dark" richColors />
 
-<Toaster richColors position="top-center" />
-
-<div class="flex min-h-screen flex-col">
-	<Header />
-	<div class="flex flex-1">
-		<slot />
+<main>
+	<div class="h-screen w-screen px-5">
+		{@render children()}
 	</div>
-	{#if dev}
-		<TailwindIndicator />
-	{/if}
-</div>
+</main>

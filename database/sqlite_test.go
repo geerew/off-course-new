@@ -28,7 +28,6 @@ func setupSqliteDB(t *testing.T) *DatabaseManager {
 
 	// DB
 	dbManager, err := NewSqliteDBManager(&DatabaseConfig{
-		IsDebug:  false,
 		DataDir:  "./oc_data",
 		AppFs:    appFs,
 		InMemory: true,
@@ -57,7 +56,6 @@ func TestSqliteDb_Bootstrap(t *testing.T) {
 		appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
 
 		db, err := NewSqliteDB(&DatabaseConfig{
-			IsDebug:    false,
 			DataDir:    "./oc_data",
 			DSN:        "data.db",
 			MigrateDir: "data",
@@ -80,7 +78,6 @@ func TestSqliteDb_Bootstrap(t *testing.T) {
 		appFs := appFs.NewAppFs(afero.NewReadOnlyFs(afero.NewMemMapFs()), logger)
 
 		db, err := NewSqliteDB(&DatabaseConfig{
-			IsDebug:    false,
 			DataDir:    "./oc_data",
 			DSN:        "data.db",
 			MigrateDir: "data",
@@ -103,7 +100,6 @@ func TestSqliteDb_Bootstrap(t *testing.T) {
 		appFs := appFs.NewAppFs(afero.NewMemMapFs(), logger)
 
 		db, err := NewSqliteDB(&DatabaseConfig{
-			IsDebug:    false,
 			DataDir:    "./oc_data",
 			DSN:        "data.db",
 			MigrateDir: "test",

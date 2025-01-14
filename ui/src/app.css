@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+@plugin "tailwindcss-animate";
+
+@theme {
+	--font-logo: 'Source Sans Pro', 'sans-serif';
+
+	--color-background: hsl(255, 17%, 14%);
+	--color-background-alt-1: hsl(255, 17%, 17%);
+	--color-background-alt-2: hsl(255, 17%, 20%);
+	--color-background-alt-3: hsl(254, 17%, 25%);
+	--color-background-alt-4: hsl(254, 17%, 30%);
+	--color-background-alt-5: hsl(254, 17%, 33%);
+	--color-background-primary: hsl(67, 60%, 50%);
+	--color-background-primary-alt-1: hsl(67, 45%, 45%);
+	--color-background-error: hsl(5, 100%, 21%);
+	--color-background-error-alt-1: hsl(5, 100%, 25%);
+
+	--color-foreground: hsl(360, 0%, 90%);
+	--color-foreground-alt-1: hsl(360, 0%, 80%);
+	--color-foreground-alt-2: hsl(249, 6%, 52%);
+	--color-foreground-alt-3: hsl(240, 2%, 21%);
+	--color-foreground-error: hsl(5, 100%, 30%);
+
+	--animate-flash: flash 1.5s infinite ease-in-out;
+
+	@keyframes flash {
+		0% {
+			transform: scale(0);
+		}
+		50% {
+			transform: scale(1);
+		}
+		100% {
+			transform: scale(0);
+		}
+	}
+}
+
+@base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentColor);
+	}
+}
+
+@layer components {
+	:is(a, button, input, textarea, summary) {
+		@apply outline-none;
+		@apply focus-visible:ring-1 focus-visible:ring-blue-400;
+	}
+}

@@ -5,9 +5,17 @@ import "github.com/geerew/off-course/utils/types"
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type fileSystemResponse struct {
-	Count       int         `json:"count"`
-	Directories []*fileInfo `json:"directories"`
-	Files       []*fileInfo `json:"files"`
+	Count       int                 `json:"count"`
+	Directories []*fileInfoResponse `json:"directories"`
+	Files       []*fileInfoResponse `json:"files"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+type fileInfoResponse struct {
+	Title          string                   `json:"title"`
+	Path           string                   `json:"path"`
+	Classification types.PathClassification `json:"classification"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -116,6 +124,30 @@ type tagResponse struct {
 	Courses     []*courseTagResponse `json:"courses,omitempty"`
 	CreatedAt   types.DateTime       `json:"createdAt"`
 	UpdatedAt   types.DateTime       `json:"updatedAt"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+type UserRequest struct {
+	Username        string `json:"username"`
+	DisplayName     string `json:"display_name"`
+	CurrentPassword string `json:"current_password"`
+	Password        string `json:"password"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+type UserResponse struct {
+	ID          string         `json:"id"`
+	Username    string         `json:"username"`
+	DisplayName string         `json:"displayName"`
+	Role        types.UserRole `json:"role"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+type TokenResponse struct {
+	Token string `json:"token"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

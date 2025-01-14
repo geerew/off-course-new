@@ -36,7 +36,6 @@ func setup(tb testing.TB) (*DAO, context.Context) {
 
 	// DB
 	dbManager, err := database.NewSqliteDBManager(&database.DatabaseConfig{
-		IsDebug:  false,
 		DataDir:  "./oc_data",
 		AppFs:    appFs.NewAppFs(afero.NewMemMapFs(), logger),
 		InMemory: true,
@@ -271,7 +270,7 @@ func Test_Get(t *testing.T) {
 		require.Len(t, tagResult.CourseTags, 1)
 
 		// Create user
-		user := &models.User{Username: "user1", PasswordHash: "1234", Role: types.UserRoleAdmin}
+		user := &models.User{Username: "user1", DisplayName: "User 1", PasswordHash: "1234", Role: types.UserRoleAdmin}
 		require.NoError(t, dao.CreateUser(ctx, user))
 
 		// Get user
@@ -340,7 +339,7 @@ func Test_Get(t *testing.T) {
 	t.Run("invalid where", func(t *testing.T) {
 		dao, ctx := setup(t)
 		err := dao.Get(ctx, &models.Course{}, &database.Options{Where: squirrel.Eq{"`": "`"}})
-		require.ErrorContains(t, err, "SQL logic error: unrecognized token")
+		require.ErrorContains(t, err, "unrecognized token")
 	})
 
 	t.Run("db error", func(t *testing.T) {

@@ -9,8 +9,50 @@ import (
 	"path/filepath"
 
 	"github.com/geerew/off-course/migrations"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/pressly/goose/v3"
 )
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// NewSqliteDBManager returns a new DatabaseManager
+func NewSqliteDBManager(config *DatabaseConfig) (*DatabaseManager, error) {
+	manager := &DatabaseManager{}
+
+	dataConfig := &DatabaseConfig{
+		DataDir:    config.DataDir,
+		DSN:        "data.db",
+		MigrateDir: "data",
+		AppFs:      config.AppFs,
+		InMemory:   config.InMemory,
+		Logger:     config.Logger,
+	}
+
+	if dataDb, err := NewSqliteDB(dataConfig); err != nil {
+		return nil, err
+	} else {
+		manager.DataDb = dataDb
+	}
+
+	logsConfig := &DatabaseConfig{
+		DataDir:    config.DataDir,
+		DSN:        "logs.db",
+		MigrateDir: "logs",
+		AppFs:      config.AppFs,
+		InMemory:   config.InMemory,
+
+		// Never provider a logger for the logs DB as it will cause an infinite loop
+		Logger: nil,
+	}
+
+	if logsDB, err := NewSqliteDB(logsConfig); err != nil {
+		return nil, err
+	} else {
+		manager.LogsDb = logsDB
+	}
+
+	return manager, nil
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -48,7 +90,7 @@ func (tx *Tx) QueryRow(query string, args ...any) *sql.Row {
 
 // SqliteDb defines an sqlite database
 type SqliteDb struct {
-	DB     *sql.DB
+	conn   *sql.DB
 	config *DatabaseConfig
 }
 
@@ -73,12 +115,19 @@ func NewSqliteDB(config *DatabaseConfig) (*SqliteDb, error) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// DB returns the underlying sql.DB
+func (db *SqliteDb) DB() *sql.DB {
+	return db.conn
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Query executes a query that returns rows, typically a SELECT statement
 //
 // It implements the Database interface
 func (db *SqliteDb) Query(query string, args ...any) (*sql.Rows, error) {
 	db.log(query, args...)
-	return db.DB.Query(query, args...)
+	return db.conn.Query(query, args...)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -88,7 +137,7 @@ func (db *SqliteDb) Query(query string, args ...any) (*sql.Rows, error) {
 // It implements the Database interface
 func (db *SqliteDb) QueryRow(query string, args ...any) *sql.Row {
 	db.log(query, args...)
-	return db.DB.QueryRow(query, args...)
+	return db.conn.QueryRow(query, args...)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -98,7 +147,7 @@ func (db *SqliteDb) QueryRow(query string, args ...any) *sql.Row {
 // It implements the Database interface
 func (db *SqliteDb) Exec(query string, args ...any) (sql.Result, error) {
 	db.log(query, args...)
-	return db.DB.Exec(query, args...)
+	return db.conn.Exec(query, args...)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -113,7 +162,7 @@ func (db *SqliteDb) RunInTransaction(ctx context.Context, txFunc func(context.Co
 		return txFunc(ctx)
 	}
 
-	slqTx, err := db.DB.BeginTx(ctx, nil)
+	slqTx, err := db.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -123,6 +172,7 @@ func (db *SqliteDb) RunInTransaction(ctx context.Context, txFunc func(context.Co
 		db: db,
 	}
 
+	// Set the querier in the context to use the transaction
 	txCtx := WithQuerier(ctx, tx)
 
 	defer func() {
@@ -136,8 +186,7 @@ func (db *SqliteDb) RunInTransaction(ctx context.Context, txFunc func(context.Co
 		}
 	}()
 
-	err = txFunc(txCtx)
-	return err
+	return txFunc(txCtx)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -148,7 +197,7 @@ func (db *SqliteDb) SetLogger(l *slog.Logger) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// bootstrap initializes the sqlite database connect and sets db.DB
+// bootstrap initializes the sqlite database connect and sets db.conn
 func (db *SqliteDb) bootstrap() error {
 	if err := db.config.AppFs.Fs.MkdirAll(db.config.DataDir, os.ModePerm); err != nil {
 		return err
@@ -159,7 +208,7 @@ func (db *SqliteDb) bootstrap() error {
 		dsn = "file::memory:"
 	}
 
-	conn, err := sql.Open("sqlite", dsn)
+	conn, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return err
 	}
@@ -168,7 +217,7 @@ func (db *SqliteDb) bootstrap() error {
 	conn.SetMaxIdleConns(1)
 	conn.SetMaxOpenConns(1)
 
-	db.DB = conn
+	db.conn = conn
 
 	if err := db.setPragma(); err != nil {
 		return err
@@ -189,7 +238,7 @@ func (db *SqliteDb) migrate() error {
 		return err
 	}
 
-	if err := goose.Up(db.DB, db.config.MigrateDir); err != nil {
+	if err := goose.Up(db.conn, db.config.MigrateDir); err != nil {
 		return err
 	}
 
@@ -197,6 +246,7 @@ func (db *SqliteDb) migrate() error {
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func (db *SqliteDb) log(query string, args ...any) {
 	if db.config.Logger != nil {
 		attrs := make([]any, 0, len(args))
