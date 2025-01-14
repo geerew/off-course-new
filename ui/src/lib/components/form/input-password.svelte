@@ -12,7 +12,7 @@
 		...restProps
 	}: Props = $props();
 
-	let passwordEl = $state<HTMLInputElement>();
+	let passwordEl = $state<HTMLInputElement | undefined>(ref);
 	let passwordEyeOpenEl = $state<SVGElement>();
 	let passwordEyeClosedEl = $state<SVGElement>();
 
@@ -31,14 +31,7 @@
 </script>
 
 <div class="relative w-full overflow-hidden rounded-md">
-	<Input
-		bind:ref={passwordEl}
-		bind:value
-		name="password"
-		type="password"
-		class="pe-10"
-		{...restProps}
-	/>
+	<Input bind:ref bind:value name="password" type="password" class="pe-10" {...restProps} />
 
 	<Button.Root
 		type="button"
